@@ -1,0 +1,13 @@
+Features:
+
+ - SZS (Wiimms SZS Toolset) is a set of command line tools.
+ - wszst (Wiimms SZS Tool) is the main SZS manipulation tool.
+ - wimgt (Wiimms IMG Tool) is a graphics conversion tool.
+ - wkclt (Wiimms KCL Tool) is a KCL creation and modification tool.
+ - wkmpt (Wiimms KMP Tool) is a KMP creation and modification tool.
+ - wbmgt (Wiimms BMG Tool) is a BMG manipulation tool.
+ - wstrt (Wiimms STATIC.REL Tool) is a staric.rel and main.dol manipulation tool.
+ - wctct (Wiimms CT-CODE Tool) manage CT-CODE extensions.
+ - Advanced shell support.
+
+Visit @@URI-HOME@@features.html for more details.

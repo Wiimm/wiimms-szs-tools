@@ -1,0 +1,39 @@
+﻿<?xml version="1.0" encoding="utf-8" ?>
+<flags version="1.1.0">
+  <types>
+    <type key="00">00 Road</type>
+    <type key="01">01 Slippery Road</type>
+    <type key="02">02 Weak Off-road</type>
+    <type key="03">03 Off-road</type>
+    <type key="04">04 Heavy Off-road</type>
+    <type key="05">05 Slippery Road 2</type>
+    <type key="06">06 Boost Pad</type>
+    <type key="07">07 Boost Ramp</type>
+    <type key="08">08 Jump Pad</type>
+    <type key="09">09 Item Road</type>
+    <type key="0A">0a Solid Fall</type>
+    <type key="0B">0b Moving Water</type>
+    <type key="0C">0c Wall</type>
+    <type key="0D">0d Invisible Wall</type>
+    <type key="0E">0e Obstacle Wall</type>
+    <type key="0F">0f Wall</type>
+    <type key="10">10 Fall Boundary</type>
+    <type key="11">11 Cannon Activator</type>
+    <type key="12">12 Unknown</type>
+    <type key="13">13 Half-pipe Ramp</type>
+    <type key="14">14 Wall</type>
+    <type key="15">15 Moving Road</type>
+    <type key="16">16 Sticky Road</type>
+    <type key="17">17 Road</type>
+    <type key="18">18 Sound Trigger</type>
+    <type key="19">19 Unknown</type>
+    <type key="1A">1a Unknown</type>
+    <type key="1B">1b Unknown</type>
+    <type key="1C">1c Unknown</type>
+    <type key="1D">1d Road</type>
+    <type key="1E">1e Special Wall</type>
+    <type key="1F">1f Wall</type>
+  </types>
+  <variations>
+  </variations>
+</flags>

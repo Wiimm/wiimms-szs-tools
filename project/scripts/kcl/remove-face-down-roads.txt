@@ -1,0 +1,20 @@
+
+#--- remove face down roads
+
+@def start	= mSec()			# start time, for the status line
+@def rm_count	= 0				# reset status counter
+
+@for t=0; tri$n()-1				# for each tirangle (index 0 based)
+    @pdef type = tri$flag(t) & 0x1f		# get the KCL type
+    @if kcl$drive & (1<<type)			# if it is a drivable KCL type
+	@def norm = tri$normal(t,0)		#    get the first normal
+	@if norm.y < 0				#    if it is face down
+	    @def stat = tri$remove(t)		#       remove the triangle
+	    @def rm_count = rm_count + 1	#       incremtent the counter
+	@endif					#    endif
+    @endif					# endif
+@endfor
+
+# print out a summary line
+@echo "  - " rm_count " face down road triangles removed in " (mSec()-start) " msec."
+

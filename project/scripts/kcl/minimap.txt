@@ -1,0 +1,17 @@
+
+@def start	= mSec()	# start time
+@def mod_count	= 0		# modification counter
+
+@function isRoad # flag
+    @pdef t = $1 & 0x1f
+    @return t <= 0x05 || t == 0x17 || t == 0x1d
+@endfunction
+
+@for t=0;tri$n()-1
+    @if !isRoad(tri$flag(t,2))
+	@def status = tri$remove(t)
+    @endif
+@endfor
+
+@echo "  - " mod_count " of " tri$n() " triangles lowered in " (mSec()-start) " msec."
+

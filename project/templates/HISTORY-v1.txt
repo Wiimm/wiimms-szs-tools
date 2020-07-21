@@ -1,0 +1,1288 @@
+
+@@MODULE(head.txt)@@
+
+
+*******************************************************************************
+*******                           HISTORY v1.*                          *******
+*******************************************************************************
+
+szs v1.00a r3958 - 2012-07-14
+
+ - wkmpt COBJECT --draw=modelist:
+    - Mode 'JGPT': Draw arrows at respawn positions.
+    - Mode 'CJGPT' does what the old 'JGPT' did: Draw connections between
+      check points and respawn positions.
+    - Mode 'CNPT': Draw arrows instead of lines.
+ - New command "wszst MINIMAP": Print and optional patch the releavant minimap
+   data of a SZS, U8, BRRES or MDL file. Supported patching options: --touch,
+   --xcenter, --ycenter, --zcenter, --center, --scale, --shift, --xss, --yss
+   and --zss.
+
+
+szs v1.01a r3987 - 2012-07-22
+
+ - Command "wszst MINIMAP" can now automatically adjust the minimap, if the
+   new option --auto is set. It analyses MDL section 2 (vertex list) to find
+   the minimum and maximum values. Then it makes the ranges 4% wider, store
+   the calculated values in 'posRU' and 'posLD' of the MDL and calculate the
+   transformation matrices. The command is very flexible and can modify the
+   map of SZS, U8, BRRES and MDL0 files.
+   See https://szs.wiimm.de/opt/auto for details.
+
+
+szs v1.02a r3992 - 2012-08-01
+
+ - KCL: Detect invalid triangles (e.g. length=0) on OBJ import.
+ - Option --kcl: There are now 2 groups of removing commands:
+     - 'DROP*' drop unused, invalid or fixed triangles (bad triangles).
+     - 'RM*' remove triangles with special characteristics. At this moment
+	RM-FACEDOWN is the only command of the 'RM*' class: It will remove all
+	face down drivable triangles to avoid KCL glitches.
+ - File DB: Sub files 'kinoko_*.kcl' are now assigned to object group 'kinoko'.
+ - Update of the KMP Object database.
+
+
+szs v1.03a r4002 - 2012-08-11
+
+ - New global option: --force: The tools analyse input files and reject files
+   with invalid data structures. If --force is set, little repairable issues
+   are ignored or repaired and a warning is printed.
+   >>> THE RESULT MAY BE INVALID OUTPUT FILES!
+ - Option --kcl: If no 'DROP*' mode is set, the tools drops automatically all
+   bad triangles. For an existing octree, it is only 'DROP-UNUSED'.
+ - Option --kcl: Correct handling, if 'DROP-UNUSED' and 'NEW' are set together.
+ - wszst MINIMAP --auto: The Y-translation is also calculated to make very
+   high faces visible.
+
+
+szs v1.04a r4050 - 2012-09-08
+
+ - Bug fix for v1.03a: With some option combinations, the KCL generator failed
+   and created an invalid KCL (if modifying an existing KCL) or a valid KCL
+   with some unwanted triangles (if importing from OBJ).
+ - Option --kcl: Better handling of DROP modes.
+ - Option --kcl: Correct handling, if 'DROP-UNUSED' and 'NEW' are set together.
+   (Same message as before, but now I have fixed one forgotten special case).
+ - "wszst CHECK" will now compare the number of cannons in KCL and KMP.
+ - New option: "wszst NORMALIZE --minimap": If --minimap is set, the minimap
+   is automatically adjusted like "wszst MINIMAP --auto" does it. All other
+   options like --scale are ignored for this kind of minimap processing.
+ - New option: "wszst minimap --set-flags=flags": Set the MDL flags to an user
+   defined value (default 0x31f).
+ - The tools accept now 'Yaz1' files in the exact same manner as 'Yaz0' files
+   hoping that the data structure and the compression method are the same.
+ - New options: --yaz0 and --yaz1: Force the magic of new created YAZ files
+   to 'Yaz0' or 'Yaz1'.
+ - Object database updated.
+
+
+szs v1.05a r4097 - 2012-09-29
+
+ - For text files, only the first 4 characters are used as magic ('#BMG'
+   instead of '#BMG-TXT'; same for '#KCL', '#KMP' and '#MDL'). On creation
+   a 8 character magic is still written for compatibility.
+ - Update of the KMP Object database.
+ - Files './AIParam/AIParam.baa' and './AIParam/AIParam.bas' are now known by
+   the internal file database.
+ - Some optimizations around the KCL octree creation. This includes a new
+   handling of automatic dropping of invalid KCL triangles.
+ - Some minor text and layout changes.
+
+
+szs v1.06a r4110 - 2012-10-06
+
+ - Bug fix: "wkclt COPY" printed always a false syntax error after correct
+   finishing all copy jobs.
+ - Bug fixes for "wszst NORMALIZE":
+    - BRRES files will not touched now.
+    - Memory bug, if rebuilding the KCL.
+ - wszst CHECK will now make slot proposals with comments:
+    - Slots 3.1 and 7.1: Check usage of KMP objects 'sunDS' and 'pylon01'.
+    - Slot 4.2: Only the usage of at least one KMP object of 'kart_truck',
+	'car_body' or 'K_bomb_car' is done. An additonally MDL analysis is
+	missed, so the status is only "may run on slot 4.2".
+    - Slot 6.1: Test the existence of file 'ice.brres' and of KCL flag 0x70.
+    - Slot 6.2: Check usage of KMP object 'HeyhoShipGBA'.
+ - New command: wszst SLOTS: Print the possible slots for a track file.
+   The analysis is the same as for "wszst CHECK" (see above). The command
+   prints either a positive or a negative slot list, whatever is shorter.
+
+
+szs v1.07a r4137 - 2012-10-19
+
+ - "wszst NORMALIZE --kcl ...": In the old versions, the KCL was patched in
+   place and the total size of the KCL was not changed. If the new KCL was
+   larger, parameters were changes in up to 5 iteration steps until the new
+   KCL was less or equal the old size. Now a complete new KCL is created with
+   the optimal settings and the size may shrink or grow.
+   If 'INPLACE' is added to the '--kcl list', the old behavior becomes active.
+ - wzszt CHECK: The logging of sub checks (KCL+KMP) is now better integrated
+   into the main log and there is now only one summary line for all.
+ - KCL creation tuned.
+ - The auto-add library holds now also unique files of folder 'posteffect'.
+   Try "wszst AUTOADD ./path/to/Race/Course/" to add all supported files.
+ - New archive format: WU8 (Wiimms U8)
+   WU8 is like U8, but the sub files are coded as patch for Nintendos original
+   files. This removes any code of Nintendo and a compressed WU8 (default) is
+   in general smaller than the related SZS. For encoding end decoding an
+   auto-add archive is needed (see https://szs.wiimm.de/doc/autoadd).
+ - wszst NORMALIZE/PATCH:
+    - Accept options --dest and --DEST for an alternative destination path.
+    - Accept options --u8 and --wu8 to define the new (W)U8-archive format.
+ - Object DB updated.
+
+
+szs v1.08a r4148 - 2012-10-27
+
+ - wszst CREATE/COMPRESS/DECOMPRESS:
+    - All 3 commands support now U8 and WU8 conversions and accept the
+      options --u8 and --wu8.
+    - Support of U8/WU8 conversions of non track files.
+    - All 3 commands support the new option --remove-src (or --rm-src) to
+      remove the source files on success and if different to dest files.
+ - Better error handling of non existing files if --ignore is set.
+ - New keyword for option --kcl: If creating an OBJ file and 'TRIANGLES' is
+   set, the triangles are not stored as vertices and faces. Instead each
+   triangle is stored in an independent line. The OBJ file itself becomes
+   incompatible (or invalid), because TRI lines are not supported by any
+   other tool, but it  makes adding points or mixing OBJ files much easier.
+
+
+szs v1.09a r4169 - 2012-11-11
+
+ - BZIP2 compression is now supported as alternative to Yaz0. It is dedicated
+   to the WU8 file format for transferring files. BZIP2 files are smaller than
+   Yaz0 files and the creation is faster.
+ - The new option --bz forces BZIP2 compression instead of Yaz0 compression.
+ - The new option --wbz is a short cut for --wu8 --bz.
+    => To create a WBZ (WU8+BZ) file: wszst compress --wbz TRACK.szs
+ - The new option --szs is a short cut for --u8 --yaz0.
+    => To create a SZS (U8+Yaz0) file: wszst compress --szs TRACK.wbz
+
+
+szs v1.10a r4186 - 2012-11-17
+
+ - Bug fix: File type printing (e.g. "YAZ0.U8:filename") was reimplemented
+   because of the new bzip compression, but with bugs.
+ - Command "wszst CHECK" will now accept option --verbose to print some more
+   slot hints (negative info about slots 4.2, 6.1 and 6.2).
+ - New debug command for all tools: ARGTEST: Print all scanned arguments as
+   list. This helps to find out wrong parameters, especially for windows.
+ - Cygwin (Windows): Filename handling improved. If using double quotes around
+   a filename, backslashes work in a Windows usual way as directory separator.
+ - Cygwin (Windows): Windows 'SendTo' support added. It must be (un-)installed
+   with the batch files 'sendto-install.bat' and 'sendto-uninstall.bat'.
+   Available SendTo jobs:
+     - normalize-SZS.bat  : Normalize a file and convert it to SZS.
+     - convert-to-WBZ.bat : Convert a SZS file to a WBZ file.
+     - convert-to-SZS.bat : Convert a WBZ file to a SZS file.
+     - create-autoadd-library.bat : Use it with the extracted Race/Course
+       folder to create the autoadd library. It is needed for WBZ conversions.
+ - New option: --number or --num: If a destination file already exists, append
+   a number directly before the file extension to make the filename unique.
+   If other numbered files already exist (ignoring case), use the maximum
+   existing index+1. Option --number is ignored if --overwrite is set.
+
+
+szs v1.11a r4205 - 2013-01-01
+
+ - If creating the KCL file, the world will be enlarged by the KCL_BLOW value
+   to avoid problems at the world border.
+ - New parameter for KCL/octree fine tuning: KCL_MAX_SIZE:
+   Cubes, that are larger than KCL_MAX_SIZE, will always be splitted into 8
+   sub cubes and will never have triangle lists. The maximum and default value
+   for KCL_MAX_SIZE is 1024*1024 (~1 million).
+ - New flag for --KCL=list: CENTER: If creating a new octree, adjust the cube
+   entrance values so that the real world is centered in the cube world.
+ - Some old and for a long time obsolate keywords removed.
+
+
+szs v1.11b r4214 - 2013-01-20
+
+ - Bug fix: If creating a TEX0 file, the float number at offset 0x14 in the
+   TEX header was wrong (1 too large). The result were artifacts.
+ - Small updates of the object DB.
+
+
+szs v1.12a r4236 - 2013-02-09
+
+ - Windows version only: Update to Cygwin v1.7.17
+ - wstrt TRACKS+ARENAS: The index column shows now the internal zero based
+   track index of the track or arena instead of a simple track counter.
+ - wstrt FIND -lll: Additionally print the slot index and the internal index
+   (both zero based) before the file names.
+ - New command: wbmgt CAT: Print decoded BMG files to stdout. If a source is
+   a SZS file and no subfile is entered, subfile './message/Common.bmg' is
+   printed.
+
+
+szs v1.12b r4246 - 2013-02-23
+
+ - Bug fix: The KCL cannon activator was internally handled as drivable type.
+   So it was wrongly a deletion candidate for --kcl=RM-FACEDOWN.
+ - Object DB updated.
+
+
+szs v1.13a r4258 - 2013-03-01
+
+ - New option --rm-aiparam (short cut: --rmai): If set, the directory AIParam
+   and all files are removed from the archive. This option has only impact,
+   if creating a new archive or normalizing an existing archive.
+ - Command wszst NORMALIZE: Logging changed.
+
+
+szs v1.14a r4274 - 2013-03-14
+
+ - wkmpt CHECK (and all commands calling this function internally):
+   4 new tests for sections CKPH, ENPH and ITPH:
+    - The section must not be empty (WARNING).
+    - Only ITPH: The first 'next' link must be valid (WARNING).
+    - Each group must have at least one valid 'next' link (WARNING).
+    - Each group must have at least one valid 'prev' link (HINT).
+   See https://szs.wiimm.de/cmd/wkmpt/check#testlist for all tests.
+ - Option --kcl-script can now be used multiple times to execute multiple
+   kcl script in the entered order.
+ - Two new parser functions to identify the source within a script: isKCL()
+   and isKMP(). Both functions return 0 for false, 1 for true or 2 for true,
+   if the source is named 'course.*' (main KCL/KMP file).
+
+
+szs v1.15a r4300 - 2013-03-28
+
+ - New docu file: INSTALL.txt
+ - Mac+Linux+Unix: Script 'install.sh' will call itself with 'sudo' if not
+   started by user 'root'. Read INSTALL.txt for details.
+ - Windows: Cygwin updated.
+ - Better detection of UTF-8 files with byte order mark (BOM). Tool wbmgt will
+   accept those files now.
+ - Bug fix: wbmgt CAT: The option --patch is now processed.
+ - Bug fix: wbmgt ENCODE: Wrong file naming fixed.
+ - Bug fix: Option --kcl: If no 'DROP*' mode is set, the tools drops all bad
+   triangles automatically. For an existing octree, it is only 'DROP-UNUSED'.
+ - Check KCL+KMP: The checks are now done after patching.
+ - New option --kmp=modes: It works like --kcl=modes to define KMP jobs and
+   modes. The first modes are:
+    - NEW        : Scan KMP and create a new one.
+    - RM-SPCITEM : Clear 'special items for players' setting of the 6 item box
+		   object types.
+    - FIX-CKPH   : Fix the section CKPH.
+    - FIX-ENPH   : Fix the section ENPH.
+    - FIX-ITPH   : Fix the section ITPH.
+    - FIX-PH     : Short cut for: FIX-CKPH,FIX-ENPH,FIX-ITPH.
+    - INPLACE    : Force inplace replacing of KMP files (old mode).
+    - LOG        : Debug: Enable KMP specific logging.
+   The fix modes are EXPERIMENTAL!
+   See https://szs.wiimm.de/opt/kmp for details.
+
+
+szs v1.16a r4313 - 2013-04-08
+
+ - Bug fix for BTI detection (reduce false positives).
+ - wkmpt COBJECT --draw=ckpt: Draw lines to next point and to point linked
+   by the 'next' member.
+ - New command: wszst ENCODE: Works like wszst CREATE, but will not create a
+   first level archive. The intension is to create and update all subfiles.
+   'wszst ENCODE' can be used as a prepararion before using 'wszst UPDATE'.
+ - New mode for --kmp: FIX-CKNEXT: Automatic calculation of the 'prev' and
+   'next' links of KMP section CKPT.
+   See https://szs.wiimm.de/opt/kmp for details.
+ - Slot 4.2 detection: Improved 'moonview' detection, because MDL.s10
+   'polygon11' and 'polygon60' are searched and their size is checked.
+ - Command 'wszst SLOTS': Slots are assigned to output columns now.
+ - Windows 'SendTo' commands: Fix handling of filenames with spaces.
+   Reinstall the SendTo files with 'sendto-install.bat'.
+ - New Windows 'SendTo' commands:
+    - clean-KCL-of-SZS: Normalize a SZS, drop unneeded KCL triangles and
+      rebuild the KCL octree.
+    - adjust-minimap: Adjust the minimap of SZS, BRRES and MDL files.
+ - Object DB updated.
+
+
+szs v1.17a r4358 - 2013-04-23
+
+ - Moonview slot proposal optimized.
+ - KMP check: Print a hint, if 200 or more global objects are defined.
+ - Option --fast overrides compression rates set by --norm or --compr=list.
+ - New --kcl mode: FIX-ALL: Short cut for DROP,RM,NEW,LOG.
+ - New option: --autoadd-path=dir: Define a path for the auto-add library
+   and override the default search pathes.
+ - New option: --mdl=list: Define a MDL patching method. VERTEX patching is
+   used by default.
+ - New option for wszst: --patch-file=list: Define, which kind of KMP, KCL and
+   BRRES/MDL files are objects for patching. The default is to patch only the
+   main KMP and KCL files and the MODEL and MAP files. --pfile is a short cut
+   for --patch-file.
+ - New name for option --hrot: --yrot
+ - New options: --xrot, --yrot, --zrot, --ypos: Options --xrot, --zrot and
+   --ypos are really new for X+Z rotation and --yrot is only a alternative
+   name for --hrot. See built in help for impact.
+ - New option: --translate: Works like --shift, but is done after the
+   rotation. This is similar to the MDL transformations, that works in the
+   order scale, x-rotate, y-rotate, z-rotate, translate.
+ - New command for testing: wszst MATRIX: Use the transformation options as
+   base and calculate and print the related vectors and the tranformation
+   matrices. Then execute the transformations for each vector (parameter).
+ - ATTENTION: Because of the new 3D rotation support, a new rotation
+   algorithm has been implemented. Implementation bugs are not impossible.
+ - ATTENTION: All new patching options are EXPERIMENTAL!
+
+
+szs v1.18a r4404 - 2013-05-01
+
+ - There is a complete new transformation algorithm: All transforming options
+   will be used to create a transformation matrix. If using >1 transformation
+   steps (see below), the matrices are multiplied to get a final transformation
+   matrix. All transformations are now done using this final transformation
+   matrix. This is faster and the internal handling is now much easier.
+ - New option --next: This option allows and separates up to 10 transformation
+   steps. Logical, each point is transformed step by step in the definition
+   order. Internally, a final matrix is calculated and all transformations are
+   done in a single step by using this final matrix. There are some issues
+   transforming KMP object, see https://szs.wiimm.de/opt/next for details.
+ - Command MATRIX is now available for all tools with transformation support.
+   It was redesigned to control the impact of the new transformation steps.
+   See https://szs.wiimm.de/cmd/matrix
+ - New option --rot=deg@origin: Define the rotations for 3 axes by one option.
+ - New option --arot=deg[@pt1]@pt2: Do an (axis) rotation around the axis
+   specified by the 2 points as single transformation step.
+   This option is EXPERIMENTAL! See https://szs.wiimm.de/opt/arot
+ - New option --ascale=factor@dir: Do an (axis) scaling into the direction
+   specified by the vector 'dir' as single transformation step.
+   This option is EXPERIMENTAL! See https://szs.wiimm.de/opt/ascale
+ - KMP object database updated.
+
+
+szs v1.19a r4461 - 2013-06-02
+
+ - wszst CHECK: Check existence of minimap bones 'posLD' and 'posRU'.
+   Read https://szs.wiimm.de/cmd/wszst/check#desc for a list of all tests.
+ - Check commands: KMP objects with presence flag == 0 will be handled as
+   non existent. This changes the missing files status and the slot proposals.
+ - KCL type names synchchronized to Wiki.
+ - Bug fix: If a function was searched and a const was defined with the same
+   name, a `segmentation fault´ (or similar) occured.
+ - New command: wkmpt STARTPOS: Print the start positions of players in
+   various formats. See https://szs.wiimm.de/cmd/wkmpt/startpos for details.
+ - Patching option --kmp accepts now the keywords LEFT, RIGHT, WIDE and NARROW
+   to modify the start options in section STGI.
+ - New global option --de: Use german track and arena names.
+ - Command FILETYPE --long: Column with version of file format added.
+ - wszst EXTRACT/CREATE: The version number of the archive file format is
+   stored in and read from the help file 'wszst-setup.txt' to support version
+   dependent file formats.
+ - BREFF and BREFT:
+    - Version numbers are printed in listings with version support.
+    - The file format version number is written to 'wszst-setup.txt' on
+      extracting and read from read from 'wszst-setup.txt' on creating.
+    - The default aligning for BREFT files depends now on the version number.
+      It is 0x20 for versions <10 (MKW=9) and 0x40 for versions >9 (NSMB=11).
+      At the moment the new alignment for NSMB is not well tested!
+
+
+szs v1.19b r4482 - 2013-06-14
+
+ - Bug fix: If resizing an image (e.g. for mipmaps), an INTERNAL ERROR
+   appeared sometimes because of an unhandled combination of image type
+   and image size (odd height or width). [Thanx to HelloImYourMind]
+
+
+szs v1.20a r4548 - 2013-07-21
+
+ - New Option for wszst and wimgt: --smart:
+   If resizing an image, use the new smart resize function. The new function
+   is much slower (factor 2-4) than the old function, but creates much better
+   resized images. This is only relevant for creating mipaps with odd width
+   or height. THIS NEW FUNCTION IS EXPERIMENTAL!
+ - Support of original SketchUp OBJ exporter, see next 2 points for details:
+ - More tolerant detection of Wavefront OBJ files. Export of the original
+   SketchUp exporter will be recognized as 'SKPOBJ' instead of 'WAVOBJ'.
+ - New --kcl flags: 'G' and 'USEMTL': If scanning an OBJ file, these flags
+   decides, which OBJ commands will define groups. If none is set (default)
+   'USEMTL' is used for files of type 'SKPOBJ' and 'G' for all others.
+ - Command 'wkclt CFF' accepts now option --brief to suppress the comment
+   '# f(type,variant)' and option --long to force a '= f(type,variant)'
+   parameter.
+ - Suppress some patch logging messages for CHECK commands.
+ - CHECK KMP: If option --long is set, print some additional statistics.
+ - Some error messages are more exact now.
+ - Bug fix: If using options --test and --remove together, the destination
+   file was removed sometimes (but not created).
+ - New patching option: --tform-kmp=list: Fine control about the sections
+   and objects (position, rotation or scale vector), that are transformed.
+   See https://szs.wiimm.de/opt/tform-kmp for details.
+ - Windows only: Cygwin update to v1.7.20 2013-06-07.
+
+
+szs v1.21a r4578 - 2013-09-07
+
+ - Improved built-in help system. Type e.g. "wszst help help" or visit
+   https://szs.wiimm.de/cmd/wszst/help for details.
+ - New keyword for option --kmp: FORCE: Ignore little repairable file structure
+   issues on reading KMP files. Works like --force, but only for KMP files.
+ - Bug fix: The check for the right position of all KMP sections failed.
+ - Optimized handling for SZS sub files with 'out of range offsets'.
+ - wszst: Option --auto-add can now be used together with the commands PATCH
+   and NORMALIZE. EXPERIMENTAL!
+ - Bug fix: Wrong calculation of parent directory index in U8 header fixed.
+   This bug existed from the beginning of the SZS tools and it seems, that it
+   had no impact for running a track or for other tools. However, the positive
+   impact is, that the creation of the files Track.szs, Race.szs and the other
+   language independent SZS files of MKWii directory './Scene/UI' works now.
+
+
+szs v1.22a r4602 - 2013-09-14
+
+ - The Windows installer will now force type REG_EXPAND_SZ for path variables.
+ - New commmand: wbmgt MIX: Works like CAT, but combines all input files.
+ - Exported BMG text files will now show all characters of the Unicode Basic
+   Multilingual Plane (BMP; codes <=0xfffd) without escape sequences.
+ - Tool wbmgt: Option --single-line supports now 2 levels and option --brief
+   3 levels. See https://szs.wiimm.de/opt/wbmgt/single-line and
+   https://szs.wiimm.de/opt/wbmgt/brief for details.
+ - New option: wszst --patch-bmg: Patch BMG sub files directly. There is no
+   more need to extract BMG files before patching.
+ - New option for tools wszst and wbmgt: --msg=list: If set, the BMG messages
+   are filtered by this list. Only enabled messages are exported to the ouput
+   BMG file (binary or text).
+ - If an archive (SZS,...) is found while reading a BMG file, the archive is
+   searched for BMG sub files and found sub files together are used as BMG
+   source.
+ - wstrt can now detect main.dol files and its type (PAL, USA, JAP or KOR).
+ - Option --kmp accepts now the keywords 1LAP, 2LAPS ... 9LAPS to modify the
+   first byte of KMP/STGI (number of laps). This first byte has only impact on
+   patched main.dol files.
+
+
+szs v1.23a r4682 - 2013-10-05
+
+ - Exported BMG text files will now show all characters of the Unicode Basic
+   Multilingual Plane (BMP; codes <=0xfffd) without escape sequences. New is,
+   that surrogates and private ranges are always printed as escape sequences.
+ - New options for BMG text output: --color and --no-color: If enabled, colors
+   are printed as new escape sequence "\c{color}". 'color' is either a known
+   color name or a hex number with 4 digits. At the moment, --no-color is
+   the default to avoid problems with old versions and other externl tools.
+   In 2014 --color shall become the default. However, the BMG text scanner
+   accepts the new escape sequence from now and independent of these options.
+ - New modes for option --patch-bmg: 'ID', 'ID-ALL', 'CT-COPY' and 'CT-FILL'.
+   See https://szs.wiimm.de/opt/patch-bmg for details.
+ - New command: wstrt DUMP: Dump the data structure of DOL files as text.
+ - wstrt ANALYZE: Analyze DOL files and compare them section by section with
+   the orginal main.dol file of MKWii.
+ - New command: wstrt EXTRACT: Extract the sections of a DOL file into a
+   directory. StaticR.rel files are ignored.
+ - New global option: --ctcode: Enable the CT-CODE mode of the tools.
+   See https://szs.wiimm.de/doc/ctcode for details and about CT-CODE.
+ - wstrt PATCH --add-ctcode: Add CT-CODE to original main.dol files.
+ - New tool: wctct: Manage CT-CODE. See https://szs.wiimm.de/wctct and
+   https://szs.wiimm.de/doc/ctcode for details.
+
+
+szs v1.24a r4703 - 2013-10-14
+
+ - Bug fix for wctct: Winning + losing ceremony after GP enabled.
+ - wctct: More possible names for music and property ids.
+   See https://szs.wiimm.de/doc/slot-id for details.
+ - Transforming complete tracks: VRCORN will now patched by default, if not
+   excluded by option --patch-file=list.
+ - Linux 'make': LIBPNG will be linked as static library, if available.
+
+
+szs v1.25a r4715 - 2013-10-27
+
+ - New KMP command for CKPT, ENPT and ITPT: $SPLIT: Split the group into 2 or
+   more peaces. See https://szs.wiimm.de/doc/kmp/syntax#ckpt-grp for details.
+ - New KMP parameter for ENPT and ITPT: @AUTO-FILL: Add additional points if
+   the distance between points is smaller than the defined value.
+   See https://szs.wiimm.de/doc/kmp/syntax#enpt-par for details.
+ - KMP compiler: New snap variant to define x- and y-rotation.
+   See https://szs.wiimm.de/doc/kmp/snap for details.
+ - Command 'wkmpt COBJECT' accepts now option --kcl-script to filter the
+   exported OBJ file.
+ - Some small fixes for tool wctct.
+
+
+szs v1.26a r4726 - 2013-11-10
+
+ - Bug fix: A patched file was not marked as dirty (and not written), if only
+   BMG was patched and only with modes 'ID' or 'ID-ALL'.
+ - New option --export (-X): Enable the export mode and create small and
+   machine readable text files for easy post processing. The option works
+   similar like -HBB for KMP and like -HBl11 for BMG text files.
+ - Windows version only: Update to Cygwin v1.7.25. I hope that it fixes the
+   bug that occurred during creation of MKW-Fun 2013-10 with Windows 8.1.
+
+
+szs v1.27a r4742 - 2013-11-24
+
+ - Bug fix: Occasional a triangle was marked as invalid by mistake, if it was
+   inserted by the script function tri$create() (option --kcl-script).
+ - Minimap fixing: From now the minmum and maximum values of the MDL.s1 root
+   are set too.
+ - KMP check: A test added, which controls, that the check points are not to
+   near together and that they build convex quadrilaterals.
+   See https://szs.wiimm.de/cmd/wkmpt/check#desc for check details.
+ - KMP check: Some WARNINGS are HINTS now.
+ - New transformation option: --tform-script=script
+   The script is loaded and a macro is called for every vertex. So it is
+   possible to add user defined and also non linear transformations.
+   See https://szs.wiimm.de/opt/tform-script for details.
+ - New parser functions: status(), len2(), hlen2(), sideOfLine(),
+   ptInConvexPolygon(), ptsInConvexTri(), ptsInConvexQuad().
+   See https://szs.wiimm.de/cmd/wszst/functions#desc for details.
+
+
+szs v1.28a r4771 - 2013-12-09
+
+ - There was a disorder using the escape sequences '%E' and '%T' for file
+   extensions/types. '%E' included a leading point, '%T' only sometimes.
+   Henceforth both will include then leading '.' or are empty, if no file
+   extension is available. So the earlier '%N.%T' becomes '%N%T'.
+ - Command wkmpt COBJECT will now also draw the start position with area, the
+   respawn positions with area, the POTI routes and standard itemboxes. See
+   https://szs.wiimm.de/opt/draw for details.
+ - Command wkmpt COBJECT: Check points with quadrilateral warnings are drawn
+   in red. This option can be disabled by --draw=-warn.
+ - New KMP check: Test, if all enemy and item root points are inside of at
+   least one convex check point quadrilateral.
+
+
+szs v1.29a r4788 - 2013-12-13
+
+ - Command 'wkmpt COBJECT' was renamed to the more intuitive name
+   'wkmpt DRAW'. The old command name can still be used.
+ - Option --draw has now a short twin: -w
+ - Option --draw supports the new keyword SOLIDOBJECTS: Draw all solid objects
+   without any route as a blue octahedron. At the moment, the native object
+   size, scaling and rotation are ignored.
+ - Command 'wkmpt DRAW --draw ITEMBOXES' draws itemboxes like in-game as a
+   grey cube with a vertex down. The color for itemboxes with special items
+   for players or enemies is dark grey.
+ - New KCL script functions: tri$createOctahedron(), tri$createAntiPrism()
+   and tri$createAntiArrow().
+
+
+szs v1.30a r4810 - 2013-12-27
+
+ - Object export (wkclt DECODE & wkmpt DRAW):
+    - The default for normals changed. Normals will only be included if the
+      keyword NORMALS of option --kcl is set. The new default is better for
+      the SketchUp OBJ importer plugin in time and correctness.
+    - The ambient color of the material 'Ka' is not longer defined.
+    - Bug fix: If the object needed more than 65535 vertices, then a wrong OBJ
+      was written with indices modulo 65536.
+ - wkmpt DRAW: The following objects are drawn in correct size and with a
+   recognizable form and color: itembox, obakeblockSFC*, dokan*, karehayama
+   and all trees.
+ - KCL: Improved error system, if a KCL has more than 65535 normals. Before
+   aborting, the normals are rounded in multiple steps to find duplicates.
+
+
+szs v1.31a r4828 - 2014-01-03
+
+ - BMG handling: \c{color} escape sequences in text output are now enabled
+   by default. To be compatible with old tool versions (v1.22a released at
+   2013-09-14 and older versions), use option --no-color.
+ - wctct: Support of hex coded filenames for the 32 original tracks.
+ - Windows only: Cygwin update to v1.7.27 2013-12-09.
+ - New option: wstrt --all-ranks: Manipulate a query for Nintendos servers, so
+   that all players in a region are found independent of their ranking points.
+
+
+szs v1.31b r4841 - 2014-01-17
+
+ - KCL bug fix: Creating and managing the flag file failed sometimes.
+
+
+szs v1.32a r4958 - 2014-02-07
+
+ - wszst+wbmgt: Options --color and --no-color have new meanings (see next
+   point). Instead of the old option --no-color, there is a new option named
+   --no-bmg-color to suppress '\c{color}' escape sequences of BMG files.
+ - New global options for all tools: Option --color forces colorized text. It
+   is enabled by default for output to terminals. Option --no-color disables
+   colorized text at all. At the moment only the commands COLORS, CHECK and
+   SLOTS support colorized text.
+ - New command: COLORS: Test colorized text by printing it in different modes
+   (colors, bold, underline). Also test the options --color and --no-color.
+ - Bug fix: A patched BMG file was not marked as dirty (and not written), if
+   only some characters in the second half of the string are modified and the
+   length don't change (compared N bytes and not N words).
+ - Bug fix: wstrt patch --region=name: New assignment of region names to
+   region numbers: 0=Japan, 1=America, 2=Europe, 3=Australia, ...
+ - KMP/STGI: Support of the last 2 bytes as `speed modifier':
+    - On output, the factor is appended as comment.
+    - On input, a floating point number instead 2 single bytes is accepted
+      as speed mulitplier. The floating point number is rounded to the nearest
+      possible number (16 bit cut float with only 7 bits for the mantissa).
+ - New option for tools wszst and wkmpt: --speed-mod=factor: Define a speed
+   modifier and patch KMP files.
+
+
+szs v1.33a r4983 - 2014-03-01
+
+ - Colorized patch log.
+ - New Command: wszst COPY source dest: COPY is an alternative command for
+   copying and pathing files. It uses the same internal procedure as command
+   PATCH, but has another command line syntax.
+ - New mode for option --kmp: FIX-CKJGPT: Fix invalid links to respawn points.
+ - wszst CHECK: Test geometry of images:
+    - Warnings about invalid images with zero width or height.
+    - Warnings about images with width or height not power of 2.
+    - Hints about images with width or height >1024.
+   See https://szs.wiimm.de/cmd/wszst/check#testlist for details.
+ - wszst CHECK: Count and warn about the number of vertices in MDL files
+   of 'course_model.brres', 'map_model.brres' and 'vrcorn_model.brres',
+   and about the total of all MDL files.
+ - New KMP checks for wszst+wkmpt CHECK:
+    - STGI: Print modified lap counter.
+    - STGI: Print invalid start position or mode.
+    - STGI: Print defined speed modifier.
+   See https://szs.wiimm.de/cmd/wkmpt/check#testlist for details.
+ - The tools 'wkclt' and 'wbmgt' accept the literal "0" as source filename for
+   an empty file (like "-" for stdin).
+ - Windows only: Cygwin update to v1.7.28 2014-02-09.
+
+
+szs v1.34a r5070 - 2014-04-19
+
+ - New Option --slot=keyword: Patch a track file to run at the specified slot.
+   KMP and KCL may be modified. BRRES files may be added to or removed from
+   SZS. The main keywords are DAISY, DESERT, SHERBET, SHYGUY, STANDARD and
+   MOST. Slot numbers (except '42' or '4.2') are also accepted.
+   See https://szs.wiimm.de/opt/slot for details.
+   ***  THIS NEW OPTION IS EXPERIMENTAL!  ***
+ - New patch option: --https=mode: Patch the https strings of REL and DOL
+   files. 'mode' is one of the following keywords:
+    - RESTORE restores the original URLs and domains.
+    - HTTP replace HTTPS requests by HTTP and sub-domain 'naswii.' by 'nas.'.
+    - DOMAIN replace HTTPS requests by HTTP and domain 'nintendowifi.net' by
+      a domain specified by the option --domain.
+    - PORT1 sets the domain specified by option --domain in combination with
+      ports 90-93.
+    - PORT2 is like PORT1, but it uses 'mariokartwii.DOMAIN' to replace the
+      'mariokartwii.race.gs.nintendowifi.net' domain.
+ - New patch option: --domain=dom: Define a domain for option --https. The
+   default domain is 'wiimmfi.de'.
+
+
+szs v1.35a r5184 - 2014-05-16
+
+ - Two more modes for option --https:
+    - SAKE0: Same as DOMAIN, but don't replace URLs with SAKE domain.
+    - SAKE1: Same as SAKE0, but replace HTTPS of SAKE domains.
+ - New option: wstrt --wiimmfi: Patch the files for the new custom server.
+   It is a short cut for '{--https=domain --domain=wiimmfi.de}'.
+
+
+szs v1.35b r5386 - 2014-07-02
+
+ - wstrt ANALYSE: Bug fix: HTTPS hint for original files removed.
+ - wstrt PATCH: Bug fix: Some forgotten 'https' and 1 'sake' are patched now.
+
+
+szs v1.35c r5394 - 2014-07-03
+
+ - wstrt PATCH: Another 'https' bug fixed.
+
+
+szs v1.36a r5680 - 2014-10-18
+
+ - New command: wstrt+wbmgt POINTS: Print a table with points assigned after
+   a versus or private room race. This command should help to find a good
+   parameter for option --points.
+ - New option --points=list: Define a new table with points assigned after a
+   versus or private room race. Predefined tables are:
+      NINTENDO: Original Nintendo table.
+      LINEAR:   Last get 0 points, all other 1 point more than successor.
+      WIN15:    Winner = 15 points, last=0, all other are evenly distributed.
+      WIN25:    Winner = 25 points, last=0, all other are evenly distributed.
+   For LINEAR, WIN15 and WIN25 there are some options:
+      ONE:   Last get 1 point instead of 0.
+      BONUS: Winner get a bonus of 1 point.
+   See https://szs.wiimm.de/opt/points for details.
+ - Windows only: Cygwin update to v1.7.32 2014-08-13.
+
+
+szs v1.36b r5690 - 2014-10-21
+
+ - Bug fix: If transforming a track, the minimap became sometimes invisible.
+   The reason was, that the minimum and maximum parameters of the vertex list
+   were not calculated and not stored to reflect the new coordinates.
+ - New patching option: --null: Create a neutral transformation without
+   affecting the coordinates. The only influence is, that the dependent values
+   (like maximum) are calculated as if a transformation has taken place.
+   This option helps to fix the transforming bug mentioned above.
+
+
+szs v1.37a r6010 - 2015-02-08
+
+ - New color management.
+ - Object database updated.
+ - New wstrt options --vs=ch & --bt=ch: Replace the second letter of
+   versus/battle identification ('vs','bt') to a new character.
+ - Windows only: Cygwin update to v1.7.34-6 2015-02-04.
+
+
+szs v1.38a r6056 - 2015-02-27
+
+ - Tools WSZST contains now all other tools. It can be called in the usual way
+   or as tool wrappers. See https://szs.wiimm.de/doc/wrapper for details.
+ - wkmpt DRAW: If the drawing of itemboxes or other solid objects is enabled,
+   the routes of movable itemboxes or other solid objects are drawn too.
+ - Two new keywords for option --patch-bmg defined:
+    - CT-FORCE-COPY: Copy all standard track and arena name messages to
+      MID 4000..4029 and overwrite existing strings.
+    - RM-CUPS: Remove racing cup names (MID 23f0..23f7) from BMG.
+ - New keyword for option --msg=list: CTTRACKS enables the messages for the
+   CT-CODE track names (MID 4000..40ff).
+ - New option wctct --write-tracks=file : Create a machine readable file
+   reflecting the track distribution to the cups. --wtracks is a short cut.
+ - New option wctct --order-by=bmg : Load the BMG file and filter track
+   names. Then order the tracks in the cups by the alphabetic order of the
+   BMG messages. The tracks and its slots are notmodified.
+ - New option wctct --order-all : Option --order-by will order all tracks.
+ - New command wctct PATCH : Read each source file, find and scan the
+   CT-CODE part and patch it.
+ - New command wctct TRACKS: Create a track listing.
+
+
+szs v1.39a r6123 - 2015-03-27
+
+ - BMG files: Support of new color names YOR0..YOR7: 8 continous colors from
+   (Y)ellow to (O)range to (R)ed. For compatibility reasons, hex-codes are
+   used instead of the new names on text output.
+ - wctct: Minor bugs fixed for handling BMG files.
+ - wctct CREATE: Support of output modes EU-BRRES, US-BRRES, JP-BRRES, EU-SZS,
+   US-SZS and JP-SZS to create strap files, either uncompressed (xx-BRRES) or
+   compressed (xx-SZS).
+ - New option: wctct CREATE --images=dir: Define a directory where the images
+   for BRRES or SZS files are searched.
+ - KMP/GOBJ/ELINE_CONTROL: Use group names instead of index numbers for links
+   into section ENPH. Reordering of groups is stable now. In section ENPT a
+   cross reference to ELINE_CONTROL objects is printed.
+ - New option for wstrt: --vs-region and --bt-region: Define different regions
+   for versus races and battles.
+ - New: wszst SHA1 --base64: print the checksum as BASE64 encoded string.
+ - New: wszst SHA1 --verify: Compare a checksum integrated in the filename.
+
+
+szs v1.40a r6162 - 2015-04-13
+
+ - wstrt: The region is now patched at 4 places at StaticR.rel for versus
+   races and at 4 other places for battles. Versus and battle can be patched
+   to different regions.
+ - BMG: Each BMG string has an additional 32-bit value. In old versions,
+   a value different from 0x01000000 is printed as separate line using the
+   format 'NAME ~ VALUE'. With this version, also a combiantion of value and
+   string is possible. The new format is: NAME [value_vector] = STRING'.
+   At scanning, both formats are accepted.
+    - The new option --bmg-inline selects the new inline format for output.
+      It will be the default in the future.
+    - The new option --no-bmg-inline selects the old separate line format for
+      output. At the moment it is the default for compatibility reasons.
+ - Full support of PAT0 binary and text files including decoding and encoding:
+    - 2 models for text output are used. SIMPLE for all standard PAT0 files
+      and COMPLEX for PAT0 with extended features (e.g. multiple animations).
+    - The internal parser is used to scan text files (SIMPLE and COMPLEX).
+    - New tool 'wpatt': Wiimms PAT Tool: Decode and encode PAT0 files.
+    - Tool 'wszst' decodes on extract and encodes on archive creation if the
+      text file was touched.
+    - The new option --pat=list defines global options for PAT processing.
+ - Support of PACK archives (list, extract and create).
+    - New option --pack: Force a PACK archive on CREATE.
+    - New option --align-pack=size: Define the alignment for PACK sub-files.
+ - The tools of the Linux distributions are compiled now with static libraries
+   to improve the compatibility with various Linux systems.
+
+
+szs v1.41a r6469 - 2015-09-04
+
+ - Bug fix: wstrt patch --region: Changing the region in a staticr.rel file
+   was internally not registered as modification with the result, that the
+   patched file was not rewritten.
+ - New option for wkmpt DRAW: --png geometry: A PNG with a top view of the
+   world is created instead of an OBJ file. Use rotation to view into other
+   directions. This is very slow.
+ - Internal sub-file database: Files "posteffect.bblm", "posteffect.bdof" and
+   "VolcanoPiece*.*" are now marked as 'optional'. The new classification
+   suppresses "Missing file:" warnings on checks.
+
+
+szs v1.42a r6527 - 2015-10-03
+
+ - New commands: wszst STGI & wkmpt STGI: Print a single line statistic about
+   KMP/STGI settings (start pos, speed mod, laps) for each source file.
+   Both commands do the same and accept track and KMP (bin and text) files.
+ - New option: wstrt --add-section: Add a new section to a main.dol file.
+   It's also possible to add a gecko code interpreter together with cheat
+   codes, e.g. the Lap & Speed Modifier.
+
+
+szs v1.43a r6536 - 2015-10-09
+
+ - Option --add-section supports now GCT files as input. In this case,
+   code-handler-only is added automatically.
+
+
+szs v1.44a r6558 - 2015-10-17
+
+ - BMG: The `inline mode' for attributes is now enabled by default. It can be
+   disabled by option --no-bmg-inline.
+ - BMG message id 0 is allowed now.
+ - BMG: Support of 1A escapes with up to 254 bytes (before 12 bytes).
+ - BMG: Escape sequences \x{}, \u{} and \z{} can now handle comma separated
+   lists of parameters. See https://szs.wiimm.de/doc/bmg/esc for details.
+ - New option: --x-escapes: Use \x{} escapes instead of \z{} escapes.
+ - New option: --old-escapes: To be compatible with v1.43 and earlier, print
+   1A escape sequences with total size of >12 bytes as single words. Also
+   don't use \x{} and \u{} with parameter lists.
+ - BMG supports now attribute vectors up to 20 bytes. MKWii uses only 4 bytes
+   for attributes.
+ - New option: --bmg-inf-size (also --inf-size for tool wbmgt):
+   Defines the size of section 'INF0'. For MKW it is usually 8.
+ - New option: --force-attrib=attrib: Override all BMG attributes with the
+   entered value. See https://szs.wiimm.de/doc/bmg/attrib for the syntax.
+ - New option: --def-attrib=attrib: Define alternative default attributes for
+   new BMG text files. See https://szs.wiimm.de/doc/bmg/attrib for the syntax.
+ - New option: --no-attrib: Suppress the output of string attributes at new
+   BMG text files.
+
+
+szs v1.45a r6602 - 2015-10-31
+
+ - Option --patch-bmg=id: Better detection of the source file type (Race,
+   Event, MenuOther, ... ) especially in SZS files.
+ - The KMP compiler can now automatically create respawn points and/or
+   automatically connect check points to the nearest respawn point. Both
+   together make an initial respawn setup much easier.
+   Read https://szs.wiimm.de/info/respawn-setup.html for details.
+ - Tool wctct: It is now possible to define hidden tracks (don't appear in
+   any cup) by using control letter 'H' instead of 'T'.
+ - New option: wctct/wstrt --ct-dir: Define a search directory for CT-CODE
+   parts and use the internal copies only, if no valid file is found. Use
+   this option multiple times to define more than one search directory.
+    - wctct --ct-dir: Search files rmc?/mod1.bin, rmc?/mod2.bin, rmc?/ovr1.bin
+      and rmc?/bad1code.bin.
+    - wstrt --ct-dir: Search files rmc?/boot_code.bin and rmc?/boot_data.bin
+      if option --add-ctcode is used.
+ - Tools wctct and wstrt use now the most current CT-CODE version provided by
+   https://github.com/Wiimm/wii-ct-code (a fork of Chadderz code with support
+   of the SZS Tools). To use the old code of year 2013 download the zip file
+   https://szs.wiimm.de/download/ctcode/ctcode-2013-10.zip and use the base
+   directory as parameter for the new option --ct-dir (see above).
+ - wstrt --add-ctcode: The first free DOL sections are used now. Before only
+   sections T2 and D8 were added if not already in use.
+ - New option: wstrt --meno: Patch some 'MenuSingle' and 'MenuMulti' strings
+   of file StaticR.rel for online usage to 'MenO*' to distinguish between
+   offline and online.
+
+
+szs v1.46a r6626 - 2015-11-08
+
+ - New option: --compatible=version: The option accpets a version number
+   (format '#.##' or 'v#.##') or a revision number (format 'r#') as parameter.
+   If set, the tools try to create BMG and KMP text files, that are compatible
+   to the entered version. This may override other legacy options.
+ - wkmpt DECODE: If creating a KMP text file, a new macro section is included.
+   The only yet provided macro is ITEMBOX: It help to setup a row of items
+   and supports automatic height correction. See the macro definition for more
+   details. The macro itself is very old and works also with old versions of
+   the tools, but they don't create it.
+ - wkmpt DRAW: Draw objects 'kinoko_*' and 'DKturibashiGC' as recognizable
+   polygons. These objects can also be used to stop fall-down on automatic
+   height evaluation, if the new parameter 'KCL-FALL-ADD-ROAD' is set to '1'.
+ - New: Post processing flags for KMP sections ENPT, ITPT and JGPT. To disable
+   the new flags column on text output, use option --compatible=v1.45.
+ - wkmpt DRAW: If drawing check point connection lines, red is used for the
+   left and green for the right side (like navigation lights).
+ - wkmpt DRAW: Option --draw supports now object filtering by presence flag.
+   The new keywords are: 1OFFLINE .. 3OFFLINE and  1ONLINE .. 3ONLINE.
+
+
+szs v1.47a r6650 - 2015-11-27
+
+ - Tool wctct: Update of the internal CT-CODE (mod2). The new code improves
+   the modes "in order" and "random" for offline versus races. Here you can
+   find old CT-CODE version: https://szs.wiimm.de/download/ctcode/
+   Visit https://github.com/Wiimm/wii-ct-code/ for more details.
+
+
+szs v1.48a r6675 - 2015-12-11
+
+ - Tools wctct and wstrt support now Korean CT-CODE. Therefor external CT-CODE
+   files are needed. Use --ct-dir=path to declare at least one search path.
+ - Bug fix: wctct disables the hard coded region patch of the CT-CODE. Now
+   region patches in StaticR.rel are possible like before v1.45a.
+ - Bug fix: On CT-CODE text export wctct encloses the track names by quote
+   signs. This feature was accidentally lost with v1.38a.
+ - New option: wctct --allow-slots: Activate reserved slots for automatic
+   slot assigning. Example: --allow-slots ARENAS,SPECIAL
+
+
+szs v1.49a r6974 - 2016-03-05
+
+ - The BMG is rewritten as independent source code lib. It can be used by
+   other tools (e.g. mkw-ana) now.
+ - BMG text output contains now more comments about message ID groups.
+ - Option --patch-bmg supports 2 new modes:
+    - UNICODE: Replace Unicode-escapes ('\u{xx}') with 16-bit codes by related
+      unicode character.
+    - RM-ESCAPE: Remove all 0x1a-escapes from all strings.
+ - KCL script 'lower-walls.txt' updated to support different gradients.
+ - New option: --mipmap-size=num: Define the minimal width and minimal height
+   of a generated mipmap. The default is 16. Tools before v1.49 used 1 as not
+   alterable value. --mm-size is a short cut.
+ - Option --kcl RM-FACEDOWN: Remove all road with face direction >30 degree
+   toward bottom. Before it was >0 degree.
+ - New keyword for option --kcl: RM-FACEUP: Remove all walls with a face
+   direction >80 degree towards the sky.
+ - New keyword for option --kcl: CONV-FACEUP: Convert all walls with a face
+   direction >80 degree towards the sky into a simple road.
+ - New keyword for option --kcl: SCRIPT: If set, KCL scripts are executed
+   before cleaning and transforming the KCL.
+
+
+szs v1.50a r7053 - 2016-04-08
+
+ - Improved cheat code handling.
+ - Three new options: --gct-move & --gct-addr & --gct-space
+   With these 3 options it is possible to support a very large cheat code
+   table. Therefor a temporary section is created that runs at the very
+   beginning and takes space from the game heap to establish a code section
+   before the FST table.
+ - Tool wctct: Update of the internal CT-CODE (mod1). The new code allows to
+   select original tracks in regions. Here you can find old CT-CODE versions:
+   https://szs.wiimm.de/download/ctcode/
+   Visit https://github.com/Wiimm/wii-ct-code/ for more details.
+
+
+szs v1.51a r7107 - 2016-06-01
+
+ - wstrt is able to patch DOL files of other games and not only of MKWii.
+ - The CHECK for slot 4.2 will be more exact now because it looks for the
+   needed materials. The presence flags of objects 'car_body' and 'kart_truck'
+   is also tested. If option --OLD is set, the old polygon test will be used.
+ - Option --kmp=list supports now the keyword REVERSE as `backwards´ support:
+   Reverse KMP sections ENPH, ENPT, ITPH, ITPT, POTI. The implementation is
+   not finished yet and more section (CKPH, CKTP, KTPT, JGPT) will follow.
+ - Different small fixes.
+
+
+szs v1.52a r7164 - 2016-06-29
+
+ - Bug fix for wkclt: Since v1.49a, the transformation was executed twice,
+   but only for commands DECODE and ENCODE. Command COPY works correct and
+   transforms only once.
+ - wstrt: Wiimmfi patching excludes now 3 patch positions for competitions.
+   It's now the job of the competition patcher to patch these 3 URLs.
+ - wkclt CFF: If creating a new flag file, the new function i(type,z,index)
+   is defined as support for fall boundaries (idea by Wexos).
+ - New tool: wmdlt: The tool wmdlt exists since v0.26a (2012), but was always
+   hidden, because it was useless. But now I started with MDL analysis and
+   plan to modifiy MDL data.
+    - wmdlt CAT/DECODE: Print a MDL file as text. It is incomplete, but can be
+      used for analysing.
+    - wmdlt STRINGS: Print all strings of a MDL.
+ - For slot 42 (moonview highway) the content of the 12 needed materials
+   is checked.
+
+
+szs v1.53a r7308 - 2016-12-09
+
+ - Bug fix: Occasional a "Segmentation fault" occured, if reading an empty file.
+ - Option --draw supports the new keyword DECORATION: Draw unsolid objects
+   without any route as a magenta cuboid.
+
+
+szs v1.54a r7393 - 2017-08-14
+
+ - Some KCL flags renamed.
+ - wkmpt draw --draw AREA: Areas of KMP are drawn as yellow arrows and as
+   transparent yellow cuboids.
+ - Support for RKC (competition) files added:
+   RKC files are handled like other archives. Tool wszst is able to detect,
+   list, extract or create a RKC file, also recursive. Direct creation and
+   optimation of the included SZS is not implemented yet.
+ - New keyword for option --kmp: MAX-LAPS: Keyword MAX-LAPS has only impact,
+   if one of 1LAP,...,9LAPS is set too. Then, the number of laps is only
+   decreased to the specified number, but never increased.
+ - New keyword for option --kmp: RM-EMPTY: After creating a new KMP, all empty
+   KMP sections are removed to make the KMP as small as possible. Use this
+   option only for compettitions!
+ - New command: YAZDUMP: Prints an info dump about the YAZ0/YAZ1 compression
+   details for analysis.
+ - New compression methods: 10 (=ULTRA) and 100-150: They need much more time
+   than BEST (=9) but create smaller SZS files than Nintendo did. It is
+   dedicated to competitions with strict size limitations.
+ - There is a new option: --tiny=level: It tries to minimize SZS and also the
+   included KCL and KMP by different technics (rounding values, sorting and
+   compression methods 100-150). It is not fully documentd yet.
+   See https://szs.wiimm.de/info/tiny.html for details.
+ - New keyword for option --kcl: WEAK-WALLS: Set the most significant bit
+   (bit 15, 0x8000) of KCL flag of all walls. It stops hard bumping at the
+   edges and has similar effects like lowering the walls.
+ - Windows only: Cygwin update to v2.8.1, 2017-07-03.
+ - Apple Mac is no longer supported because I no longer have access to a Mac.
+
+
+szs v1.55a r7429 - 2017-11-11
+
+ - New command: wszst DISTRIBUTION: The aim is to create a text file that
+   describes a custom track distribution. The owner have to edit the created
+   file and send it to Wiimm. Wiimm add the information to the custom track
+   portal https://ct.wiimm.de/ with a complete track list.
+
+
+szs v1.55b r7437 - 2017-11-19
+
+ - wszst DISTRIBUTION: New parameter: PREDECESSOR
+ - wszst AUTOADD: With option -v, the command will list invalid files too.
+
+
+szs v1.56a r7461 - 2017-12-03
+
+ - wszst DISTRIBUTION: Track scanning improved.
+ - Option --cache is a global option now. It is used to speedup every YAZ0
+   compression, but only for standard compression level 9 (BEST). A hash table
+   is used now for optimization.
+ - New option: --cname: Defines a cache file name for a single file.
+ - New Command: wszst SCANCACHE: Scan the cache directory for SZS files and
+   re-build the hash table.
+
+
+szs v1.57a r7484 - 2018-04-11
+
+ - Windows version only: Update to Cygwin v2.10.0.
+ - New option for tools wkclt, wszst and wkmpt: --kcl-min=FLOAT: Define a
+   minimal `length` of KCL triangles. The length is the heights of the
+   reference side of the triangle. Smaller triangles are invalidated and
+   ignored or removed. The default value is 0.1 and good values are between
+   0.01 and 2.0. Until v1.56a the minimal length was hard coded as 1e-6
+   (1/million) to avoid  mathematical overflows while calculating positions
+   by normals. The larger value reduces the number of KCL glitches
+   dramatically for some tracks with many unusual triangles.
+ - New option: --wc24: If set, options --wiimmfi and --domain will exclude
+   2 strings of StaticR.rel from the URL patch to enable WC24 support.
+
+
+szs v1.58a r7499 - 2018-04-20
+
+ - Option --kcl-min=EXPR: This option is deprecated, but still supported. It
+   is an alternative name for --tri-height=EXPR now.
+ - New option --tri-area=EXPR: Define the minimal area size of KCL triangles.
+   The intention is to ignore triangles that are generally to small. EXPR is
+   a floating point number or expression. Triangles are invalidated if their
+   area size is smaller than EXPR. The test is executed after reading files,
+   after transformations, and after calculating normals and lengths. Values
+   between 0.01 and 4.0 are recommended. The careful value 1.0 is used as
+   default. Value 0 disables this filter functionality.
+ - New option --tri-height=EXPR: Define the minimal height of KCL triangles.
+   The intention is to ignore deformed triangles (very slim, but long). EXPR
+   is a floating point number or expression. Triangles are invalidated if at
+   least 1 of the 3 heights is smaller than EXPR. The test is executed after
+   reading files, after transformations, and after calculating normals and
+   lengths. Values between 0.01 and 2.0 are recommended. The careful value 0.1
+   is used as default. Value 0 disables this filter functionality.
+ - You can proof the impact of the options above by command wkclt TEST.
+ - Command wkclt DUMP has been expanded and shows metrics like side length,
+   area size and heights for each triangle.
+ - New command: wkclt LIST: Print a list of all triangles with metrics in
+   human and machine readable text format. It is like command DUMP, but
+   reduced to the list of triangles.
+ - New implementation for OBJ groups without assigned KCL flag. They will be
+   inserted into the OBJ export now.
+
+
+szs v1.58b r7503 - 2018-05-18
+
+ - Default value for options --tri-area and --tri-height is now 1.0.
+ - Some more minor edits.
+
+
+szs v1.59a r7533 - 2018-08-05
+
+ - Option --kcl-min is not longer supported. Use option --tri-height instead.
+ - The old file extension ".flag.txt" for KCL flag files is not longer
+   supported.
+ - wszst/wkmpt CHECK: Battle arenas are now detected in 2 levels: "some hints
+   found" and "is battle arena". Some hints and warnings are suppressed for
+   battle arenas.
+ - wszst SLOTS: For battle arenas, the keyword ARENA is printed instead of a
+   slot list.
+ - New option: --export-flags[=mode] (or short: --exflags): KMP compiler and
+   scanner support the export and import of KMP flags for sections ENPT, ITPT
+   and JGPT through a binary KMP file. Therefore, the last byte of the scale
+   or of the x-rotation is used. Values becomes inaccurate by 0.003% (not
+   relevant for scale or rotation and not noticeable while playing).
+   MODE is either OFF, AUTO (default) or ON. Without value, ON is used. ON and
+   OFF override the @EXPORT-FLAGS settings of a KMP text file.
+ - New option: --wim0[=mode]: KMP compiler and scanner support the export and
+   KMP parameters through a special KMP section named "@WIM0@". MODE is either
+   OFF, AUTO (default) or ON. Without value, ON is used. ON and OFF override
+   the @WIM0 setting of a KMP text file. This as an experimental feature at
+   the moment to proof the compatibility with other KMP tools.
+ - New command wkmpt WIM0: Analyze the WIM0 section of each KMP file (text,
+   binary or szs) and print an info about it.
+ - wkmpt DRAW: AREAs are drawn dependent of the mode either as a rectangle
+   cuboid or as a cylinder (more exact: as an anti prism with 20 sides).
+ - wkmpt: If creating a KMP by text file, the PREV and NEXT links of item
+   routes are checked. If missed, a link to self is added to avoid a freeze.
+ - Option --kmp FIX-CKPH,FIX-ENPH,FIX-ITPH: If a PREV or NEXT link is missed,
+   a link to itself is added. Before, a link to another group was inserted.
+ - Camera types 0 (Goal) and 3 (KartFollow) are excluded from transformation
+   and scaling now.
+ - KMP text files: STGI is printed with new column names according the new
+   knowledge of CT-Wiiki.
+ - Internal KMP GOBJ database updated by CT-Wiiki object table.
+
+
+szs v1.60a r7578 - 2018-08-21
+
+ - Improved detection of battle arenas by KMP. The output of KMP text files
+   of racing tracks and battle arenas differ.
+ - New option:--battle[=mode]: The mode is either OFF, AUTO (default) or ON.
+   OFF and ON override the automatic detection of battle arenas.
+ - wkmpt DRAW: The connections between ENPT and ITPT routes are drawn with
+   half width and a brighter color now. Additional, there is a distinction
+   between bidirectional links, PREV only and NEXT only.
+ - wkmpt DRAW: Dispatch points of KMP sections ENPT and ITPT are detected and
+   printed as octahedron. The NEXT links point to the nearest end of the
+   destination routes.
+ - New keyword for option --draw: DISPATCH: If set, the settings of dispatch
+   points of areans are visualized by colors to support the analysis.
+ - New keyword for option --draw: COINS: If set, draw coins as yellow, orange
+   or red cubus. Color and size depend on coin place type.
+ - New keywords for option --draw: BLACK and WHITE: If set, a very dark grey
+   (BLACK) or a very bright grey (WHITE) ground is inserted at height 0.0.
+   The rectangle encloses all valid triangles.
+ - New command: wkmpt ROUTES: Print out the new internal cross references for
+   routes of KMP sections CKPH, CKPT, ENPH, ENPT, ITPH and ITPT.
+ - The settings of KMP sections CKPH, ENPH and ITPH are printed as "$SETTINGS"
+   line if not zero. They are also scanned and stored into binary KMP. Usually
+   only section ENPH of battle arenas use these settings.
+ - New feature for KMP sections ENPT and ITPT to support battle arenas:
+   @AUTO-CONNECT=MODE: Control the automatic calculation of PREV and NEXT
+   links. One MODE is DISPATCH: Connect routes and dispatch points
+   automatically controlled by different settings. THe default is to link all
+   routes, if no links is defined.
+ - Auto created group names of ENPT begin with 'DP' instead of 'G', if
+   DISPATCH mode is active.
+ - PREV links of KMP sections CKPH, ENPH and ITPH are printed as "$PREV" line,
+   if either @AUTO-CONNECT is changed or the PREV link lists is different from
+   automatic calculated list.
+ - New global option: --route-options: Disable or enable the new features
+   $SETTINGS, @AUTO-CONNECT, ...
+ - wkmpt CHECK and wszst CHECK improved:
+    - Info about arena classification: NONE, MAYBE, ARENA, ARREA+DISPATCH
+    - Battle arena: Hint about non empty CKPT and ITPT.
+    - Battle arena: Warnings about empty ENPT.
+    - Racing track: Warnings about empty CKPT, ENPT and ITPT.
+    - Check the number of KTPT elements and find missed or multiple defined
+      player indices for battle arenas.
+    - Check the number of MSPT elements and print warnings about too less or
+      hints about too much records.
+    - Check number and valid types of coin objects.
+    - Some camera warnings reduced to HINT.
+ - New global option: --battle=mode: MODE is either OFF, AUTO (default) or ON.
+   OFF and ON override the automatic battle detection.
+ - New commands to be used behind $GROUP: $PREV and $SETTINGS.
+ - New commands to fine control @AUTO-CONNECT: $DEF-CLASS, $CLASS, $AC-PREV,
+   $AC-NEXT and $ONEWAY.
+ - New keywords for option --kmp: DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL: Dump
+   reference lists at the end of section ENPT and ITPT.
+ - Internal KMP GOBJ database updated by CT-Wiiki object table.
+
+
+szs v1.61a r7601 - 2018-09-23
+
+ - Bug fix for the new route analysis (e.g. wkmpt DRAW): The positions were
+   wrong (e.g. NAN or too large) when analysing ITPT.
+ - New command: wszst ISARENA: Check the arena status of a SZS file, print a
+   status line and exit with an appropriate status code.
+
+
+szs v1.62a r7620 - 2018-11-07
+
+ - Windows version only: Update to Cygwin 2.11.1.
+ - Cygwin bug fix: Color support failed, if tools started in a Windows console
+   window or as script outside a Cygwin window.
+ - The text parser (mainly used to scan KMP text files) supports the new data
+   type STRING. Different string functions and command @EXEC added.
+ - Battle arena detection improved.
+ - New command: wstrt HEXDUMP: Dump the content of a DOL file ordered by the
+   memory addres. Enter "wstrt help hexdump" to get a list of the many ouput
+   formatting options.
+
+
+szs v1.62b r7624 - 2018-11-08
+
+ - Bug fix for new parser STRING support.
+
+
+szs v1.62c r7630 - 2018-11-10
+
+ - wstrt --add-section FILE: If a single file is not found and the filename
+   (not path) contains at least 1 '@' character, then all '@' characters of
+   it are replaced by the region code (one of P,E,J,K) for a second try.
+ - New option for Command wstrt HEXDUMP: --sname=LIST: Select addresses to
+   dump by section names.
+
+
+szs v1.62d r7634 - 2018-11-11
+
+ - DOL detection improved.
+ - Tool wstrt: After patching main.dol for Wiimmfi.de, the HTTP header
+   "Host: DOMAIN" is not longer sent twice.
+ - Tool wstrt: Patching and analysing of DOL files improved.
+ - Tool wstrt automatically patch main.dol to support the new login method
+   at Wiimmfi.de, when using option --wiimmfi.
+
+
+szs v1.63a.beta1 r7657 - 2018-11-17
+
+ - Tool wstrt: The method to patch main.dol to support the new Wiimmfi login
+   changed: It don't use the Gecko Code Handler any more.
+ - The cheat code memory is allocated dynamically. It supports a total of more
+   than 90000 cheat code lines (>720kb).
+ - Behaviour of option --gct-move changed: It optionally accept one of the
+   keywords OFF, AUTO and ON. Without parameter, AUTO is used.
+ - A warning message is printed, if CT-CODE (option --add-ctcode) should be
+   added to a not original main.dol.
+
+
+szs v1.63a r7664 - 2018-11-19
+
+ - Tool wstrt: All around Wiimmfi and CT-CODE patching, and around cheat code
+   management tuned and optimized. On the fly, some small bugs fixed.
+   Related options: --add-section --gct-move --gct-addr --gct-space
+   --add-ctcode --wiimmfi --domain --https --wc24 --force
+
+
+szs v1.64a r7680 - 2018-11-23
+
+ - Tool wstrt: Wiimmfi patching optimized again, especially in combination
+   with CT-CODE.
+ - New option for tool wstrt: --clean-dol: Remove additional DOL sections,
+   reset entry point and VBI address, and try to restore other patches known
+   by SZS tools. This is done after loading a DOL and before analysing and
+   patching to allow re-patching.
+ - Error logging improved.
+
+
+szs v1.65a r7690 - 2018-12-23
+
+ - Support of BMG files without section MID1.
+ - New Option: --bmg-mid=MODE: Control the creation of BMG section MID1.
+   MODE is one of OFF, AUTO (default) or ON.
+ - The impact of options --n-mipmaps, --max-mipmaps and --mipmap-size changed.
+   All 3 options together control the automatic creation of mipmaps.
+   Read https://szs.wiimm.de/info/mipmap.html for details.
+ - Option --smart is deprecated and ignored now. The new option --fast-mipmaps
+   will enable the old algorithm for images with odd width or with odd height.
+   Read https://szs.wiimm.de/doc/img/resize for details.
+
+
+*******************************************************************************
+*******                              END                                *******
+*******************************************************************************

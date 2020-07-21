@@ -1,0 +1,153 @@
+
+szs v0.01a.beta r2385 - 2011-03-31
+ - First version of tool 'wszst' (Wiimms SZS Tool) with the commands LIST,
+   COMPRESS, DECOMPRESS, EXTRACT and CREATE.
+
+szs v0.02a r2417 - 2011-04-04
+ - First version of tool 'wbgmt' (Wiimms BGM Tool) with the commands LIST,
+   PATCH, DECODE and ENOCDE.
+
+szs v0.04a r2457 - 2011-04-09
+ - wbmgt: Support of Nintendos 0x1a escape in BGM/TEXT as "\z{head,value}".
+ - New command: wszst NORMALIZE: Resort and recompress an U8 archive like
+   Nintendo does it. Best custom compression at all.
+
+szs v0.09a r2636 - 2011-05-17
+ - First version of tool 'wstrt' (Wiimms StaticR Tool). It allows to rearange
+   the slot order for tracks and arenas.
+
+szs v0.11a r2670 - 2011-06-04
+ - Extraction of BREFF and BREFT files.
+
+szs v0.13a r2840 - 2011-07-09
+ - First version of tool 'wimgt' (Wiimms Image Tool). It will convert BREFT
+   subfiles, TPL, TEX0 and PNG to each other format. Supported image formats
+   are I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA32, C4, C8, C14X2 and CMPR.
+
+szs v0.15a r2917 - 2011-08-07
+ - First version of tool 'wkmpt' (Wiimms KMP Tool). The decoder creates a
+   user friendly text file and the encoder a binary file.
+
+szs v0.19a r3033 - 2011-09-15
+ - Implementation of a parser with arithmetic expressions and nested
+   @IF..@ELIF..@ELSE..@ENDIF. The parser is used to scan KMP text files.
+ - First support of an internal Object DB (copy of Wiki page 'Object').
+
+szs v0.22a r3166 - 2011-11-06
+ - The KMP encoder is now a 2 pass compiler and the whole source is scanned
+   twice. In pass 1 only names are defined and warnings are suppressed. In
+   pass 2 all objects are defined.
+
+szs v0.23a r3243 - 2011-11-25
+ - Support of 3D vector variables and parser functions.
+
+szs v0.26a r3415 - 2012-02-04
+ - First version of tool 'wkclt' (Wiimms KCL Tool). It can only create OBJ
+   files.
+
+szs v0.28a r3463 - 2012-02-20
+ - Improved usage of Object DB and first implementation of the auto-add archive
+   to add missing objects automatically.
+ - The parser supports now much more functions.
+
+szs v0.29a r3515 - 2012-02-28
+ - First implementation of 'wkmpt CHECK' to make KMP plausibility checks.
+
+szs v0.33a r3627 - 2012-05-02
+ - The text parser supports now 5 kinds of loops.
+
+szs v0.34a r3659 - 2012-05-12
+ - The text parser supports now user defined macros and functions and a new
+   private name space.
+
+szs v0.36a r3720 - 2012-05-28
+ - The tools can now create a KCL file from scratch ony by importing an OBJ
+   file. The internal octree generator works fine and can be controlled by
+   different constants.
+ - KCL scripts are supported (option --ksl-script=file).
+
+szs v0.42a r3927 - 2012-07-06
+ - KCL (and octree) creator are now very good. Last importand issues are
+   fixed. The octree cubes overlap now.
+ - KCL trasformation is enabled.
+
+szs v1.01a r3987 - 2012-07-22
+ - Automated adjusting of minimaps is now possible.
+
+szs v1.02a r3992 - 2012-08-01
+ - KCL: Detection of invalid triangles and face down roads implemented. Both
+   kinds can be removed controlled by option --kcl=modes.
+
+szs v1.05a r4097 - 2012-09-29
+ - For text files, only the first 4 characters are used as magic ('#BMG'
+   instead of '#BMG-TXT'; same for '#KCL', '#KMP' and '#MDL'). On creation
+   a 8 character magic is still written for compatibility.
+ - Files './AIParam/AIParam.baa' and './AIParam/AIParam.bas' are now known by
+   the internal file database.
+
+szs v1.06a r4110 - 2012-10-06
+ - wszst CHECK will now make slot proposals with comments.
+ - New command: wszst SLOTS: Print the possible slots for a track file.
+
+szs v1.07a r4137 - 2012-10-19
+ - New archive format: WU8 (Wiimms U8).
+
+szs v1.09a r4169 - 2012-11-11
+ - BZIP2 compression is now supported as alternative to Yaz0. It is dedicated
+   to the WU8 file format for transferring files. BZIP2 files are smaller than
+   Yaz0 files and the creation is faster.
+ - First WBZ support.
+
+szs v1.13a r4258 - 2013-03-01
+ - New option --rm-aiparam (short cut: --rmai): If set, the directory AIParam
+   and all files are removed from the archive.
+
+szs v1.17a r4358 - 2013-04-23
+ - 3D rotation for all 3 axis and transformation of whole tracks.
+
+szs v1.21a r4578 - 2013-09-07
+ - A very old well known bug is now fixed: The old versions couldn't create
+   the language independent SZS files of MKWii directory './Scene/UI' like
+   Track.szs, Race.szs and others.
+
+szs v1.22a r4602 - 2013-09-14
+ - BMG text patching of SZS files is now possible without extract, patch and
+   recreate using the command "wszst PATCH --patch-bmg ..."
+
+szs v1.23a r4682 - 2013-10-05
+ - CT-CODE support to manage CT distributions with >32 tracks.
+
+szs v1.34a r5070 - 2014-04-19
+ - Direct slot transforming of tracks with option --slot=NAME.
+
+szs v1.35a r5184 - 2014-05-16
+ - Support of the new custom server 'wiimmfi.de'.
+
+szs v1.40a r6162 - 2015-04-13
+ - Support for PACK archives & PAT0 files.
+ - New tool: wpatt
+
+szs v1.44a r6558 - 2015-10-17
+ - Advanced BMG support with larger attributes.
+
+szs v1.45a r6602 - 2015-10-31
+ - Support of external CT-CODE files.
+ - Update to current CT-CODE version.
+
+szs v1.57a r7484 - 2018-04-11
+ - Removal of very small triangles to avoid KCL glitches.
+
+szs v1.60a r7578 - 2018-08-21
+ - Advanced support of battle arenas.
+ - Support of dispatch points (enemy routes)
+
+szs v2.00a
+ - Support of LE-CODE (Leserattes CT-CODE).
+ - VR calculations.
+
+szs v2.01a
+ - First LEX support.
+
+szs v2.08a
+ - Support of all known BMG encodings (CP-1252, UTF-16, SHIFT-JIS and UTF-8).
+

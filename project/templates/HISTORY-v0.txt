@@ -1,0 +1,784 @@
+
+@@MODULE(head.txt)@@
+
+
+*******************************************************************************
+*******                           HISTORY v0.*                          *******
+*******************************************************************************
+
+szs v0.01a.beta r2385 - 2011-03-31
+
+ - new Tool: wszst (Wiimms SZS Tool)
+   The following main commands are supported:
+     LIST, COMPRESS, DECOMPRESS, EXTRACT, CREATE.
+
+
+szs v0.01a r2392 - 2011-04-01
+
+ - Bug fix for "wszst CREATE": Wrong calculation of parent directory link.
+ - New option: wszst CREATE --align: Overwrite the default aligment (32=0x20).
+ - wszst LIST: If --long is set three times debugging mode is enabled.
+ - wszst LIST: If listing a directory, then a virtual SZS file is created
+   (like CREATE do it) and listed.
+ - New command: wszst DIFF: Compare two sources (each SZS, U8 or directory)
+   on file level and report mismatches for each sub file.
+
+
+szs v0.02a r2417 - 2011-04-04
+
+ - New option: --max-file-size: This options set the limit for input files.
+   The default value is 20 MiB.
+ - Option --dest: If the parameter is '-' the output is redirected to stdout.
+ - New tool: wbmgt: Wiimms BMG Tool
+   Commands:
+     - LIST   : List a message file to proof the content.
+     - PATCH  : Patch the entered text files.
+     - DECODE : Decode (and patch) the entered text files.
+     - ENCODE : Encode (and patch) the entered text files.
+
+
+szs v0.03a r2437 - 2011-04-06
+
+ - wszst: Compression algorithm improved: The compression is now about 40%-50%
+   faster than before.
+ - wszst: New option --compr=level: define a compression level between 0-9.
+   Three clear text parameters accepted too: NONE=0, FAST=1 and BEST=9.
+ - wszst: New option --fast: This is a short cut for --compr=fast. Usually
+   "CREATE --fast" needs about 1/4 of time, but creates ~25% larger SZS files.
+ - New command: wszst CAT: Extract one or more sub files of SZS/U8 archives.
+   The output is written to stdout. Multiple outputs are concatenated.
+ - New command: wbmgt DIFF: Compare two BMG (raw or text) file on string level
+   and report mismatches for each string.
+ - wbmgt --patch: new mode: HIDE
+ - wbmgt is able to read BMG files directly from a SZS file. Just use a
+   combined path as 'my.szs/message/Common.bmg'
+ - new option: --ignore: Ignore non existing source files without warning.
+
+
+szs v0.04a r2457 - 2011-04-09
+
+ - SZS compression improved: It uses now overlaps and save about 2% size.
+   With more complicated algorithm (that needs much more time) better
+   compression is possible -- but it's not worth it.
+ - wszst LIST --long: View the magic (first 4 bytes) of each file too.
+ - wszst can list, diff, (de-)compress and extract SZS.BRRES files.
+ - wbgmt: Bug fix: Wrong string end detection for the last message if
+   scanning Nintendos 0x1a (CTRL-Z, ASCII 'SUB') escape sequences.
+ - BGM/TEXT format: Allow \z{head,value} for Nintendos 0x1a escape sequence.
+ - Bug fix for wszst+wbmgt DIFF: Some files only in source #2 were not listed.
+ - New command: wszst NORMALIZE: resort and recompress an U8 archive.
+ - New option: wszst --norm: Force normalization while copying/converting.
+ - Many layout things.
+
+
+szs v0.05a r2498 - 2011-04-15
+
+ - Code view & fine tuning (many little things...)
+ - wszst NORMALIZE: Bug fixed if source does not contain a "." directory.
+ - wszst CREATE+NORMALIZE: The files are ordered like Nintendo does it.
+ - New command: wszst SHA1: calculate and print the SHA1 checksum of
+   the decompressed data of all source files.
+ - wszst+wbmgt DIFF: If option --dest is set then all sources are compared
+   with the destination.
+ - New option: wszst --pdir (`point directory'): Decides if a base directory
+   named "." should be created. Modes are: REMOVE, AUTO, FORCE.
+ - New option: --preserve: If set, mtime and atime of the source(s) are used
+   to set the destination time stamps.
+ - wbmgt: If creating a text BMG file option --ho-header (or -H) suppresses
+   the output of the syntax information section.
+ - wbmgt: If creating a text BMG file the message IDs for tracks, battle
+   tracks and chat messages will be replaced by 'Txx', 'Uxx' and 'Mxx'.
+   This feature is disabled if option ---long is set.
+
+
+szs v0.06a r2540 - 2011-04-27
+
+ - If extracting a SZS, U8 or BRRES archive a file named 'wszst-setup.txt' is
+   created. It contains some infos for a following creation.
+ - New option --ignore-setup: Ignore setup file 'wszst-setup.txt'.
+ - Option --pdir renamed to --pt-dir. --pdir is still allowed.
+ - wszst CREATE: Can now create a BRRES file as copy of a directory structure.
+ - wbmgt: If creating text BMG files, than unicode escapes "\z{801,hexnum}"
+   are written as \u{hexnum}. v0.05a can already scan such unicode escapes.
+ - wbmgt: new patch mode "print": create a new text using %s-escapes (like
+   print functions) to insert the old one.
+ - "wszst EXTRACT" can extract archives recursively and can decode BMG files
+   on the fly. This is controlled by the options --recurse, --decode and
+   --all. All needed information for recreation is stored in the setup file
+   'wszst-setup.txt'.
+ - "wszst CREATE" creates a recursively directory structure created by EXTRACT
+   using 'wszst-setup.txt' as script. Files will be encoded again.
+
+
+szs v0.07a r2584 - 2011-05-05
+
+ - wbmgt --patch mode PRINT:
+    - New escape %i inserts the message ID (MID, good for finding IDs)
+    - Inserting 'b-e' or 'e' between '%' and conversion character limits the
+      number of characters to copy. 'b' (begin) and 'e' (end) are numbers.
+ - Bug fix for wszst: The base directory was not always created if the U8
+   archive has not point directory as base.
+ - Bug fix for wszst: If creating a BRRES file the programm runs sometimes
+   in a wrong assertion and terminates.
+ - Bug fix for wszst: Adjust all external offsets of BRRES sub files.
+ - wszst LIST: Can list files recursive if --recurse or --all is set.
+ - wszst: A string pool is added to extracted BRRES sub files. This string
+   pool is used for the creation of new BRRES files.
+ - "wszst CREATE file.brres" works now, but see also "Known bugs".
+ - New command: wszst DUMP: Dump the internal structure of BRRES files. The
+   main goal is to verify string relocation.
+
+ - Known bugs:
+
+    - If creating a BRRES the internal name of the sub file is not set to
+      the filename. This could be problematic if a sub file was renamed.
+
+
+szs v0.08a r2617 - 2011-05-12
+
+ - Improved support for BRRES sub file versions (more string pointers).
+ - wszst EXTRACT --raw: Extract BRRES sub file in raw mode and do not adjust
+   string pointers and other offsets.
+
+ - Known bugs:
+
+    - If creating a BRRES the internal name of the sub file is not set to
+      the filename. This could be problematic if a sub file was renamed.
+
+
+szs v0.09a r2636 - 2011-05-17
+
+ - New tool: wstrt: Wiimms StaticR Tool: manipulate StaticR files of MKW.
+    - It can analyze StaticR files and detects CTGP 4.4. patches and
+      modifications of track and arena orders.
+    - It can patch StaticR files and modifies the track and arena order.
+      So it is possible to move tracks with special features (like snow
+      or fog) to other slots.
+    - Commands TRACKS and ARENAS show details about tracks and arenas.
+      The order may be in StaticR related order.
+    - Command FILES shows the track and sound file names of all tracks and
+      arenas in machine readable format (not vertically formatted, one space
+      to separate columns). The order may be in 'StaticR' related order.
+   IMPORTANT: wstrt is EXPERIMENTAL!
+ - New option: --tracks=list: This option allow to define a new track order
+   for Mario Kart Wii. Tool wstrt uses this option for patching the track
+   order. Tools wszst and wbmgt use this to define the relation between Txx
+   and real message IDs.
+ - New option: --arenas=list: Does the same for arenas as --tracks for tracks.
+
+
+szs v0.10a r2651 - 2011-05-21
+
+ - wstrt: Support for NTSC/JAP and KOREA version of StaticR.rel.
+ - wstrt: new command: FIND: Find tracks and arenas by name.
+
+
+szs v0.11a r2670 - 2011-06-04
+
+ - New option: --single-line (-1): No continuation lines for BMG text output.
+ - Support for BREFF and BREFT files: Listing and extraction, but not creation:
+    - wszst LIST: List also BREFF and BREFT files including recursive lists.
+    - wszst EXTRACT: Extract also BREFF and BRRES files. Recursive extraction
+      of theses file types is implemented but disabled because of not
+      implemented creation support.
+
+
+szs v0.12a r2693 - 2011-06-16
+
+  - Bug fix for Windows install script: Remove duplicate SZS entries from PATH.
+  - wszst CREATE: Create BREFF and BREFT files.
+
+
+szs v0.13a r2840 - 2011-07-09
+
+ - Bug fix for tool wszst: Tool chrashed when creating BRRES files with empty
+   sub directories.
+ - wszst: Export of internal images (BREFT subfiles, TPL, TEX0) to PNG files
+   is done while extracting archives if decoding is enabled. Supported image
+   formats: I4, I8, IA4, IA8, RGB565, RGB5A3, RGBA32, C4, C8, C14X2 and CMPR.
+ - New tool: wimgt = Wiimms Image Tool : Convert and manage images files.
+   Supported file types: BREFT subfiles, TPL, TEX0 and PNG.
+    - wimgt LIST:    List images files and print types and geometry data.
+    - wimgt DECODE:  Export an internal image to a PNG file.
+    - wimgt ENCODE:  Import PNG images and store them in internal formats.
+    - wimgt CONVERT: Convert formats (file and image format).
+ - All tools: new command FILETYPE (=FT): Scan the header of the entered files
+   and print file type and path for each file as list.
+
+
+szs v0.14a r2862 - 2011-07-14
+
+ - New command: wszst UPDATE: Update sub files in an already existing archive.
+ - wbmgt --patch mode=file: A equal sign '=' is now used to separate mode and
+   filename. The old comma separator ',' is allowed but deprecated.
+ - New option for wimgt: --patch mode=file
+   This option allows to patch images by a list of other images.
+
+
+szs v0.15a r2917 - 2011-08-07
+
+ - New tool: wkmpt: Wiimms KMP Tool
+   - wkmpt DECODE: Decode a binary KMP file and store the results
+     as user friendly, but machine readable text file.
+   - wkmpt ENCODE: Encode a text KMP file and store the results binary.
+     Indexing and grouping and some other stuff are done automatically.
+ - wszst EXTRACT: KMP files are decoded automatically.
+ - wszst CREATE: Encode KMP files automatically if changed.
+ - New image options for wszst: --transform= --encode-img
+
+
+szs v0.16a r2931 - 2011-08-13
+
+ - Support of "Byte Order Marks" (BOM) when reading UTF-8 text files.
+ - New algorithm for CMPR image compression.
+ - Bug fix for KMP text files: Due a wrong info in the CT-Wiiki the 'prev'
+   and 'next' grouping values were swapped.
+ - Bug fix for KMP text files: Setting "[CKPT]/@AUTO-NEXT=1" failed.
+
+
+szs v0.17a r2941 - 2011-08-16
+
+ - Scan KMP text: Correct line numbers in error messages.
+ - KMP: [CAME], [GOBJ] and [CHKT] entries can use names to point to the route
+   or respawn entries into the [POST] or [JGPT] sections. This makes list
+   modifications (inserting, removing, reordering) much easier.
+ - KMP: Parameter '@AUTO-ID=1' enables automatic setting of ID values.
+ - KMP text export:
+     - Improved and more detailed documentation.
+     - The sections are now sorted alphabetically.
+     - Links into other section uses generic names instead of index numbers.
+
+
+szs v0.18a r2959 - 2011-08-26
+
+ - KMP: Improved text output with additinal infos.
+ - KMP: More intelligent group naming.
+ - KMP: Linear calculated points in CKPT, ENPT and ITPT.
+ - KMP: User may define local and global variables.
+ - KMP: Objects can be referenced my name (eg. o$itembox).
+ - KMP: Inter section links (AREA->CAME, CAME->POTI, GOBJ->POTI, CKPT->JGPT)
+   using names instead of indices. This allows easy reorganisation.
+ - KMP: AREA+CAME syntax (table layout) changed, old format stays compatible.
+
+
+szs v0.18b r2966 - 2011-08-30
+
+ - Several small KMP decoding+encoding improvements.
+
+
+szs v0.19a r3033 - 2011-09-15
+
+ - New option: --const NAME=VALUE,...
+   With this option the user can predefine variables in the command line.
+ - KMP scanner supports C like arithmetic expressions.
+ - KMP scanner supports nested @IF..@ELIF..@ELSE..@ENDIF structures.
+ - The KMP scanner accept copy&paste text of the SZS-Modifier, if parameter
+   @SZS-MODIFIER is set to 1.
+ - If decoding a KMP text file, names of entries of the source are used
+   instead of generic names while creating the destination output.
+ - Object infos (name, short description, parameters) are inluded into the
+   KMP object list.
+ - A decoded KMP file contains a template for parameters and conditional
+   encoding. Option --no-param (-P) disables the template.
+ - Several small KMP decoding+encoding improvements.
+ - New command: wkmpt SYMBOLS: Print a table with all predefined symbols.
+ - wszst CAT --decode: Decode files before output if possible.
+ - New command: wszst KMP: Open the sub file @course.kmp@, decode and print it.
+ - New command: wszst INFO: Print the content of the subfile 'info.txt'
+   or 'credits.txt' (first found file used, case ignored).
+
+
+szs v0.20a r3069 - 2011-09-30
+
+ - Bug fix for KMP decoding: A wrong name was written for the opening camera.
+ - New option: --brief: Create KMP text files without most info lines. If set
+   twice, the output of unneeded sections is also suppressed.
+ - Tools exit with error status on encoding errors.
+ - The new KMP command '$BEZIER' works similar like '$LINE' and create
+   quadratic and cubic bezier curves for CKPT, ENPT, ITPT and POTI sections.
+ - New KMP commands: @ECHO and @WARN: Print a message or a warning.
+ - New option: --no-echo: Suppress messages made by the new '@ECHO' command.
+ - The KMP encoder and decoder support a free info string. It is stored at
+   and load from the end of the KMP file behind all sections.
+ - Mac: Support for PPC disabled, because the new LIBPNG does not support it.
+ - Mac: LIBPNG is now linked static. So there is no longer a need for Mac
+   users to install LIBPNG.
+
+
+szs v0.21a.beta1 r3092 - 2011-10-09
+
+ - New wszst commands: XDECODE (=XD) as short cut for "EXTRACT --decode" and
+   XALL (=XA) as short cut for "EXTRACT --all".
+ - KMP encoder: Support of names for route points (section POTI).
+ - Mipmap support improved:
+    - If reading a TEX or BREFT, all mipmaps are scanned and internal stored.
+    - If reading a TPL file, all images are scanned internal stored.
+    - If reading a PNG, the tools search mipmap files.
+    - If storing a PNG, one PNG file is created for each image.
+    - If saving a format, all images are saved. The mipmaps of TEX and BREFT
+      are resized to have the correct size (half of the previos image).
+    - Option --no-mipmaps disables mipmap support.
+    - Option --n-mipmaps=NUM force the number of mipmaps. If needed, the
+      missing mipmaps are created from the existing images.
+
+
+szs v0.21a r3142 - 2011-10-29
+
+ - Windows version only: Update to Cygwin DLL 1.7.9-1
+ - Bug fix: If creating a TEX from multiple PNG files, sometimes not all
+   PNG sources were used.
+ - Bug fix: If extracting BRRES files, the informative file '.string-pool.txt'
+   was sometimes empty.
+ - The KMP/CAME text output contains now comments about camera, zoom and view
+   point durations. This helps to find out a good camera setup.
+ - KMP/CAME scanning: If zoom or view point speed is set to value -1, then the
+   value is calculated so that the time coincides with the camera running time.
+ - Internal object database updated.
+
+ - The following points improve the diagnostic and analysis features:
+    - New wszst command: ILIST (or IL): List all images of an archive. To view
+      all sub archives recursivley, set option --all. Command ILL and ILLL are
+      short cuts for 'ILIST --long' and 'ILIST --long --long'.
+    - New option for tool wszst: --sort (-S): Define a sorting method for the
+      output of commands LIST and ILIST.
+    - New wszst command: MEMORY: Print a (recursive) memory map of all sources.
+    - New option --cut for "wszst LIST" and "wszst MEMORY": Cut different non
+      archive files into peaces (headers, groups, sections, ...) and list these
+      peaces as single sub files for a more detailed analysis.
+      Supported file types: BMG, BREFT-IMG, KMP, TEX, TPL and BRRES sub files.
+
+
+szs v0.22a r3166 - 2011-11-06
+
+ - The KMP encoder is now a 2 pass compiler and the whole source is scanned
+   twice. In pass 1 only names are defined and warnings are suppressed. In
+   pass 2 all objects are defined.
+ - KMP logging: The job info line is now printed before warnings.
+ - Some new CAME+POTI variables are defined automatically as help for
+   calculated parameters, e.g. came.time or viewpt.len.
+ - If decoding or encoding a KMP, a plausibility check is done. This should
+   help to find KMP errors. Option --no-check disables this check. You can
+   find a detailed list of all checks on the tools website:
+    * https://szs.wiimm.de/cmd/wkmpt/check#desc
+ - New command: wkmpt CHECK: Run a KMP check and return 'DIFFER' as exit
+   status if any KMP error found.
+ - New command: wkmpt OBJECTS: Search objects in the internal object database
+   using the entered keywords and print infos about each found object.
+   Options --brief and --long control the verbosity of output. A online query
+   is also available: https://szs.wiimm.de/cgi/mkw/object
+ - Internal object database updated.
+ - KMP compiler/POTI: New command '$COPY': Copy some or all points from
+   previous defined routes.
+ - KMP compiler/POTI: New commands @shift-route, @hrotate-route, @scale-route:
+   These commands transform all points of a route.
+
+
+szs v0.23a r3243 - 2011-11-25
+
+ - New command: wkmpt CAT: Print decoded KMP files to stdout.
+ - New option for wkmpt: --generic: Use generic names as references instead
+   of the names scanned from the source file.
+ - "wszst DIFF" supports now --recurse and --cut (and --all) to list
+   differences on sub file level.
+
+ - Support of 3D vector variables and parser functions:
+    - New @DEF* and @GDEF* commands to define variables. The old @NUM, @GNUM,
+      @INT... are stil possible.
+    - Parser functions implemented, e.g. sin(x), hRot(pt,deg,[origin]). All
+      values of all KMP objects can be read by functions.
+    - New command: wkmpt FUNCTIONS: Print a return type and syntax info about
+      all parser functions. If --long is set, a little description is added.
+      The output can be filters by keywords.
+    - New command: wkmpt CALCULATE: Calculate each expression and print the
+      result to standard output.
+
+ - Tool wstrt can now detect and patch region settings:
+    - wstrt ANALYZE: If a region patch is detected, a message is printed.
+    - wstrt PATCH --region=val: Patch a StaticR.rel to the entered region or,
+      if 'val' is 'RESET', restore it to the original Nintendo values.
+
+
+szs v0.24a r3316 - 2011-12-30
+
+ - Feature to debug routes: The KMP compiler can automatically define
+   itemboxes for route points of the sections ENPT, ITPT and/or POTI.
+ - New commands: "wszst+wkmpt SYNTAX": Print out the generel syntax rules
+   for the text parser and compiler.
+ - Several bugs of parser functions fixed and some new functions added.
+ - Object DB updated.
+ - New feature: KMP transforming
+   The tools wszst & wkmpt support the new options --shift, --scale and
+   --hrot. With this options all position, size and rotation parameters
+   of a KMP can be transformed. The transformation is supported by nearly
+   all data commands like DECODE, ENCODE, CREATE, EXTRACT and NORMALIZE.
+ - wszst LIST/MEMORY/EXTRACT/UPDATE: Support of RARC and ARC files.
+   Creating a RARC file is not supported yet.
+
+
+szs v0.25a r3321 - 2011-12-31
+
+ - The transformation options are now a little bit easier to handle:
+    - The execution order is now --scale before --shift before --hrot.
+    - New options for easier scale and shift setup: --xss, --yss and --zss.
+      => The user must select 2 points and make a note of the coordinates in
+         the old and in the new model. Then he must enter the coordinates as
+         parameters like --xss x1old,x1new,x2old,x2new and the scale and shift
+         values are calculated automatically.
+
+
+szs v0.26a r3415 - 2012-02-04
+
+ - New general parser functions: dot(), cross(), unit().
+ - New KMP specific parser functions: enpt$hDir(), enpt$next(), itpt$hDir(),
+   itpt$next(), stgi$byte().
+ - An online function reference is also available:
+    -> https://szs.wiimm.de/cmd/functions#desc
+ - Bug fix: If scaling, the calculation of column 'scale' of sections ENPT
+   and ITPT were wrong.
+ - KMP/STGI table format changed to support 'pole position' and 'narrow'.
+ - Command FILETYPE: Accept --long to print an additional column with the
+   decompressed file type.
+ - wszst EXTRACT supports now --cut and stores the cutted peaces of files
+   into hidden directories.
+ - wszst EXTRACT supports extraction of BRRES sub files and all other file
+   formats, that supports the --cut option.
+ - New command for all tools: FILEATTRIB: Print out a table with all supported
+   file types and operations.
+ - First KCL support:
+    - New tool: "wkclt" with command DECODE (convert to obj like the
+      KCLexporter of `blank').
+    - Tool wszst: If decoding is enabled, convert KCL to an obj file.
+    - Support for option --cut.
+ - wkmpt+wbmgt ENCODE: Wrong automatic file extensions fixed.
+ - New option for all tools: --chdir: Set a new working directory for all
+   following options, for all parameters and for the execution.
+
+
+szs v0.27a r3437 - 2012-02-14
+
+ - KMP, sections JGPT+CNPT+MSPT: If parameter '@SNAP-TO-ENPT' is set to a
+   numeric value, then all points will be moved to the nearest point of the
+   ENPT section plus the entered value. The horizontal direction (Y-rotation)
+   is calculated to point to the next ENPT point, section linking is observed.
+ - KMP: Command '@ROUTE-ITEMBOX' is now avaialable for sections ENPT, ITPT,
+   JGPT, CNPT, MSPT and POTI.
+ - wszst EXTRACT: New option --ext or -e (for BRRES archives only): If a file
+   is extracted, add a handy file extension (like '.mdl') to the file name.
+   If set twice and a textual file magic is available, use the file magic in
+   lower case instead (like '.mdl0').
+ - wszst CREATE: If creating a BRRES archive, the new file extensions (see
+   above) are detected and removed.
+ - wszst+wkmpt: More KMP checks.
+   See https://szs.wiimm.de/cmd/wkmpt/check#desc for a complete list.
+
+
+szs v0.28a r3463 - 2012-02-20
+
+ - New command: wszst AUTOADD: Show the status of a auto-add archive and add
+   BRRES, BREFF and BREFT files to it.
+   Try "wszst AUTOADD ./path_to/Race/Course/" to add all supported files.
+ - New option: --auto-add (short: --aadd): Analyze the KMP (if exist) and add
+   missing BRRES files automatically, if the tool can find the files in any
+   sub directory named 'auto-add'. This sub directory is searched in all
+   directories of 'SEARCH_PATH'; try 'wszst AUTOADD' to view them.
+ - New command: wszst CHECK: Check track files: Try to read KMP (and check it)
+   and find missing BRRES, BREFF and BREFT files needed by used global objects.
+ - KMP/CKPT: The KMP compiler is now able to make check points visible by
+   using and scaling any global object. For details read the built in help.
+   If enabled, option --auto-add is implicitly set.
+
+
+szs v0.29a r3515 - 2012-02-28
+
+ - KMP/GOBJ @SORT-OBJECTS=mode: The KMP compiler can sort objects in 2 ways.
+ - KMP/POTI: There are new transformation commands with changed syntax and
+   semantics. They are now identical to the global transformation options.
+ - KMP/POTI: Command @REVERSE-ORDER reverse the order of points of a route.
+ - Command 'wkmpt OBJECT --long' lists all needed files for each object.
+ - Minimum support (detection only) for file type BRASD.
+ - AUTO-ADD database: Object dependent KCL and BRASD files added.
+   Please redo: "wszst AUTOADD ./path_to/Race/Course/"
+ - New command: wszst TRACKS: Print a list of all known track SZS files of
+   Mario Kart internal directory './Race/Course'. These files are 32 standard
+   track files, 10 arena files, and 9 other files.
+ - KMP/CKPT: The KMP compiler is able to make check points visible by using
+   and scaling global objects. The interface has changes to allow different
+   viewing modes (forget the old settings). See built in help for details.
+ - New Command: wszst CHECK: Make a validity check for track files: Try to
+   read KMP (and check it) and find unknown, modified, needed and unneeded
+   files. This command uses a new internal object and file database.
+    - HINT: Unknown file:     This will is not part of any Nintendo track.
+    - HINT: Additional file:  Known file with unknown usage.
+    - HINT: Modified file:    This file is different to Nintendo tracks.
+    + WARNING: Missing file:  This file is needed/used (by an object).
+
+
+szs v0.29b r3528 - 2012-03-02
+
+ - Bug fix for "wszst CHECK": There was a crash with core dump if analyzing
+   a SZS without valid KMP.
+
+
+szs v0.30a r3548 - 2012-03-10
+
+ - There is a new BRRES subfile iterator. The old one is very strict and do
+   wrong things with BRRES strings and names while extracting some custom
+   tracks (Nintendo tracks work fine). The new one is more tolerant and runs
+   better on custom tracks. Now you can extract and repack every track.
+   Use option --OLD to activate the old iterator.
+
+
+szs v0.31a r3579 - 2012-04-06
+
+ - Bug fix if BRRES sub file is cutted into sections:
+   Wrong size calculation of last section, if section type is unknown.
+ - BTI support:
+    - All tools and listing commands: Detect BTI files and print details.
+    - wimgt: Can now convert TPL, TEX, BTI, BREFT and PNG into all directions.
+    - wszst: Decode and encode BTI files on the fly.
+
+
+szs v0.32a r3593 - 2012-04-14
+
+ - Bug fix for option --auto-add: Sometimes a segmentation fault appeared when
+   auto adding a missing subdirectory for a missing file.
+ - New command: wimgt COPY <source> <dest>
+   Copy and convert source image to dest image. The default destination file
+   format is selected by scanning the file extension of the destination.
+   This is an alternative for the ENCODE and DECODE commands.
+ - KMP parser: @DEF.ENUM and @GDEF.ENUM define enumerated values.
+ - KMP parser: @DEF.SHIFT and @GDEF.SHIFT define shifted bit masks.
+
+
+szs v0.33a r3627 - 2012-05-02
+
+ - Because of an update of the internal object & file database, redo the
+   command "wszst AUTOADD ./path_to/Race/Course/" to add more files to the
+   autoadd database -> see https://szs.wiimm.de/doc/autoadd for more info.
+ - wszst CHECK: Detect "optional files".
+ - KMP: New command '@HSNAP-TO-ENPT' is similar to '@SNAP-TO-ENPT', but
+   ignoring the vertical value of the enemy points.
+ - The text parser supports 5 kinds of nested loops (EXPERIMENTAL):
+     @LOOP    ... @ENDLOOP   : umlimted loop
+     @REPEAT  ... @ENDREPEAT : loop with a predefined repeat count
+     @FOR     ... @ENDFOR    : classical 'for' with iterator variable
+     @FOREACH ... @ENDEACH   : for each element in list
+     @WHILE   ... @ENDWHILE  : classical 'while' with condition
+   There are also conditional @BREAK and @CONTINUE.
+ - The KMP syntax and semantics documentation is now online available:
+    -> https://szs.wiimm.de/doc/kmp/syntax
+   The inline documentation in decoded KMP files is now much shorter.
+ - Command SYNTAX removed. Use page https://szs.wiimm.de/doc/syntax instead.
+ - The backtracking algorithm for analyzing of CKPH + ENPH + ITPH pathes has
+   been modified and optimized, because a test version of "Toad's Turnpike"
+   has 105 ITPH groups and needs much to much steps and time to calculate
+   about 10^28 pathes total.
+
+
+szs v0.34a r3659 - 2012-05-12
+
+ - KMP text parser extensions:
+    - New commands:
+       @INCLUDE "filename": include text files.
+       @RETURN [val]: returns from the current input file.
+       @EXIT: exit the parser execution.
+       @ASSERT condition: exit execution, if 'condition' is false.
+       @MACRO .. @ENDMACRO: Define named macros.
+       @FUNCTION .. @ENDFUNCTION: Like @MACRO, but can also be used as
+          function in numerical expressions.
+       @CALL macroname(...): Call a previos defined macro with parameters.
+          '@:macroname(...)' is a short cut for '@CALL macroname(...):'
+       @DOIF (condition) anytext: Execute 'anytext', if 'condition' is true.
+    - New private variable name space: @PDEF
+       - P-Variables are only defined for the current source file or function.
+       - Loop variables (@FOR,@FOREACH) and macro parameters are defined in
+         this new private name space.
+ - New options for command FUNCTIONS (list parser functions):
+    - Option --long: The entered keys are compared against the description.
+    - Option --verbose: The description is printed too.
+ - Bug fix: Parser function minMax() returned wrong results.
+
+
+szs v0.35a r3681 - 2012-05-20
+
+ - New options for "wstrt TRACKS+ARENAS": --brief --no-header
+ - KMP sections CKPH+ENPH+ITPH: Accept unsorted groups.
+ - New patching options:
+    - For wszst and wkclt: --kcl-flag=list: Exchange KCL flags in KCL files.
+    - For wszst and wkclt: --kcl-parse=script: Execute the script for each KCL
+      file and to calculate/modify the KCL flags.
+    - For wszst and wkmpt: --rm-gobj=list: Remove global objects in KMP files.
+ - New command: wkclt FLAGS: Print usage statistics about KCL flags.
+ - New parser functions: ptInCube(cube1,cube2,pt1,...) and a strict variant
+   ptInCubeS(cube1,cube2,pt1,...): Count the points in the cube.
+ - KCL exporter creates now 3dsMax compatible OBJ files with some issues.
+
+
+szs v0.36a r3720 - 2012-05-28
+
+ - It the tools 'wkmpt' or 'wkclt' opens a SZS file, they use the internal
+   files 'course.kmp' or 'course.kcl' as source.
+ - New command: wszst KCL: Open the sub file @course.kcl@, decode and print it.
+ - KCL object exporter improved.
+ - New command: wkclt DUMP: Dumps the raw KCL records in human readable format.
+ - New command: wkclt OCTREE: Traverse and test the octree by using the entered
+   points. Logging of steps and triangles is controlled by --long and --brief.
+ - wkclt ENCODE: Import an OBJ file and create a new KCL from scratch. The
+   internal octree generator works fine and can be controlled by different
+   constants. See https://szs.wiimm.de/doc/kcl#encode for more details.
+ - If a KCL obj file with name NAME.EXT is scanned, a file name NAME.flag.txt
+   is scanned to find relations between group names and flags.
+   See https://szs.wiimm.de/doc/kcl#def-flag for more details.
+ - Read the new KCL export and import How-To: https://szs.wiimm.de/doc/kcl
+
+
+szs v0.37a r3748 - 2012-06-02
+
+ - Read "Known Bugs" or https://szs.wiimm.de/doc/kcl about KCL issues.
+ - Command "wkclt dump" prints now more octree statistics.
+   As the result of the analysis of these statstics, the octree generation has
+   been optimized and some new parameters have been established.
+ - New command: wkclt TRIANGLES: It's like DUMP, but it print only 1 line
+   for each triangle data. The goal is to compare the data with other dumps.
+ - New option: --kcl-sort: Sort the triangles by length and positions to make
+   a dump more and easier compareable.
+ - New option: --kcl-drop: Remove all triangles, that are not referenced by
+   the octree. This helps to clean the KCL of custom tracks.
+ - The OBJ exporter creates Wavefront OBJ files compatible with "3ds Max" and
+   "Google SketchUp" (TIG's OBJ-importer plugin) and maybe with more 3D tools.
+   The exported data contains now also 'vn' vectors (normals).
+ - The OBJ importer read Wavefront OBJ files created by "3ds Max" and by
+   "Google SketchUp" (TIG's OBJ-exporter plugin) and maybe by other 3D tools.
+
+
+szs v0.38a r3774 - 2012-06-05
+
+ - OBJ import and KCL creation tested with different tracks without issues.
+ - New option --kcl=list: 'list' is a comma separated list with keywords to
+   define options for the KCL processing. Allowed options are: RESET, FAST,
+   NORMALS, OUT-SWAP, IN-SWAP, AUTO, CLIP, DROP, SORT and DEFAULT.
+   See https://szs.wiimm.de/opt/kcl for details.
+ - The transforming options  --shift, --scale, -xss, -yss, -zss and --hrot
+   are now available for KCL processing.
+ - Option --kcl-parse renamed to --kcl-script.
+ - Three new parser functions for the --kcl-script script:
+     tri$setPt()  : Define new triangle points.
+     tri$shift()  : Shift all points of a triangle.
+     tri$remove() : Remove a triangle from the list.
+   If one of these function is used, a new octree is calculated.
+ - New parser functions: sec(), mSec(), uSec()
+ - Several small bugs in the KCL creation removed.
+
+
+szs v0.39a r3799 - 2012-06-09
+
+ - The KCL code was cleaned and the internal triangle data base has a new
+   optimized data structure. The new KCL tool will create the same KCL as
+   the previous r3774. Only the output of some dump commands and also
+   the created OBJ files have changed.
+ - Three new parser functions for the --kcl-script script:
+     tri$create()    : Create a new triangle.
+     tri$scale()     : Scale all points of a triangle.
+     tri$hRot()      : Rotate all points of a triangle horizontally.
+     tri$unremove()  : Clear 'REMOVED' marker
+     tri$isRemoved() : Get 'REMOVED' status.
+   Call "wkclt func tri$" for complete list of all 12 triangle functions.
+ - Command "wkclt OCTREE" renamed to "wkclt TRAVERSE".
+ - New command: wkclt COPY <source> <dest>
+   Copy and convert source collision file (KCL or OBJ) to dest. The default
+   destination file format is selected by scanning the file extension of the
+   destination. This is an alternative for the ENCODE and DECODE commands
+   for single copy operations.
+ - Optimization: If input and output are binary KCL files and only KCL flags
+   were changed, then the original KCL data is copied 1:1 to the output file
+   and only the flag values are modifed. Use --kcl=new to build always a new
+   binary KCL and to disable this optimization.
+
+
+szs v0.40a r3837 - 2012-06-17
+
+ - Windows version only: Update to Cygwin DLL 1.7.15-1
+ - The KCL obj export will now create a material file with adequate colors.
+   To disable materials support, use "--kcl -mtl".
+ - KCL flag scanning: Some 3D tools use the generic suffix '_number' in goup
+   names. This may result in a conflict with the automatic detection of KCL
+   flags. Not only therefor, the interface has changed:
+    - If creating an OBJ file, '_Fxxxx' (literal '_F' and 4 hex digits)
+      instead of '_xxxx' is now appended to the group names.
+    - If scanning a groupname, '_Fxxxx' is always accepted as flag value.
+    - The old way to detect flag values is now disabled by default, but can be
+      enabled by different --kcl keywords: 'HEX4' enables '_ffff' (flag),
+      'HEX23' enables '_tt_vvv' (type and variant) and 'HEX' enables both.
+    - The flag file may define HEX4 and/ot HEX23 to 0 (disable) or 1 (enable)
+      to override the defaults set by option --kcl.
+    - For all groups with unknown flag assignments, the unusal values 0xFFE0,
+      0xFFC0, 0xFFA0 and so on (all type 0x00 (road), each 0x20 lower) are
+      used in this order. This makes the groups discriminable in the KCL.
+    - The default extension of the flag file is now '.flag' and not longer
+      '.flag.txt'. If scanning both files are searched.
+    - The new option --flag-file=path overrides the default search for a flag
+      definitions file while scanning OBJ files.
+    - New command "wkclt CFF" will create a flag file with all group names
+      as template.
+ - If scanning a OBJ file, faces (polygons) with up to 50 vertices in a plane
+   are supported. Polygons with N>3 are split into adequate triangles.
+ - The user interface of the parser function tri$create() has changed to
+   allow the definition of polygons with any number of verteces.
+ - Bug fix: The naming of some parser functions were wrong: ptInCube*() are
+   renamed to ptInCuboid*(). The obsolete old names are allowed for a while.
+ - New command: wkclt CHECK: Run a KCL check and return 'DIFFER' as exit
+   status if any KCL error found.
+ - The KCL creation is now included into the SZS creator: Touched OBJ files
+   will now converted to KCL automatically if creating a SZS file.
+
+
+szs v0.41a r3866 - 2012-06-24
+
+ - Bug fix: The triangle split of a face with exact 4 verteces fails in 50% of
+   all cases (bad optimization).
+ - Bug fix: The parser expression "a?b:c" fails, if the operators not followed
+   by a blank.
+ - Bug fix for some parser functions.
+ - Using a KCL for defining KMP positions:
+   Now it is possible to set a point anywhere and let it fall down until a
+   collision. This is a very good function to place global objects and other
+   points of the KMP. This internal KCL-FALL is available for the user in
+   different stages:
+    - Command "wkclt FALL source point..." for testing.
+    - Parser functions kcl$fall() and kcl$fallFlag() for scripts.
+    - Automatic adjusting of KMP points and objects in the sections CNPT,
+      ENPT, GOBJ, ITPT, JGPT, KTPT, MSPT and POTI.
+
+
+szs v0.42a r3927 - 2012-07-06
+
+ - Linux+Mac: The math library is now included explicitly to avoid a linking
+   failure on some systems.
+ - Bug fix: Assigning values to private macro variables has overwritten
+   existing variables in the standard or global namespace.
+ - New parser command: '@PARAM': Define a parameter name list for macro and
+   function calls.
+ - 'ROUTE-ITEMBOX' replaced by a more flexible 'ROUTE-OBJECT'.
+ - New command: wkmpt COBJECT: Create an OBJ file: Load the related KCL and
+   add new faces representing the KMP elements are added. Enemy, item, check
+   and respawn points and cannon destinations are supported at the moment.
+   Option --draw=list decides which elements are included into the OBJ file.
+   See https://szs.wiimm.de/cmd/draw for more details.
+ - New parser functions: mean(), dir(), xDir(), yDir(), zDir(), rot(), xRot()
+   yRot(), zRot(), axisRot(), tri$createCuboid(), tri$createJoist(),
+   tri$createPrism() and tri$createPyramid(). The tri$create*() functions are
+   internally used to add KMP objects to the OBJ file.
+ - New KCL creating parameter: KCL_BLOW: If calculating the overlay between
+   cubes and triangles, the cubes are blowed up by the some units, so that a
+   triangle may be visible in a neighbor cube. This avoids unexpected rarely
+   effects like bike hopping. The default value is 400.
+   See https://szs.wiimm.de/doc/kcl#KCL_BLOW for more info.
+    * If you have created a KCL with a previous version of my tools, use this
+      command to create a new octree:
+             wkclt encode course.kcl --kcl drop,new --overwrite
+      The file 'course.kcl' will be overwritten with a repaired version.
+
+
+*******************************************************************************
+*******                              END                                *******
+*******************************************************************************

@@ -1,0 +1,41 @@
+###############################
+###  (c) Wiimm, 2015-12-18  ###
+###############################
+
+# Setup
+@def start	= mSec()	# start time, for the status line
+@def mod_count	= 0		# modification counter
+
+# Get the value for lowering the walls.
+# If 'lower' is defined as number by option --const => use it.
+# Otherwise use the default of 30.
+@def lower = isNumeric(lower) ? lower : 30
+
+# Limit to walls with inclination <45 degree
+# If 'degree' is defined by option --const as number >0 => use it.
+# Otherwise use the default of 45 degrees.
+@def degree = isNumeric(degree) && degree > 0 ? degree : 45
+@def sin_degree = sin(degree) 
+
+# Define a function to test the KCL flag for walls
+@function isWall # flag
+    @pdef t = $1 & 0x1f
+    @return t == 0x0c || t == 0x0d || t == 0x0f || t == 0x14 || t == 0x1e || t == 0x1f
+@endfunction
+
+# Main loop: Iterate through all triangles
+@for t=0;tri$n()-1
+    @if isWall(tri$flag(t))
+    	@def norm = tri$normal(t,0) #  get the first normal
+    	@if abs(norm.y) < sin_degree
+	    # it's a vertical wall -> lower the wall & increment counter
+	    @def status = tri$shift(t,-vy(lower))
+	    @def mod_count = mod_count+1
+	@endif
+    @endif
+@endfor
+
+# Print a little status line
+@echo "  - " mod_count " of " tri$n() " triangles lowered by " lower
+	> " in " (mSec()-start) " msec."
+
