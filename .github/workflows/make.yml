@@ -1,4 +1,4 @@
-name: make distrib
+name: make mac distrib
 
 on:
   push:
@@ -9,11 +9,8 @@ on:
 jobs:
   build:
 
-    runs-on: [ubuntu-latest, macos-latest]
+    runs-on: macos-latest
 
     steps:
-    - uses: actions/checkout@v2
-    - name: cd
-      run: cd project
-    - name: make
-      run: make distrib
+      - uses: actions/checkout@v2
+      - run: make -C project distrib
