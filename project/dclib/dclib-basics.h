@@ -1531,6 +1531,7 @@ uint   InsertFastBuf	( FastBuf_t *fb, int index,   cvp source, int size );
 char * AppendFastBuf	( FastBuf_t *fb,              cvp source, int size );
 char * WriteFastBuf	( FastBuf_t *fb, uint offset, cvp source, int size );
 uint   AssignFastBuf	( FastBuf_t *fb, cvp source,              int size );
+uint   AlignFastBuf	( FastBuf_t *fb, uint align, u8 fill );
 uint   DropFastBuf	( FastBuf_t *fb, int index,               int size );
 
 void CopyFastBuf	( FastBuf_t *dest, const FastBuf_t *src );
@@ -2133,6 +2134,10 @@ typedef enum EncodeMode_t // select encodig/decoding method
     ENCODE__N		// number of encoding modes
 }
 EncodeMode_t;
+
+// [[doxygen]]
+static inline bool NeedsQuotesByEncoding ( EncodeMode_t em )
+	{ return em < ENCODE_BASE64 || em > ENCODE_BASE64XML; }
 
 ///////////////////////////////////////////////////////////////////////////////
 // [[DecodeType_t]]
@@ -3355,6 +3360,7 @@ extern int timezone_adjust_isdst;
 ///////////////////////////////////////////////////////////////////////////////
 
 void SetupTimezone ( bool force );
+int GetTimezoneAdjust ( time_t tim );
 
 struct timeval	GetTimeOfDay ( bool localtime );
 DayTime_t	GetDayTime   ( bool localtime );
@@ -4891,8 +4897,11 @@ __attribute__ ((packed)) SaveRestoreTab_t;
 #define DEF_SRT_STR_SIZE(v,n,e)		DEF_SRT_VAR(v,1,n,SRT_STRING_SIZE,e)
 #define DEF_SRT_STR_ALLOC(v,n,e)	DEF_SRT_VAR(v,1,n,SRT_STRING_ALLOC,e)
 #define DEF_SRT_MEM(v,n,e)		DEF_SRT_VAR(v,1,n,SRT_MEM,e)
+
 #define DEF_SRT_STRING_FIELD(v,n,e)	DEF_SRT_VAR(v,1,n,SRT_STRING_FIELD,e)
 #define DEF_SRT_PARAM_FIELD(v,n,e)	DEF_SRT_VAR(v,1,n,SRT_PARAM_FIELD,e)
+
+//--- n elements
 
 #define DEF_SRT_BOOL_N(v,ne,n)		DEF_SRT_VAR(v,ne,n,SRT_BOOL,0)
 #define DEF_SRT_UINT_N(v,ne,n)		DEF_SRT_VAR(v,ne,n,SRT_UINT,0)
@@ -4900,6 +4909,14 @@ __attribute__ ((packed)) SaveRestoreTab_t;
 #define DEF_SRT_INT_N(v,ne,n)		DEF_SRT_VAR(v,ne,n,SRT_INT,0)
 #define DEF_SRT_FLOAT_N(v,ne,n)		DEF_SRT_VAR(v,ne,n,SRT_FLOAT,0)
 #define DEF_SRT_XFLOAT_N(v,ne,n)	DEF_SRT_VAR(v,ne,n,SRT_XFLOAT,0)
+
+#if defined(TEST) || defined(DEBUG)
+#define DEF_SRT_STR_SIZE_N(v,ne,n,e)	DEF_SRT_VAR(v,ne,n,SRT_STRING_SIZE,e)
+#define DEF_SRT_STR_ALLOC_N(v,ne,n,e)	DEF_SRT_VAR(v,ne,n,SRT_STRING_ALLOC,e)
+#define DEF_SRT_MEM_N(v,ne,n,e)		DEF_SRT_VAR(v,ne,n,SRT_MEM,e)
+#endif
+
+//--- auto array
 
 #define DEF_SRT_ARRAY(v,n,t,e)		\
 	{offsetof(SRT_NAME,v), sizeof(((SRT_NAME*)0)->v[0]), n, \
@@ -4911,6 +4928,14 @@ __attribute__ ((packed)) SaveRestoreTab_t;
 #define DEF_SRT_INT_A(v,n)		DEF_SRT_ARRAY(v,n,SRT_INT,0)
 #define DEF_SRT_FLOAT_A(v,n)		DEF_SRT_ARRAY(v,n,SRT_FLOAT,0)
 #define DEF_SRT_XFLOAT_A(v,n)		DEF_SRT_ARRAY(v,n,SRT_XFLOAT,0)
+
+#if defined(TEST) || defined(DEBUG)
+#define DEF_SRT_STR_SIZE_A(v,n,e)	DEF_SRT_ARRAY(v,n,SRT_STRING_SIZE,e)
+#define DEF_SRT_STR_ALLOC_A(v,n,e)	DEF_SRT_ARRAY(v,n,SRT_STRING_ALLOC,e)
+#define DEF_SRT_MEM_A(v,n,e)		DEF_SRT_ARRAY(v,n,SRT_MEM,e)
+#endif
+
+//--- special
 
 #define DEF_SRT_SEPARATOR()		{0,0,0,0,SRT__IS_LIST,0}
 #define DEF_SRT_COMMENT(c)		{0,0,c,0,SRT__IS_LIST,0}

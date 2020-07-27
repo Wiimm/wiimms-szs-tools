@@ -2173,6 +2173,14 @@ enumError ScanRawBMG ( bmg_t * bmg )
     DASSERT(!memcmp(bh->magic,BMG_MAGIC,sizeof(bh->magic)));
 
     u32 data_size = ntohl(bh->size);
+    bmg->encoding = bh->encoding;
+    if ( !bmg->encoding && data_size*BMG_LEGACY_BLOCK_SIZE <= bmg->data_size )
+    {
+	bmg->legacy = true;
+	bmg->encoding = BMG_ENC_CP1252;
+	data_size *= BMG_LEGACY_BLOCK_SIZE;
+    }
+
     if ( data_size > bmg->data_size )
     {
 	ERROR0(ERR_WARNING,
@@ -2188,7 +2196,6 @@ enumError ScanRawBMG ( bmg_t * bmg )
 
     //--- check encoding
 
-    bmg->encoding = bh->encoding;
     switch (bmg->encoding)
     {
      case BMG_ENC_CP1252:
@@ -2670,7 +2677,9 @@ enumError ScanTextBMG ( bmg_t * bmg )
 		continue;
 
 	    noPRINT("PARAM: %s = |%.*s|\n",namebuf,(int)(ptr-start),start);
-	    if (!strcmp(namebuf,"ENCODING"))
+	    if (!strcmp(namebuf,"LEGACY"))
+		bmg->legacy = str2l(start,0,10) > 0;
+	    else if (!strcmp(namebuf,"ENCODING"))
 		AssignEncodingBMG(bmg,str2l(start,0,10));
 	    else if (!strcmp(namebuf,"BMG-MID"))
 		bmg->have_mid = str2ul(start,0,10) > 0;
@@ -3371,7 +3380,9 @@ enumError CreateRawBMG
 
     //--- check encoding
 
-    const int encoding = CheckEncodingBMG(opt_bmg_encoding,bmg->encoding);
+    const int encoding = bmg->legacy
+		? BMG_ENC_CP1252
+		: CheckEncodingBMG(opt_bmg_encoding,bmg->encoding);
     switch (encoding)
     {
      case BMG_ENC_CP1252:
@@ -3398,19 +3409,6 @@ enumError CreateRawBMG
     }
 
 
-    //--- count messages
-
-#if 0
-    bmg_item_t *bi, *bi_end = bmg->item + bmg->item_used;
-    u32 n_msg = 0;
-
-    for ( bi = bmg->item; bi < bi_end; bi++ )
-    {
-	if (bi->text)
-	    n_msg++;
-    }
-#endif
-
     //--- count size of raw sections
 
     uint total_raw_size = 0, raw_count = 0;
@@ -3430,14 +3428,15 @@ enumError CreateRawBMG
 
     //--- calculate sizes
 
-    const mem_t inf =  GetFastBufMem(&bc.inf);
-    const mem_t mid =  GetFastBufMem(&bc.mid);
-    const mem_t dat =  GetFastBufMem(&bc.dat);
+    const mem_t inf = GetFastBufMem(&bc.inf);
+    const mem_t mid = GetFastBufMem(&bc.mid);
+    const mem_t dat = GetFastBufMem(&bc.dat);
 
-    const u32 inf_size	= ALIGN32( sizeof(bmg_inf_t) + inf.len, opt_bmg_align );
-    const u32 dat_size	= ALIGN32( sizeof(bmg_dat_t) + dat.len, opt_bmg_align );
+    const int align	= bmg->legacy ? BMG_LEGACY_BLOCK_SIZE : opt_bmg_align;
+    const u32 inf_size	= ALIGN32( sizeof(bmg_inf_t) + inf.len, align );
+    const u32 dat_size	= ALIGN32( sizeof(bmg_dat_t) + dat.len, align );
     const u32 mid_size	= bc.have_mid
-			? ALIGN32( sizeof(bmg_mid_t) + mid.len, opt_bmg_align ) : 0;
+			? ALIGN32( sizeof(bmg_mid_t) + mid.len, align ) : 0;
 
     const u32 total_size = sizeof(bmg_header_t)
 			 + inf_size + dat_size + mid_size
@@ -3458,9 +3457,9 @@ enumError CreateRawBMG
     //---- setup bmg header
 
     bmg_header_t *bh	= (bmg_header_t*)bmg->raw_data;
-    bh->size		= htonl(total_size);
+    bh->size		= htonl( bmg->legacy ? total_size/BMG_LEGACY_BLOCK_SIZE: total_size );
     bh->n_sections	= htonl( ( bc.have_mid ? 3 : 2 ) + raw_count );
-    bh->encoding	= encoding;
+    bh->encoding	= bmg->legacy ? 0 : encoding;
     memcpy(bh->magic,BMG_MAGIC,sizeof(bh->magic));
 
     u8 *dest = (u8*)(bh+1);
@@ -3841,6 +3840,10 @@ enumError SaveTextBMG
     {
       "%s"
       "\r\n"
+      "# If 1, then enable legacy (GameCube) mode for old binary BMG files.\r\n"
+      "# If enabled, ENCODING is always CP1252.\r\n"
+      "@LEGACY = %u\r\n"
+      "\r\n"
       "# Define encoding of BMG: 1=CP1252, 2=UTF-16/be, 3=Shift-JIS, 4=UTF-8\r\n"
       "@ENCODING = %u\r\n"
       "\r\n"
@@ -3893,7 +3896,10 @@ enumError SaveTextBMG
 	fprintf(F.f,"%s\r\n\r\n",BMG_TEXT_MAGIC);
 
     HavePredifinedSlots(bmg);
-    const int encoding = CheckEncodingBMG(opt_bmg_encoding,bmg->encoding);
+    bmg->legacy = bmg->legacy != 0;
+    const int encoding = bmg->legacy
+		? BMG_ENC_CP1252
+		: CheckEncodingBMG(opt_bmg_encoding,bmg->encoding);
 
     const bool print_settings // print only, if unusual
 		=  encoding != BMG_ENC__DEFAULT
@@ -3911,19 +3917,20 @@ enumError SaveTextBMG
 	{
 	    fprintf(F.f,text_param,
 			param_announce,
-			encoding, bmg->have_mid, bmg->inf_size, abuf,
+			bmg->legacy, encoding, bmg->have_mid, bmg->inf_size, abuf,
 			bmg->use_color_names, bmg->use_mkw_messages );
 	    param_announce = "";
 	}
 	else if ( brief_count < BRIEF_NO_MAGIC )
-	    fprintf(F.f,"@ENCODING        = %u\r\n"
+	    fprintf(F.f,"@LEGACY          = %u\r\n"
+			"@ENCODING        = %u\r\n"
 			"@BMG-MID         = %u\r\n"
 			"@INF-SIZE        = 0x%02x\r\n"
 			"@DEFAULT-ATTRIBS = %s\r\n"
 			"@COLOR-NAMES     = %u\r\n"
 			"@MKW-MESSAGES    = %u\r\n"
 			"\r\n",
-			encoding, bmg->have_mid, bmg->inf_size, abuf,
+			bmg->legacy, encoding, bmg->have_mid, bmg->inf_size, abuf,
 			bmg->use_color_names, bmg->use_mkw_messages );
     }
 

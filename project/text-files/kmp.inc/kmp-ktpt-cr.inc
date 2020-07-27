@@ -8,6 +8,10 @@
 
 @REVISION          = %u
 @KTPT-HEAD-VALUE   = %#x
+
+# KCL-FALL (automatic height correction)
+# Define the following values here or at any place between the points.
+# They are valid until re-defined. Disable this feature by @KCL-FALL-WIDTH=0.
 @KCL-FALL-WIDTH    =   0	# set to a value >0 (e.g. 200) to enable KCL falling
 @KCL-FALL-PRE-ADD  =   0	# add this height or vector before falling
 @KCL-FALL-POST-ADD =   0	# add this height or vector after success

@@ -3719,8 +3719,8 @@ int FindSlotsSZS
 					//	-1: slot not possible
 					//	 0: unknown
 					//	+1: slot possible
-    bool		*res_special	// not NULL: return TRUE, if an other slot
-					//           than 4.2|6.1|6.2 is needed
+    int			*required_slot	// if not NULL: return 0|31|61|62
+					// 31 is an alias for "31+71"
 )
 {
     DASSERT(szs);
@@ -3773,8 +3773,8 @@ int FindSlotsSZS
     SLOT(6,1) = 0;
     SLOT(6,2) = 0;
 
-    if (res_special)
-	*res_special = false;
+    if (required_slot)
+	*required_slot = 0;
 
     //uint pos_count = MKW_N_TRACKS - 3;
     //uint neg_count = 0;
@@ -3788,8 +3788,8 @@ int FindSlotsSZS
     {
 	set_required_slot(slot,ISLOT(3,1),ISLOT(7,1));
 	stat = -1;
-	if (res_special)
-	    *res_special = true;
+	if (required_slot)
+	    *required_slot = 31;
     }
 
 
@@ -3808,18 +3808,24 @@ int FindSlotsSZS
 	set_required_slot(slot,ISLOT(6,1),ISLOT(6,1));
 	if (!szs->have_ice_brres)
 	    SLOT(6,1) = -1;
-	stat = -1;
+	else
+	{
+	    stat = -1;
+	    if (required_slot)
+		*required_slot = 61;
+	}
     }
     else if ( !SLOT(6,1) && szs->have_ice_brres )
 	SLOT(6,1) = 1;
-
 
     //--- analyze slot 6.2
 
     if (szs->slot_62)
     {
-	set_required_slot(slot,ISLOT(6,2),ISLOT(6,2));
 	stat = -1;
+	set_required_slot(slot,ISLOT(6,2),ISLOT(6,2));
+	if (required_slot)
+	    *required_slot = 62;
     }
 
 
@@ -3837,12 +3843,62 @@ int FindSlotsSZS
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp CreateSlotInfo ( szs_file_t * szs )
+void AnalyzeSlot ( slot_ana_t *sa, szs_file_t *szs )
+{
+    DASSERT(sa);
+    DASSERT(szs);
+    memset(sa,0,sizeof(*sa));
+    sa->stat = FindSlotsSZS(szs,sa->slot,&sa->required_slot);
+
+    if ( szs->is_arena >= ARENA_FOUND )
+    {
+	StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"arena");
+	StringCopyS(sa->slot_info,sizeof(sa->slot_info),"arena");
+	return;
+    }
+
+    static char buf[500];
+    char *dest = buf;
+
+    uint i;
+    for ( i = 0; i < MKW_N_TRACKS; i++ )
+    {
+	const int slot = sa->slot[i];
+	if ( slot != sa->stat )
+	{
+	    if ( dest > buf )
+		*dest++ = ',';
+	    dest = snprintfE(dest,buf+sizeof(buf),"%c%u.%u",
+		    slot < 0 ? '-' : slot > 0 ? '+' : '?' ,
+		    i/4+1, i%4+1 );
+	}
+    }
+
+    if ( dest == buf )
+	*dest++ = '%';
+    *dest = 0;
+
+    StringCopyS(sa->slot_info,sizeof(sa->slot_info),buf);
+
+    if ( sa->required_slot == 31 )
+	StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"31+71");
+    else if ( sa->required_slot )
+	snprintf(sa->mandatory_slot,sizeof(sa->mandatory_slot),"%u",sa->required_slot);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp CreateSlotInfo ( szs_file_t *szs )
 {
     DASSERT(szs);
+ #if 1
+    slot_ana_t sa;
+    AnalyzeSlot(&sa,szs);
+    return CopyCircBuf(sa.slot_info,strlen(sa.slot_info)+1);
+ #else
     int slot[MKW_N_TRACKS];
-    bool need_special;
-    const int stat = FindSlotsSZS(szs,slot,&need_special);
+    int required_slot;
+    const int stat = FindSlotsSZS(szs,slot,&required_slot);
 
     if ( szs->is_arena >= ARENA_FOUND )
 	return "arena";
@@ -3868,35 +3924,7 @@ ccp CreateSlotInfo ( szs_file_t * szs )
     char *res = GetCircBuf(size);
     memcpy(res,buf,size);
     return res;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-ccp CreateBriefSlotInfo ( szs_file_t * szs )
-{
-    DASSERT(szs);
-    int slot[MKW_N_TRACKS];
-    bool need_special;
-    const int stat = FindSlotsSZS(szs,slot,&need_special);
-
-    static char buf[500], *dest = buf;
-
-    uint i, count = 0;
-    const char sign = stat < 0 ? '+' : '-';
-
-    for ( i = 0; i < MKW_N_TRACKS; i++ )
-	if ( slot[i] && slot[i] != stat )
-	{
-	    dest = snprintfE(dest,buf+sizeof(buf),"%c%u%u",
-			count ? ',' : sign, i/4+1, i%4+1 );
-	    count++;
-	}
-
-    *dest++ = 0;
-    const uint size = dest - buf;
-    char *res = GetCircBuf(size);
-    memcpy(res,buf,size);
-    return res;
+ #endif
 }
 
 //

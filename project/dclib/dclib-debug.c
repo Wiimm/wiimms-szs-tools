@@ -579,6 +579,7 @@ bool mark_used ( ccp name, ... )
 
 #if HAVE_PRINT
 
+ #undef PRINT_TIME
  void PRINT_TIME ( time_t time, ccp title )
  {
     struct tm utc, loc;

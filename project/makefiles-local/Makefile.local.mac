@@ -3,17 +3,21 @@
 
 #-----------------------------------------------------------------------------
 
-SDKROOT		= $(shell ls -d /Developer/SDKs/MacOSX* | tail -n1 )
-SDKVERSION	= $(shell echo "$(SDKROOT)" | sed -E 's/.*MacOSX//; s/([0-9]*\.[0-9*]).*/\1/g' )
-
-CC	 = "gcc-4.0"
-CFLAGS	+= -mmacosx-version-min=${SDKVERSION} -isysroot ${SDKROOT}
-LDFLAGS	+= -mmacosx-version-min=${SDKVERSION} -isysroot ${SDKROOT}
-
-#-----------------------------------------------------------------------------
-
 .PHONY : mac-distrib
-mac-distrib: mac2 doc $(INSTALL_SCRIPTS) gen-mac-distrib
+mac-distrib: mac1 doc $(INSTALL_SCRIPTS) gen-mac-distrib
+
+.PHONY : mac1
+mac1: mac-x86_64
+
+	@echo
+	@echo "----- building universal binaries -----"
+
+	@for i in $(MAIN_TOOLS); do \
+	    lipo -create bin/x86_64/$${i} -output $${i}; \
+	    ln -f $${i} bin/$${i}; \
+	done
+	@rm -rf bin/x86_64
+	@echo "done"
 
 .PHONY : mac2
 mac2: mac-i386 mac-x86_64
@@ -85,12 +89,11 @@ gen-mac-distrib:
 	@cp -p $(DISTRIB_FILES) $(DISTRIB_PATH)
 	@ln -f $(MAIN_TOOLS) $(WDF_LINKS) $(DISTRIB_PATH)/bin
 	cp -p $(DOC_FILES) $(DISTRIB_PATH)/doc
-#	@cp -p $(SCRIPTS)/*.{sh,txt} $(DISTRIB_PATH)/scripts
 
 	@chmod -R 755 $(DISTRIB_PATH)
-#	@chmod a+x $(DISTRIB_PATH)/*.sh $(DISTRIB_PATH)/scripts/*.sh $(DISTRIB_PATH)/bin*/*
 	@chmod a+x $(DISTRIB_PATH)/*.sh $(DISTRIB_PATH)/bin*/*
 	@chmod -R a+X $(DISTRIB_PATH)
 
 	@tar -czf $(DISTRIB_PATH).tar.gz $(DISTRIB_PATH)
+	@ln $(DISTRIB_PATH).tar.gz latest-mac.tar.gz
 

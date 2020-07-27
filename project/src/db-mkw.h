@@ -117,6 +117,7 @@ typedef struct MusicInfo_t
 } MusicInfo_t;
 
 extern const MusicInfo_t music_info[MKW_N_MUSIC+1];
+extern const KeywordTab_t music_keyword_tab[];
 
 
 //

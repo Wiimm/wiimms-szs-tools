@@ -850,24 +850,26 @@ int ScanOptKmgLimit ( ccp arg )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+const KeywordTab_t arena_attrib_tab[] =
+{
+	{  0,	"0",	"A12",	12 },
+	{  1,	"1",	"A11",	11 },
+	{  2,	"2",	"A14",	14 },
+	{  3,	"3",	"A13",	13 },
+	{  4,	"4",	"A15",	15 },
+	{  5,	"5",	"A24",	24 },
+	{  6,	"6",	"A25",	25 },
+	{  7,	"7",	"A21",	21 },
+	{  8,	"8",	"A22",	22 },
+	{  9,	"9",	"A23",	23 },
+	{ -1,	"-1",	"OFF",	0 },
+	{0,0,0,0}
+};
+
+//-----------------------------------------------------------------------------
+
 int ScanOptKmgCopy ( ccp arg )
 {
-    static const KeywordTab_t keytab[] =
-    {
-	{  0,		"0",	"A12",	0 },
-	{  1,		"1",	"A11",	0 },
-	{  2,		"2",	"A14",	0 },
-	{  3,		"3",	"A13",	0 },
-	{  4,		"4",	"A15",	0 },
-	{  5,		"5",	"A24",	0 },
-	{  6,		"6",	"A25",	0 },
-	{  7,		"7",	"A21",	0 },
-	{  8,		"8",	"A22",	0 },
-	{  9,		"9",	"A23",	0 },
-	{ -1,		"-1",	"OFF",	0 },
-	{0,0,0,0}
-    };
-
     if ( !arg || !*arg )
     {
 	opt_kmg_arena = -1;
@@ -891,7 +893,7 @@ int ScanOptKmgCopy ( ccp arg )
 		{
 		    memcpy(name,p1,len);
 		    name[len] = 0;
-		    const KeywordTab_t *key = ScanKeyword(0,name,keytab);
+		    const KeywordTab_t *key = ScanKeyword(0,name,arena_attrib_tab);
 		    if (key)
 		    {
 			opt_kmg_arena = key->id;
@@ -905,10 +907,10 @@ int ScanOptKmgCopy ( ccp arg )
     }
 
     int abbrev;
-    const KeywordTab_t *key = ScanKeyword(&abbrev,arg,keytab);
+    const KeywordTab_t *key = ScanKeyword(&abbrev,arg,arena_attrib_tab);
     if (!key)
     {
-	PrintKeywordError(keytab,arg,abbrev,0,
+	PrintKeywordError(arena_attrib_tab,arg,abbrev,0,
 		"keyword for option --kmg-arena");
 	return 1;
     }

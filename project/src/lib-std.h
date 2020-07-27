@@ -1233,6 +1233,67 @@ typedef enum PatchImage_t
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			slot by attribute		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[slot_info_type_t]]
+
+typedef enum slot_info_type_t
+{
+    SIT_NOT,		// not defined
+    SIT_GENERIC,	// generic slot: "arena" or music by race/arena slot
+    SIT_RECOMMEND,	// recommended slot: "r##" | "a##" | "m*"
+    SIT_MANDATORY2,	// mandatory alternative: "31+71"
+    SIT_MANDATORY,	// mandatory slot: "##"
+}
+__attribute__ ((packed)) slot_info_type_t;
+
+//-------------------------------------------------------------------------
+// [[slot_info_t]]
+
+typedef struct slot_info_t
+{
+    mem_t		source;		// reference to last source of analysis
+					// becomes invalid when source becomes invalid
+
+    u16			race_slot;	// 0 or 11..84
+    u16			arena_slot;	// 0 or 11..25
+    u16			music_index;	// 0 or 0x75..
+
+    slot_info_type_t	race_mode;	// 0:not,            2:"r##", 3:"##"
+    slot_info_type_t	arena_mode;	// 0:not, 1:"arena", 2:"a##"
+    slot_info_type_t	music_mode;	// 0:not, 1:generic, 2:"m*"
+    bool		have_31_71;	// true: "31+71" found!
+
+    char		race_info[6];	// race slot as text: "##" | "r##" | "31+71"
+    char		arena_info[6];	// arena slot as text: "arena" | "a##"
+    char		music_info[5];	// music slot as text: "m##" | "ma##"
+    char		slot_attrib[17];// normalized slot atribute, combi of race+arena+music
+
+}
+slot_info_t;
+
+//-----------------------------------------------------------------------------
+
+void DumpSlotInfo
+(
+    FILE		*f,	    // valid output stream
+    int			indent,	    // robust indention of dump
+    const slot_info_t	*si,	    // data to dump
+    bool		src_valid   // FALSE: si.source if definitly invalid
+);
+
+
+//-----------------------------------------------------------------------------
+
+void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib );
+void AnalyzeSlotByName ( slot_info_t *si, bool reset_si, mem_t name );
+void FinalizeSlotInfo  ( slot_info_t *si, bool minus_for_empty );
+
+slot_info_t GetSlotByAttrib ( mem_t attrib, bool minus_for_empty );
+slot_info_t GetSlotByName   ( mem_t name,   bool minus_for_empty );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct FormatField_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 

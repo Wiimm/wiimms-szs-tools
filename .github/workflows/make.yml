@@ -2,9 +2,7 @@ name: make mac distrib
 
 on:
   push:
-    branches: [ master ]
-  pull_request:
-    branches: [ master ]
+    branches: [ master, Test-Mac-build ]
 
 jobs:
   build:
@@ -14,3 +12,9 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: make -C project distrib
+      - name: Upload distribution
+        uses: actions/upload-artifact@v2
+        with:
+          name: latest-mac-distribution
+          path: project/latest-mac.tar.gz
+

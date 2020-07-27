@@ -4502,6 +4502,53 @@ static void print_scs_name ( FILE *f, int fw, int use_tab, ccp format, ... )
 
 //-----------------------------------------------------------------------------
 
+static u64 SCS_get_uint ( const u8* data, int idx, const SaveRestoreTab_t *srt )
+{
+    DASSERT(srt);
+    DASSERT(srt->var);
+
+    switch(srt->size)
+    {
+	case 1: return ((u8*) (data+srt->offset))[idx];
+	case 2: return ((u16*)(data+srt->offset))[idx];
+	case 4: return ((u32*)(data+srt->offset))[idx];
+	case 8: return ((u64*)(data+srt->offset))[idx];
+    }
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+
+static s64 SCS_get_int ( const u8* data, int idx, const SaveRestoreTab_t *srt )
+{
+    DASSERT(srt);
+    DASSERT(srt->var);
+
+    switch(srt->size)
+    {
+	case 1: return ((s8*) (data+srt->offset))[idx];
+	case 2: return ((s16*)(data+srt->offset))[idx];
+	case 4: return ((s32*)(data+srt->offset))[idx];
+	case 8: return ((s64*)(data+srt->offset))[idx];
+    }
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+
+static void SCS_save_string ( FILE *f, ccp src, int slen, EncodeMode_t emode )
+{
+    char buf[4000];
+    mem_t res = EncodeByModeMem(buf,sizeof(buf),src,slen,emode);
+
+    fwrite(res.ptr,1,res.len,f);
+    fputc('\n',f);
+    if ( res.ptr != buf )
+	FreeMem(&res);
+}
+
+//-----------------------------------------------------------------------------
+
 void SaveCurrentStateByTable
 (
     FILE	*f,		// valid output file
@@ -4548,53 +4595,6 @@ void SaveCurrentStateByTable
 
     //-------------------------------------------------------------------------
 
-    u64 get_uint ( const u8* data, int idx, const SaveRestoreTab_t *srt )
-    {
-	DASSERT(srt);
-	DASSERT(srt->var);
-
-	switch(srt->size)
-	{
-	    case 1: return ((u8*) (data+srt->offset))[idx];
-	    case 2: return ((u16*)(data+srt->offset))[idx];
-	    case 4: return ((u32*)(data+srt->offset))[idx];
-	    case 8: return ((u64*)(data+srt->offset))[idx];
-	}
-	return 0;
-    }
-
-    //-------------------------------------------------------------------------
-
-    s64 get_int ( const u8* data, int idx, const SaveRestoreTab_t *srt )
-    {
-	DASSERT(srt);
-	DASSERT(srt->var);
-
-	switch(srt->size)
-	{
-	    case 1: return ((s8*) (data+srt->offset))[idx];
-	    case 2: return ((s16*)(data+srt->offset))[idx];
-	    case 4: return ((s32*)(data+srt->offset))[idx];
-	    case 8: return ((s64*)(data+srt->offset))[idx];
-	}
-	return 0;
-    }
-
-    //-------------------------------------------------------------------------
-
-    void save_string ( FILE *f, ccp src, int slen, EncodeMode_t emode )
-    {
-	char buf[4000];
-	mem_t res = EncodeByModeMem(buf,sizeof(buf),src,slen,emode);
-
-	fwrite(res.ptr,1,res.len,f);
-	fputc('\n',f);
-	if ( res.ptr != buf )
-	    FreeMem(&res);
-    }
-
-    //-------------------------------------------------------------------------
-
     const u8 *data = data0;
 
     for ( ; srt->type != SRT__TERM; srt++ )
@@ -4614,54 +4614,51 @@ void SaveCurrentStateByTable
       if ( srt->type < SRT__IS_LIST )
 	print_scs_name(f,fw_name,use_tab,"%s%s",prefix,srt->name);
 
+      uint i, offset;
       switch(srt->type)
       {
 	case SRT_BOOL:
 	    if ( srt->n_elem > 1 )
 	    {
-		uint i;
 		for ( i = 0; i < srt->n_elem; i++ )
-		    fprintf(f,"%s%u", i ? "," : "", get_uint(data,i,srt)!=0 );
+		    fprintf(f,"%s%u", i ? "," : "", SCS_get_uint(data,i,srt)!=0 );
 		fputc('\n',f);
 	    }
 	    else
-		fprintf(f,"%u\n",get_uint(data,0,srt)!=0);
+		fprintf(f,"%u\n",SCS_get_uint(data,0,srt)!=0);
 	    break;
 
 	case SRT_UINT:
 	    if ( srt->n_elem > 1 )
 	    {
-		uint i;
 		for ( i = 0; i < srt->n_elem; i++ )
-		    fprintf(f,"%s%llu", i ? "," : "", get_uint(data,i,srt) );
+		    fprintf(f,"%s%llu", i ? "," : "", SCS_get_uint(data,i,srt) );
 		fputc('\n',f);
 	    }
 	    else
-		fprintf(f,"%llu\n",get_uint(data,0,srt));
+		fprintf(f,"%llu\n",SCS_get_uint(data,0,srt));
 	    break;
 
 	case SRT_HEX:
 	    if ( srt->n_elem > 1 )
 	    {
-		uint i;
 		for ( i = 0; i < srt->n_elem; i++ )
-		    fprintf(f,"%s%#llx", i ? "," : "", get_uint(data,i,srt) );
+		    fprintf(f,"%s%#llx", i ? "," : "", SCS_get_uint(data,i,srt) );
 		fputc('\n',f);
 	    }
 	    else
-		fprintf(f,"%#llx\n",get_uint(data,0,srt));
+		fprintf(f,"%#llx\n",SCS_get_uint(data,0,srt));
 	    break;
 
 	case SRT_INT:
 	    if ( srt->n_elem > 1 )
 	    {
-		uint i;
 		for ( i = 0; i < srt->n_elem; i++ )
-		    fprintf(f,"%s%lld", i ? "," : "", get_int(data,i,srt) );
+		    fprintf(f,"%s%lld", i ? "," : "", SCS_get_int(data,i,srt) );
 		fputc('\n',f);
 	    }
 	    else
-		fprintf(f,"%lld\n",get_int(data,0,srt));
+		fprintf(f,"%lld\n",SCS_get_int(data,0,srt));
 	    break;
 
 	case SRT_FLOAT:
@@ -4669,7 +4666,6 @@ void SaveCurrentStateByTable
 	    {
 	     case sizeof(float):
 		{
-		    uint i;
 		    for ( i = 0; i < srt->n_elem; i++ )
 			fprintf(f,"%s%.8g", i ? "," : "",
 				    ((float*)(data+srt->offset))[i] ); 
@@ -4678,7 +4674,6 @@ void SaveCurrentStateByTable
 
 	     case sizeof(double):
 		{
-		    uint i;
 		    for ( i = 0; i < srt->n_elem; i++ )
 			fprintf(f,"%s%.16g", i ? "," : "",
 				    ((double*)(data+srt->offset))[i] ); 
@@ -4687,7 +4682,6 @@ void SaveCurrentStateByTable
 
 	     case sizeof(long double):
 		{
-		    uint i;
 		    for ( i = 0; i < srt->n_elem; i++ )
 			fprintf(f,"%s%.20Lg", i ? "," : "",
 				    ((long double*)(data+srt->offset))[i] ); 
@@ -4705,7 +4699,6 @@ void SaveCurrentStateByTable
 	    {
 	     case sizeof(float):
 		{
-		    uint i;
 		    for ( i = 0; i < srt->n_elem; i++ )
 			fprintf(f,"%s%a", i ? "," : "",
 				    ((float*)(data+srt->offset))[i] ); 
@@ -4714,7 +4707,6 @@ void SaveCurrentStateByTable
 
 	     case sizeof(double):
 		{
-		    uint i;
 		    for ( i = 0; i < srt->n_elem; i++ )
 			fprintf(f,"%s%a", i ? "," : "",
 				    ((double*)(data+srt->offset))[i] ); 
@@ -4723,7 +4715,6 @@ void SaveCurrentStateByTable
 
 	     case sizeof(long double):
 		{
-		    uint i;
 		    for ( i = 0; i < srt->n_elem; i++ )
 			fprintf(f,"%s%La", i ? "," : "",
 				    ((long double*)(data+srt->offset))[i] ); 
@@ -4739,17 +4730,38 @@ void SaveCurrentStateByTable
 	//-----
 
 	case SRT_STRING_SIZE:
-	    save_string(f,(char*)(data+srt->offset),-1,srt->emode);
+	    for ( i = 0, offset = srt->offset;; offset += srt->size )
+	    {
+		SCS_save_string(f,(char*)(data+offset),-1,srt->emode);
+		if ( ++i == srt->n_elem )
+		    break;
+		fputc(',',f);
+	    }
+	    fputc('\n',f);
 	    break;
 
 	case SRT_STRING_ALLOC:
-	    save_string(f,*(ccp*)(data+srt->offset),-1,srt->emode);
+	    for ( i = 0, offset = srt->offset;; offset += srt->size )
+	    {
+		SCS_save_string(f,*(ccp*)(data+offset),-1,srt->emode);
+		if ( ++i == srt->n_elem )
+		    break;
+		fputc(',',f);
+	    }
+	    fputc('\n',f);
 	    break;
 
 	case SRT_MEM:
 	{
-	    mem_t *mem = (mem_t*)(data+srt->offset);
-	    save_string(f,mem->ptr,mem->len,srt->emode);
+	    for ( i = 0, offset = srt->offset;; offset += srt->size )
+	    {
+		mem_t *mem = (mem_t*)(data+offset);
+		SCS_save_string(f,mem->ptr,mem->len,srt->emode);
+		if ( ++i == srt->n_elem )
+		    break;
+		fputc(',',f);
+	    }
+	    fputc('\n',f);
 	    break;
 	}
 
@@ -4766,7 +4778,7 @@ void SaveCurrentStateByTable
 	    for ( i = 0; i < sf->used; i++, ptr++ )
 	    {
 		print_scs_name(f,fw_name,use_tab,"%s%s@%u",prefix,srt->name,i);
-		save_string(f,*ptr,-1,srt->emode);
+		SCS_save_string(f,*ptr,-1,srt->emode);
 	    }
 	    break;
 	}
@@ -4783,7 +4795,7 @@ void SaveCurrentStateByTable
 	    {
 		print_scs_name(f,fw_name,use_tab,"%s%s@%u",prefix,srt->name,i);
 		fprintf(f,"%d ",ptr->num);
-		save_string(f,ptr->key,-1,srt->emode);
+		SCS_save_string(f,ptr->key,-1,srt->emode);
 	    }
 	    break;
 	}
@@ -4793,6 +4805,13 @@ void SaveCurrentStateByTable
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+
+#if defined(TEST) && 1
+ #define X_DEVELOP 1
+#else
+ #define X_DEVELOP 0
+#endif
+ 
 
 void RestoreStateByTable
 (
@@ -4804,6 +4823,71 @@ void RestoreStateByTable
 {
     DASSERT(rs);
     DASSERT(srt);
+
+    //-------------------------------------------------------------------------
+
+#if X_DEVELOP
+
+    mem_t get_string
+	( mem_t *param, ccp *p_ptr, char *buf, uint bufsize, EncodeMode_t emode )
+    {
+	DASSERT(param);
+	DASSERT(p_ptr);
+
+	ccp ptr;
+	if (!*p_ptr)
+	    ptr = param->ptr;
+	else
+	{
+	    ptr = *p_ptr;
+	    if ( *ptr != ',' )
+		return NullMem;
+	    ptr++;
+	}
+
+	if ( *ptr == '%' )
+	{
+	    *p_ptr = ptr;
+	    return NullMem;
+	}
+
+	uint len;
+	ccp start, end = param->ptr + param->len;
+	if ( *ptr == '"' )
+	{
+	    start = ++ptr;
+	    for (;;)
+	    {
+		if ( ptr == end )
+		{
+		    len = ptr - start;
+		    break;
+		}
+
+		const char ch = *ptr++;
+		if ( ch == '\\' && ptr < end )
+		    ptr++;
+		else if ( ch == '"' )
+		{
+		    len = ptr-start-1;
+		    break;
+		}
+	    }
+	}
+	else
+	{
+	    start = ptr;
+	    while ( ptr < end && *ptr != ',' )
+		ptr++;
+	    len = ptr - start;
+	}
+
+	*p_ptr = ptr;
+	return MemByStringS(start,len);
+    }
+#endif
+
+    //-------------------------------------------------------------------------
 
     char buf[4000];
     if (!prefix)
@@ -4909,6 +4993,22 @@ void RestoreStateByTable
 	//-----
 
 	case SRT_STRING_SIZE:
+#if X_DEVELOP
+	{
+	    ParamFieldItem_t *it = GetParamField(rs,buf);
+	    mem_t param = it ? MemByString((ccp)it->data) : EmptyMem;
+	    PRINT1("param: [%u] |%.*s|\n",param.len,param.len,param.ptr);
+	    ccp ptr = 0;
+	    uint i;
+	    for ( i = 0; i < srt->n_elem; i++ )
+	    {
+		mem_t str = get_string(&param,&ptr,buf,sizeof(buf),srt->emode);
+		PRINT1("str: [%d,%u] |%.*s|\n",str.ptr!=0,str.len,str.len,str.ptr);
+		//if ( str.ptr != buf ) FreeMem(&str);
+	    }
+	    break;
+	}
+#else
 	{
 	    char *val = (char*)(data+srt->offset);
 	    mem_t res = GetParamFieldMEM(buf,sizeof(buf),rs,buf,
@@ -4918,6 +5018,7 @@ void RestoreStateByTable
 		FreeString(res.ptr);
 	    break;
 	}
+#endif
 
 	case SRT_STRING_ALLOC:
 	{

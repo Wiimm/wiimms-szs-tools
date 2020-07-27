@@ -1800,7 +1800,7 @@ void AppendInt64FastBuf ( FastBuf_t *fb, u64 val, IntMode_t mode )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-char *  WriteFastBuf ( FastBuf_t *fb, uint offset, cvp source, int size )
+char * WriteFastBuf ( FastBuf_t *fb, uint offset, cvp source, int size )
 {
     DASSERT(fb);
 
@@ -1843,6 +1843,22 @@ uint AssignFastBuf ( FastBuf_t *fb, cvp source, int size )
 	*fb->ptr = 0;
     }
     return size;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+uint AlignFastBuf ( FastBuf_t *fb, uint align, u8 fill )
+{
+    DASSERT(fb);
+    const uint len = fb->ptr - fb->buf;
+    const uint append = ALIGN32(len,align) - len;
+    if ( append > 0 )
+    {
+	char *dest = GetSpaceFastBuf(fb,append);
+	memset(dest,fill,append);
+    }
+
+    return fb->ptr - fb->buf;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

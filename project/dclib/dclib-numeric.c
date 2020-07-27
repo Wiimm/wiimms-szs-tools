@@ -1799,20 +1799,37 @@ void SetupTimezone ( bool force )
 {
     if ( force || timezone_adjust_sec == -1 )
     {
-	tzset();
-	timezone_adjust_sec = timezone;
-
-	time_t tim = GetTimeSec(false);
-	struct tm *tm = localtime(&tim);
-	timezone_adjust_isdst = tm->tm_isdst;
-	if (tm->tm_isdst)
-	    timezone_adjust_sec -= 3600;
-
+	timezone_adjust_sec  = GetTimezoneAdjust(GetTimeSec(false));
 	timezone_adjust_usec = 1000000ll * timezone_adjust_sec;
 	TRACE("TZ: %s,%s, %ld, %d => %lld %lld\n",
 		tzname[0], tzname[1], timezone, daylight,
 		timezone_adjust_sec, timezone_adjust_usec );
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int GetTimezoneAdjust ( time_t tim )
+{
+    struct tm gmt, loc;
+    gmtime_r(&tim,&gmt);
+    localtime_r(&tim,&loc);
+    int delta = ( gmt.tm_hour - loc.tm_hour ) * 3600
+	      + ( gmt.tm_min  - loc.tm_min  ) *   60
+	      + ( gmt.tm_sec  - loc.tm_sec  );
+    if ( gmt.tm_yday != loc.tm_yday )
+    {
+	if ( gmt.tm_year < loc.tm_year
+	    || gmt.tm_year == loc.tm_year && gmt.tm_yday < loc.tm_yday )
+	{
+	    delta -= 24*3600;
+	}
+	else
+	{
+	    delta += 24*3600;
+	}
+    }
+    return delta;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

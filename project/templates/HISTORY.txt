@@ -388,6 +388,21 @@ szs v2.17a r8204 - 2020-05-12
    find missed files. This has impact to command CHECK and option --auto-add.
 
 
+szs v2.18a r8217 - 2020-06-28
+
+ - wszst/wkmpt CHECK: Hints about self linked item routes and item routes with
+   exact 1 point. A warning is printed when both events apply for same route.
+ - Bug fix: The number of tables is set to 6 if writing a short binary
+   item-slot file (without tables for battles).
+ - wszst TEXT/BINARY: New options to patch KMG files: --kmg-limit=seconds to
+   limit the run time of battles and --kmg-copy=id to copy one slot definition
+   to the 9 other slots.
+ - Leseratte and I analysed the MKW internal VR calculations and adapted the
+   results into the tools. So the calculations are 100% identical now.
+ - Command wszst VR-RACE supports now up to 30 players for the VR calculation.
+ - KMP/CAME type 6 and the related route is excluded from any transformation.
+
+
 @@MODULE(last-history.txt)@@
 
 

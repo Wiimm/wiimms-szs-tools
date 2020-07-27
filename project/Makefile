@@ -127,7 +127,7 @@ DIR_LIST	=
 
 RM_FILES	= *.{a,o,d,tmp,bak,exe} edit-list/*.log
 RM_FILES	+= */*.{tmp,bak} */*/*.{tmp,bak} */*/*/*.{tmp,bak}
-RM_FILES2	= templates.sed
+RM_FILES2	= templates.sed Makefile.setup
 
 MODE_FILE	= ./_mode.flag
 MODE		= $(shell test -s $(MODE_FILE) && cat $(MODE_FILE))
@@ -248,8 +248,9 @@ TOBJ_wlect	= lib-lecode.o lib-ctcode.o lib-xbmg.o db-ctcode.o \
 TOBJ_wmdlt	= lib-mdl.o lib-transform.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wpatt	= lib-pat.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wstrt	= lib-staticr.o db-dol.o db-ctcode.o $(XOBJ_OBJECT)
-TOBJ_wtest	= $(XOBJ_KMP) $(XOBJ_KCL) $(XOBJ_OBJECT) $(XOBJ_PARSER) $(XOBJ_IMAGE) \
-		  lib-mdl.o lib-transform.o
+TOBJ_wtest	= lib-szs-create.o lib-xbmg.o lib-ctcode.o lib-lecode.o \
+			lib-mdl.o lib-pat.o lib-transform.o \
+			$(XOBJ_KMP) $(XOBJ_KCL) $(XOBJ_OBJECT) $(XOBJ_PARSER) $(XOBJ_IMAGE)
 
 #-------------------------------------------------------------------------------
 # sub libs

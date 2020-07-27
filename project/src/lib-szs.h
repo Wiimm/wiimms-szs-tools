@@ -708,6 +708,20 @@ static inline ccp GetNameFF_SZScurrent ( const szs_file_t *szs )
 }
 
 //-----------------------------------------------------------------------------
+// [[slot_ana_t]]
+
+typedef struct slot_ana_t
+{
+    int  stat;			// result of FindSlotsSZS() : -1, 0 or +1
+    int  slot[MKW_N_TRACKS];	// set by FindSlotsSZS()
+    int  required_slot;		// set by FindSlotsSZS()
+
+    char mandatory_slot[6];	// empty | "arena" | "31+71" | "61" | "62"
+    char slot_info[30];		// slot info text
+}
+slot_ana_t;
+
+//-----------------------------------------------------------------------------
 
 int FindSlotsSZS
 (
@@ -718,12 +732,14 @@ int FindSlotsSZS
 					//	-1: slot not possible
 					//	 0: unknown
 					//	+1: slot possible
-    bool		*res_special	// not NULL: return TRUE, if an other slot
-					//           than 4.2|6.1|6.2 is needed
+    int			*required_slot	// if not NULL: return 0|31|61|62
+					// 31 is an alias for "31+71"
 );
 
-ccp CreateSlotInfo ( szs_file_t * szs );
-ccp CreateBriefSlotInfo ( szs_file_t * szs );
+void AnalyzeSlot ( slot_ana_t *sa, szs_file_t *szs );
+
+// return temporary string by GetCircBuf()
+ccp CreateSlotInfo ( szs_file_t *szs );
 
 //-----------------------------------------------------------------------------
 

@@ -35,8 +35,11 @@
  *                                                                         *
  ***************************************************************************/
 
+#define _GNU_SOURCE 1
+
 #include <sys/types.h>
 #include <sys/ioctl.h>
+#include <string.h>
 #include <fcntl.h>
 #include <time.h>
 #include <utime.h>
@@ -1985,7 +1988,7 @@ int GetVersionFF
 	    break;
  #endif
 
-	case FF_BMG: // use encoding
+	case FF_BMG: // use n_sections & encoding
 	    if ( data_size >= sizeof(bmg_header_t) )
 	    {
 		const bmg_header_t *bh = (bmg_header_t*)data;
@@ -3427,6 +3430,252 @@ EncodeMode_t SetupCoding64 ( EncodeMode_t mode, EncodeMode_t fallback )
 					? ENCODE_BASE64 : fallback, ENCODE_OFF );
     }
     return mode;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			slot by attribute		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void DumpSlotInfo
+(
+    FILE		*f,	    // valid output stream
+    int			indent,	    // robust indention of dump
+    const slot_info_t	*si,	    // data to dump
+    bool		src_valid   // FALSE: si.source if definitly invalid
+)
+{
+    if ( !f || !si )
+	return;
+
+    indent = NormalizeIndent(indent);
+    if ( src_valid && si->source.ptr && si->source.len )
+    fprintf(f,"%*s" "Source:      %.*s\n",
+		indent,"", si->source.len, si->source.ptr );
+
+    fprintf(f,
+	"%*s" "Slot attrib: %s\n"
+	"%*s" "Race info:   %4u [%u] %s\n"
+	"%*s" "Arena info:  %4u [%u] %s\n"
+	"%*s" "Music info:  %#4x [%u] %s\n"
+	,indent,"" ,si->slot_attrib
+	,indent,"" ,si->race_slot   ,si->race_mode  ,si->race_info
+	,indent,"" ,si->arena_slot  ,si->arena_mode ,si->arena_info
+	,indent,"" ,si->music_index ,si->music_mode ,si->music_info
+	);
+}
+
+//-----------------------------------------------------------------------------
+
+void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
+{
+    DASSERT(si);
+    PRINT("AnalyzeSlotAttrib(,%d,\"%.*s\")\n",reset_si,attrib.len,attrib.ptr);
+
+    if (reset_si)
+	memset(si,0,sizeof(*si));
+    si->source = attrib;
+
+    const uint MAX_ATTRIB = 100;
+    mem_t list[MAX_ATTRIB];
+    const uint n_attrib = SplitByCharMem(list,MAX_ATTRIB,attrib,',');
+
+    uint i;
+    for ( i = 0; i < n_attrib; i++ )
+    {
+	ccp  src = list[i].ptr;
+	uint len = list[i].len;
+	PRINT0("%3u: |%.*s|\n",i,len,src);
+
+	switch(len)
+	{
+	 case 2:
+	    if ( src[0] >= '1' && src[0] <= '8' && src[1] >= '1' && src[1] <= '4' )
+	    {
+		si->race_mode = SIT_MANDATORY;
+		si->race_slot = strtoul(src,0,10);
+		StringCopySM(si->race_info,sizeof(si->race_info),src,2);
+	    }
+	    break;
+
+	 case 3:
+	    if ( src[0]=='r' && src[1]>='1' && src[1]<='8' && src[2]>='1' && src[2]<='4' )
+	    {
+		const u16 slot = strtoul(src+1,0,10);
+		if (!si->have_31_71)
+		{
+		    si->race_mode = SIT_RECOMMEND;
+		    si->race_slot = slot;
+		    StringCopySM(si->race_info,sizeof(si->race_info),src,3);
+		}
+		else if ( slot == 31 || slot == 71 )
+		{
+		    si->race_mode = SIT_MANDATORY;
+		    si->race_slot = slot;
+		    snprintf(si->race_info,sizeof(si->race_info),"%u",slot);
+		}
+		// else ignore
+	    }
+	    else if ( src[0]=='a' && src[1]>='1' && src[1]<='2' && src[2]>='1' && src[2]<='5' )
+	    {
+		si->arena_mode = SIT_RECOMMEND;
+		si->arena_slot = strtoul(src+1,0,10);
+		StringCopySM(si->arena_info,sizeof(si->arena_info),src,3);
+	    }
+	    else if ( src[0]=='m' && src[1]>='1' && src[1]<='8' && src[2]>='1' && src[2]<='4' )
+	    {
+		si->music_mode = SIT_RECOMMEND;
+		StringCopySM(si->music_info,sizeof(si->music_info),src,3);
+	    }
+	    else if (!memcmp(src,"mlc",3))
+	    {
+		si->music_mode = SIT_MANDATORY;
+		StringCopySM(si->music_info,sizeof(si->music_info),src,3);
+	    }
+	    break;
+
+	 case 4:
+	    if ( src[0] == 'm' && src[1] == 'a'
+			&& src[2] >= '1' && src[2] <= '2' && src[3] >= '1' && src[3] <= '5' )
+	    {
+		si->music_mode = SIT_MANDATORY;
+		StringCopySM(si->music_info,sizeof(si->music_info),src,4);
+	    }
+	    else if ( src[0] == 'm' && src[1] == 't'
+			&& src[2] >= '1' && src[2] <= '8' && src[3] >= '1' && src[3] <= '4' )
+	    {
+		si->music_mode = SIT_MANDATORY;
+		StringCopySM(si->music_info,sizeof(si->music_info),src+1,3);
+		si->music_info[0] = 'm';
+	    }
+	    break;
+
+	 case 5:
+	    if (!memcmp(src,"31+71",5))
+	    {
+		si->have_31_71 = true;
+		if ( si->race_slot == 31 || si->race_slot == 71 )
+		{
+		    si->race_mode = SIT_MANDATORY;
+		    snprintf(si->race_info,sizeof(si->race_info),"%u",si->race_slot);
+		}
+		else
+		{
+		    si->race_mode = SIT_MANDATORY2;
+		    si->race_slot = 31;
+		    StringCopySM(si->race_info,sizeof(si->race_info),src,5);
+		}
+	    }
+	    else if ( !si->arena_mode && !memcmp(src,"arena",5) )
+	    {
+		si->arena_mode = SIT_GENERIC;
+		si->arena_slot = 0;
+		StringCopySM(si->arena_info,sizeof(si->arena_info),src,5);
+	    }
+	    break;
+	}
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+void AnalyzeSlotByName ( slot_info_t *si, bool reset_si, mem_t name )
+{
+    DASSERT(si);
+
+    if (reset_si)
+	memset(si,0,sizeof(*si));
+
+    ccp src = name.ptr;
+    ccp slash = memrchr(src,'/',name.len);
+    if (slash)
+	src = slash+1;
+
+    ccp end = name.ptr + name.len;
+    ccp brack1 = memrchr(src,'[',end-src);
+    if (brack1)
+    {
+	ccp brack2 = memchr(brack1,']',end-brack1);
+	if (brack2)
+	    AnalyzeSlotAttrib(si,false,MemByE(brack1+1,brack2));
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+void FinalizeSlotInfo ( slot_info_t *si, bool minus_for_empty )
+{
+    DASSERT(si);
+
+    //--- generic music support
+
+    char music_info[8];
+    if (si->race_slot)
+	snprintf(music_info,sizeof(music_info),"m%u",(u8)si->race_slot);
+    else if (si->arena_slot)
+	snprintf(music_info,sizeof(music_info),"ma%u",(u8)si->arena_slot);
+    else
+	*music_info = 0;
+
+    if ( !si->music_mode && *music_info )
+    {
+	si->music_mode = SIT_GENERIC;
+	StringCopyS(si->music_info,sizeof(si->music_info),music_info);
+    }
+
+    if (si->music_info[0])
+    {
+	const KeywordTab_t *kt = ScanKeyword(0,si->music_info,music_keyword_tab);
+	if (kt)
+	    si->music_index = kt->id;
+    }
+
+
+    //--- create slot info
+
+    char slot_attrib[20], *dest = slot_attrib, *end = slot_attrib + sizeof(slot_attrib);
+    if (si->race_info[0])
+	dest = StringCat2E(dest,end,",",si->race_info);
+    if (si->arena_info[0])
+	dest = StringCat2E(dest,end,",",si->arena_info);
+    if ( si->music_info[0] && strcmp(si->music_info,music_info) )
+	dest = StringCat2E(dest,end,",",si->music_info);
+    if ( dest > slot_attrib )
+	StringCopyS(si->slot_attrib,sizeof(si->slot_attrib),slot_attrib+1);
+
+
+    //--- options
+
+    if (minus_for_empty)
+    {
+	if (!*si->race_info)  si->race_info[0]  = '-', si->race_info[1] = 0;
+	if (!*si->arena_info) si->arena_info[0] = '-', si->arena_info[1] = 0;
+	if (!*si->music_info) si->music_info[0] = '-', si->music_info[1] = 0;
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+slot_info_t GetSlotByAttrib ( mem_t attrib, bool minus_for_empty )
+{
+    PRINT("GetSlotByAttrib(\"%.*s\")\n",attrib.len,attrib.ptr);
+
+    slot_info_t si = {{0,0}};
+    AnalyzeSlotAttrib(&si,false,attrib);
+    FinalizeSlotInfo(&si,minus_for_empty);
+    return si;
+}
+
+//-----------------------------------------------------------------------------
+
+slot_info_t GetSlotByName ( mem_t name, bool minus_for_empty )
+{
+    PRINT("GetSlotByName(\"%.*s\")\n",name.len,name.ptr);
+
+    slot_info_t si = {{0,0}};
+    AnalyzeSlotByName(&si,false,name);
+    FinalizeSlotInfo(&si,minus_for_empty);
+    return si;
 }
 
 //

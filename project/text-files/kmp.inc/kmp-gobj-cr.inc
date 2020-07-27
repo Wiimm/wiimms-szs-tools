@@ -10,6 +10,11 @@
 @GOBJ-HEAD-VALUE   = %#x
 @AUTO-ENEMY-ITEM   =   0	# mode$test ? <item$star,item$mega> : 0
 @AUTO-OBJECT-NAME  =   0
+@SORT-OBJECTS      = SORT$OFF	# SORT$GROUPING SORT$ANGLE SORT$TINY
+
+# KCL-FALL (automatic height correction)
+# Define the following values here or at any place between the objects.
+# They are valid until re-defined. Disable this feature by @KCL-FALL-WIDTH=0.
 @KCL-FALL-WIDTH    =   0	# set to a value >0 (e.g. 200) to enable KCL falling
 @KCL-FALL-PRE-ADD  =   0	# add this height or vector before falling
 @KCL-FALL-POST-ADD =   0	# add this height or vector after success
@@ -17,7 +22,6 @@
 	# Best values are:
 	#  - KCL$BORDER: All KCL types except effects.
 	#  - KCL$DRIVE:  All driveable types like road, boost, ramp, water, ...
-@SORT-OBJECTS      = SORT$OFF	# SORT$GROUPING SORT$ANGLE SORT$TINY
 
 #------------------------------------------------------------------------------
 # Definition objects and references

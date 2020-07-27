@@ -48,6 +48,7 @@
 #define BMG_ATTRIB_BUF_SIZE	(10+4*BMG_ATTRIB_SIZE)	// good buf size for attrib string
 #define BMG_INF_MAX_SIZE	(4+BMG_ATTRIB_SIZE)	// max supported inf size
 #define BMG_INF_LIMIT		1000			// max allowed inf size
+#define BMG_LEGACY_BLOCK_SIZE	32			// block size for legacy files
 
 // [[xbuf]]
 #define BMG_MSG_BUF_SIZE	20050			// good buf size for messages
@@ -772,6 +773,7 @@ typedef struct bmg_t
     bmg_encoding_t	encoding;		// type of encoding
     uint		inf_size;		// size of each 'inf' element
     bool		have_mid;		// TRUE: enable MID1 creation
+    bool		legacy;			// TRUE: legacy (GameCube) mode enabled
     u8			attrib[BMG_ATTRIB_SIZE];// attribute buffer for defaults
     u16			attrib_used;		// used size of 'attrib', ALIGN(4)
     u8			use_color_names;	// 0:off, 1:auto, 2:on

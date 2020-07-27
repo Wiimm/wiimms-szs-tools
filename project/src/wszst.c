@@ -1961,18 +1961,15 @@ static enumError cmd_analyze()
 	int	lap_count	= 3;		// STGI lap counter
 	float	speed_factor	= 1.0;		// STGI speed factor
 
-	ccp slot_info = CreateSlotInfo(&szs);
-	if (szs.is_arena)
-	    ct_dest = StringCopyE(ct_dest,ct_end,",arena");
-	else
-	{
-	    if (!strcmp(slot_info,"+6.1"))
-		ct_dest = StringCopyE(ct_dest,ct_end,",61");
-	    else if (!strcmp(slot_info,"+6.2"))
-		ct_dest = StringCopyE(ct_dest,ct_end,",62");
-	    else if (!strcmp(slot_info,"+3.1,+7.1"))
-		ct_dest = StringCopyE(ct_dest,ct_end,",31+71");
-	}
+	slot_ana_t slotana;
+	AnalyzeSlot(&slotana,&szs);
+	slot_info_t slotinfo;
+	AnalyzeSlotByName(&slotinfo,true,MemByString(param->arg));
+	if (slotana.mandatory_slot[0])
+	    AnalyzeSlotAttrib(&slotinfo,false,MemByString(slotana.mandatory_slot));
+	FinalizeSlotInfo(&slotinfo,true);
+	if (*slotinfo.slot_attrib)
+	    ct_dest = StringCat2E(ct_dest,ct_end,",",slotinfo.slot_attrib);
 
 	kmp_finish_t kf;
 	InitializeFinishLine(&kf);
@@ -2215,12 +2212,15 @@ static enumError cmd_analyze()
 		 "sha1_course=\"%s\"\n"
 		 "sha1_vrcorn=\"%s\"\n"
 		 "sha1_minimap=\"%s\"\n"
-		"is_arena=%u\n"
-		"is_arena_name=\"%s\"\n"
+		"is_arena=\"%u %s\"\n"
 		"n_ckpt0=%d\n"
 		"lap_count=%d\n"
 		"speed_factor=%5.3f\n"
 		"slot_info=\"%s\"\n"
+		"slot_attributes=\"%s\"\n"
+		"race_slot=\"%u %s\"\n"
+		"arena_slot=\"%u %s\"\n"
+		"music_index=\"%u %s\"\n"
 		 "used_x_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
 		 "used_y_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
 		 "used_z_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
@@ -2248,7 +2248,11 @@ static enumError cmd_analyze()
 		,ckpt0_count
 		,lap_count
 		,speed_factor
-		,slot_info
+		,slotana.slot_info
+		,slotinfo.slot_attrib
+		,slotinfo.race_slot,slotinfo.race_info
+		,slotinfo.arena_slot,slotinfo.arena_info
+		,slotinfo.music_index,slotinfo.music_info
 		 ,up.orig.rating[0],WarnLevelNameLo[up.orig.rating[0]]
 		 ,up.orig.min.x,up.orig.max.x
 			,fabsf(up.orig.max.x-up.orig.min.x)
@@ -3012,8 +3016,8 @@ static enumError cmd_slots()
 	//PatchSZS(&szs);
 
 	int slot[MKW_N_TRACKS];
-	bool need_special;
-	const int stat = FindSlotsSZS(&szs,slot,&need_special);
+	int required_slot;
+	const int stat = FindSlotsSZS(&szs,slot,&required_slot);
 
 	noPRINT("IS_ARENA=%d\n",szs.is_arena);
 	if ( szs.is_arena >= ARENA_FOUND )
@@ -3055,7 +3059,7 @@ static enumError cmd_slots()
 				i/4+1, i%4+1 );
 			count++;
 		    }
-		    else if ( !need_special && ( i == 13 || i == 20 || i == 21 ))
+		    else if ( required_slot != 31 && ( i == 13 || i == 20 || i == 21 ))
 		    {
 			fputs("     ",stdout);
 			count++;

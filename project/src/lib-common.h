@@ -611,6 +611,8 @@ enumError SaveTextMINIGAME
 int ScanOptKmgLimit ( ccp arg );
 int ScanOptKmgCopy ( ccp arg );
 
+extern const KeywordTab_t arena_attrib_tab[];
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			ObjFlow.bin			///////////////

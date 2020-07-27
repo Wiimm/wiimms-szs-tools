@@ -18,31 +18,34 @@
 typedef enum kcl_attrib_t
 {
 
-    KCLT_C_ROAD       = 0x00001,  // normal road
-    KCLT_C_OFFROAD    = 0x00002,  // offroad
-    KCLT_C_FAST       = 0x00004,  // boost and trick
-    KCLT_C_HALFPIPE   = 0x00008,  // halfpipe
-    KCLT_C_MOVING     = 0x00010,  // moving terrain
-    KCLT_C_WATER      = 0x00020,  // shallow water
-    KCLT_C_CANNON     = 0x00040,  // cannon activator
-    KCLT_C_WALL       = 0x00080,  // wall
-    KCLT_C_FALL       = 0x00100,  // fall or out of bounds
-    KCLT_C_EFFECT     = 0x00200,  // sound trigger and other effects
-    KCLT_C_ITEM       = 0x00400,  // for items only
-    KCLT_C_UNKNOWN    = 0x00800,  // unknown type
-     KCLT_M_CLASS     = 0x00fff,  // mask of classes
+    KCLT_C_ROAD       = 0x000001,  // normal road
+    KCLT_C_OFFROAD    = 0x000002,  // offroad
+    KCLT_C_FAST       = 0x000004,  // boost and trick
+    KCLT_C_HALFPIPE   = 0x000008,  // halfpipe
+    KCLT_C_MOVING     = 0x000010,  // moving terrain
+    KCLT_C_WATER      = 0x000020,  // shallow water
+    KCLT_C_CANNON     = 0x000040,  // cannon activator
+    KCLT_C_WALL       = 0x000080,  // wall
+    KCLT_C_FALL       = 0x000100,  // fall or out of bounds
+    KCLT_C_EFFECT     = 0x000200,  // sound trigger and other effects
+    KCLT_C_ITEM       = 0x000400,  // for items only
+    KCLT_C_UNKNOWN    = 0x000800,  // unknown type
+     KCLT_M_CLASS     = 0x000fff,  // mask of classes
 
-    KCLT_BORDER       = 0x01000,  // road or wall
-    KCLT_DRIVE        = 0x02000,  // is driveable
-    KCLT_BOOST        = 0x04000,  // boost
-    KCLT_TRICK        = 0x08000,  // trickable
-    KCLT_SOUND        = 0x10000,  // sound effect
-    KCLT_ITEM         = 0x20000,  // special for items
-    KCLT_UNKNOWN      = 0x40000,  // unknown
-     KCLT_M_FEATURES  = 0x7f000,  // mask of base features
+    KCLT_BORDER       = 0x001000,  // road or wall
+    KCLT_DRIVE        = 0x002000,  // is driveable
+    KCLT_BOOST        = 0x004000,  // boost
+    KCLT_TRICK        = 0x008000,  // trickable
+    KCLT_SOUND        = 0x010000,  // sound effect
+    KCLT_ITEM         = 0x020000,  // special for items
+    KCLT_UNKNOWN      = 0x040000,  // unknown
+    KCLT_VARIANT_X    = 0x080000,  // unknown variant
+    KCLT_VARIANT_A    = 0x100000,  // variant A
+    KCLT_VARIANT_B    = 0x200000,  // variant B
+     KCLT_M_FEATURES  = 0x3ff000,  // mask of base features
 
-    KCLT_NONE         = 0x00000,  // none set
-    KCLT_M_ALL        = 0x7ffff   // all flags of above
+    KCLT_NONE         = 0x000000,  // none set
+    KCLT_M_ALL        = 0x3fffff   // all flags of above
 
 } kcl_attrib_t;
 
@@ -50,7 +53,7 @@ typedef enum kcl_attrib_t
 
 #define N_KCL_CLASS     12
 #define N_KCL_TYPE    0x20
-#define N_KCL_ATTRIB    19
+#define N_KCL_ATTRIB    22
 #define N_KCL_FLAG 0x10000
 #define N_KCL_AUTO_FLAGS 200
 #define N_KCL_USER_FLAGS 200

@@ -2735,20 +2735,20 @@ int GetVr1DiffByTab ( int diff ) // diff = VR(winner) - VR(loser)
 
 static const s16 vr2_diff_tab[112] =
 {
-          6598,  4999,  3963,  3233,  2671,  2212,  1819,  1476,  //   0 ..   7
-          1168,   889,   633,   395,   174,   -34,  -231,  -418,  //   8 ..  15
-          -596,  -767,  -931, -1090, -1243, -1392, -1536, -1676,  //  16 ..  23
-         -1813, -1946, -2076, -2203, -2328, -2450, -2569, -2687,  //  24 ..  31
-         -2802, -2915, -3026, -3136, -3243, -3349, -3454, -3557,  //  32 ..  39
-         -3658, -3759, -3857, -3955, -4051, -4147, -4241, -4334,  //  40 ..  47
-         -4425, -4516, -4606, -4695, -4783, -4870, -4957, -5042,  //  48 ..  55
-         -5127, -5211, -5294, -5377, -5459, -5540, -5622, -5702,  //  56 ..  63
-         -5783, -5863, -5942, -6022, -6101, -6180, -6259, -6338,  //  64 ..  71
-         -6417, -6495, -6574, -6653, -6731, -6810, -6889, -6968,  //  72 ..  79
-         -7048, -7127, -7207, -7287, -7367, -7448, -7530, -7611,  //  80 ..  87
-         -7693, -7776, -7860, -7944, -8029, -8114, -8201, -8288,  //  88 ..  95
-         -8377, -8466, -8557, -8649, -8743, -8838, -8935, -9034,  //  96 .. 103
-         -9135, -9239, -9345, -9455, -9568, -9684, -9806, -9933,  // 104 .. 111
+	  6598,  4999,  3963,  3233,  2671,  2212,  1819,  1476,  //   0 ..   7
+	  1168,   889,   633,   395,   174,   -34,  -231,  -418,  //   8 ..  15
+	  -596,  -767,  -931, -1090, -1243, -1392, -1536, -1676,  //  16 ..  23
+	 -1813, -1946, -2076, -2203, -2328, -2450, -2569, -2687,  //  24 ..  31
+	 -2802, -2915, -3026, -3136, -3243, -3349, -3454, -3557,  //  32 ..  39
+	 -3658, -3759, -3857, -3955, -4051, -4147, -4241, -4334,  //  40 ..  47
+	 -4425, -4516, -4606, -4695, -4783, -4870, -4957, -5042,  //  48 ..  55
+	 -5127, -5211, -5294, -5377, -5459, -5540, -5622, -5702,  //  56 ..  63
+	 -5783, -5863, -5942, -6022, -6101, -6180, -6259, -6338,  //  64 ..  71
+	 -6417, -6495, -6574, -6653, -6731, -6810, -6889, -6968,  //  72 ..  79
+	 -7048, -7127, -7207, -7287, -7367, -7448, -7530, -7611,  //  80 ..  87
+	 -7693, -7776, -7860, -7944, -8029, -8114, -8201, -8288,  //  88 ..  95
+	 -8377, -8466, -8557, -8649, -8743, -8838, -8935, -9034,  //  96 .. 103
+	 -9135, -9239, -9345, -9455, -9568, -9684, -9806, -9933,  // 104 .. 111
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2762,7 +2762,7 @@ int GetVr2DiffByTab ( int diff ) // diff = VR(winner) - VR(loser)
 
     const s16 search = diff;
     int i = 0, j = sizeof(vr2_diff_tab) / sizeof(*vr2_diff_tab) - 1;
-    
+
     while ( i < j )
     {
 	const int k = (i+j)/2;
@@ -3370,6 +3370,87 @@ static enumError test_timezone ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_timeadjust()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+//-----------------------------------------------------------------------------
+
+static enumError test_timeadjust ( int argc, char ** argv )
+{
+    SetupTimezone(true);
+    printf("timezone_adjust_sec=%lld, _usec=%lld\n",
+		timezone_adjust_sec, timezone_adjust_usec );
+
+    time_t gmt = time(0);
+    struct tm tm1;
+    gmtime_r(&gmt,&tm1);
+    printf("> %02d:%02d\n",tm1.tm_hour,tm1.tm_min);
+    struct tm *tm2 = gmtime(&gmt);
+    printf("> %02d:%02d\n",tm2->tm_hour,tm2->tm_min);
+
+    static ccp tztab[] =
+    {
+	"UTC",
+	"Europe/Berlin",
+	"America/Detroit",
+	0
+    };
+
+    ccp *tzptr;
+    for ( tzptr = tztab; *tzptr; tzptr++ )
+    {
+	printf("----- TZ: %s -----\n",*tzptr);
+	setenv("TZ",*tzptr,1);
+	tzset();
+
+	int prev_delta = -1;
+	time_t tim;
+	for ( tim = 1577664030; tim < 1609545600; tim++ )
+	{
+	    struct tm gmt, loc;
+	    gmtime_r(&tim,&gmt);
+	    localtime_r(&tim,&loc);
+	    int delta = ( gmt.tm_hour - loc.tm_hour ) * 3600
+		      + ( gmt.tm_min  - loc.tm_min  ) *   60
+		      + ( gmt.tm_sec  - loc.tm_sec  );
+	    if ( gmt.tm_yday != loc.tm_yday )
+	    {
+		if ( gmt.tm_year < loc.tm_year
+		    || gmt.tm_year == loc.tm_year && gmt.tm_yday < loc.tm_yday )
+		{
+		    delta -= 24*3600;
+		}
+		else
+		{
+		    delta += 24*3600;
+		}
+	    }
+
+	    const int adj = GetTimezoneAdjust(tim);
+	    if ( delta != prev_delta || delta != adj )
+	    {
+		prev_delta = delta;
+		printf("%6d | %03u %04u-%02u-%02u %2u:%02u:%02u |"
+			    " %03u %04u-%02u-%02u %2u:%02u:%02u",
+		    delta,
+		    gmt.tm_yday,
+		    gmt.tm_year+1900, gmt.tm_mon+1, gmt.tm_mday,
+		    gmt.tm_hour, gmt.tm_min, gmt.tm_sec,
+		    loc.tm_yday,
+		    loc.tm_year+1900, loc.tm_mon+1, loc.tm_mday,
+		    loc.tm_hour, loc.tm_min, loc.tm_sec );
+		if ( delta != adj )
+		    printf(" | %6d\n",adj);
+		else
+		    putchar('\n');
+	    }
+	}
+    }
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			test_condition()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3523,6 +3604,54 @@ static enumError test_in_arch ( int argc, char ** argv )
 	}
     }
     printf(" %u/%u differ\n",differ,total);
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_slot_attrib()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_slot_attrib ( int argc, char ** argv )
+{
+    int i;
+    for ( i = 1; i < argc; i++ )
+    {
+	printf("\n\e[1;33;44m %s \e[0m\n",argv[i]);
+	slot_info_t si = GetSlotByName(MemByString(argv[i]),true);
+	DumpSlotInfo(stdout,2,&si,true);
+    }
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_slot_info()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_slot_info ( int argc, char ** argv )
+{
+    int i;
+    for ( i = 1; i < argc; i++ )
+    {
+	printf("\n> %s\n",argv[i]);
+
+	szs_file_t szs;
+	InitializeSZS(&szs);
+	enumError err = LoadCreateSZS(&szs,argv[i],true,false,true);
+	if (err)
+	    return err;
+
+	slot_ana_t sa;
+	AnalyzeSlot(&sa,&szs);
+	ccp slot_info = CreateSlotInfo(&szs);
+	printf("stat=%d, req=%d: %s\n\t%s\n\t%s%s\n",
+		sa.stat, sa.required_slot, sa.mandatory_slot,
+		sa.slot_info, slot_info,
+		strcmp(sa.slot_info,slot_info) ? "   \e[31;1mFAIL!\e[0m" : "" );
+
+	ResetSZS(&szs);
+    }
     return 0;
 }
 
@@ -3741,9 +3870,12 @@ enum
     CMD_ITEMSLOT,		// test_item_slot(argc,argv)
     CMD_SINCE2001,		// test_since2001(argc,argv)
     CMD_TIMEZONE,		// test_timezone(argc,argv)
+    CMD_TIMEADJUST,		// test_timeadjust(argc,argv)
     CMD_CONDITION,		// test_condition(argc,argv)
     CMD_XBIT,			// test_xbit(argc,argv)
     CMD_IN_ARCH,		// test_in_arch(argc,argv)
+    CMD_SLOT_ATTRIB,		// test_slot_attrib(argc,argv)
+    CMD_SLOT_INFO,		// test_slot_info(argc,argv)
 
     CMD__N
 };
@@ -3794,9 +3926,12 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_ITEMSLOT,		"ITEM-SLOT",	"IS",		0 },
 	{ CMD_SINCE2001,	"SINCE2001",	"S2",		0 },
 	{ CMD_TIMEZONE,		"TIMEZONE",	"TZ",		0 },
+	{ CMD_TIMEADJUST,	"TIMEADJUST",	"TA",		0 },
 	{ CMD_CONDITION,	"CONDITION",	"CO",		0 },
 	{ CMD_XBIT,		"XBIT",		0,		0 },
 	{ CMD_IN_ARCH,		"IN-ARCH",	"INARCH",	0 },
+	{ CMD_SLOT_ATTRIB,	"SLOT-ATTRIB",	"SA",		0 },
+	{ CMD_SLOT_INFO,	"SLOT-INFO",	"SI",		0 },
 
 	{ CMD__N,0,0,0 }
 };
@@ -3918,9 +4053,12 @@ int main ( int argc, char ** argv )
 	case CMD_ITEMSLOT:		test_item_slot(argc,argv); break;
 	case CMD_SINCE2001:		test_since2001(argc,argv); break;
 	case CMD_TIMEZONE:		test_timezone(argc,argv); break;
+	case CMD_TIMEADJUST:		test_timeadjust(argc,argv); break;
 	case CMD_CONDITION:		test_condition(argc,argv); break;
 	case CMD_XBIT:			test_xbit(argc,argv); break;
 	case CMD_IN_ARCH:		test_in_arch(argc,argv); break;
+	case CMD_SLOT_ATTRIB:		test_slot_attrib(argc,argv); break;
+	case CMD_SLOT_INFO:		test_slot_info(argc,argv); break;
 	//case CMD_HELP:
 	default:
 	    help_exit();
