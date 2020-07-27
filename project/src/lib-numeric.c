@@ -718,12 +718,12 @@ double AngleVector
 
     const double ax = point[0] - prev[0];
     const double az = point[2] - prev[2];
-    if ( abs(ax) + abs(az) < 1e-6 )
+    if ( fabs(ax) + fabs(az) < 1e-6 )
 	return 0.0;
 
     const double bx = next[0] - point[0];
     const double bz = next[2] - point[2];
-    if ( abs(bx) + abs(bz) < 1e-6 )
+    if ( fabs(bx) + fabs(bz) < 1e-6 )
 	return 0.0;
 
     if (!return_degree)

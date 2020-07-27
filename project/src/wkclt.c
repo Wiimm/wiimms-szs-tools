@@ -294,7 +294,7 @@ static enumError cmd_cat()
 	}
 
 	kcl_t kcl;
-	err = ScanRawDataKCL(&kcl,true,&raw,mode,true);
+	err = ScanRawDataKCL(&kcl,true,&raw,true,mode);
 	if ( err > ERR_WARNING )
 	    return err;
 
@@ -355,7 +355,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 	kcl_t kcl;
 	InitializeKCL(&kcl);
 	kcl.fform_outfile = dest_ff;
-	err = ScanRawDataKCL(&kcl,false,&raw,global_check_mode,true);
+	err = ScanRawDataKCL(&kcl,false,&raw,true,global_check_mode);
 	if ( err > ERR_WARNING )
 	    return err;
 
@@ -436,7 +436,7 @@ static enumError cmd_copy()
 	kcl_t kcl;
 	InitializeKCL(&kcl);
 	kcl.fform_outfile = dest_ff;
-	err = ScanRawDataKCL(&kcl,false,&raw,global_check_mode,true);
+	err = ScanRawDataKCL(&kcl,false,&raw,true,global_check_mode);
 	if ( err > ERR_WARNING )
 	    return err;
 
@@ -540,7 +540,7 @@ static enumError cmd_cff()
 	    return err;
 
 	kcl_t kcl;
-	err = ScanRawDataKCL(&kcl,true,&raw,global_check_mode,true);
+	err = ScanRawDataKCL(&kcl,true,&raw,true,global_check_mode);
 	if ( err > ERR_WARNING )
 	    return err;
 
@@ -704,7 +704,7 @@ static enumError cmd_flags()
 			GetNameFF(raw.fform,0), raw.fname );
 
 	kcl_t kcl;
-	err = ScanRawDataKCL(&kcl,true,&raw,global_check_mode,true);
+	err = ScanRawDataKCL(&kcl,true,&raw,true,global_check_mode);
 	if ( err > ERR_WARNING )
 	    return err;
 
@@ -800,7 +800,7 @@ static enumError cmd_dump ( bool brief_level, int cmd )
 	kcl_t kcl;
 	InitializeKCL(&kcl);
 	kcl.fform_outfile = FF_KCL;
-	err = ScanRawDataKCL(&kcl,false,&raw,global_check_mode,true);
+	err = ScanRawDataKCL(&kcl,false,&raw,true,global_check_mode);
 	if ( err > ERR_WARNING )
 	    return err;
 
@@ -870,7 +870,7 @@ static enumError cmd_traverse ( bool fall )
     }
 
     kcl_t kcl;
-    err = ScanRawDataKCL(&kcl,true,&raw,0,true);
+    err = ScanRawDataKCL(&kcl,true,&raw,true,0);
     if ( err > ERR_WARNING || !param )
 	return err;
 
@@ -952,7 +952,7 @@ static enumError cmd_check()
 	}
 
 	kcl_t kcl;
-	err = ScanRawDataKCL(&kcl,true,&raw,0,true);
+	err = ScanRawDataKCL(&kcl,true,&raw,true,0);
 	if ( err <= ERR_WARNING && ( !mode || CheckKCL(&kcl,mode) ))
 	    cmd_err = ERR_DIFFER;
 	fflush(stdout);
@@ -1064,7 +1064,7 @@ static enumError cmd_analyze()
 			GetNameFF(raw.fform,0), raw.fname );
 
 	kcl_t kcl;
-	err = ScanRawDataKCL(&kcl,true,&raw,0,true);
+	err = ScanRawDataKCL(&kcl,true,&raw,true,0);
 	if ( err > ERR_WARNING )
 	    return err;
 
@@ -1097,7 +1097,7 @@ static enumError cmd_blow()
 	    return err;
 
 	kcl_t kcl;
-	err = ScanRawDataKCL(&kcl,true,&raw,0,true);
+	err = ScanRawDataKCL(&kcl,true,&raw,true,0);
 	if ( err > ERR_WARNING )
 	    return err;
 

@@ -1423,9 +1423,9 @@ void PrintTranferStatistics
 		prefix, color1, name,
 		stat->conn_count, stat->conn_count == 1 ? "" : "s",
 		stat->recv_count, stat->recv_count == 1 ? "" : "s",
-		PrintSize1024(0,0,stat->recv_size,false),
+		PrintSize1024(0,0,stat->recv_size,0),
 		stat->send_count, stat->send_count == 1 ? "" : "s",
-		PrintSize1024(0,0,stat->send_size,false),
+		PrintSize1024(0,0,stat->send_size,0),
 		color0 );
     }
     else if ( stat->recv_count || stat->send_count )
@@ -1434,9 +1434,9 @@ void PrintTranferStatistics
 		"%s%s#STAT-%-5s %u packet%s (%s) received, %u packet%s (%s) send.%s\n",
 		prefix, color1, name,
 		stat->recv_count, stat->recv_count == 1 ? "" : "s",
-		PrintSize1024(0,0,stat->recv_size,false),
+		PrintSize1024(0,0,stat->recv_size,0),
 		stat->send_count, stat->send_count == 1 ? "" : "s",
-		PrintSize1024(0,0,stat->send_size,false),
+		PrintSize1024(0,0,stat->send_size,0),
 		color0 );
     }
     else
@@ -1465,8 +1465,8 @@ void PrintTranferStatistics
 		duration_info,
 		delta.recv_count, crate,
 		delta.recv_count == 1 ? "" : "s",
-		PrintSize1024(0,0,delta.recv_size,false),
-		PrintSize1024(0,0,srate,false),
+		PrintSize1024(0,0,delta.recv_size,0),
+		PrintSize1024(0,0,srate,0),
 		color0 );
 	}
 
@@ -1481,8 +1481,8 @@ void PrintTranferStatistics
 		duration_info,
 		delta.send_count, crate,
 		delta.send_count == 1 ? "" : "s",
-		PrintSize1024(0,0,delta.send_size,false),
-		PrintSize1024(0,0,srate,false),
+		PrintSize1024(0,0,delta.send_size,0),
+		PrintSize1024(0,0,srate,0),
 		color0 );
 	}
     }
@@ -2204,8 +2204,8 @@ void LogTCPStream
     fprintf(f,"%*sTS: id:%x, sock=%d, %u packets received (%s), %u packets send (%s)",
 	indent,"",
 	ts->unique_id, ts->sock,
-	ts->stat.recv_count, PrintSize1024(0,0,ts->stat.recv_size,false),
-	ts->stat.send_count, PrintSize1024(0,0,ts->stat.send_size,false) );
+	ts->stat.recv_count, PrintSize1024(0,0,ts->stat.recv_size,0),
+	ts->stat.send_count, PrintSize1024(0,0,ts->stat.send_size,0) );
 
     if (format)
     {
@@ -3394,8 +3394,8 @@ void LogTCPHandler
     fprintf(f,"\n%*s    %u connects, %u packets received (%s), %u packets send (%s)\n",
 	indent,"",
 	th->stat.conn_count,
-	th->stat.recv_count, PrintSize1024(0,0,th->stat.recv_size,false),
-	th->stat.send_count, PrintSize1024(0,0,th->stat.send_size,false) );
+	th->stat.recv_count, PrintSize1024(0,0,th->stat.recv_size,0),
+	th->stat.send_count, PrintSize1024(0,0,th->stat.send_size,0) );
 
     if (recurse>0)
     {

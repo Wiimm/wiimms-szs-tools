@@ -2167,7 +2167,7 @@ TextCommand_t GetTextCommand
 
 //-----------------------------------------------------------------------------
 
-enumError ScanTextCommand
+TextCommand_t ScanTextCommand
 (
     ScanInfo_t		* si		// valid data
 );

@@ -1643,7 +1643,7 @@ xpf_mode1_t CheckMode1GOBJ ( const kmp_gobj_entry_t *g )
 
 typedef struct xpf_mode1_elem_t
 {
-    int			index;		// index of element wihiin list
+    int			index;		// index of element within list
     xpf_mode1_t		mode;		// mode
     kmp_gobj_entry_t	*obj;		// pointer to object
     kmp_gobj_entry_t	norm;		// copy of 'obj' with normalized data

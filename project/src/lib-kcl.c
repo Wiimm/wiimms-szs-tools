@@ -4113,7 +4113,7 @@ enumError ScanRawDataKCL
     bool		init_kcl,	// true: initialize 'kcl' first
     struct raw_data_t	* raw,		// valid raw data
     bool		move_data,	// true: move 'raw.data' to 'kcl'
-    CheckMode_t		mode		// not NULL: call CheckKCL(mode)
+    CheckMode_t		check_mode	// not NULL: call CheckKCL(check_mode)
 )
 {
     DASSERT(kcl);
@@ -4133,7 +4133,7 @@ enumError ScanRawDataKCL
 	return ERR_OK;
     }
 
-    enumError err = ScanKCL(kcl,false,raw->data,raw->data_size,mode,move_data);
+    enumError err = ScanKCL(kcl,false,raw->data,raw->data_size,move_data,check_mode);
 
     if ( kcl->raw_data == raw->data )
     {
@@ -4173,7 +4173,7 @@ enumError LoadKCL
     {
 	kcl->fname = raw.fname;
 	raw.fname = 0;
-	err = ScanKCL(kcl,false,raw.data,raw.data_size,mode,true);
+	err = ScanKCL(kcl,false,raw.data,raw.data_size,true,mode);
 	if ( kcl->raw_data == raw.data )
 	{
 	    // move the data
@@ -4288,7 +4288,7 @@ kcl_t * LoadReferenceKCL()
     kcl_t kcl;
     InitializeKCL(&kcl);
     //kcl.fform_outfile = FF_KCL;
-    err = ScanRawDataKCL(&kcl,false,&raw,0,false);
+    err = ScanRawDataKCL(&kcl,false,&raw,false,0);
     ResetRawData(&raw);
     if (err)
     {

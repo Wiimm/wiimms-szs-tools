@@ -3204,7 +3204,7 @@ static enumError F_abs
 	    break;
 
 	case VAR_INT:
-	    res->i = abs(param->i);
+	    res->i = llabs(param->i);
 	    break;
 
 	case VAR_DOUBLE:
@@ -3792,7 +3792,7 @@ static enumError F_sqrt
 	    break;
 
 	case VAR_INT:
-	    res->d = sqrt(abs(param->i));
+	    res->d = sqrt(llabs(param->i));
 	    res->mode = VAR_DOUBLE;
 	    break;
 

@@ -1,6 +1,8 @@
 
 # optimize mac binaries and/or build universal binaries
 
+CFLAGS += -Wno-gnu-variable-sized-type-not-at-end -Wno-address-of-packed-member
+
 #-----------------------------------------------------------------------------
 
 .PHONY : mac-distrib

@@ -6560,7 +6560,7 @@ static void check_ph
 	if ( end > n_pt )
 	    end = n_pt;
 
-	u8 done[0xff];
+	u8 done[0x100];
 	memset(done,0,sizeof(done));
 
 	uint j;
@@ -6673,9 +6673,7 @@ int CheckKMP
     memset(route_usage,0,sizeof(route_usage));
     enum { RU_CAME = 1, RU_GOBJ = 2 };
 
-    u16 jgpt_usage[0x100];
-    memset(jgpt_usage,0,sizeof(jgpt_usage));
-
+    u16 jgpt_usage[0x100] = {0};
     const int ncame = kmp->dlist[KMP_CAME].used;
     const int npoti = kmp->dlist[KMP_POTI].used;
     const int njgpt = kmp->dlist[KMP_JGPT].used;

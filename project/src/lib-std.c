@@ -5493,13 +5493,13 @@ palette_format_t ScanPaletteFormat ( ccp arg )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp GetPaletteFormatName ( image_format_t iform, ccp unknown_value )
+ccp GetPaletteFormatName ( palette_format_t pform, ccp unknown_value )
 {
-    if ( iform >= 0 )
+    if ( pform >= 0 )
     {
 	const KeywordTab_t * ct;
 	for ( ct = cmdtab_palette_format; ct->name1; ct++ )
-	    if ( ct->id == iform )
+	    if ( ct->id == pform )
 		return ct->name1;
     }
     return unknown_value;

@@ -1949,7 +1949,7 @@ static enumError test_find_dol ( int argc, char ** argv )
     }
 
     dol_header_t dh;
-    enumError err = LoadFILE(argv[1],0,0,&dh,sizeof(dh),1,false,false);
+    enumError err = LoadFILE(argv[1],0,0,&dh,sizeof(dh),1,0,false);
     if (err)
 	return err;
 

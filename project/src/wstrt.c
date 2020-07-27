@@ -530,7 +530,6 @@ static enumError cmd_https()
 			ptr++;
 			continue;
 		    }
-//printf(">H> %06x : %s\n",(int)(ptr-str.data),ptr);
 		    sl = ServerList;
 		    ptr += off;
 		    if (*ptr)
@@ -557,7 +556,6 @@ static enumError cmd_https()
 			ptr++;
 			continue;
 		    }
-//printf(">G> %06x : %s\n",(int)(ptr-str.data),ptr);
 
 		    is_http = 0;
 		    off = 19;
@@ -571,7 +569,7 @@ static enumError cmd_https()
 
 		str_server_patch_t *pat = patch_list + n_list++;
 		pat->mode	= str.mode;
-		pat->flags	= str.is_dol;
+		pat->flags	= str.is_dol ? STR_F_IS_DOL : 0;
 		pat->is_http	= is_http;
 		pat->serv_type	= sl->serv_type;
 		pat->offset	= ptr - off - str.data;

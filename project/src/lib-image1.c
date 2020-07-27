@@ -561,7 +561,7 @@ bool IsGrayIMG
 {
     DASSERT(img);
     image_format_t xform;
-    NormalizeIF(&xform,img->iform,IMG_X_RGB,img->iform);
+    NormalizeIF(&xform,img->iform,IMG_X_RGB,img->pform);
     return xform == IMG_X_GRAY;
 }
 
@@ -894,7 +894,7 @@ static enumError TransformPalette
 	FREE(itab);
 	return ERROR0(ERR_INVALID_IFORM,
 		"Palette format 0x%02x [%s] not supported: %s\n",
-		src_img->pform, GetImageFormatName(src_img->pform,"?"), src_img->path );
+		src_img->pform, GetPaletteFormatName(src_img->pform,"?"), src_img->path );
     }
 
 

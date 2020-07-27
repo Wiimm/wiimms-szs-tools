@@ -6779,9 +6779,7 @@ enumError SaveTextKMP
 
     fwrite(text_kmp_gobj_tabhead_cr,1,sizeof(text_kmp_gobj_tabhead_cr)-1,F.f);
 
-    u8 done[N_KMP_GOBJ];
-    memset(done,0,sizeof(done));
-
+    u8 done[N_KMP_GOBJ] = {0};
     const kmp_gobj_entry_t * gobj = (kmp_gobj_entry_t*)kmp->dlist[KMP_GOBJ].list;
     for ( i = 0; i < n; i++, gobj++ )
     {
@@ -6896,7 +6894,7 @@ enumError SaveTextKMP
 		    GetConditionRefInfo(&cri,gobj->ref_id,gobj->obj_id,true);
 		    fprintf(F.f,"  $%s %s%s%s\r\n",
 			cri.cmd_suffix, cri.cond,
-			cri.info ? " # " : "", cri.info ? cri.info : "" );
+			cri.info[0] ? " # " : "", cri.info );
 		}
 
 		fprintf(F.f,"#%.84s\r\n",Minus300);
@@ -6985,7 +6983,7 @@ enumError SaveTextKMP
 	    if (cri.is_condref)
 		fprintf(F.f,"  $%s %s%s%s\r\n",
 			cri.cmd_suffix, cri.cond,
-			cri.info ? " # " : "", cri.info ? cri.info : "" );
+			cri.info[0] ? " # " : "", cri.info );
 	    PRINT0("# CR[%#x,%#x]: is=%d, found=%d, cmd=%s, xor:%x->%#x, c=%s, i=%s\n",
 			gobj->ref_id, gobj->obj_id,
 			cri.is_condref, cri.condref!=0, cri.cmd_suffix,

@@ -538,7 +538,7 @@ ccp PrintGParam ( const GParam_t *par )
 
 	case GOPT_IDX_SIZE:
 	    snprintf(buf,sizeof(buf),"[SIZE] %llu = %s",
-		par->un64, PrintSize1024(0,0,par->un64,false) );
+		par->un64, PrintSize1024(0,0,par->un64,0) );
 	    break;
 
 	case GOPT_IDX_DOUBLE:

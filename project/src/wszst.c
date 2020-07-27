@@ -2636,7 +2636,7 @@ static enumError cmd_distribution()
 		    if (!dent)
 			break;
 
-		    if ( dent->d_name && *dent->d_name != '.' )
+		    if ( *dent->d_name != '.' )
 		    {
 			PathCatPP(path,sizeof(path),param->arg,dent->d_name);
  #if HAVE_WIIMM_EXT // [[2do]] by option
@@ -2988,12 +2988,11 @@ static enumError cmd_slots()
     if ( KCL_MODE & KCLMD_DROP_AUTO )
 	SetKclMode(KCL_MODE|KCLMD_DROP_UNUSED);
 
-    const bool have_col = IsFileColorized(stdout);
-    ccp col_minus = GetTextMode(have_col,TTM_BOLD|TTM_RED);
-    ccp col_plus  = GetTextMode(have_col,TTM_BOLD|TTM_GREEN);
-    ccp col_misc  = GetTextMode(have_col,TTM_BOLD|TTM_CYAN);
-    ccp col_reset = GetTextMode(have_col,TTM_RESET);
-    MARK_USED(col_minus,col_plus,col_misc);
+    const ColorMode_t colmode = GetFileColorized(stdout);
+    ccp col_minus = GetTextMode(colmode,TTM_BOLD|TTM_RED);
+    ccp col_plus  = GetTextMode(colmode,TTM_BOLD|TTM_GREEN);
+    ccp col_misc  = GetTextMode(colmode,TTM_BOLD|TTM_CYAN);
+    ccp col_reset = GetTextMode(colmode,TTM_RESET);
 
     enumError max_err = ERR_OK;
     ParamList_t *param;
@@ -4571,7 +4570,7 @@ static bool ConvertHelper
 	    kcl_t kcl;
 	    InitializeKCL(&kcl);
 	    kcl.fname = src_fname;
-	    *err = ScanKCL(&kcl,false,data,data_size,global_check_mode,true);
+	    *err = ScanKCL(&kcl,false,data,data_size,true,global_check_mode);
 	    if (*err)
 		return false;
 	    *err = testmode

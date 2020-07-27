@@ -924,7 +924,7 @@ enumError ScanRawDataKCL
     bool		init_kcl,	// true: initialize 'kcl' first
     struct raw_data_t	* raw,		// valid raw data
     bool		move_data,	// true: move 'raw.data' to 'kcl'
-    CheckMode_t		mode		// not NULL: call CheckKCL(mode)
+    CheckMode_t		check_mode	// not NULL: call CheckKCL(check_mode)
 );
 
 //-----------------------------------------------------------------------------

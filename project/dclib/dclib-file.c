@@ -875,8 +875,8 @@ enumError OpenFile
     if ( limit && f->st.st_size > limit )
     {
 	char sbuf[12], lbuf[12];
-	PrintSize1024(sbuf,sizeof(sbuf),(u64)f->st.st_size,false);
-	PrintSize1024(lbuf,sizeof(lbuf),(u64)limit,false);
+	PrintSize1024(sbuf,sizeof(sbuf),(u64)f->st.st_size,0);
+	PrintSize1024(lbuf,sizeof(lbuf),(u64)limit,0);
 
 	// be tolerant, if both values produce same text
 	if (strcmp(sbuf,lbuf))
@@ -1839,13 +1839,13 @@ enumError TransferFile
 	LOGPRINT("TransferFile(MOVE1) %s -> %s\n",src,dest);
 	struct stat st;
 	if ( !stat(src,&st) && st.st_nlink == 1 && !rename(src,dest) )
-	    return true;
+	    return ERR_OK;
     }
     else if ( tfer_mode & TFMD_J_MOVE )
     {
 	LOGPRINT("TransferFile(MOVE) %s -> %s\n",src,dest);
 	if (!rename(src,dest))
-	    return true;
+	    return ERR_OK;
     }
 
     if ( tfer_mode & TFMD_J_LINK )
@@ -1856,7 +1856,7 @@ enumError TransferFile
 
 	LOGPRINT("TransferFile(LINK) %s -> %s\n",src,dest);
 	if (!link(src,dest))
-	    return true;
+	    return ERR_OK;
     }
 
     if ( tfer_mode & TFMD_J_COPY )
@@ -1872,7 +1872,7 @@ enumError TransferFile
 		PRINT("TransferFile(RM_SRC) %s",src);
 		unlink(src);
 	    }
-	    return true;
+	    return ERR_OK;
 	}
     }
 

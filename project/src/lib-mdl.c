@@ -1745,7 +1745,7 @@ enumError LoadMDL
     //--- load and scan data
 
     raw_data_t raw;
-    enumError err = LoadRawData(&raw,true,fname,0,ignore_no_file,false);
+    enumError err = LoadRawData(&raw,true,fname,0,ignore_no_file,0);
     if (!err)
     {
 	mdl->fname = raw.fname;

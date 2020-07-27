@@ -1956,7 +1956,8 @@ uint SetupAllocInfo()
 	    noPRINT("%4x: %p [%zx]\n",i,alloc[i],alloc[i]-alloc[ i>0 ? i-1 : 0 ] );
 	    if ( i > 1 )
 	    {
-		int diff = abs ( alloc[i-1] - alloc[i] );
+		const int diff = abs ( (int)(uintptr_t)(alloc[i-1])
+				     - (int)(uintptr_t)(alloc[i]) );
 		mask_found &= diff - 1;
 	    }
 	}
@@ -1976,7 +1977,8 @@ uint SetupAllocInfo()
 	    int found = 0x100;
 	    for ( i = 2; i <= MAX; i++ )
 	    {
-		const int diff = abs ( alloc[i-1] - alloc[i] ) - i;
+		const int diff = abs ( (int)(uintptr_t)(alloc[i-1])
+				     - (int)(uintptr_t)(alloc[i]) ) - i;
 		if ( diff >= 0 && found > diff )
 		    found = diff;
 	    }
@@ -5315,9 +5317,9 @@ u32 ColorTab_M0_M15[16] =
 u8 ConvertColorRGB3ToM256 ( u8 r, u8 g, u8 b )
 {
     // 0..5
-    const uint r6 = SingleColorToM6(r);
-    const uint g6 = SingleColorToM6(g);
-    const uint b6 = SingleColorToM6(b);
+    const int r6 = SingleColorToM6(r);
+    const int g6 = SingleColorToM6(g);
+    const int b6 = SingleColorToM6(b);
 
     u8	 m256	= 36*r6 + 6*g6 + b6 + 16;
     uint delta	= abs ( ( r6 ? 55 + 40 * r6 : 0 ) - r  )
@@ -5326,7 +5328,7 @@ u8 ConvertColorRGB3ToM256 ( u8 r, u8 g, u8 b )
 
     //printf("%02x>%u %02x>%u %02x>%u : m=%u delta=%d\n",r,r6,g,g6,b,b6,m256,delta);
 
-    uint m, gray, prev = 0x1000000;
+    int m, gray, prev = 0x1000000;
     for ( m = 232, gray = 8; m < 256; m++, gray += 10 )
     {
 	const uint d = abs( gray - r ) + abs( gray - g ) + abs( gray - b );
@@ -7839,7 +7841,7 @@ void LogGrowBuffer
 	PrintSize1024(0,0,gb->used,DC_SFORM_TINY|DC_SFORM_ALIGN),
 	PrintSize1024(0,0,gb->max_used,DC_SFORM_TINY|DC_SFORM_ALIGN),
 	PrintSize1024(0,0,gb->size,DC_SFORM_TINY|DC_SFORM_ALIGN),
-	PrintNumberU6(0,0,gb->ptr-gb->buf,true),
+	PrintNumberU6(0,0,gb->ptr-gb->buf,DC_SFORM_ALIGN),
 	PrintSize1024(0,0,gb->grow_size,DC_SFORM_TINY|DC_SFORM_ALIGN),
 	PrintSize1024(0,0,gb->max_size,DC_SFORM_TINY|DC_SFORM_ALIGN),
 	gb->disabled );

@@ -5366,7 +5366,7 @@ TextCommand_t GetTextCommand
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError ScanTextCommand
+TextCommand_t ScanTextCommand
 (
     ScanInfo_t		* si		// valid data
 )
@@ -6524,11 +6524,12 @@ void CalcExpr
 	    if ( src2->i >= 0 )
 	    {
 		// try integer calculation first, double is fall back on overflow
-		int n = src2->i, res = 1, err = 0;
+		s64 res = 1;
+		int n = src2->i, err = 0;
 		while ( n-- > 0 )
 		{
-		    int new_res = res * dest->i;
-		    if ( abs(new_res) <= abs(res) )
+		    s64 new_res = res * dest->i;
+		    if ( llabs(new_res) <= llabs(res) )
 		    {
 			err++;
 			break;

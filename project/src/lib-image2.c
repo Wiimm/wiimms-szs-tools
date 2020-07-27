@@ -80,7 +80,8 @@ enumError AssignIMG
 // [[analyse-magic]]
     const file_format_t fform = GetByMagicFF(data,data_size,data_size);
 
-    image_format_t iform = IMG_INVALID, pform = PAL_INVALID;
+    image_format_t   iform = IMG_INVALID;
+    palette_format_t pform = PAL_INVALID;
     uint width = 0, height = 0, n_pal = 0, psize = 0, n_img = 0;
     const u8 *idata = 0, *pdata = 0;
     bool calc_geo = false; // true: calculate geometry for mipmaps

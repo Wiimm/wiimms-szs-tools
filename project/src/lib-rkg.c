@@ -123,7 +123,7 @@ enumError ScanRawDataGHOST
 	{
 	    FREE(dest);
 	    ri->error = "decompression failed";
-	    return false;
+	    return ERR_WARNING;
 	}
 
 	data = dest;

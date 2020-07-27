@@ -602,7 +602,7 @@ static int DumpFloat
 		    if ( xd->bytes_per_col == 4 )
 		    {
 			val = xd->endian_func->rdf4(p.d);
-			format	= fabsf(val) <= 9999.0 && fabsf(val) >= 1e-3
+			format	= fabs(val) <= 9999.0 && fabs(val) >= 1e-3
 				? xd->num_format1 : xd->num_format2;
 			p.d += 4;
 		    }

@@ -226,15 +226,15 @@ XOBJ_KCL	= lib-kcl.o db-kcl.o
 XOBJ_KMP	= lib-kmp.o lib-kmp-text.o lib-kmp-pflags.o lib-kmp-diff.o lib-kmp-draw.o
 XOBJ_COMMON	= lib-common.o lib-geohit.o lib-itemslot.o lib-minigame.o lib-objflow.o
 
-TOBJ_gen-ui	= $(XOBJ_OBJECT)
-
-TOBJ_wszst	= analyze.o lib-szs-create.o lib-xbmg.o \
+XOBJ_LIB	= analyze.o lib-szs-create.o lib-xbmg.o \
 			lib-mdl.o lib-pat.o lib-transform.o \
 			lib-ctcode.o lib-lecode.o \
 			lib-staticr.o db-dol.o db-ctcode.o getopt.o \
 			$(XOBJ_KMP) $(XOBJ_COMMON) $(XOBJ_KCL) lib-kcl-image.o lib-rkg.o \
-			$(XOBJ_OBJECT) $(XOBJ_PARSER) $(XOBJ_IMAGE) \
-			$(WRAPPER_OBJ)
+			$(XOBJ_OBJECT) $(XOBJ_PARSER) $(XOBJ_IMAGE)
+
+TOBJ_gen-ui	= $(XOBJ_OBJECT)
+TOBJ_wszst	= $(XOBJ_LIB) $(WRAPPER_OBJ)
 TOBJ_wbmgt	= lib-xbmg.o $(XOBJ_OBJECT)
 TOBJ_wctct	= lib-ctcode.o lib-lecode.o lib-xbmg.o db-ctcode.o \
 			$(XOBJ_PARSER) $(XOBJ_IMAGE) $(XOBJ_OBJECT)
@@ -248,9 +248,7 @@ TOBJ_wlect	= lib-lecode.o lib-ctcode.o lib-xbmg.o db-ctcode.o \
 TOBJ_wmdlt	= lib-mdl.o lib-transform.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wpatt	= lib-pat.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wstrt	= lib-staticr.o db-dol.o db-ctcode.o $(XOBJ_OBJECT)
-TOBJ_wtest	= lib-szs-create.o lib-xbmg.o lib-ctcode.o lib-lecode.o \
-			lib-mdl.o lib-pat.o lib-transform.o \
-			$(XOBJ_KMP) $(XOBJ_KCL) $(XOBJ_OBJECT) $(XOBJ_PARSER) $(XOBJ_IMAGE)
+TOBJ_wtest	= $(XOBJ_LIB)
 
 #-------------------------------------------------------------------------------
 # sub libs

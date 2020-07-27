@@ -715,7 +715,7 @@ void ScanSZSCache ( ccp dir_name, bool purge )
 	    if (!dent)
 		break;
 
-	    if	( dent->d_name && *dent->d_name != '.' )
+	    if	( *dent->d_name != '.' )
 	    {
 		noPRINT("> %s\n",dent->d_name);
 		StoreSZSCache(dent->d_name,0,purge,0);

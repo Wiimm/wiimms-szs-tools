@@ -99,7 +99,7 @@ static const alter_file_t * ShallRemoveFile ( ccp fname )
 	    if ( opt_slot & alter->rm_mode && !strcasecmp(fname,alter->fname) )
 		return alter;
     }
-    return false;
+    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -594,7 +594,7 @@ enumError CreateSZS
 		InitializeKCL(&kcl);
 		kcl.fform_outfile = FF_KCL;
 		kcl.fname = STRDUP(sd.path);
-		enumError err = ScanKCL(&kcl,false,data,st.st_size,global_check_mode,true);
+		enumError err = ScanKCL(&kcl,false,data,st.st_size,true,global_check_mode);
 		if (err)
 		{
 		    if ( err > ERR_WARNING )
@@ -3138,7 +3138,7 @@ int CheckSZS
     {
 	kcl.fname = STRDUP2(szs->fname,"/course.kcl");
 	kcl_valid = !ScanKCL( &kcl, false, szs->course_kcl_data,
-			szs->course_kcl_size, true, sub_mode);
+			szs->course_kcl_size, true, sub_mode );
 
 	if (kcl_valid)
 	{

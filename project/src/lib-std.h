@@ -1076,7 +1076,7 @@ typedef enum palette_format_t
 
 extern const KeywordTab_t cmdtab_palette_format[];
 int ScanPaletteFormat ( ccp arg );
-ccp GetPaletteFormatName ( image_format_t iform, ccp unknown_value );
+ccp GetPaletteFormatName ( palette_format_t pform, ccp unknown_value );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1296,6 +1296,7 @@ slot_info_t GetSlotByName   ( mem_t name,   bool minus_for_empty );
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct FormatField_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[FormatFieldItem_t]]
 
 typedef struct FormatFieldItem_t
 {
