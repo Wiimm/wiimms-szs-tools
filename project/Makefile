@@ -561,7 +561,7 @@ chgrp:
 clean:
 	@printf "$(LOGFORMAT)" rm "output files + distrib" ""
 	-@rm -fr _start-pos.tmp
-	@find -type d -name test.tmp -exec rm -rf {} +
+	@find . -type d -name test.tmp -exec rm -rf {} +
 	@rm -f $(RM_FILES)
 	@rm -fr $(DISTRIB_RM)* $(LIBEXPORT)
 	@cd dclib && rm -f $(DCLIB_PRIVATE)
