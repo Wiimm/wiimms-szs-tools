@@ -5269,6 +5269,14 @@ static inline char * snprintfE ( char *buf, char *end, ccp format, ... )
     return buf + ( res < 0 ? 0 : res < size ? res : size - 1 );
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+void * dc_memrchr ( cvp src, int ch, size_t size );
+
+#ifdef __APPLE__
+ #define memrchr dc_memrchr
+#endif
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    E N D			///////////////

@@ -3684,6 +3684,18 @@ const gobj_cond_ref_t * FindConditionRef2 ( u16 ref_id )
 static enumError develop ( int argc, char ** argv )
 {
  #if 1
+    static const char text[] = "abc/def/ghi\0jkl/mno/pqr";
+    uint i;
+    for ( i = 0; i < sizeof(text); i++ )
+    {
+	ccp res = memrchr(text,'/',i);
+	ccp dc  = dc_memrchr(text,'/',i);
+	printf(" %3u: %3zd %3zd%s\n",
+	    i, res ? res-text : -1, dc ? dc-text : -1,
+	    res == dc ? "" : " DIFFER!" );
+    }
+
+ #elif 1
     static const u16 tab[] = { 0x1000,0x103f, 0x1900,0x193f, 0 };
     const u16 *ptr;
 

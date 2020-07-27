@@ -8074,6 +8074,20 @@ ccp GetSha1Hex ( cvp bin )
     return hex;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+void * dc_memrchr ( cvp src, int ch, size_t size )
+{
+    if ( !src || !size )
+	return 0;
+
+    ccp ptr = src + size;
+    while ( ptr > (ccp)src )
+	if ( *--ptr == ch )
+	    return (void*)ptr;
+    return 0;
+}
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////				END			///////////////
