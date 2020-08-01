@@ -355,7 +355,7 @@ void ClearLparChat ( le_lpar_t * lp )
 {
     DASSERT(lp);
     memset(lp->chat_mode_1,0,sizeof(lp->chat_mode_1));
-    memset(lp->chat_mode_1,0,sizeof(lp->chat_mode_2));
+    memset(lp->chat_mode_2,0,sizeof(lp->chat_mode_2));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -940,7 +940,6 @@ enumError AnalyseLEBinary
 		}
 		else
 		    memcpy(ana->lpar.chat_mode_1,chat_mode_legacy,sizeof(ana->lpar.chat_mode_1));
-		break;
 
 		if ( param_size >= sizeof(le_binpar_v1_1b8_t) )
 		{

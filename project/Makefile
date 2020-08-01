@@ -58,7 +58,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.18a
+VERSION_NUM		= 2.19a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -908,67 +908,67 @@ predef:
 
 templates.sed: Makefile
 	@printf "$(LOGFORMAT)" create templates.sed ""
-	@echo -e '' \
-		'/^~/ d;\n' \
-		's|@.@@@|$(VERSION_NUM)|g;\n' \
-		's|@@@@-@@-@@|$(DATE)|g;\n' \
-		's|@@:@@:@@|$(TIME)|g;\n' \
-		's|@@AUTHOR@@|$(AUTHOR)|g;\n' \
-		's|@@TOOLSET-SHORT@@|$(TOOLSET_SHORT)|g;\n' \
-		's|@@TOOLSET-LONG@@|$(TOOLSET_LONG)|g;\n' \
-		's|@@WSZST-SHORT@@|$(WSZST_SHORT)|g;\n' \
-		's|@@WSZST-LONG@@|$(WSZST_LONG)|g;\n' \
-		's|@@WBMGT-SHORT@@|$(WBMGT_SHORT)|g;\n' \
-		's|@@WBMGT-LONG@@|$(WBMGT_LONG)|g;\n' \
-		's|@@WCTCT-SHORT@@|$(WCTCT_SHORT)|g;\n' \
-		's|@@WCTCT-LONG@@|$(WCTCT_LONG)|g;\n' \
-		's|@@WIMGT-SHORT@@|$(WIMGT_SHORT)|g;\n' \
-		's|@@WIMGT-LONG@@|$(WIMGT_LONG)|g;\n' \
-		's|@@WKCLT-SHORT@@|$(WKCLT_SHORT)|g;\n' \
-		's|@@WKCLT-LONG@@|$(WKCLT_LONG)|g;\n' \
-		's|@@WKMPT-SHORT@@|$(WKMPT_SHORT)|g;\n' \
-		's|@@WKMPT-LONG@@|$(WKMPT_LONG)|g;\n' \
-		's|@@WLECT-SHORT@@|$(WLECT_SHORT)|g;\n' \
-		's|@@WLECT-LONG@@|$(WLECT_LONG)|g;\n' \
-		's|@@WMDLT-SHORT@@|$(WMDLT_SHORT)|g;\n' \
-		's|@@WMDLT-LONG@@|$(WMDLT_LONG)|g;\n' \
-		's|@@WPATT-SHORT@@|$(WPATT_SHORT)|g;\n' \
-		's|@@WPATT-LONG@@|$(WPATT_LONG)|g;\n' \
-		's|@@WSTRT-SHORT@@|$(WSTRT_SHORT)|g;\n' \
-		's|@@WSTRT-LONG@@|$(WSTRT_LONG)|g;\n' \
-		's|@@VERSION@@|$(VERSION)|g;\n' \
-		's|@@VERSION-NUM@@|$(VERSION_NUM)|g;\n' \
-		's|@@VERSION-INT@@|$(VERSION_INT)|g;\n' \
-		's|@@BETA-VERSION@@|$(BETA_VERSION)|g;\n' \
-		's|@@BETA-SUFFIX@@|$(BETA_SUFFIX)|g;\n' \
-		's|@@REV@@|$(REVISION)|g;\n' \
-		's|@@REV-NUM@@|$(REVISION_NUM)|g;\n' \
-		's|@@REV-NEXT@@|$(REVISION_NEXT)|g;\n' \
-		's|@@BINTIME@@|$(BINTIME)|g;\n' \
-		's|@@DATE@@|$(DATE)|g;\n' \
-		's|@@TIME@@|$(TIME)|g;\n' \
-		's|@@YEAR@@|$(YEAR)|g;\n' \
-		's|@@INSTALL-PATH@@|$(INSTALL_PATH)|g;\n' \
-		's|@@BIN-FILES@@|$(BIN_FILES)|g;\n' \
-		's|@@SHARE-FILES@@|$(SHARE_FILES)|g;\n' \
-		's|@@CYGWIN-DIR@@|$(CYGWIN_DIR)|g;\n' \
-		's|@@CYGWIN-TOOLS@@|$(CYGWIN_TOOLS)|g;\n' \
-		's|@@WIN-INSTALL-PATH@@|$(WIN_INSTALL_PATH)|g;\n' \
-		's|@@DISTRIB-PATH@@|$(DISTRIB_PATH)|g;\n' \
-		's|@@DISTRIB-I386@@|$(DISTRIB_I386)|g;\n' \
-		's|@@DISTRIB-X86_64@@|$(DISTRIB_X86_64)|g;\n' \
-		's|@@DISTRIB-MAC@@|$(DISTRIB_MAC)|g;\n' \
-		's|@@DISTRIB-CYGWIN@@|$(DISTRIB_CYGWIN)|g;\n' \
-		's|@@URI-REPOS@@|$(URI_REPOS)|g;\n' \
-		's|@@URI-VIEWVC@@|$(URI_VIEWVC)|g;\n' \
-		's|@@URI-HOME@@|$(URI_HOME)|g;\n' \
-		's|@@URI-SOURCE@@|$(URI_SOURCE)|g;\n' \
-		's|@@URI-DOWNLOAD@@|$(URI_DOWNLOAD)|g;\n' \
-		's|@@URI-DOWNLOAD-I386@@|$(URI_DOWNLOAD_I386)|g;\n' \
-		's|@@URI-DOWNLOAD-X86_64@@|$(URI_DOWNLOAD_X86_64)|g;\n' \
-		's|@@URI-DOWNLOAD-MAC@@|$(URI_DOWNLOAD_MAC)|g;\n' \
-		's|@@URI-DOWNLOAD-CYGWIN@@|$(URI_DOWNLOAD_CYGWIN)|g;\n' \
-		's|@@HAVE-XSRC@@|$(HAVE_XSRC)|g;\n' \
+	@printf '%s\n' \
+		'/^~/ d;' \
+		's|@.@@@|$(VERSION_NUM)|g;' \
+		's|@@@@-@@-@@|$(DATE)|g;' \
+		's|@@:@@:@@|$(TIME)|g;' \
+		's|@@AUTHOR@@|$(AUTHOR)|g;' \
+		's|@@TOOLSET-SHORT@@|$(TOOLSET_SHORT)|g;' \
+		's|@@TOOLSET-LONG@@|$(TOOLSET_LONG)|g;' \
+		's|@@WSZST-SHORT@@|$(WSZST_SHORT)|g;' \
+		's|@@WSZST-LONG@@|$(WSZST_LONG)|g;' \
+		's|@@WBMGT-SHORT@@|$(WBMGT_SHORT)|g;' \
+		's|@@WBMGT-LONG@@|$(WBMGT_LONG)|g;' \
+		's|@@WCTCT-SHORT@@|$(WCTCT_SHORT)|g;' \
+		's|@@WCTCT-LONG@@|$(WCTCT_LONG)|g;' \
+		's|@@WIMGT-SHORT@@|$(WIMGT_SHORT)|g;' \
+		's|@@WIMGT-LONG@@|$(WIMGT_LONG)|g;' \
+		's|@@WKCLT-SHORT@@|$(WKCLT_SHORT)|g;' \
+		's|@@WKCLT-LONG@@|$(WKCLT_LONG)|g;' \
+		's|@@WKMPT-SHORT@@|$(WKMPT_SHORT)|g;' \
+		's|@@WKMPT-LONG@@|$(WKMPT_LONG)|g;' \
+		's|@@WLECT-SHORT@@|$(WLECT_SHORT)|g;' \
+		's|@@WLECT-LONG@@|$(WLECT_LONG)|g;' \
+		's|@@WMDLT-SHORT@@|$(WMDLT_SHORT)|g;' \
+		's|@@WMDLT-LONG@@|$(WMDLT_LONG)|g;' \
+		's|@@WPATT-SHORT@@|$(WPATT_SHORT)|g;' \
+		's|@@WPATT-LONG@@|$(WPATT_LONG)|g;' \
+		's|@@WSTRT-SHORT@@|$(WSTRT_SHORT)|g;' \
+		's|@@WSTRT-LONG@@|$(WSTRT_LONG)|g;' \
+		's|@@VERSION@@|$(VERSION)|g;' \
+		's|@@VERSION-NUM@@|$(VERSION_NUM)|g;' \
+		's|@@VERSION-INT@@|$(VERSION_INT)|g;' \
+		's|@@BETA-VERSION@@|$(BETA_VERSION)|g;' \
+		's|@@BETA-SUFFIX@@|$(BETA_SUFFIX)|g;' \
+		's|@@REV@@|$(REVISION)|g;' \
+		's|@@REV-NUM@@|$(REVISION_NUM)|g;' \
+		's|@@REV-NEXT@@|$(REVISION_NEXT)|g;' \
+		's|@@BINTIME@@|$(BINTIME)|g;' \
+		's|@@DATE@@|$(DATE)|g;' \
+		's|@@TIME@@|$(TIME)|g;' \
+		's|@@YEAR@@|$(YEAR)|g;' \
+		's|@@INSTALL-PATH@@|$(INSTALL_PATH)|g;' \
+		's|@@BIN-FILES@@|$(BIN_FILES)|g;' \
+		's|@@SHARE-FILES@@|$(SHARE_FILES)|g;' \
+		's|@@CYGWIN-DIR@@|$(CYGWIN_DIR)|g;' \
+		's|@@CYGWIN-TOOLS@@|$(CYGWIN_TOOLS)|g;' \
+		's|@@WIN-INSTALL-PATH@@|$(WIN_INSTALL_PATH)|g;' \
+		's|@@DISTRIB-PATH@@|$(DISTRIB_PATH)|g;' \
+		's|@@DISTRIB-I386@@|$(DISTRIB_I386)|g;' \
+		's|@@DISTRIB-X86_64@@|$(DISTRIB_X86_64)|g;' \
+		's|@@DISTRIB-MAC@@|$(DISTRIB_MAC)|g;' \
+		's|@@DISTRIB-CYGWIN@@|$(DISTRIB_CYGWIN)|g;' \
+		's|@@URI-REPOS@@|$(URI_REPOS)|g;' \
+		's|@@URI-VIEWVC@@|$(URI_VIEWVC)|g;' \
+		's|@@URI-HOME@@|$(URI_HOME)|g;' \
+		's|@@URI-SOURCE@@|$(URI_SOURCE)|g;' \
+		's|@@URI-DOWNLOAD@@|$(URI_DOWNLOAD)|g;' \
+		's|@@URI-DOWNLOAD-I386@@|$(URI_DOWNLOAD_I386)|g;' \
+		's|@@URI-DOWNLOAD-X86_64@@|$(URI_DOWNLOAD_X86_64)|g;' \
+		's|@@URI-DOWNLOAD-MAC@@|$(URI_DOWNLOAD_MAC)|g;' \
+		's|@@URI-DOWNLOAD-CYGWIN@@|$(URI_DOWNLOAD_CYGWIN)|g;' \
+		's|@@HAVE-XSRC@@|$(HAVE_XSRC)|g;' \
 		>templates.sed
 
 #

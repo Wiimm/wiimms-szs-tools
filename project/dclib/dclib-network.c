@@ -1708,8 +1708,8 @@ void InitializeTCPStream ( TCPStream_t *ts, int sock )
     ts->poll_index = M1(ts->poll_index);
     LOG_TCP_STREAM(ts,0,"%s","INIT()");
     INC_TCP_INDENT;
-    InitializeGrowBuffer(&ts->ibuf,0x800);
-    InitializeGrowBuffer(&ts->obuf,0x800);
+    InitializeGrowBuffer(&ts->ibuf,0x4000);
+    InitializeGrowBuffer(&ts->obuf,0x4000);
     DEC_TCP_INDENT;
 }
 

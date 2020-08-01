@@ -2338,11 +2338,13 @@ void MoveMemList ( mem_list_t *dest, mem_list_t *src )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void GrowBufMemList ( mem_list_t *ml, uint need_size )
+void NeedBufMemList ( mem_list_t *ml, uint need_size, uint extra_size )
 {
+    need_size += ml->buf_used;
     if ( ml->buf_size < need_size )
     {
-	PRINT("MEM-LIST: MALLOC/BUF(%u)\n",need_size);
+	need_size = GetGoodAllocSize(need_size+extra_size);
+	PRINT("MEM-LIST: MALLOC/BUF(%u/%u>%u)\n",ml->buf_used,ml->buf_size,need_size);
 	char *new_buf = MALLOC(need_size);
 
 	//--- copy existing strings
@@ -2351,34 +2353,35 @@ void GrowBufMemList ( mem_list_t *ml, uint need_size )
 	mem_t *dest = ml->list;
 	uint i;
 	for ( i = 0; i < ml->used; i++, dest++ )
-	    if ( dest->len )
+	    if (dest->len)
 	    {
 		memcpy(bufptr,dest->ptr,dest->len);
 		dest->ptr = bufptr;
 		bufptr += dest->len;
 		*bufptr++ = 0;
 		DASSERT( bufptr <= new_buf + need_size );
-		noPRINT("OLD: %p,%u\n",dest->ptr,dest->len);
 	    }
 	FREE(ml->buf);
-	ml->buf = new_buf;
+	ml->buf      = new_buf;
 	ml->buf_used = bufptr - new_buf;
+	ml->buf_size = need_size;
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void PrepareMemList ( mem_list_t *ml, uint n_elem, uint buf_size )
+void NeedElemMemList ( mem_list_t *ml, uint need_elem, uint need_size )
 {
     DASSERT(ml);
-    if ( ml->size < n_elem )
+    need_elem += ml->used;
+    if ( ml->size < need_elem )
     {
-	ml->size = n_elem;
+	ml->size = GetGoodAllocSize2(need_elem,sizeof(*ml->list));
 	PRINT("MEM-LIST: REALLOC/LIST(%u)\n",ml->size);
 	ml->list = REALLOC(ml->list,sizeof(*ml->list)*ml->size);
     }
 
-    GrowBufMemList(ml,buf_size);
+    NeedBufMemList(ml,need_size,0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2390,10 +2393,7 @@ void InsertMemListN
     int			pos,		// insert position => CheckIndex1()
     const mem_t		*src,		// source list
     uint		src_len,	// number of elements in source list
-    uint		src_ignore	// 0: insert all
-					// 1: ignore NULL
-					// 2: ignore NULL and empty
-					// 3: replace NULL by EmptyString
+    mem_list_mode_t	src_ignore	// how to manage NULL and empty strings
 )
 {
     DASSERT(ml);
@@ -2411,8 +2411,13 @@ void InsertMemListN
 	    need_size += sptr->len + 1; // always terminate with NULL
 	    add_elem++;
 	}
-	else if ( !src_ignore || src_ignore == 1 && sptr->ptr || src_ignore == 3 )
+	else if (  src_ignore == MEMLM_ALL
+		|| src_ignore == MEMLM_IGN_NULL && sptr->ptr
+		|| src_ignore == MEMLM_REPL_NULL
+		)
+	{
 	    add_elem++;
+	}
     }
 
     if (!add_elem)
@@ -2436,8 +2441,8 @@ void InsertMemListN
 	need_size += ml->buf_used + 20;
 	need_size += need_size/10;
 
-	// don't use GrowBufMemList() here, because the old buffer is needed
-	// BUT: char old_buf = ml->buf; ml->buf = 0; GrowBufMemList(ml,need_size)
+	// don't use NeedBufMemList() here, because the old buffer is needed
+	// BUT POSSIBLE: char old_buf = ml->buf; ml->buf = 0; GrowBufMemList(ml,need_size)
 
 	PRINT("MEM-LIST: MALLOC/BUF(%u)\n",need_size);
 	bufptr = new_buf = MALLOC(need_size);
@@ -2492,14 +2497,14 @@ void InsertMemListN
 	    dest++;
 	    DASSERT( dest <= ml->list + ml->used );
 	}
-	else if ( !src_ignore || src_ignore == 1 && sptr->ptr )
+	else if ( src_ignore == MEMLM_ALL || src_ignore == MEMLM_IGN_NULL && sptr->ptr )
 	{
 	    dest->ptr = sptr->ptr ? EmptyString : NULL;
 	    dest->len = 0;
 	    dest++;
 	    DASSERT( dest <= ml->list + ml->used );
 	}
-	else if ( src_ignore == 3 )
+	else if ( src_ignore == MEMLM_REPL_NULL )
 	{
 	    dest->ptr = EmptyString;
 	    dest->len = 0;
@@ -2533,10 +2538,7 @@ void CatMemListN
     mem_list_t		*dest,		// valid destination mem_list
     const mem_list_t	**src_list,	// list with mem lists, element may be NULL
     uint		n_src_list,	// number of elements in 'src'
-    uint		src_ignore	// 0: insert all
-					// 1: ignore NULL
-					// 2: ignore NULL and empty
-					// 3: replace NULL by EmptyString
+    mem_list_mode_t	src_ignore	// how to manage NULL and empty strings
 )
 {
     DASSERT(dest);
@@ -2565,8 +2567,13 @@ void CatMemListN
 		need_size += sptr->len + 1; // always terminate with NULL
 		need_elem++;
 	    }
-	    else if ( !src_ignore || src_ignore == 1 && sptr->ptr || src_ignore == 3 )
+	    else if (  src_ignore == MEMLM_ALL
+		    || src_ignore == MEMLM_IGN_NULL && sptr->ptr
+		    || src_ignore == MEMLM_REPL_NULL
+		    )
+	    {
 		need_elem++;
+	    }
 	}
     }
 
@@ -2613,14 +2620,14 @@ void CatMemListN
 		listptr++;
 		DASSERT( listptr <= new_list + need_elem );
 	    }
-	    else if ( !src_ignore || src_ignore == 1 && sptr->ptr )
+	    else if ( src_ignore == MEMLM_ALL || src_ignore == MEMLM_IGN_NULL && sptr->ptr )
 	    {
 		listptr->ptr = sptr->ptr ? EmptyString : NULL;
 		listptr->len = 0;
 		listptr++;
 		DASSERT( listptr <= new_list + need_elem );
 	    }
-	    else if ( src_ignore == 3 )
+	    else if ( src_ignore == MEMLM_REPL_NULL )
 	    {
 		listptr->ptr = EmptyString;
 		listptr->len = 0;
@@ -3609,10 +3616,11 @@ uint SplitByCharMemList
     if (init_ml)
 	InitializeMemList(ml);
     ml->used = 0;
+    ml->buf_used = 0;
+    NeedBufMemList(ml,source.len+1,0);
 
     if ( max_fields <= 0 )
 	max_fields = INT_MAX;
-    GrowBufMemList(ml,source.len+1);
 
     ccp src = source.ptr;
     ccp end = src + source.len;
@@ -3654,10 +3662,11 @@ uint SplitByTextMemList
     if (init_ml)
 	InitializeMemList(ml);
     ml->used = 0;
+    ml->buf_used = 0;
+    NeedBufMemList(ml,source.len+1,0);
 
     if ( max_fields <= 0 )
 	max_fields = INT_MAX;
-    GrowBufMemList(ml,source.len+1);
 
     ccp src = source.ptr;
     ccp end = src + source.len;
@@ -5907,7 +5916,7 @@ void RestoreStateStringField
 	    ParamFieldItem_t *pfi = GetParamField(rs,name);
 	    if (pfi)
 	    {
-		mem_t mem = DecodeByModeMem(0,0,pfi->data,-1,emode);
+		mem_t mem = DecodeByModeMem(0,0,pfi->data,-1,emode,0);
 		AppendStringField(sf,mem.ptr,true);
 	    }
 	}

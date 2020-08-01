@@ -1035,6 +1035,7 @@ typedef struct brsub_cut_t
     brres_entry_t	*eptr;		// NULL or pointer to current entry
     char		*path_end;	// pointer to end of string of 'it->path'
 
+
     //--- group iterator, private data
 
     int			found_grp;	// index of found group
@@ -1043,6 +1044,7 @@ typedef struct brsub_cut_t
 } brsub_cut_t;
 
 //-----------------------------------------------------------------------------
+// [[grp_entry_t]]
 
 typedef enum grp_entry_t
 {
@@ -1060,6 +1062,7 @@ typedef enum grp_entry_t
 } grp_entry_t;
 
 //-----------------------------------------------------------------------------
+// [[brsub_cut_func_t]]
 
 typedef int (*brsub_cut_func_t)
 (

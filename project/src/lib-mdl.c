@@ -3472,12 +3472,10 @@ static int find_minimap_brres
     if ( !term
 	&& ( it->fform == FF_MDL
 		|| it->fform == FF_UNKNOWN && !memcmp(data,MDL_MAGIC,4) )
-	&& !strcmp(it->name,"map")
        )
     {
-	PRINT("MDL FOUND: %x |%s|%s|\n",it->fform,it->path,it->name);
+	PRINT("MDL FOUND: %x |%s|%s|  fn=%s\n",it->fform,it->path,it->name,it->szs->fname);
 	szs_file_t szs;
-// [[fname+]]
 	InitializeSubSZS(&szs,it->szs,it->off,it->size,FF_MDL,it->path,false);
 	int stat = IterateFilesSZS ( &szs, find_minimap_mdl, it->param,
 					true, 0, 1, SORT_NONE );
@@ -3507,7 +3505,6 @@ static int find_minimap_szs
     {
 	PRINT("MAP MODEL FOUND: %x |%s|%s|\n",it->fform,it->path,it->name);
 	szs_file_t szs;
-// [[fname+]]
 	InitializeSubSZS(&szs,it->szs,it->off,it->size,FF_BRRES,it->path,false);
 	int stat = IterateFilesSZS ( &szs, find_minimap_brres, it->param,
 					true, 0, -1, SORT_NONE );
