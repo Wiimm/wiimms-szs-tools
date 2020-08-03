@@ -743,10 +743,6 @@ enumError WriteSectionLPAR
 	    }
 
 	    fprintf(f,"%s\n",PrintChatMode(i,mode1,mode2,export_count));
-	    if (export_count)
-		fprintf(f,"M%02u = %4u # %s\n",i+1,mode1,GetChatModeName(mode1));
-	    else
-		fprintf(f,"M%02u = %s\n",i+1,GetChatModeName(mode1));
 	}
     }
     return ERR_OK;

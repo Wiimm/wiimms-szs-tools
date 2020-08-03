@@ -360,7 +360,7 @@ szs v1.19a r4461 - 2013-06-02
    non existent. This changes the missing files status and the slot proposals.
  - KCL type names synchchronized to Wiki.
  - Bug fix: If a function was searched and a const was defined with the same
-   name, a `segmentation fault´ (or similar) occured.
+   name, a `segmentation faultÂ´ (or similar) occured.
  - New command: wkmpt STARTPOS: Print the start positions of players in
    various formats. See https://szs.wiimm.de/cmd/wkmpt/startpos for details.
  - Patching option --kmp accepts now the keywords LEFT, RIGHT, WIDE and NARROW
@@ -963,7 +963,7 @@ szs v1.51a r7107 - 2016-06-01
  - The CHECK for slot 4.2 will be more exact now because it looks for the
    needed materials. The presence flags of objects 'car_body' and 'kart_truck'
    is also tested. If option --OLD is set, the old polygon test will be used.
- - Option --kmp=list supports now the keyword REVERSE as `backwards´ support:
+ - Option --kmp=list supports now the keyword REVERSE as `backwardsÂ´ support:
    Reverse KMP sections ENPH, ENPT, ITPH, ITPT, POTI. The implementation is
    not finished yet and more section (CKPH, CKTP, KTPT, JGPT) will follow.
  - Different small fixes.

@@ -466,7 +466,7 @@
 		" This is done after loading a DOL and before analysing"
 		" and patching to allow re-patching." },
 
-  { H_OPT_C,	"ADD_LECODE",	"add-lecode|addlecode",
+  { T_OPT_C,	"ADD_LECODE",	"add-lecode|addlecode",
 		0,
 		"Add LE-CODE starter to main.dol." },
 

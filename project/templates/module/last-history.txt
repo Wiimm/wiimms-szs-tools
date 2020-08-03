@@ -1,10 +1,6 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Bug fix: Tool wlect didn't read the second chat message functions from
-   binary LE-CODE files.
- - Support of an old GameCube BMG variant (internally named "legacy").
- - Check minimap: Bones 'posRU' and 'posLD' are detected even if the root bone
-   is renamed. This suppresses wrong warnings.
+ - Bug fix for wlect LPAR: Message functions are not longer printed twice.
 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it

@@ -22080,6 +22080,10 @@
 	" after loading a DOL and before analysing and patching to allow" \
 	" re-patching." )
 
+#:def_opt( "ADD_LECODE", "add-lecode|addlecode", "C", \
+	"", \
+	"Add LE-CODE starter to main.dol." )
+
 #:def_opt( "ADD_CTCODE", "add-ctcode|addctcode", "C", \
 	"", \
 	"If source is an original main.dol file of MKWii, then append 2" \

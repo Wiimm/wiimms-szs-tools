@@ -147,7 +147,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Ignore non existing source files without warning."
     },
 
-    {	OPT_ADD_LECODE, false, true, false, false, false, 0, "add-lecode",
+    {	OPT_ADD_LECODE, false, false, false, false, false, 0, "add-lecode",
 	0,
 	"Add LE-CODE starter to main.dol."
     },
