@@ -128,7 +128,7 @@ ccp GetFileOpenMode
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifndef HAVE_FILEATTRIB_NSEC
-  #ifdef st_mtime
+  #if defined(st_mtime) && !defined(__APPLE__)
     #define HAVE_FILEATTRIB_NSEC 1
   #else
     #define HAVE_FILEATTRIB_NSEC 0
