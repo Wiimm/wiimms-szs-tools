@@ -4788,5 +4788,303 @@ ccp GetOptBasedir()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			analyse_szs_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void InitializeAnalyseSZS ( analyse_szs_t * as )
+{
+  #ifdef DEBUG
+    static bool done = false;
+    if (!done)
+    {
+	done = true;
+	TRACE_SIZEOF(analyse_szs_t);
+	TRACE_SIZEOF(lex_info_t);
+	TRACE_SIZEOF(slot_ana_t);
+	TRACE_SIZEOF(slot_info_t);
+	TRACE_SIZEOF(kmp_finish_t);
+	TRACE_SIZEOF(kmp_usedpos_t);
+	TRACE("-\n");
+    }
+ #endif
+
+    DASSERT(as);
+    memset(as,0,sizeof(*as));
+
+    InitializeLexInfo(&as->lexinfo);
+    InitializeFinishLine(&as->kmp_finish);
+    InitializeUsedPos(&as->used_pos);
+
+    as->ckpt0_count	= -1;		// number of LC in CKPT
+    as->lap_count	= 3;		// STGI lap counter
+    as->speed_factor	= 1.0;		// STGI speed factor
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ResetAnalyseSZS ( analyse_szs_t * as )
+{
+    if (as)
+    {
+	ResetLexInfo(&as->lexinfo);
+	InitializeAnalyseSZS(as);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AnalyseSZS
+(
+    analyse_szs_t	*as,		// result
+    bool		init_sa,	// true: init 'as', false: reset 'as'
+    szs_file_t		*szs,		// SZS filre t analysze
+    ccp			fname		// NULL or fname for slot analysis
+)
+{
+    //--- setup
+
+    const u_usec_t start_usec = GetTimerUSec();
+
+    DASSERT(as);
+    if (init_sa)
+	InitializeAnalyseSZS(as);
+    else
+	ResetAnalyseSZS(as);
+
+    if (!szs)
+	return;
+
+    char *ct_dest = as->ct_attrib;
+    char *ct_end  = as->ct_attrib + sizeof(as->ct_attrib);
+
+
+    //--- checksums
+
+    sha1_size_t sha1_data;
+    SHA1(szs->data,szs->size,sha1_data.hash);
+    Sha1Bin2Hex(as->sha1_szs,sha1_data.hash);
+    memcpy(as->sha1_szs_norm,as->sha1_szs,sizeof(as->sha1_szs_norm));
+
+    sha1_data.size = htonl(szs->size);
+    CreateSSChecksumDB(as->db64,sizeof(as->db64),&sha1_data);
+    FindSpecialFilesSZS(szs,false);
+
+
+    //--- scan LEX
+
+    InitializeLexInfo(&as->lexinfo);
+
+    if (szs->course_lex_data)
+    {
+	lex_t lex;
+	InitializeLEX(&lex);
+	ScanLEX(&lex,false,szs->course_lex_data,szs->course_lex_size);
+	szs->have_lex = lex.have_lex;
+	SetupLexInfo(&as->lexinfo,&lex);
+	ResetLEX(&lex);
+    }
+
+
+    //--- scan slots
+
+    AnalyzeSlot(&as->slotana,szs);
+    if (fname)
+	AnalyzeSlotByName(&as->slotinfo,true,MemByString(fname));
+    if (as->slotana.mandatory_slot[0])
+	AnalyzeSlotAttrib(&as->slotinfo,false,MemByString(as->slotana.mandatory_slot));
+    FinalizeSlotInfo(&as->slotinfo,true);
+    if (*as->slotinfo.slot_attrib)
+	ct_dest = StringCat2E(ct_dest,ct_end,",",as->slotinfo.slot_attrib);
+
+
+    //--- scan KMP
+
+    if (szs->course_kmp_data)
+    {
+	SHA1(szs->course_kmp_data,szs->course_kmp_size,sha1_data.hash);
+	Sha1Bin2Hex(as->sha1_kmp,sha1_data.hash);
+	memcpy(as->sha1_kmp_norm,as->sha1_kmp,sizeof(as->sha1_kmp_norm));
+
+	kmp_t kmp;
+	InitializeKMP(&kmp);
+	kmp.lexinfo = &as->lexinfo;
+	const enumError err
+	    = ScanKMP(&kmp,false,szs->course_kmp_data,szs->course_kmp_size,0);
+	if ( err <= ERR_WARNING )
+	{
+	    if (kmp.stgi)
+	    {
+		kmp_stgi_entry_t *stgi = (kmp_stgi_entry_t*)kmp.stgi;
+		as->lap_count = stgi->lap_count;
+		as->speed_mod = stgi->speed_mod;
+		stgi->lap_count = 3;
+		stgi->speed_mod = 0;
+
+		SHA1(szs->data,szs->size,sha1_data.hash);
+		Sha1Bin2Hex(as->sha1_szs_norm,sha1_data.hash);
+
+		SHA1(szs->course_kmp_data,szs->course_kmp_size,sha1_data.hash);
+		Sha1Bin2Hex(as->sha1_kmp_norm,sha1_data.hash);
+
+		stgi->lap_count = as->lap_count;
+		stgi->speed_mod = as->speed_mod;
+	    }
+
+	    CheckFinishLine(&kmp,&as->kmp_finish);
+	    CheckWarnKMP(&kmp,&as->used_pos);
+	    szs->warn_bits |= kmp.warn_bits;
+
+	    const uint n_ckpt = kmp.dlist[KMP_CKPT].used;
+	    if (n_ckpt)
+	    {
+		const kmp_ckpt_entry_t *ckpt
+		    = (kmp_ckpt_entry_t*)kmp.dlist[KMP_CKPT].list;
+		uint i;
+		as->ckpt0_count = 0;
+		for ( i = 0; i < n_ckpt; i++, ckpt++ )
+		    if (!ckpt->mode)
+			as->ckpt0_count++;
+	    }
+
+	    const kmp_stgi_entry_t *stgi = (kmp_stgi_entry_t*)kmp.dlist[KMP_STGI].list;
+	    if ( kmp.dlist[KMP_STGI].used > 0 )
+	    {
+		as->lap_count = stgi->lap_count;
+		if (!szs->is_arena)
+		{
+		    if ( as->ckpt0_count > 1 )
+		    {
+			if ( as->lap_count == 1 )
+			    ct_dest = StringCopyE(ct_dest,ct_end,",1lap");
+			ct_dest = snprintfE(ct_dest,ct_end,",%ulc",as->ckpt0_count);
+		    }
+		    else if ( as->lap_count != 0 && as->lap_count != 3 )
+			ct_dest = snprintfE(ct_dest,ct_end,",%ulap%s",
+				    as->lap_count, as->lap_count == 1 ? "" : "s" );
+		}
+
+		if (stgi->speed_mod)
+		{
+		    as->speed_mod = stgi->speed_mod;
+		    as->speed_factor = SpeedMod2float(stgi->speed_mod);
+		    char buf[20];
+		    snprintf(buf,sizeof(buf),",x%4.2f",as->speed_factor);
+		    char *ptr = buf + strlen(buf) - 1;
+		    while ( *ptr == '0' )
+			*ptr-- = 0;
+		    if ( *ptr == '.' )
+			*ptr = 0;
+		    if ( strcmp(buf,",x0") && strcmp(buf,",x1") )
+			ct_dest = StringCopyE(ct_dest,ct_end,buf);
+		}
+	    }
+	    else if ( !szs->is_arena && as->ckpt0_count > 1 )
+		ct_dest = snprintfE(ct_dest,ct_end,",%ulc",as->ckpt0_count);
+
+	    if ( as->kmp_finish.n_ktpt_m > 1 )
+		ct_dest = StringCopyE(ct_dest,ct_end,",2ktpt");
+
+	    kmp_ana_pflag_t ap;
+	    AnalysePFlagScenarios(&ap,&kmp,GMD_M_DEFAULT);
+	    snprintf(as->gobj_info,sizeof(as->gobj_info),"%d %d %d %d",
+		    ap.ag.n_gobj, ap.n_version, ap.n_res_std, ap.n_res_ext );
+	    ResetPFlagScenarios(&ap);
+	}
+
+	DetectSpecialKMP(&kmp,szs->kmp_special);
+	if (  szs->kmp_special[HAVEKMP_WOODBOX_HT]
+	   || szs->kmp_special[HAVEKMP_MUSHROOM_CAR]
+	   || szs->kmp_special[HAVEKMP_PENGUIN_POS]
+	   || szs->kmp_special[HAVEKMP_EPROP_SPEED]
+	)
+	{
+	    ct_dest = StringCopyE(ct_dest,ct_end,",gobj");
+	}
+
+	if (  szs->kmp_special[HAVEKMP_X_PFLAGS]
+	   || szs->kmp_special[HAVEKMP_X_COND]
+	   || szs->kmp_special[HAVEKMP_X_DEFOBJ]
+	   || szs->kmp_special[HAVEKMP_X_RANDOM]
+	)
+	{
+	    ct_dest = StringCopyE(ct_dest,ct_end,",xpf");
+	}
+
+	ResetKMP(&kmp);
+    }
+
+    if ( szs->szs_special[HAVESZS_ITEM_SLOT_TABLE] )
+	ct_dest = StringCopyE(ct_dest,ct_end,",itemslot");
+
+    if ( szs->szs_special[HAVESZS_OBJFLOW] )
+	ct_dest = StringCopyE(ct_dest,ct_end,",objflow");
+
+    if (  szs->szs_special[HAVESZS_GHT_ITEM]
+       || szs->szs_special[HAVESZS_GHT_ITEM_OBJ]
+       || szs->szs_special[HAVESZS_GHT_KART]
+       || szs->szs_special[HAVESZS_GHT_KART_OBJ]
+    )
+    {
+	ct_dest = StringCopyE(ct_dest,ct_end,",geohit");
+    }
+
+    if ( szs->szs_special[HAVESZS_MINIGAME] )
+	ct_dest = StringCopyE(ct_dest,ct_end,",minigame");
+
+
+    //--- scan KCL
+
+    if (szs->course_kcl_data)
+    {
+	SHA1(szs->course_kcl_data,szs->course_kcl_size,sha1_data.hash);
+	Sha1Bin2Hex(as->sha1_kcl,sha1_data.hash);
+    }
+
+
+    //--- course model (course_model.brres, course_d_model.brres)
+
+    if (szs->course_model_data)
+    {
+	SHA1(szs->course_model_data,szs->course_model_size,sha1_data.hash);
+	Sha1Bin2Hex(as->sha1_course,sha1_data.hash);
+    }
+    else if (szs->course_d_model_data)
+    {
+	SHA1(szs->course_d_model_data,szs->course_d_model_size,sha1_data.hash);
+	Sha1Bin2Hex(as->sha1_course,sha1_data.hash);
+    }
+
+
+    //--- vrcorn (vrcorn_model.brres)
+
+    if (szs->vrcorn_model_data)
+    {
+	SHA1(szs->vrcorn_model_data,szs->vrcorn_model_size,sha1_data.hash);
+	Sha1Bin2Hex(as->sha1_vrcorn,sha1_data.hash);
+    }
+
+
+    //--- minimap (map_model.brres)
+
+    if (szs->map_model_data)
+    {
+	SHA1(szs->map_model_data,szs->map_model_size,sha1_data.hash);
+	Sha1Bin2Hex(as->sha1_minimap,sha1_data.hash);
+    }
+
+
+    //--- finalize ct_attrib by "lex" and "warn"
+
+    if (szs->course_lex_data)
+	ct_dest = StringCopyE(ct_dest,ct_end,",lex");
+
+    if (szs->warn_bits)
+	ct_dest = StringCat2E(ct_dest,ct_end,",warn=",GetWarnSZSNames(szs->warn_bits,'+'));
+
+    as->duration_usec = GetTimerUSec() - start_usec;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			    END				///////////////
 ///////////////////////////////////////////////////////////////////////////////

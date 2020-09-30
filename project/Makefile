@@ -59,7 +59,7 @@ WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
 VERSION_NUM		= 2.20a
-BETA_VERSION		= 3
+BETA_VERSION		= 4
 			# 0:off  -1:"beta"  >0:"beta#"
 
 URI_HOME		= https://szs.wiimm.de/
