@@ -1714,6 +1714,7 @@ enumError ScanRawDataMDL
     else
 	ResetMDL(mdl);
 
+    mdl->fatt  = raw->fatt;
     mdl->fname = raw->fname;
     raw->fname = 0;
  #if USE_NEW_CONTAINER_MDL

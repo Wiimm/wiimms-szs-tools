@@ -245,11 +245,11 @@ static void hint_exit ( enumError stat )
     if ( current_command )
 	fprintf(stderr,
 	    "-> Type '%s help %s' (pipe it to a pager like 'less') for more help.\n\n",
-	    progname, CommandInfo[current_command->id].name1 );
+	    ProgInfo.progname, CommandInfo[current_command->id].name1 );
     else
 	fprintf(stderr,
 	    "-> Type '%s -h' or '%s help' (pipe it to a pager like 'less') for more help.\n\n",
-	    progname, progname );
+	    ProgInfo.progname, ProgInfo.progname );
     exit(stat);
 }
 
@@ -1066,6 +1066,7 @@ static int check_brsub
 				"%sOk     %s", colout->success, colout->reset );
 			break;
 
+		    case BIMD_INFO:
 		    case BIMD_HINT:
 			err = ERR_INVALID_VERSION;
 			print_status = cb->mode > 0;
@@ -1180,6 +1181,7 @@ enumError cmd_brsub()
 		    fputs("-\n",stdout);
 		    break;
 
+		case BIMD_INFO:
 		case BIMD_HINT:
 		    printf("%sUNUSUAL%s\n",colout->hint,colout->reset);
 		    break;
@@ -1804,7 +1806,11 @@ static enumError cmd_sha1()
 	    {
 		if (long_count>1)
 		{
+	#if USE_NEW_FILEATTRIB
+		    struct tm * tm = localtime(&szs.fatt.mtime.tv_sec);
+	#else
 		    struct tm * tm = localtime(&szs.fatt.mtime);
+	#endif
 		    char timbuf[40];
 		    strftime(timbuf,sizeof(timbuf),"%F %T ",tm);
 		    fputs(timbuf,stdout);
@@ -1885,6 +1891,9 @@ static enumError cmd_analyze()
     szs_file_t szs;
     InitializeSZS(&szs);
 
+    analyse_szs_t as;
+    InitializeAnalyseSZS(&as);
+
     File_t fo;
     InitializeFile(&fo);
 
@@ -1901,8 +1910,12 @@ static enumError cmd_analyze()
 	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
-	if ( max_err < err )
-	    max_err = err;
+	if ( err > ERR_WARNING )
+	{
+	    if ( max_err < err )
+		max_err = err;
+	    continue;
+	}
 
 	if (!fo.f)
 	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
@@ -1918,246 +1931,9 @@ static enumError cmd_analyze()
 	}
 
 
-	//--- checksums
+	//--- analyse szs
 
-	sha1_size_t info;
-	SHA1(szs.data,szs.size,info.hash);
-	info.size = htonl(szs.size);
-	sha1_hex_t sha1, sha1_norm;
-	Sha1Bin2Hex(sha1,info.hash);
-	memcpy(sha1_norm,sha1,sizeof(sha1_norm));
-
-	char db64[CHECKSUM_DB_SIZE+1];
-	CreateSSChecksumDB(db64,sizeof(db64),&info);
-	FindSpecialFilesSZS(&szs,false);
-
-
-	//--- scan LEX
-
-	lex_info_t lexinfo;
-	InitializeLexInfo(&lexinfo);
-
-	if (szs.course_lex_data)
-	{
-	    lex_t lex;
-	    InitializeLEX(&lex);
-	    err = ScanLEX(&lex,false,szs.course_lex_data,szs.course_lex_size);
-	    szs.have_lex = lex.have_lex;
-	    SetupLexInfo(&lexinfo,&lex);
-	    ResetLEX(&lex);
-	}
-
-
-	//--- scan KMP
-
-	sha1_hex_t sha1_kmp = {0}, sha1_kmp_norm = {0};
-
-	char	ct_attrib[300];
-	char	*ct_dest = ct_attrib;
-	char	*ct_end  = ct_attrib + sizeof(ct_attrib);
-	ct_attrib[1] = 0;
-
-	int	ckpt0_count	= -1;		// number of LC in CKPT
-	int	lap_count	= 3;		// STGI lap counter
-	float	speed_factor	= 1.0;		// STGI speed factor
-
-	slot_ana_t slotana;
-	AnalyzeSlot(&slotana,&szs);
-	slot_info_t slotinfo;
-	AnalyzeSlotByName(&slotinfo,true,MemByString(param->arg));
-	if (slotana.mandatory_slot[0])
-	    AnalyzeSlotAttrib(&slotinfo,false,MemByString(slotana.mandatory_slot));
-	FinalizeSlotInfo(&slotinfo,true);
-	if (*slotinfo.slot_attrib)
-	    ct_dest = StringCat2E(ct_dest,ct_end,",",slotinfo.slot_attrib);
-
-	kmp_finish_t kf;
-	InitializeFinishLine(&kf);
-
-	kmp_usedpos_t up;
-	InitializeUsedPos(&up);
-
-	char gobj_info[20] = {0};
-	if (szs.course_kmp_data)
-	{
-	    SHA1(szs.course_kmp_data,szs.course_kmp_size,info.hash);
-	    Sha1Bin2Hex(sha1_kmp,info.hash);
-	    memcpy(sha1_kmp_norm,sha1_kmp,sizeof(sha1_kmp_norm));
-
-	    kmp_t kmp;
-	    InitializeKMP(&kmp);
-	    kmp.lexinfo = &lexinfo;
-	    err = ScanKMP(&kmp,false,szs.course_kmp_data,szs.course_kmp_size,0);
-	    if ( err <= ERR_WARNING )
-	    {
-		if (kmp.stgi)
-		{
-		    kmp_stgi_entry_t *stgi = (kmp_stgi_entry_t*)kmp.stgi;
-		    const u8  lap_count = stgi->lap_count;
-		    const u16 speed_mod = stgi->speed_mod;
-		    stgi->lap_count = 3;
-		    stgi->speed_mod = 0;
-
-		    SHA1(szs.data,szs.size,info.hash);
-		    Sha1Bin2Hex(sha1_norm,info.hash);
-
-		    SHA1(szs.course_kmp_data,szs.course_kmp_size,info.hash);
-		    Sha1Bin2Hex(sha1_kmp_norm,info.hash);
-
-		    stgi->lap_count = lap_count;
-		    stgi->speed_mod = speed_mod;
-		}
-
-		CheckFinishLine(&kmp,&kf);
-		CheckUsedPos(&kmp,&up);
-
-		const uint n_ckpt = kmp.dlist[KMP_CKPT].used;
-		if (n_ckpt)
-		{
-		    const kmp_ckpt_entry_t *ckpt
-			= (kmp_ckpt_entry_t*)kmp.dlist[KMP_CKPT].list;
-		    uint i;
-		    ckpt0_count = 0;
-		    for ( i = 0; i < n_ckpt; i++, ckpt++ )
-			if (!ckpt->mode)
-			    ckpt0_count++;
-		}
-
-		const kmp_stgi_entry_t *stgi = (kmp_stgi_entry_t*)kmp.dlist[KMP_STGI].list;
-		if ( kmp.dlist[KMP_STGI].used > 0 )
-		{
-		    lap_count = stgi->lap_count;
-		    if (!szs.is_arena)
-		    {
-			if ( ckpt0_count > 1 )
-			{
-			    if ( lap_count == 1 )
-				ct_dest = StringCopyE(ct_dest,ct_end,",1lap");
-			    ct_dest = snprintfE(ct_dest,ct_end,",%ulc",ckpt0_count);
-			}
-			else if ( lap_count != 0 && lap_count != 3 )
-			    ct_dest = snprintfE(ct_dest,ct_end,",%ulap%s",
-					lap_count, lap_count == 1 ? "" : "s" );
-		    }
-
-		    if (stgi->speed_mod)
-		    {
-			speed_factor = SpeedMod2float(stgi->speed_mod);
-			char buf[20];
-			snprintf(buf,sizeof(buf),",x%4.2f",speed_factor);
-			char *ptr = buf + strlen(buf) - 1;
-			while ( *ptr == '0' )
-			    *ptr-- = 0;
-			if ( *ptr == '.' )
-			    *ptr = 0;
-			if ( strcmp(buf,",x0") && strcmp(buf,",x1") )
-			    ct_dest = StringCopyE(ct_dest,ct_end,buf);
-		    }
-		}
-		else if ( !szs.is_arena && ckpt0_count > 1 )
-		    ct_dest = snprintfE(ct_dest,ct_end,",%ulc",ckpt0_count);
-
-		if ( kf.n_ktpt_m > 1 )
-		    ct_dest = StringCopyE(ct_dest,ct_end,",2ktpt");
-
-		kmp_ana_pflag_t ap;
-		AnalysePFlagScenarios(&ap,&kmp,GMD_M_DEFAULT);
-		snprintf(gobj_info,sizeof(gobj_info),"%d %d %d %d",
-			ap.ag.n_gobj, ap.n_version, ap.n_res_std, ap.n_res_ext );
-		ResetPFlagScenarios(&ap);
-	    }
-
-	    DetectSpecialKMP(&kmp,szs.kmp_special);
-	    if (  szs.kmp_special[HAVEKMP_WOODBOX_HT]
-	       || szs.kmp_special[HAVEKMP_MUSHROOM_CAR]
-	       || szs.kmp_special[HAVEKMP_PENGUIN_POS]
-	       || szs.kmp_special[HAVEKMP_EPROP_SPEED]
-	    )
-	    {
-		ct_dest = StringCopyE(ct_dest,ct_end,",gobj");
-	    }
-
-	    if (  szs.kmp_special[HAVEKMP_X_PFLAGS]
-	       || szs.kmp_special[HAVEKMP_X_COND]
-	       || szs.kmp_special[HAVEKMP_X_DEFOBJ]
-	       || szs.kmp_special[HAVEKMP_X_RANDOM]
-	    )
-	    {
-		ct_dest = StringCopyE(ct_dest,ct_end,",xpf");
-	    }
-
-	    ResetKMP(&kmp);
-	}
-
-	if ( szs.szs_special[HAVESZS_ITEM_SLOT_TABLE] )
-	    ct_dest = StringCopyE(ct_dest,ct_end,",itemslot");
-
-	if ( szs.szs_special[HAVESZS_OBJFLOW] )
-	    ct_dest = StringCopyE(ct_dest,ct_end,",objflow");
-
-	if (  szs.szs_special[HAVESZS_GHT_ITEM]
-	   || szs.szs_special[HAVESZS_GHT_ITEM_OBJ]
-	   || szs.szs_special[HAVESZS_GHT_KART]
-	   || szs.szs_special[HAVESZS_GHT_KART_OBJ]
-	)
-	{
-	    ct_dest = StringCopyE(ct_dest,ct_end,",geohit");
-	}
-
-	if ( szs.szs_special[HAVESZS_MINIGAME] )
-	    ct_dest = StringCopyE(ct_dest,ct_end,",minigame");
-
-
-	//--- scan KCL
-
-	sha1_hex_t sha1_kcl = {0};
-	if (szs.course_kcl_data)
-	{
-	    SHA1(szs.course_kcl_data,szs.course_kcl_size,info.hash);
-	    Sha1Bin2Hex(sha1_kcl,info.hash);
-	}
-
-
-	//--- add "lex" and terminate 'ct_dest'
-
-	if (szs.course_lex_data)
-	    ct_dest = StringCopyE(ct_dest,ct_end,",lex");
-	*ct_dest = 0;
-
-
-	//--- course model (course_model.brres, course_d_model.brres)
-
-	sha1_hex_t sha1_course = {0};
-	if (szs.course_model_data)
-	{
-	    SHA1(szs.course_model_data,szs.course_model_size,info.hash);
-	    Sha1Bin2Hex(sha1_course,info.hash);
-	}
-	else if (szs.course_d_model_data)
-	{
-	    SHA1(szs.course_d_model_data,szs.course_d_model_size,info.hash);
-	    Sha1Bin2Hex(sha1_course,info.hash);
-	}
-
-
-	//--- vrcorn (vrcorn_model.brres)
-
-	sha1_hex_t sha1_vrcorn = {0};
-	if (szs.vrcorn_model_data)
-	{
-	    SHA1(szs.vrcorn_model_data,szs.vrcorn_model_size,info.hash);
-	    Sha1Bin2Hex(sha1_vrcorn,info.hash);
-	}
-
-
-	//--- minimap (map_model.brres)
-
-	sha1_hex_t sha1_minimap = {0};
-	if (szs.map_model_data)
-	{
-	    SHA1(szs.map_model_data,szs.map_model_size,info.hash);
-	    Sha1Bin2Hex(sha1_minimap,info.hash);
-	}
+	AnalyseSZS(&as,false,&szs,param->arg);
 
 
 	//--- status
@@ -2230,51 +2006,56 @@ static enumError cmd_analyze()
 		"special_kmp=\"%s\"\n"
 		"special_files=\"%s\"\n"
 		"lex_sections=\"%s\"\n"
+		"warn=\"%u=%s\"\n"
 		"ct_attributes=\"%s\"\n"
 		"name_attributes=\"%.*s\"\n"
+		"duration_usec=%llu\n"
 		,dest
 		,szs.size
-		 ,db64
-		 ,sha1
-		 ,sha1_norm
-		 ,sha1_kcl
-		 ,sha1_kmp
-		 ,sha1_kmp_norm
-		 ,sha1_course
-		 ,sha1_vrcorn
-		 ,sha1_minimap
+		 ,as.db64
+		 ,as.sha1_szs
+		 ,as.sha1_szs_norm
+		 ,as.sha1_kcl
+		 ,as.sha1_kmp
+		 ,as.sha1_kmp_norm
+		 ,as.sha1_course
+		 ,as.sha1_vrcorn
+		 ,as.sha1_minimap
 		,szs.is_arena
 		,is_arena_name[szs.is_arena]
-		,ckpt0_count
-		,lap_count
-		,speed_factor
-		,slotana.slot_info
-		,slotinfo.slot_attrib
-		,slotinfo.race_slot,slotinfo.race_info
-		,slotinfo.arena_slot,slotinfo.arena_info
-		,slotinfo.music_index,slotinfo.music_info
-		 ,up.orig.rating[0],WarnLevelNameLo[up.orig.rating[0]]
-		 ,up.orig.min.x,up.orig.max.x
-			,fabsf(up.orig.max.x-up.orig.min.x)
-			,(up.orig.min.x+up.orig.max.x)/2
-		 ,up.orig.rating[1],WarnLevelNameLo[up.orig.rating[1]]
-		 ,up.orig.min.y,up.orig.max.y
-			,fabsf(up.orig.max.y-up.orig.min.y)
-			,(up.orig.min.y+up.orig.max.y)/2
-		 ,up.orig.rating[2],WarnLevelNameLo[up.orig.rating[2]]
-		 ,up.orig.min.z,up.orig.max.z
-			,fabsf(up.orig.max.z-up.orig.min.z)
-			,(up.orig.min.z+up.orig.max.z)/2
-		 ,GetUsedPosObjSuggestion(up.suggest,true,"")
-		,kf.warn ? "warn" : kf.hint ? "hint" : "ok"
-		,kf.distance
-		,kf.dir_delta
-		,gobj_info
+		,as.ckpt0_count
+		,as.lap_count
+		,as.speed_factor
+		,as.slotana.slot_info
+		,as.slotinfo.slot_attrib
+		,as.slotinfo.race_slot,as.slotinfo.race_info
+		,as.slotinfo.arena_slot,as.slotinfo.arena_info
+		,as.slotinfo.music_index,as.slotinfo.music_info
+		 ,as.used_pos.orig.rating[0]
+			,WarnLevelNameLo[as.used_pos.orig.rating[0]]
+		 ,as.used_pos.orig.min.x,as.used_pos.orig.max.x
+			,fabsf(as.used_pos.orig.max.x-as.used_pos.orig.min.x)
+			,(as.used_pos.orig.min.x+as.used_pos.orig.max.x)/2
+		 ,as.used_pos.orig.rating[1],WarnLevelNameLo[as.used_pos.orig.rating[1]]
+		 ,as.used_pos.orig.min.y,as.used_pos.orig.max.y
+			,fabsf(as.used_pos.orig.max.y-as.used_pos.orig.min.y)
+			,(as.used_pos.orig.min.y+as.used_pos.orig.max.y)/2
+		 ,as.used_pos.orig.rating[2],WarnLevelNameLo[as.used_pos.orig.rating[2]]
+		 ,as.used_pos.orig.min.z,as.used_pos.orig.max.z
+			,fabsf(as.used_pos.orig.max.z-as.used_pos.orig.min.z)
+			,(as.used_pos.orig.min.z+as.used_pos.orig.max.z)/2
+		 ,GetUsedPosObjSuggestion(as.used_pos.suggest,true,"")
+		,as.kmp_finish.warn ? "warn" : as.kmp_finish.hint ? "hint" : "ok"
+		,as.kmp_finish.distance
+		,as.kmp_finish.dir_delta
+		,as.gobj_info
 		,CreateSpecialInfoKMP(szs.kmp_special,true,"")
 		,CreateSpecialFileInfo(&szs,true,"")
 		,CreateSectionInfoLEX(szs.have_lex,true,"")
-		,ct_attrib+1
+		,szs.warn_bits,GetWarnSZSNames(szs.warn_bits,' ')
+		,as.ct_attrib+1
 		,name_attrib_len,name_attrib
+		,as.duration_usec
 		);
 
 	if ( long_count > 0 )
@@ -2300,13 +2081,12 @@ static enumError cmd_analyze()
 	    PrintScriptFooter(&ps);
 	    ResetFile(&fo,0);
 	}
-
-	ResetLexInfo(&lexinfo);
     }
 
     PrintScriptFooter(&ps);
     ResetPrintScript(&ps);
     ResetFile(&fo,0);
+    ResetAnalyseSZS(&as);
     ResetSZS(&szs);
     return max_err;
 }
@@ -5413,7 +5193,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	    return err;
     }
 
-    return !err ? ERR_OK : max_error ? max_error : ERR_SYNTAX;
+    return !err ? ERR_OK : ProgInfo.max_error ? ProgInfo.max_error : ERR_SYNTAX;
 }
 
 //
@@ -5552,13 +5332,13 @@ static enumError CheckCommand ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			main_wszst()			///////////////
+///////////////			main_wszst(), main()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 int main_wszst ( int argc, char ** argv )
 {
     print_title_func = print_title;
-    SetupLib(argc,argv,WSZST_SHORT);
+    SetupLib(argc,argv,WSZST_SHORT,VERSION,TITLE);
     SetupExtendedSZS();
 
     //----- process arguments
@@ -5657,7 +5437,7 @@ static const wrapper_t * FindWrapper ( int argc, char ** argv )
 
 int main_wrapper ( int argc, char ** argv )
 {
-    SetupLib(argc,argv,TOOLSET_SHORT);
+    SetupLib(argc,argv,TOOLSET_SHORT,VERSION,TITLE);
 
     enum
     {
@@ -5838,7 +5618,7 @@ int main_wrapper ( int argc, char ** argv )
     fprintf(stdout,
 	"\n%s\n%s\n\n   Usage: %s TOOLNAME ...\n\n"
 	"This is a wrapper for the following tools:\n\n",
-	text_logo, TOOLSET_TITLE, progname );
+	text_logo, TOOLSET_TITLE, ProgInfo.progname );
 
     const wrapper_t *w, *active = FindWrapper(argc,argv);
     DASSERT(active);

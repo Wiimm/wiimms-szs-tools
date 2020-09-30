@@ -333,11 +333,31 @@ void SetupColors()
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// [[2do]]
 
-void SetupLib ( int argc, char ** argv, ccp p_progname )
+#if defined(TEST) || defined(DEBUG)
+  #define USE_PROGINFO 2	// 0:off, 1:both, 2:new proginfo only
+  #define LOG_PROGINFO 1	// 0:off, 1:on
+#else
+  #define USE_PROGINFO 2	// 0:off, 1:both, 2:new proginfo only
+  #define LOG_PROGINFO 0	// 0:off, 1:on
+#endif
+
+//-----------------------------------------------------------------------------
+
+void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
 {
-    if ( p_progname && *p_progname )
-	progname = p_progname;
+ #if USE_PROGINFO
+    SetupProgname(argc,argv,tname,tvers,ttitle);
+ #else
+    if ( tname && *tname )
+	ProgInfo.progname = tname;
+ #endif
+
+ #if LOG_PROGINFO
+    PRINT1("PROG1: %s | %s | %s\n",ProgInfo.progname,ProgInfo.progdir,ProgInfo.progpath);
+    PRINT1("TOOL1: %s | %s | %s\n",ProgInfo.toolname,ProgInfo.toolversion,ProgInfo.tooltitle);
+ #endif
 
     SetupTimezone(true);
     GetTimerMSec();
@@ -357,7 +377,7 @@ void SetupLib ( int argc, char ** argv, ccp p_progname )
     if (!TRACE_FILE)
     {
 	char fname[100];
-	snprintf(fname,sizeof(fname),"_trace-%s.tmp",p_progname);
+	snprintf(fname,sizeof(fname),"_trace-%s.tmp",tname);
 	TRACE_FILE = fopen(fname,"w");
 	if (!TRACE_FILE)
 	    fprintf(stderr,"open TRACE_FILE failed: %s\n",fname);
@@ -701,16 +721,20 @@ void SetupLib ( int argc, char ** argv, ccp p_progname )
 
     //----- setup progname
 
-    tool_name = p_progname;
-    if ( argc > 0 && *argv && **argv )
-	p_progname = *argv;
-    progname = strrchr(p_progname,'/');
-    progname = progname ? progname+1 : p_progname;
-    //argv[0] = (char*)progname;
-    if ( !tool_name || !*tool_name )
-	tool_name = progname;
+ #if USE_PROGINFO < 2
 
-    TRACE("##PROG## PROG-NAME=%s\n",progname);
+    tool_name = tname;
+    if ( argc > 0 && *argv && **argv )
+	tname = *argv;
+    ProgInfo.progname = strrchr(tname,'/');
+    ProgInfo.progname = ProgInfo.progname ? ProgInfo.progname+1 : tname;
+    //argv[0] = (char*)ProgInfo.progname;
+    if ( !tool_name || !*tool_name )
+	tool_name = ProgInfo.progname;
+
+    TRACE("##PROG## PROG-NAME=%s\n",ProgInfo.progname);
+
+ #endif
 
 
     //----- setup search_path
@@ -721,17 +745,22 @@ void SetupLib ( int argc, char ** argv, ccp p_progname )
 
  #ifndef WIN_SZS_LIB
     // determine program path
+ #if !USE_PROGINFO
     char proc_path[30];
     snprintf(proc_path,sizeof(proc_path),"/proc/%u/exe",getpid());
     TRACE("PROC-PATH: %s\n",proc_path);
-
+ #endif
     static char share[] = "/share/szs/";
     static char local_share[] = "/usr/local/share/szs/";
  #ifndef __CYGWIN__
     share_path = local_share;
  #endif
 
+ #if USE_PROGINFO
+    if (GetProgramPath(path,sizeof(path),true,argv[0]))
+ #else 
     if (readlink(proc_path,path,sizeof(path)))
+ #endif
     {
 	// program path found!
 	TRACE("PROG-PATH: %s\n",path);
@@ -801,6 +830,11 @@ void SetupLib ( int argc, char ** argv, ccp p_progname )
  #endif
 
     SetupStandardSZS();
+
+ #if LOG_PROGINFO
+    PRINT1("PROG2: %s | %s | %s\n",ProgInfo.progname,ProgInfo.progdir,ProgInfo.progpath);
+    PRINT1("TOOL2: %s | %s | %s\n",ProgInfo.toolname,ProgInfo.toolversion,ProgInfo.tooltitle);
+ #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -866,7 +900,7 @@ void NormalizeOptions
 	if (print_title_func)
 	    print_title_func(stdout);
 
-	fprintf(stdlog,"PROGRAM_NAME    = %s\n",progname);
+	fprintf(stdlog,"PROGRAM_NAME    = %s\n",ProgInfo.progname);
 	if ( compatible != COMPAT_CURRENT )
 	    fprintf(stdlog,"COMPATIBILITY   = %s\n",PrintOptCompatible());
 
@@ -1073,6 +1107,41 @@ void InitializeOutputMode ( output_mode_t * outmode )
     outmode->mode	= 1;
     outmode->cross_ref	= true;
     outmode->hex	= false;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////		    warn_enum_t / warn_bits_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const ccp warn_szs_name[WARNSZS__N] =
+{
+    "itempos",		// WARNSZS_ITEMPOS
+    "self-it",		// WARNSZS_SELF_ITPH
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetWarnSZSNames ( warn_bits_t ws, char sep )
+{
+    static const int order[] =
+    {
+	WARNSZS_ITEMPOS,
+	WARNSZS_SELF_ITPH,
+	-1
+    };
+    
+    char buf[100], *dest = buf;
+
+    const int *op;
+    for ( op = order; *op >= 0; op++ )
+	if ( 1 << *op & ws && dest < buf+sizeof(buf)-1 )
+	{
+	    *dest++ = sep;
+	    dest = StringCopyE(dest,buf+sizeof(buf),warn_szs_name[*op]);
+	}
+
+    return dest == buf ? EmptyString : CopyCircBuf0(buf+1,dest-buf-1);
 }
 
 //

@@ -808,16 +808,12 @@ enumError CreateSZS
 	    {
 		StringCopyE( sd.path_rel, sd.path+sizeof(sd.path), *ptr );
 		struct stat st;
+	#if USE_NEW_FILEATTRIB
+		if ( stat(sd.path,&st) || CompareTimeSpec(&st.st_mtim,&szs.fatt.mtime) < 0 )
+	#else
 		const time_t mtime = stat(sd.path,&st) ? 0 : st.st_mtime;
-#if 0
- BINGO;
- printf("mtime: %u - %u = %d [%s>%s>] size=%zu,%zu\n",
-    (uint)mtime, (uint)szs.fatt.mtime, (int)(mtime-szs.fatt.mtime),
-    GetNameFF(setup_param2.fform_file,setup_param2.fform_arch),
-    GetNameFF(szs.fform_file,szs.fform_arch),
-    szs.size, szs.csize );
-#endif
 		if ( mtime < szs.fatt.mtime )
+	#endif
 		{
 		    const bool is_compressed = IsCompressedFF(setup_param2.fform_file);
 		    if (is_compressed)
@@ -1007,7 +1003,8 @@ enumError LoadCreateSZS
     }
 
     enumError err = LoadSZS(szs,fname,decompress,ignore_no_file,mark_readonly);
-    PatchSZS(szs);
+    if ( err <= ERR_WARNING )
+	PatchSZS(szs);
     return err;
 }
 
@@ -3643,6 +3640,10 @@ static int check_brres
 	     print_check_error( chk, CMOD_HINT,
 				"Unusual %s version %d: %s\n",
 				GetNameFF(0,fform), version, it->path );
+	else if ( bi->warn >= BIMD_INFO )
+	     print_check_error( chk, CMOD_INFO,
+				"Unusual %s version %d: %s\n",
+				GetNameFF(0,fform), version, it->path );
     }
     return 0;
 }
@@ -3706,6 +3707,18 @@ static void set_required_slot
 	    slot[i] = -1;
 	else if (!slot[i])
 	    slot[i] = 1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void dump_slots ( int stat, int *slot, ccp info )
+{
+    printf(">> stat=%d:",stat);
+    uint i;
+    for ( i = 0; i < 32; i++ )
+	printf("%s%c", i&3 ? "" : " ",
+		slot[i] < 0 ? '-' : slot[i] > 0 ? '+' : '.' );
+    printf(" : %s\n",info);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3792,7 +3805,6 @@ int FindSlotsSZS
 	    *required_slot = 31;
     }
 
-
     //--- analyze slot 4.2
 
     if ( !szs->slot_42 || szs->moonview_mdl_stat < 2 )
@@ -3818,6 +3830,7 @@ int FindSlotsSZS
     else if ( !SLOT(6,1) && szs->have_ice_brres )
 	SLOT(6,1) = 1;
 
+
     //--- analyze slot 6.2
 
     if (szs->slot_62)
@@ -3835,6 +3848,8 @@ int FindSlotsSZS
     if (!SLOT(6,1)) SLOT(6,1) = -1;
     if (!SLOT(6,2)) SLOT(6,2) = -1;
 
+
+    //dump_slots(stat,slot,"END");
     return stat;
 }
 
@@ -3860,10 +3875,12 @@ void AnalyzeSlot ( slot_ana_t *sa, szs_file_t *szs )
     static char buf[500];
     char *dest = buf;
 
-    uint i;
+    uint i, allow = 0;
     for ( i = 0; i < MKW_N_TRACKS; i++ )
     {
 	const int slot = sa->slot[i];
+	if ( slot >= 0 )
+	    allow++;
 	if ( slot != sa->stat )
 	{
 	    if ( dest > buf )
@@ -3873,6 +3890,9 @@ void AnalyzeSlot ( slot_ana_t *sa, szs_file_t *szs )
 		    i/4+1, i%4+1 );
 	}
     }
+
+    if (!allow)
+	dest = StringCopyS(buf,sizeof(buf),"none");
 
     if ( dest == buf )
 	*dest++ = '%';

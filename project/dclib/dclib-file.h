@@ -126,10 +126,42 @@ ccp GetFileOpenMode
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct FileAttrib_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
+
+#ifndef USE_NEW_FILEATTRIB
+  #define USE_NEW_FILEATTRIB 1
+#endif
+
+#undef FILEATTRIB_SEC
+#if USE_NEW_FILEATTRIB
+  #define FILEATTRIB_SEC(t) ((t).tv_sec)
+#else
+  #define FILEATTRIB_SEC(t) (t)
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
 // [[FileAttrib_t]]
 
 typedef struct FileAttrib_t
 {
+ #if USE_NEW_FILEATTRIB
+
+    union
+    {
+	struct timespec times[4];
+	struct
+	{
+	    // order compatible to utimensat() and futimens()
+	    struct timespec atime;	// last ascces time
+	    struct timespec mtime;	// time of last content modification
+	    struct timespec ctime;	// time of file creation or last status change
+	    struct timespec itime;	// insertion time (special time for archives)
+	};
+    };
+
+    size_t size;			// file size
+    mode_t mode;			// file mode
+
+ #else
 	time_t mtime;	// time of last content modification
 	time_t ctime;	// time of file creation or last status change
 	time_t atime;	// last ascces time
@@ -137,6 +169,8 @@ typedef struct FileAttrib_t
 
 	size_t size;	// file size
 	mode_t mode;	// file mode
+ #endif
+
 }
 FileAttrib_t;
 
@@ -146,6 +180,9 @@ FileAttrib_t * ClearFileAttrib
 (
     FileAttrib_t	* dest		// NULL or destination attribute
 );
+
+static inline FileAttrib_t * ZeroFileAttrib ( FileAttrib_t * dest )
+	{ DASSERT(dest); memset(dest,0,sizeof(*dest)); return dest; }
 
 FileAttrib_t * TouchFileAttrib
 (
@@ -182,6 +219,45 @@ FileAttrib_t * NormalizeFileAttrib
 (
     FileAttrib_t	* fa		// valid attribute
 );
+
+///////////////////////////////////////////////////////////////////////////////
+// struct timespec helpers
+
+extern const struct timespec null_timespec;
+
+// NULL pointers allowed
+int CompareTimeSpec0 ( const struct timespec *a, const struct timespec *b );
+
+// NULL pointers forbidden
+static inline int CompareTimeSpec
+	( const struct timespec *a, const struct timespec *b )
+{
+    DASSERT(a);
+    DASSERT(b);
+    return a->tv_sec  < b->tv_sec  ? -1
+	 : a->tv_sec  > b->tv_sec  ?  1
+	 : a->tv_nsec < b->tv_nsec ? -1
+	 : a->tv_nsec > b->tv_nsec;
+}
+
+// NULL pointers forbidden
+static inline int CompareTimeSpecVal
+	( const struct timespec *a, const struct timeval *b )
+{
+    DASSERT(a);
+    DASSERT(b);
+    return a->tv_sec  < b->tv_sec       ? -1
+	 : a->tv_sec  > b->tv_sec       ?  1
+	 : a->tv_nsec < b->tv_usec*1000 ? -1
+	 : a->tv_nsec > b->tv_usec*1000;
+}
+
+static inline bool IsTimeSpecNull ( const struct timespec *ts )
+{
+    return !ts
+	|| ts->tv_nsec > 1000000000 // includes UTIME_NOW || UTIME_OMIT
+	|| !ts->tv_nsec && !ts->tv_sec;
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -632,7 +708,7 @@ static inline uint ReadMemFile
 enumError LoadMemFile
 (
     MemFile_t	*mf,		// MemFile_t data
-    bool	init_mf,	// true: initalize 'mf' first
+    bool	init_mf,	// true: initialize 'mf' first
 
     ccp		path1,		// NULL or part #1 of path
     ccp		path2,		// NULL or part #2 of path
@@ -881,43 +957,17 @@ uint NumberedFilename
 );
 
 ///////////////////////////////////////////////////////////////////////////////
-#if 0
-///////////////////////////////////////////////////////////////////////////////
 
-char * SplitSubPath
-(
+#if 0
+
+ char * SplitSubPath
+ (
     char		* buf,		// destination buffer
     size_t		buf_size,	// size of 'buf'
     ccp			path		// source path, if NULL: use 'buf'
-);
+ );
 
-enumError LoadFile
-(
-    ccp			path1,		// NULL or part #1 of path
-    ccp			path2,		// NULL or part #2 of path
-    size_t		skip,		// skip num of bytes before reading
-    void		* data,		// destination buffer, size = 'size'
-    size_t		size,		// size to read
-    int			silent,		// 0: print all error messages
-					// 1: suppress file size warning
-					// 2: suppress all error messages
-    FileAttrib_t	* fatt,		// not NULL: store file attributes
-    bool		fatt_max	// true: store *max* values to 'fatt'
-);
-
-enumError SaveFile
-(
-    ccp			path1,		// NULL or part #1 of path
-    ccp			path2,		// NULL or part #2 of path
-    bool		overwrite,	// true: force overwriting
-    const void		* data,		// data to write
-    uint		data_size,	// size of 'data'
-    FileAttrib_t	* fatt		// not NULL: set timestamps using this attribs
-);
-
-///////////////////////////////////////////////////////////////////////////////
 #endif
-///////////////////////////////////////////////////////////////////////////////
 
 //
 ///////////////////////////////////////////////////////////////////////////////

@@ -94,7 +94,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 void SetupColors();
-void SetupLib ( int argc, char ** argv, ccp p_progname );
+void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle );
+
 void NormalizeOptions
 (
     uint	log_level	// 0: no log
@@ -196,6 +197,26 @@ __attribute__ ((packed)) WarnLevel_t;
 
 extern const char WarnLevelNameLo[WLEVEL__N][8]; // lower case
 extern const char WarnLevelNameUp[WLEVEL__N][8]; // upper case
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			warn_enum_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[warn_enum_t]] [[warn_bits_t]]
+// order is important, compare warn_szs_name[] and ct.wiimm.de "warning bits"
+
+typedef enum warn_enum_t
+{
+    WARNSZS_ITEMPOS,		// item-pos bug
+    WARNSZS_SELF_ITPH,		// self linked ITPT route
+    WARNSZS__N
+}
+warn_enum_t;
+
+typedef uint warn_bits_t;
+
+extern const ccp warn_szs_name[WARNSZS__N];
+ccp GetWarnSZSNames ( warn_bits_t ws, char sep );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2156,7 +2177,6 @@ extern const u8 TestDataLEX[8*1];
 ///////////////////////////////////////////////////////////////////////////////
 
 extern ccp		tool_name;
-extern ccp		progname;
 extern ccp		share_path;
 extern ccp		search_path[];
 extern ccp		auto_add_path[6];

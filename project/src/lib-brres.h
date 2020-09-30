@@ -205,6 +205,7 @@ ccp GetStringBRRES
 typedef enum brsub_warn_t
 {
 	BIMD_OK,	// original record
+	BIMD_INFO,	// hint about wrong version on VERBOSE -> will work
 	BIMD_HINT,	// hint about wrong version -> will work
 	BIMD_FAIL,	// wrong n_sect, but will work (garbage display)
 	BIMD_FATAL,	// wrong n_sect, will freeze

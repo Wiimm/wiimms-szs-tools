@@ -302,8 +302,8 @@ static int test_matrix ( int argc, char ** argv )
     }
 
     printf("\nerr=%u, total=%u\n",err_count,total_count);
-    if ( err_count && max_error < ERR_DIFFER )
-	max_error = ERR_DIFFER;
+    if ( err_count && ProgInfo.max_error < ERR_DIFFER )
+	ProgInfo.max_error = ERR_DIFFER;
     return 0;
 }
 
@@ -3353,7 +3353,7 @@ static enumError test_timezone ( int argc, char ** argv )
 {
     printf("\nEndless timezone test with interval of 30 minutes started (pid=%u)\n",
 		getpid() );
-    printf("Typical usage: nohup ./%s TIMEZONE >>timezone-test.tmp 2>&1 &\n\n",progname);
+    printf("Typical usage: nohup ./%s TIMEZONE >>timezone-test.tmp 2>&1 &\n\n",ProgInfo.progname);
 
     for(;;)
     {
@@ -3989,7 +3989,7 @@ int main ( int argc, char ** argv )
 {
     printf("*****  %s  *****\n",TITLE);
     print_title_func = print_title;
-    SetupLib(argc,argv,NAME);
+    SetupLib(argc,argv,NAME,VERSION,TITLE);
     fflush(stdout);
 
     //printf(" |" MM1(XXX) "|" MM2(XXX) "\n");
@@ -4079,7 +4079,7 @@ int main ( int argc, char ** argv )
     if (SIGINT_level)
 	ERROR0(ERR_INTERRUPT,"Program interrupted by user.");
 
-    return max_error;
+    return ProgInfo.max_error;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

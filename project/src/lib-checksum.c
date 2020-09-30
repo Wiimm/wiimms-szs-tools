@@ -43,6 +43,7 @@
 #include "dclib-basics.h"
 #include "dclib-numeric.h"
 #include "lib-checksum.h"
+#include "lib-szs.h"
 
 //
 ///////////////////////////////////////////////////////////////////////////////

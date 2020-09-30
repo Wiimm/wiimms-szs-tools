@@ -370,6 +370,7 @@ enumError ScanRawDataBMG
 	ResetBMG(bmg);
     if (!raw->data)
 	return ERR_OK;
+    bmg->fatt  = raw->fatt;
 
     if (IsArchiveFF(raw->fform))
     {

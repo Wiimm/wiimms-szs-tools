@@ -55,6 +55,8 @@
 #include "lib-std.h"
 #include "lib-object.h"
 #include "lib-lecode.h"
+#include "lib-checksum.h"
+#include "lib-kmp.h"
 #include "db-mkw.h"
 
 //
@@ -406,6 +408,7 @@ typedef struct szs_file_t
 					// 2: all materials found
 					// 3: all materials found & content ok
 
+    warn_bits_t	warn_bits;		// warning summary
     bool	szs_special[HAVESZS__N]; // true: special file found
     kmp_special_t kmp_special;		// list: >0: number of special KMP objects found
     uint	have_lex;		// bit field for found lex eleemnts
@@ -1268,6 +1271,65 @@ enumError CompressBZ ( szs_file_t * szs, bool remove_uncompressed );
 
 #define BRASD_MAGIC		"RASD"
 #define BRASD_MAGIC_NUM		0x52415344
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			analyse_szs_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[analyse_szs_t]]
+
+typedef struct analyse_szs_t
+{
+
+    //--- db+sha1 check sums
+
+    char	db64[CHECKSUM_DB_SIZE+1];
+					// DB64 checksum
+    sha1_hex_t	sha1_szs;		// SHA1 of SZS file
+    sha1_hex_t	sha1_szs_norm;		// SHA1 of normed SZS file
+    sha1_hex_t	sha1_kmp;		// SHA1 of KMP file
+    sha1_hex_t	sha1_kmp_norm;		// SHA1 of normed KMP file
+    sha1_hex_t	sha1_kcl;		// SHA1 of KCL file
+    sha1_hex_t	sha1_course;		// SHA1 of course-model
+    sha1_hex_t	sha1_vrcorn;		// SHA1 of vrcorn
+    sha1_hex_t	sha1_minimap;		// SHA1 of minimap
+
+
+    //--- sub files
+
+    lex_info_t		lexinfo;	// LEX info
+    slot_ana_t		slotana;	// slot data
+    slot_info_t		slotinfo;	// slot data
+    kmp_finish_t	kmp_finish;	// finish line
+    kmp_usedpos_t	used_pos;	// used positions
+
+
+    //--- more stats
+
+    int		ckpt0_count;		// number of LC in CKPT, -1 unknown
+    int		lap_count;		// STGI lap counter
+    u16		speed_mod;		// STGI speed mod
+    float	speed_factor;		// STGI speed factor
+
+    char	gobj_info[20];		// gobj counters
+    char	ct_attrib[300];		// collected ct attributes
+
+    u_usec_t	duration_usec;		// duration of AnalyseSZS() in usec
+}
+analyse_szs_t;
+
+//-----------------------------------------------------------------------------
+
+void InitializeAnalyseSZS ( analyse_szs_t * as );
+void ResetAnalyseSZS ( analyse_szs_t * as );
+
+void AnalyseSZS
+(
+    analyse_szs_t	*as,		// result
+    bool		init_sa,	// true: init 'as', false: reset 'as'
+    szs_file_t		*szs,		// SZS filre t analysze
+    ccp			fname		// NULL or fname for slot analysis
+);
 
 //
 ///////////////////////////////////////////////////////////////////////////////

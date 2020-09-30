@@ -1267,8 +1267,10 @@ uint EncodeBase64
     int		source_len,		// length of 'source'; if <0: use strlen(source)
     const char	encode64[64+1],		// encoding table; if NULL: use TableEncode64default
     bool	use_filler,		// use filler for aligned output
+
     ccp		next_line,		// not NULL: use this string as new line sep
-    uint	next_line_trigger	// >0: use 'next_line' every # input bytes
+    uint	bytes_per_line		// >0: use 'next_line' every # input bytes
+					// will be rounded down to multiple of 3
 )
 {
     DASSERT(buf);
@@ -1278,11 +1280,11 @@ uint EncodeBase64
     noPRINT("EncodeBase64(sz=%u,len=%d,fil=%d)\n",buf_size,source_len,use_filler);
 
     if (!next_line)
-	next_line_trigger = ~0;
-    else if (!next_line_trigger)
-	next_line_trigger = 19;
+	bytes_per_line = ~0;
+    else if (!bytes_per_line)
+	bytes_per_line = 19;
     else
-	next_line_trigger /= 3;
+	bytes_per_line /= 3;
 
     char *dest = buf;
     char *dest_end = buf + buf_size - 4;
@@ -1299,7 +1301,7 @@ uint EncodeBase64
 
     while ( src < src_end && dest < dest_end )
     {
-	if ( ++n_tupel > next_line_trigger && next_line )
+	if ( ++n_tupel > bytes_per_line && next_line )
 	{
 	    char *next = StringCopyE(dest,(char*)buf+buf_size,next_line);
 	    if ( next >= dest_end )
@@ -1379,6 +1381,49 @@ mem_t EncodeBase64Circ
 	mem.len = 0;
     }
     return mem;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+
+uint EncodeBase64ml // ml: multi line
+(
+    // returns the number of scanned bytes of 'source'
+
+    char	*buf,			// valid destination buffer
+    uint	buf_size,		// size of 'buf', >= 4
+    const void	*source,		// NULL or data to encode
+    int		source_len,		// length of 'source'; if <0: use strlen(source)
+    const char	encode64[64+1],		// encoding table; if NULL: use TableEncode64default
+    bool	use_filler,		// use filler for aligned output
+
+    int		indent,			// indention of output
+    ccp		prefix,			// NULL or prefix before encoded data
+    ccp		eol,			// line terminator, if NULL then use NL
+    int		bytes_per_line		// create a new line every # input bytes
+					// will be rounded down to multiple of 3
+)
+{
+    indent = NormalizeIndent(indent);
+    if (!eol)
+	eol = "\n";
+
+    char linesep[200];
+    int pre_pos;
+    snprintf(linesep,sizeof(linesep),"%s%n%*s%s",
+		eol,
+		&pre_pos,
+		indent, "",
+		prefix ? prefix : ""
+		);
+
+    char *end = buf + buf_size;
+    char *dest = StringCopyE(buf,end,linesep+pre_pos);
+    const uint scanned = EncodeBase64( dest, end-dest, source, source_len,
+				encode64, use_filler, linesep, bytes_per_line );
+    dest = buf + strlen(buf);
+    StringCopyE(dest,end,eol);
+    return scanned;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1793,22 +1838,22 @@ uint EncodeByMode
 
       case ENCODE_BASE64:
 	len = EncodeBase64(buf,buf_size,source,slen,TableEncode64,true,0,0);
-	len = EncodeBase64FillLen(len);
+	len = GetEncodeBase64FillLen(len);
 	break;
 
       case ENCODE_BASE64URL:
 	len = EncodeBase64(buf,buf_size,source,slen,TableEncode64url,true,0,0);
-	len = EncodeBase64FillLen(len);
+	len = GetEncodeBase64FillLen(len);
 	break;
 
       case ENCODE_BASE64STAR:
 	len = EncodeBase64(buf,buf_size,source,slen,TableEncode64star,true,0,0);
-	len = EncodeBase64FillLen(len);
+	len = GetEncodeBase64FillLen(len);
 	break;
 
       case ENCODE_BASE64XML:
 	len = EncodeBase64(buf,buf_size,source,slen,TableEncode64xml,true,0,0);
-	len = EncodeBase64FillLen(len);
+	len = GetEncodeBase64FillLen(len);
 	break;
 
       case ENCODE_JSON:
@@ -2050,11 +2095,14 @@ ccp PrintTimeByFormat
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-    time_t		time		// seconds since epoch -> time()
+    time_t		tim		// seconds since epoch; 0 is replaced by time()
 )
 {
+    if (!tim)
+	tim = time(0);
+
     char buf[100];
-    struct tm *tm = localtime(&time);
+    struct tm *tm = localtime(&tim);
     const uint len = strftime(buf,sizeof(buf),format,tm);
     return CopyCircBuf(buf,len+1);
 }
@@ -2066,11 +2114,14 @@ ccp PrintTimeByFormatUTC
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-    time_t		time		// seconds since epoch -> time()
+    time_t		tim		// seconds since epoch; 0 is replaced by time()
 )
 {
+    if (!tim)
+	tim = time(0);
+
     char buf[100];
-    struct tm *tm = gmtime(&time);
+    struct tm *tm = gmtime(&tim);
     const uint len = strftime(buf,sizeof(buf),format,tm);
     return CopyCircBuf(buf,len+1);
 }
@@ -2082,12 +2133,13 @@ ccp PrintUsecByFormat
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-    time_t		time,		// seconds since epoch -> time()
+					// 1-6 '@' in row replaced by digits of 'usec'
+    time_t		tim,		// seconds since epoch
     uint		usec		// micro second of second
 )
 {
     char buf[100];
-    struct tm *tm = localtime(&time);
+    struct tm *tm = localtime(&tim);
     const uint len = strftime(buf,sizeof(buf),format,tm);
     char *at = strchr(buf,'@');
     if (at)
@@ -2109,12 +2161,13 @@ ccp PrintUsecByFormatUTC
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-    time_t		time,		// seconds since epoch -> time()
+					// 1-6 '@' in row replaced by digits of 'usec'
+    time_t		tim,		// seconds since epoch
     uint		usec		// micro second of second
 )
 {
     char buf[100];
-    struct tm *tm = gmtime(&time);
+    struct tm *tm = gmtime(&tim);
     const uint len = strftime(buf,sizeof(buf),format,tm);
     char *at = strchr(buf,'@');
     if (at)

@@ -2767,6 +2767,7 @@ enumError ScanRawDataCTCODE
     if (!raw->data)
 	return ERR_OK;
 
+    ctcode->fatt  = raw->fatt;
     ctcode->fname = raw->fname;
     raw->fname = 0;
  #if USE_NEW_CONTAINER_CTC

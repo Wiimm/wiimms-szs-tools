@@ -1277,6 +1277,7 @@ typedef struct kmp_t
     u16			value[KMP_N_SECT+1];	// 'value' of section header
     IsArena_t		battle_mode;		// one of ARENA_*
     IndexList_t		index[KMP_N_SECT];	// named indices
+    warn_bits_t		warn_bits;		// warning summary
 
     char		* info;			// string behind last section
     const u8		* max_scanned;		// raw scanning: max scanned area
@@ -2123,6 +2124,7 @@ kmp_usedpos_t;
 
 void InitializeUsedPos ( kmp_usedpos_t *up );
 void CheckUsedPos ( const kmp_t *kmp, kmp_usedpos_t *up );
+void CheckWarnKMP ( kmp_t *kmp, kmp_usedpos_t *up );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

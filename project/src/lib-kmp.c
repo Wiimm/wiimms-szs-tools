@@ -2998,6 +2998,7 @@ enumError ScanRawDataKMP
     else
 	ResetKMP(kmp);
 
+    kmp->fatt  = raw->fatt;
     kmp->fname = raw->fname;
     raw->fname = 0;
 
@@ -6022,7 +6023,6 @@ void CheckUsedPos ( const kmp_t *kmp, kmp_usedpos_t *up )
 	}
     }
 
-
  #if HAVE_WIIMM_EXT && 0
     PrintUsedPosObj(stderr,1,&up->orig);
     PrintUsedPosObj(stderr,1,&up->orig_lex);
@@ -6033,6 +6033,46 @@ void CheckUsedPos ( const kmp_t *kmp, kmp_usedpos_t *up )
     }
     PrintUsedPosObj(stderr,1,up->suggest);
  #endif
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void CheckWarnKMP ( kmp_t *kmp, kmp_usedpos_t *up )
+{
+    kmp_usedpos_t local_up;
+    if (!up)
+    {
+	InitializeUsedPos(&local_up);
+	up = &local_up;
+    }
+
+    CheckUsedPos(kmp,up);
+    if ( up->suggest->max_rating >= WLEVEL_WARN )
+	kmp->warn_bits |= 1 << WARNSZS_ITEMPOS;
+
+    //-------------------------------------------------------------------------
+
+    const uint mask = 1 << WARNSZS_SELF_ITPH;
+    if (!(kmp->warn_bits & mask))
+    {
+	const List_t *phlist = kmp->dlist + KMP_ITPH;
+	const int n_ph = phlist->used;
+
+	if (n_ph)
+	{
+	    uint i;
+	    for ( i = 0; i < n_ph; i++ )
+	    {
+		const kmp_itph_entry_t *ph = (kmp_itph_entry_t*)phlist->list + i;
+		if ( ph->next[0] == i && ph->pt_len == 1 )
+		{
+		    kmp->warn_bits |= mask;
+		    break;
+		}
+	    }
+	}
+    }
 }
 
 //

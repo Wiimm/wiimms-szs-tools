@@ -144,11 +144,11 @@ static void hint_exit ( enumError stat )
     if ( current_command )
 	fprintf(stderr,
 	    "-> Type '%s help %s' (pipe it to a pager like 'less') for more help.\n\n",
-	    progname, CommandInfo[current_command->id].name1 );
+	    ProgInfo.progname, CommandInfo[current_command->id].name1 );
     else
 	fprintf(stderr,
 	    "-> Type '%s -h' or '%s help' (pipe it to a pager like 'less') for more help.\n\n",
-	    progname, progname );
+	    ProgInfo.progname, ProgInfo.progname );
     exit(stat);
 }
 
@@ -866,7 +866,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
     SetupBMG(filter_bmg);
     UsePatchingListBMG(&opt_load_bmg);
 
-    return !err ? ERR_OK : max_error ? max_error : ERR_SYNTAX;
+    return !err ? ERR_OK : ProgInfo.max_error ? ProgInfo.max_error : ERR_SYNTAX;
 }
 
 //
@@ -958,7 +958,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 #endif
 {
     print_title_func = print_title;
-    SetupLib(argc,argv,WCTCT_SHORT);
+    SetupLib(argc,argv,WCTCT_SHORT,VERSION,TITLE);
     ctcode_enabled = true;
 
     //----- process arguments

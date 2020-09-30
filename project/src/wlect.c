@@ -146,11 +146,11 @@ static void hint_exit ( enumError stat )
     if ( current_command )
 	fprintf(stderr,
 	    "-> Type '%s help %s' (pipe it to a pager like 'less') for more help.\n\n",
-	    progname, CommandInfo[current_command->id].name1 );
+	    ProgInfo.progname, CommandInfo[current_command->id].name1 );
     else
 	fprintf(stderr,
 	    "-> Type '%s -h' or '%s help' (pipe it to a pager like 'less') for more help.\n\n",
-	    progname, progname );
+	    ProgInfo.progname, ProgInfo.progname );
     exit(stat);
 }
 
@@ -377,7 +377,9 @@ static enumError LoadLECODE ( raw_data_t *raw, le_analyse_t *ana, ccp fname )
 
     if ( raw->fform != FF_LE_BIN )
     {
-	err = ERROR0(ERR_WRONG_FILE_TYPE,"Not a LECODE binary file: %s\n",raw->fname);
+	err = ERROR0(ERR_WRONG_FILE_TYPE,
+			"Not a LECODE binary file: %s:%s\n",
+			GetNameFF(raw->fform,0), raw->fname);
 	goto abort;
     }
 
@@ -1172,7 +1174,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
     SetupBMG(0);
     UsePatchingListBMG(&opt_load_bmg);
 
-    return !err ? ERR_OK : max_error ? max_error : ERR_SYNTAX;
+    return !err ? ERR_OK : ProgInfo.max_error ? ProgInfo.max_error : ERR_SYNTAX;
 }
 
 //
@@ -1264,7 +1266,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 #endif
 {
     print_title_func = print_title;
-    SetupLib(argc,argv,WLECT_SHORT);
+    SetupLib(argc,argv,WLECT_SHORT,VERSION,TITLE);
     ctcode_enabled = true;
     lecode_enabled = true;
 

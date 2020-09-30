@@ -4123,6 +4123,7 @@ enumError ScanRawDataKCL
     else
 	ResetKCL(kcl);
 
+    kcl->fatt  = raw->fatt;
     kcl->fname = raw->fname;
     raw->fname = 0;
 

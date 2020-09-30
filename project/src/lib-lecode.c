@@ -2305,8 +2305,15 @@ enumError LoadLPAR
 
     raw_data_t raw;
     enumError err = LoadRawData(&raw,true,fname,0,ignore_no_file,0);
-    if ( !err && raw.fform == FF_LPAR )
-	err = ScanTextLPAR(lpar,false,fname,raw.data,raw.data_size);
+    if (!err)
+    {
+	if ( raw.fform != FF_LPAR )
+	    err = ERROR0(ERR_WRONG_FILE_TYPE,
+			"Not a LPAR file: %s:%s\n",
+			GetNameFF(raw.fform,0), raw.fname );
+	else
+	    err = ScanTextLPAR(lpar,false,fname,raw.data,raw.data_size);
+    }
 
     if ( err && use_lpar )
 	opt_lpar = 0;
@@ -3776,6 +3783,7 @@ enumError ScanRawDataLEX
     else
 	ResetLEX(lex);
 
+    lex->fatt  = raw->fatt;
     lex->fname = raw->fname;
     raw->fname = 0;
 

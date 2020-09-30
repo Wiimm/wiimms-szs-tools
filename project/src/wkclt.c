@@ -144,11 +144,11 @@ static void hint_exit ( enumError stat )
     if ( current_command )
 	fprintf(stderr,
 	    "-> Type '%s help %s' (pipe it to a pager like 'less') for more help.\n\n",
-	    progname, CommandInfo[current_command->id].name1 );
+	    ProgInfo.progname, CommandInfo[current_command->id].name1 );
     else
 	fprintf(stderr,
 	    "-> Type '%s -h' or '%s help' (pipe it to a pager like 'less') for more help.\n\n",
-	    progname, progname );
+	    ProgInfo.progname, ProgInfo.progname );
     exit(stat);
 }
 
@@ -1226,7 +1226,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
     NormalizeOptions( verbose > 3 && !is_env ? 2 : 0 );
     SetupKCL();
 
-    return !err ? ERR_OK : max_error ? max_error : ERR_SYNTAX;
+    return !err ? ERR_OK : ProgInfo.max_error ? ProgInfo.max_error : ERR_SYNTAX;
 }
 
 //
@@ -1323,7 +1323,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 #endif
 {
     print_title_func = print_title;
-    SetupLib(argc,argv,WKCLT_SHORT);
+    SetupLib(argc,argv,WKCLT_SHORT,VERSION,TITLE);
 
     //----- process arguments
 

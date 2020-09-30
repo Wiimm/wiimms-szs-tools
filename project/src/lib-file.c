@@ -3213,7 +3213,7 @@ int PutScriptVars
 	    break;
 
 	 case FF_PHP:
-	    fputs("$d = new stdClass;\n",f);
+	    fputs("$d = new \\stdClass;\n",f);
 	    break;
 
 	 case FF_MAKEDOC:
@@ -3320,6 +3320,7 @@ int PutScriptVars
 	    fputc('\n',f);
 	    break;
 	}
+	fflush(f);
     }
 
     ps->index++;
@@ -3554,7 +3555,8 @@ void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
 	    if (!memcmp(src,"31+71",5))
 	    {
 		si->have_31_71 = true;
-		if ( si->race_slot == 31 || si->race_slot == 71 )
+		if ( si->race_mode != SIT_MANDATORY2
+			&& (si->race_slot == 31 || si->race_slot == 71 ))
 		{
 		    si->race_mode = SIT_MANDATORY;
 		    snprintf(si->race_info,sizeof(si->race_info),"%u",si->race_slot);

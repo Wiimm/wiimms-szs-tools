@@ -182,7 +182,7 @@ const brsub_info_t brsub_info[] =
   { FF_SRT, 0,	 5,5,	 2,2,	BIMD_OK },	// [[2do]] verify hexdump
 
   { FF_TEX,
-    FF_TEX_CT,	 1,3,	 1,1,	BIMD_HINT },
+    FF_TEX_CT,	 1,3,	 1,1,	BIMD_INFO },	// not BIMD_HINT
   { FF_TEX,
     FF_TEX_CT,	 2,3,	 2,1,	BIMD_FAIL },
   { FF_TEX,

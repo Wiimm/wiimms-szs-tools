@@ -83,7 +83,7 @@ szs v2.02a r7827 - 2019-05-04
  - New command: wszst XCOMMON: Scan archives and extract files from archives,
    that are below directory 'common'. Command XCOMMON is a short cut for
    EXTRACT --basedir=common.
- - New command: wszst ANALYZE: Analyse track files and print resulta in
+ - New command: wszst ANALYZE: Analyse track files and print result in
    machine readable format.
 
 
@@ -410,6 +410,11 @@ szs v2.19a r8237 - 2020-08-01
  - Support of an old GameCube BMG variant (internally named "legacy").
  - Check minimap: Bones 'posRU' and 'posLD' are detected even if the root bone
    is renamed. This suppresses wrong warnings.
+
+
+szs v2.19b r8243 - 2020-08-03
+
+ - Bug fix for wlect LPAR: Message functions are not longer printed twice.
 
 
 @@MODULE(last-history.txt)@@

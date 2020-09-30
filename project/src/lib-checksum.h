@@ -41,7 +41,8 @@
 #define _GNU_SOURCE 1
 
 #include "dclib-types.h"
-#include "lib-szs.h"
+
+typedef struct szs_file_t szs_file_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////

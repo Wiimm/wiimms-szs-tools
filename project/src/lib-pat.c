@@ -1671,6 +1671,7 @@ enumError ScanRawDataPAT
     else
 	ResetPAT(pat);
 
+    pat->fatt  = raw->fatt;
     pat->fname = raw->fname;
     raw->fname = 0;
  #if USE_NEW_CONTAINER_PAT
