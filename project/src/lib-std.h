@@ -2017,6 +2017,8 @@ data_tab_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void cmd_version_section ( bool sect_header, ccp name_short, ccp name_long );
+
 enumError cmd_argtest ( int argc, char ** argv );
 enumError cmd_error();
 enumError cmd_filetype();

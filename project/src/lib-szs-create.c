@@ -808,7 +808,7 @@ enumError CreateSZS
 	    {
 		StringCopyE( sd.path_rel, sd.path+sizeof(sd.path), *ptr );
 		struct stat st;
-	#if USE_NEW_FILEATTRIB
+	#if HAVE_FILEATTRIB_NSEC
 		if ( stat(sd.path,&st) || CompareTimeSpec(&st.st_mtim,&szs.fatt.mtime) < 0 )
 	#else
 		const time_t mtime = stat(sd.path,&st) ? 0 : st.st_mtime;

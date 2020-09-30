@@ -127,15 +127,22 @@ ccp GetFileOpenMode
 ///////////////			struct FileAttrib_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-#ifndef USE_NEW_FILEATTRIB
-  #define USE_NEW_FILEATTRIB 1
+#ifndef HAVE_FILEATTRIB_NSEC
+  #ifdef st_mtime
+    #define HAVE_FILEATTRIB_NSEC 1
+  #else
+    #define HAVE_FILEATTRIB_NSEC 0
+  #endif
 #endif
 
 #undef FILEATTRIB_SEC
-#if USE_NEW_FILEATTRIB
+#undef FILEATTRIB_NSEC
+#if HAVE_FILEATTRIB_NSEC
   #define FILEATTRIB_SEC(t) ((t).tv_sec)
+  #define FILEATTRIB_NSEC(t) ((t).tv_nsec)
 #else
   #define FILEATTRIB_SEC(t) (t)
+  #define FILEATTRIB_NSEC(t) 0
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -143,7 +150,7 @@ ccp GetFileOpenMode
 
 typedef struct FileAttrib_t
 {
- #if USE_NEW_FILEATTRIB
+ #if HAVE_FILEATTRIB_NSEC
 
     union
     {

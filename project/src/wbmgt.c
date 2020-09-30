@@ -86,28 +86,7 @@ static void help_exit ( bool xmode )
 
 static void print_version_section ( bool print_sect_header )
 {
-    if (print_sect_header)
-	fputs("[version]\n",stdout);
-
-    const u32 base = 0x04030201;
-    const u8 * e = (u8*)&base;
-    const u32 endian = be32(e);
-
-    printf( "prog=" WBMGT_SHORT "\n"
-	    "name=" WBMGT_LONG "\n"
-	    "version=" VERSION "\n"
-	    "beta=%d\n"
-	    "revision=" REVISION  "\n"
-	    "system=" SYSTEM "\n"
-	    "endian=%u%u%u%u %s\n"
-	    "author=" AUTHOR "\n"
-	    "date=" DATE "\n"
-	    "url=" URI_HOME WBMGT_SHORT "\n"
-	    "\n"
-	    , BETA_VERSION
-	    , e[0], e[1], e[2], e[3]
-	    , endian == 0x01020304 ? "little"
-		: endian == 0x04030201 ? "big" : "mixed" );
+    cmd_version_section(print_sect_header,WBMGT_SHORT,WBMGT_LONG);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

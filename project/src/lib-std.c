@@ -3773,6 +3773,43 @@ int ScanOptSort ( ccp arg )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			command version/section		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void cmd_version_section ( bool sect_header, ccp name_short, ccp name_long )
+{
+    if (sect_header)
+	fputs("[version]\n",stdout);
+
+    const u32 base = 0x04030201;
+    const u8 * e = (u8*)&base;
+    const u32 endian = be32(e);
+
+    printf( "prog=%s\n"
+	"name=%s\n"
+	"version=" VERSION "\n"
+	"beta=%d\n"
+	"revision=" REVISION  "\n"
+	"system=" SYSTEM "\n"
+	"endian=%u%u%u%u %s\n"
+	"have_nanosec=%d\n"
+	"author=" AUTHOR "\n"
+	"date=" DATE "\n"
+	"url=" URI_HOME "%s\n"
+	"\n"
+	, name_short
+	, name_long
+	, BETA_VERSION
+	, e[0], e[1], e[2], e[3]
+	, endian == 0x01020304 ? "little"
+	    : endian == 0x04030201 ? "big" : "mixed"
+	, HAVE_FILEATTRIB_NSEC
+	, name_short
+	);
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command argtest			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 

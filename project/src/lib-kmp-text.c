@@ -6330,7 +6330,7 @@ enumError SaveTextKMP
 
     DASSERT(kmp);
     DASSERT(fname);
- #if USE_NEW_FILEATTRIB
+ #if HAVE_FILEATTRIB_NSEC
     PRINT("SaveTextKMP(%s,%d) mtime=%lu\n",fname,set_time,kmp->fatt.mtime.tv_sec);
  #else
     PRINT("SaveTextKMP(%s,%d) mtime=%lu\n",fname,set_time,kmp->fatt.mtime);

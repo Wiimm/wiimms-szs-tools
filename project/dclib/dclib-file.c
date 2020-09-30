@@ -198,7 +198,7 @@ FileAttrib_t * ClearFileAttrib
     FileAttrib_t	* dest		// NULL or destination attribute
 )
 {
- #if USE_NEW_FILEATTRIB
+ #if HAVE_FILEATTRIB_NSEC
     if (dest)
     {
 	memset(dest,0,sizeof(*dest));
@@ -222,7 +222,7 @@ FileAttrib_t * TouchFileAttrib
 )
 {
     DASSERT(dest);
- #if USE_NEW_FILEATTRIB
+ #if HAVE_FILEATTRIB_NSEC
     struct timeval tv;
     if (!gettimeofday(&tv,0))
     {
@@ -248,7 +248,7 @@ FileAttrib_t * SetFileAttrib
 {
     DASSERT(dest);
 
- #if USE_NEW_FILEATTRIB
+ #if HAVE_FILEATTRIB_NSEC
 
     if (src_fa)
 	memcpy(dest,src_fa,sizeof(*dest));
@@ -302,7 +302,7 @@ FileAttrib_t * MaxFileAttrib
 {
     DASSERT(dest);
 
- #if USE_NEW_FILEATTRIB
+ #if HAVE_FILEATTRIB_NSEC
 
     if (src_fa)
     {
@@ -387,7 +387,7 @@ FileAttrib_t * NormalizeFileAttrib
     if ( fa->size < 0 )
 	fa->size = 0;
 
- #if USE_NEW_FILEATTRIB
+ #if HAVE_FILEATTRIB_NSEC
 
     if (IsTimeSpecNull(&fa->mtime))
     {
@@ -850,7 +850,7 @@ enumError CloseFile
 			TRACE("UNLINK %s\n",f->fname);
 			unlink(f->fname);
 		    }
-	#if USE_NEW_FILEATTRIB
+	#if HAVE_FILEATTRIB_NSEC
 		    else if ( set_time == 1 && !IsTimeSpecNull(&f->fatt.mtime) )
 			utimensat(AT_FDCWD,f->fname,f->fatt.times,0);
 	#else
@@ -860,6 +860,7 @@ enumError CloseFile
 			ubuf.actime  = f->fatt.atime
 				     ? f->fatt.atime : f->fatt.mtime;
 			ubuf.modtime = f->fatt.mtime;
+			utime(f->fname,&ubuf);
 		    }
 	#endif
 		    else if ( set_time > 1 || f->fmode & FM_TOUCH )

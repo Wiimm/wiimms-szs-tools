@@ -177,28 +177,7 @@ static void list_compressions_exit()
 
 static void print_version_section ( bool print_sect_header )
 {
-    if (print_sect_header)
-	fputs("[version]\n",stdout);
-
-    const u32 base = 0x04030201;
-    const u8 * e = (u8*)&base;
-    const u32 endian = be32(e);
-
-    printf( "prog=" WSZST_SHORT "\n"
-	    "name=" WSZST_LONG "\n"
-	    "version=" VERSION "\n"
-	    "beta=%d\n"
-	    "revision=" REVISION  "\n"
-	    "system=" SYSTEM "\n"
-	    "endian=%u%u%u%u %s\n"
-	    "author=" AUTHOR "\n"
-	    "date=" DATE "\n"
-	    "url=" URI_HOME WSZST_SHORT "\n"
-	    "\n"
-	    , BETA_VERSION
-	    , e[0], e[1], e[2], e[3]
-	    , endian == 0x01020304 ? "little"
-		: endian == 0x04030201 ? "big" : "mixed" );
+    cmd_version_section(print_sect_header,WSZST_SHORT,WSZST_LONG);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1806,7 +1785,7 @@ static enumError cmd_sha1()
 	    {
 		if (long_count>1)
 		{
-	#if USE_NEW_FILEATTRIB
+	#if HAVE_FILEATTRIB_NSEC
 		    struct tm * tm = localtime(&szs.fatt.mtime.tv_sec);
 	#else
 		    struct tm * tm = localtime(&szs.fatt.mtime);
