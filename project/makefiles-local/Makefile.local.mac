@@ -90,11 +90,13 @@ gen-mac-distrib:
 
 	@cp -p $(DISTRIB_FILES) $(DISTRIB_PATH)
 	@ln -f $(MAIN_TOOLS) $(WDF_LINKS) $(DISTRIB_PATH)/bin
-	cp -p $(DOC_FILES) $(DISTRIB_PATH)/doc
+	@cp -p $(DOC_FILES) $(DISTRIB_PATH)/doc
 
 	@chmod -R 755 $(DISTRIB_PATH)
-	@chmod a+x $(DISTRIB_PATH)/*.sh $(DISTRIB_PATH)/bin*/*
+	@chmod a+x $(DISTRIB_PATH)/*.sh $(DISTRIB_PATH)/bin/*
 	@chmod -R a+X $(DISTRIB_PATH)
+
+	@$(DISTRIB_PATH)/bin/wszst version -l
 
 	@tar -czf $(DISTRIB_PATH).tar.gz $(DISTRIB_PATH)
 	@ln $(DISTRIB_PATH).tar.gz latest-mac.tar.gz

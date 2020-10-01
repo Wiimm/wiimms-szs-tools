@@ -124,6 +124,80 @@ ccp GetFileOpenMode
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////	   nanoseconds: struct stat, struct timespec	///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#ifndef HAVE_STATTIME_NSEC
+  #if defined(st_atime) && defined(st_mtime) && defined(st_ctime) && !defined(__APPLE__)
+    #define HAVE_STATTIME_NSEC 1
+  #else
+    #define HAVE_STATTIME_NSEC 0
+  #endif
+#endif
+
+//-----------------------------------------------------------------------------
+
+#undef STATTIME_SEC
+#undef STATTIME_NSEC
+#if HAVE_STATTIME_NSEC
+  #define STATTIME_SEC(t) ((t).tv_sec)
+  #define STATTIME_NSEC(t) ((t).tv_nsec)
+#else
+  #define STATTIME_SEC(t) (t)
+  #define STATTIME_NSEC(t) 0
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+// struct timespec helpers
+
+extern const struct timespec null_timespec;
+
+// NULL pointers allowed
+int CompareTimeSpec0 ( const struct timespec *a, const struct timespec *b );
+
+// NULL pointers forbidden
+static inline int CompareTimeSpec
+	( const struct timespec *a, const struct timespec *b )
+{
+    DASSERT(a);
+    DASSERT(b);
+    return a->tv_sec  < b->tv_sec  ? -1
+	 : a->tv_sec  > b->tv_sec  ?  1
+	 : a->tv_nsec < b->tv_nsec ? -1
+	 : a->tv_nsec > b->tv_nsec;
+}
+
+// NULL pointers forbidden
+static inline int CompareTimeSpecVal
+	( const struct timespec *a, const struct timeval *b )
+{
+    DASSERT(a);
+    DASSERT(b);
+    return a->tv_sec  < b->tv_sec       ? -1
+	 : a->tv_sec  > b->tv_sec       ?  1
+	 : a->tv_nsec < b->tv_usec*1000 ? -1
+	 : a->tv_nsec > b->tv_usec*1000;
+}
+
+// NULL pointers forbidden
+static inline int CompareTimeSpecTime ( const struct timespec *a, const time_t tim )
+{
+    DASSERT(a);
+    DASSERT(b);
+    return a->tv_sec  < tim ? -1
+	 : a->tv_sec  > tim ?  1
+	 : a->tv_nsec > 0;
+}
+
+static inline bool IsTimeSpecNull ( const struct timespec *ts )
+{
+    return !ts
+	|| ts->tv_nsec > 1000000000 // includes UTIME_NOW || UTIME_OMIT
+	|| !ts->tv_nsec && !ts->tv_sec;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct FileAttrib_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -131,7 +205,7 @@ ccp GetFileOpenMode
   #if defined(st_mtime) && !defined(__APPLE__)
     #define HAVE_FILEATTRIB_NSEC 1
   #else
-    #define HAVE_FILEATTRIB_NSEC 0
+    #define HAVE_FILEATTRIB_NSEC 1
   #endif
 #endif
 
@@ -226,45 +300,6 @@ FileAttrib_t * NormalizeFileAttrib
 (
     FileAttrib_t	* fa		// valid attribute
 );
-
-///////////////////////////////////////////////////////////////////////////////
-// struct timespec helpers
-
-extern const struct timespec null_timespec;
-
-// NULL pointers allowed
-int CompareTimeSpec0 ( const struct timespec *a, const struct timespec *b );
-
-// NULL pointers forbidden
-static inline int CompareTimeSpec
-	( const struct timespec *a, const struct timespec *b )
-{
-    DASSERT(a);
-    DASSERT(b);
-    return a->tv_sec  < b->tv_sec  ? -1
-	 : a->tv_sec  > b->tv_sec  ?  1
-	 : a->tv_nsec < b->tv_nsec ? -1
-	 : a->tv_nsec > b->tv_nsec;
-}
-
-// NULL pointers forbidden
-static inline int CompareTimeSpecVal
-	( const struct timespec *a, const struct timeval *b )
-{
-    DASSERT(a);
-    DASSERT(b);
-    return a->tv_sec  < b->tv_sec       ? -1
-	 : a->tv_sec  > b->tv_sec       ?  1
-	 : a->tv_nsec < b->tv_usec*1000 ? -1
-	 : a->tv_nsec > b->tv_usec*1000;
-}
-
-static inline bool IsTimeSpecNull ( const struct timespec *ts )
-{
-    return !ts
-	|| ts->tv_nsec > 1000000000 // includes UTIME_NOW || UTIME_OMIT
-	|| !ts->tv_nsec && !ts->tv_sec;
-}
 
 //
 ///////////////////////////////////////////////////////////////////////////////

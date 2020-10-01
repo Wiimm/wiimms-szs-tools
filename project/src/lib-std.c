@@ -3792,7 +3792,8 @@ void cmd_version_section ( bool sect_header, ccp name_short, ccp name_long )
 	"revision=" REVISION  "\n"
 	"system=" SYSTEM "\n"
 	"endian=%u%u%u%u %s\n"
-	"have_nanosec=%d\n"
+	"have_stattime_nsec=%d\n"
+	"have_fileattrib_nsec=%d\n"
 	"author=" AUTHOR "\n"
 	"date=" DATE "\n"
 	"url=" URI_HOME "%s\n"
@@ -3803,6 +3804,7 @@ void cmd_version_section ( bool sect_header, ccp name_short, ccp name_long )
 	, e[0], e[1], e[2], e[3]
 	, endian == 0x01020304 ? "little"
 	    : endian == 0x04030201 ? "big" : "mixed"
+	, HAVE_STATTIME_NSEC
 	, HAVE_FILEATTRIB_NSEC
 	, name_short
 	);

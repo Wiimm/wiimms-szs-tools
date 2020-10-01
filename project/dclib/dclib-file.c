@@ -254,12 +254,18 @@ FileAttrib_t * SetFileAttrib
 	memcpy(dest,src_fa,sizeof(*dest));
     else if (src_stat)
     {
-	memset(dest,0,sizeof(*dest));
+	ZeroFileAttrib(dest);
 	if (S_ISREG(src_stat->st_mode))
 	{
+         #if HAVE_FILEATTRIB_NSEC
 	    dest->atime = src_stat->st_atim;
 	    dest->mtime = src_stat->st_mtim;
 	    dest->ctime = src_stat->st_ctim;
+	 #else
+	    dest->atime.tv_sec = src_stat->st_atime;
+	    dest->mtime.tv_sec = src_stat->st_mtime;
+	    dest->ctime.tv_sec = src_stat->st_ctime;
+	 #endif
 	    dest->itime =  CompareTimeSpec(&dest->mtime,&dest->ctime) > 0
 			? dest->mtime : dest->ctime;
 	    dest->size  = src_stat->st_size;
@@ -320,6 +326,7 @@ FileAttrib_t * MaxFileAttrib
     {
 	if ( S_ISREG(src_stat->st_mode) )
 	{
+	 #if HAVE_STATTIME_NSEC
 	    if ( CompareTimeSpec(&dest->atime,&src_stat->st_atim) > 0 )
 		dest->atime = src_stat->st_atim;
 
@@ -333,6 +340,21 @@ FileAttrib_t * MaxFileAttrib
 		dest->itime = src_stat->st_mtim;
 	    if ( CompareTimeSpec(&dest->itime,&src_stat->st_ctim) > 0 )
 		dest->itime = src_stat->st_ctim;
+	 #else
+	    if ( CompareTimeSpecTime(&dest->atime,src_stat->st_atime) > 0 )
+		dest->atime = src_stat->st_atim;
+
+	    if ( CompareTimeSpecTime(&dest->mtime,src_stat->st_mtime) > 0 )
+		dest->mtime = src_stat->st_mtim;
+
+	    if ( CompareTimeSpecTime(&dest->ctime,src_stat->st_ctime) > 0 )
+		dest->ctime = src_stat->st_ctim;
+
+	    if ( CompareTimeSpecTime(&dest->itime,src_stat->st_mtime) > 0 )
+		dest->itime = src_stat->st_mtim;
+	    if ( CompareTimeSpecTime(&dest->itime,src_stat->st_ctime) > 0 )
+		dest->itime = src_stat->st_ctim;
+	 #endif
 
 	    if ( dest->size < src_stat->st_size )
 		dest->size = src_stat->st_size;
