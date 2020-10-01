@@ -202,11 +202,7 @@ static inline bool IsTimeSpecNull ( const struct timespec *ts )
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifndef HAVE_FILEATTRIB_NSEC
-  #if defined(st_mtime) && !defined(__APPLE__)
-    #define HAVE_FILEATTRIB_NSEC 1
-  #else
-    #define HAVE_FILEATTRIB_NSEC 1
-  #endif
+  #define HAVE_FILEATTRIB_NSEC 1
 #endif
 
 #undef FILEATTRIB_SEC

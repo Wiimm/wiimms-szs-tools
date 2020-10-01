@@ -3794,6 +3794,9 @@ void cmd_version_section ( bool sect_header, ccp name_short, ccp name_long )
 	"endian=%u%u%u%u %s\n"
 	"have_stattime_nsec=%d\n"
 	"have_fileattrib_nsec=%d\n"
+ #ifdef _STATBUF_ST_NSEC
+	"have_st_nsec=1\n"
+ #endif
 	"author=" AUTHOR "\n"
 	"date=" DATE "\n"
 	"url=" URI_HOME "%s\n"
