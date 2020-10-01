@@ -808,12 +808,12 @@ enumError CreateSZS
 	    {
 		StringCopyE( sd.path_rel, sd.path+sizeof(sd.path), *ptr );
 		struct stat st;
-	#if HAVE_FILEATTRIB_NSEC
+	     #if HAVE_FILEATTRIB_NSEC
 		if ( stat(sd.path,&st) || CompareTimeSpec(&st.st_mtim,&szs.fatt.mtime) < 0 )
-	#else
+	     #else
 		const time_t mtime = stat(sd.path,&st) ? 0 : st.st_mtime;
 		if ( mtime < szs.fatt.mtime )
-	#endif
+	     #endif
 		{
 		    const bool is_compressed = IsCompressedFF(setup_param2.fform_file);
 		    if (is_compressed)

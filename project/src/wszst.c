@@ -1785,11 +1785,7 @@ static enumError cmd_sha1()
 	    {
 		if (long_count>1)
 		{
-	#if HAVE_FILEATTRIB_NSEC
-		    struct tm * tm = localtime(&szs.fatt.mtime.tv_sec);
-	#else
-		    struct tm * tm = localtime(&szs.fatt.mtime);
-	#endif
+		    struct tm * tm = localtime(&FILEATTRIB_SEC(szs.fatt.mtime));
 		    char timbuf[40];
 		    strftime(timbuf,sizeof(timbuf),"%F %T ",tm);
 		    fputs(timbuf,stdout);

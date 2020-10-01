@@ -257,7 +257,7 @@ FileAttrib_t * SetFileAttrib
 	ZeroFileAttrib(dest);
 	if (S_ISREG(src_stat->st_mode))
 	{
-         #if HAVE_FILEATTRIB_NSEC
+         #if HAVE_STATTIME_NSEC
 	    dest->atime = src_stat->st_atim;
 	    dest->mtime = src_stat->st_mtim;
 	    dest->ctime = src_stat->st_ctim;
