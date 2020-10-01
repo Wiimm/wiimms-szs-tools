@@ -128,7 +128,7 @@ ccp GetFileOpenMode
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifndef HAVE_STATTIME_NSEC
-  #if defined(st_atime) && defined(st_mtime) && defined(st_ctime) && !defined(__APPLE__)
+  #ifdef _STATBUF_ST_NSEC
     #define HAVE_STATTIME_NSEC 1
   #else
     #define HAVE_STATTIME_NSEC 0
@@ -200,28 +200,10 @@ static inline bool IsTimeSpecNull ( const struct timespec *ts )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct FileAttrib_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
-
-#ifndef HAVE_FILEATTRIB_NSEC
-  #define HAVE_FILEATTRIB_NSEC 1
-#endif
-
-#undef FILEATTRIB_SEC
-#undef FILEATTRIB_NSEC
-#if HAVE_FILEATTRIB_NSEC
-  #define FILEATTRIB_SEC(t) ((t).tv_sec)
-  #define FILEATTRIB_NSEC(t) ((t).tv_nsec)
-#else
-  #define FILEATTRIB_SEC(t) (t)
-  #define FILEATTRIB_NSEC(t) 0
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
 // [[FileAttrib_t]]
 
 typedef struct FileAttrib_t
 {
- #if HAVE_FILEATTRIB_NSEC
-
     union
     {
 	struct timespec times[4];
@@ -237,17 +219,6 @@ typedef struct FileAttrib_t
 
     size_t size;			// file size
     mode_t mode;			// file mode
-
- #else
-	time_t mtime;	// time of last content modification
-	time_t ctime;	// time of file creation or last status change
-	time_t atime;	// last ascces time
-	time_t itime;	// insertion time (special time for archives)
-
-	size_t size;	// file size
-	mode_t mode;	// file mode
- #endif
-
 }
 FileAttrib_t;
 
