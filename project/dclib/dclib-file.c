@@ -342,18 +342,33 @@ FileAttrib_t * MaxFileAttrib
 		dest->itime = src_stat->st_ctim;
 	 #else
 	    if ( CompareTimeSpecTime(&dest->atime,src_stat->st_atime) > 0 )
-		dest->atime = src_stat->st_atim;
+	    {
+		dest->atime.tv_sec  = src_stat->st_atime;
+		dest->atime.tv_nsec = 0;
+	    }
 
 	    if ( CompareTimeSpecTime(&dest->mtime,src_stat->st_mtime) > 0 )
-		dest->mtime = src_stat->st_mtim;
+	    {
+		dest->mtime.tv_sec  = src_stat->st_mtime;
+		dest->mtime.tv_nsec = 0;
+	    }
 
 	    if ( CompareTimeSpecTime(&dest->ctime,src_stat->st_ctime) > 0 )
-		dest->ctime = src_stat->st_ctim;
+	    {
+		dest->ctime.tv_sec  = src_stat->st_ctime;
+		dest->ctime.tv_nsec = 0;
+	    }
 
 	    if ( CompareTimeSpecTime(&dest->itime,src_stat->st_mtime) > 0 )
-		dest->itime = src_stat->st_mtim;
+	    {
+		dest->itime.tv_sec  = src_stat->st_mtime;
+		dest->itime.tv_nsec = 0;
+	    }
 	    if ( CompareTimeSpecTime(&dest->itime,src_stat->st_ctime) > 0 )
-		dest->itime = src_stat->st_ctim;
+	    {
+		dest->itime.tv_sec  = src_stat->st_ctime;
+		dest->itime.tv_nsec = 0;
+	    }
 	 #endif
 
 	    if ( dest->size < src_stat->st_size )
