@@ -217,13 +217,8 @@ FileAttrib_t * TouchFileAttrib
 )
 {
     DASSERT(dest);
-    struct timeval tv;
-    if (!gettimeofday(&tv,0))
-    {
-	dest->atime.tv_sec  = tv.tv_sec;
-	dest->atime.tv_nsec = tv.tv_usec * 1000;
-	dest->mtime = dest->ctime = dest->itime = dest->atime;
-    }
+    dest->atime = GetClockTime(false);
+    dest->mtime = dest->ctime = dest->itime = dest->atime;
     return dest;
 }
 
@@ -280,13 +275,13 @@ FileAttrib_t * MaxFileAttrib
 
     if (src_fa)
     {
-	if (CompareTimeSpec(&dest->atime,&src_fa->atime)>0) dest->atime = src_fa->atime;
-	if (CompareTimeSpec(&dest->mtime,&src_fa->mtime)>0) dest->mtime = src_fa->mtime;
-	if (CompareTimeSpec(&dest->ctime,&src_fa->ctime)>0) dest->ctime = src_fa->ctime;
-	if (CompareTimeSpec(&dest->itime,&src_fa->itime)>0) dest->itime = src_fa->itime;
+	if (CompareTimeSpec(&dest->atime,&src_fa->atime)<0) dest->atime = src_fa->atime;
+	if (CompareTimeSpec(&dest->mtime,&src_fa->mtime)<0) dest->mtime = src_fa->mtime;
+	if (CompareTimeSpec(&dest->ctime,&src_fa->ctime)<0) dest->ctime = src_fa->ctime;
+	if (CompareTimeSpec(&dest->itime,&src_fa->itime)<0) dest->itime = src_fa->itime;
 
-	if ( dest->size  < src_fa->size )
-	    dest->size  = src_fa->size;
+	if ( dest->size < src_fa->size )
+	     dest->size = src_fa->size;
 	dest->mode = src_fa->mode;
     }
 
@@ -295,44 +290,44 @@ FileAttrib_t * MaxFileAttrib
 	if ( S_ISREG(src_stat->st_mode) )
 	{
 	 #if HAVE_STATTIME_NSEC
-	    if ( CompareTimeSpec(&dest->atime,&src_stat->st_atim) > 0 )
+	    if ( CompareTimeSpec(&dest->atime,&src_stat->st_atim) < 0 )
 		dest->atime = src_stat->st_atim;
 
-	    if ( CompareTimeSpec(&dest->mtime,&src_stat->st_mtim) > 0 )
+	    if ( CompareTimeSpec(&dest->mtime,&src_stat->st_mtim) < 0 )
 		dest->mtime = src_stat->st_mtim;
 
-	    if ( CompareTimeSpec(&dest->ctime,&src_stat->st_ctim) > 0 )
+	    if ( CompareTimeSpec(&dest->ctime,&src_stat->st_ctim) < 0 )
 		dest->ctime = src_stat->st_ctim;
 
-	    if ( CompareTimeSpec(&dest->itime,&src_stat->st_mtim) > 0 )
+	    if ( CompareTimeSpec(&dest->itime,&src_stat->st_mtim) < 0 )
 		dest->itime = src_stat->st_mtim;
-	    if ( CompareTimeSpec(&dest->itime,&src_stat->st_ctim) > 0 )
+	    if ( CompareTimeSpec(&dest->itime,&src_stat->st_ctim) < 0 )
 		dest->itime = src_stat->st_ctim;
 	 #else
-	    if ( CompareTimeSpecTime(&dest->atime,src_stat->st_atime) > 0 )
+	    if ( CompareTimeSpecTime(&dest->atime,src_stat->st_atime) < 0 )
 	    {
 		dest->atime.tv_sec  = src_stat->st_atime;
 		dest->atime.tv_nsec = 0;
 	    }
 
-	    if ( CompareTimeSpecTime(&dest->mtime,src_stat->st_mtime) > 0 )
+	    if ( CompareTimeSpecTime(&dest->mtime,src_stat->st_mtime) < 0 )
 	    {
 		dest->mtime.tv_sec  = src_stat->st_mtime;
 		dest->mtime.tv_nsec = 0;
 	    }
 
-	    if ( CompareTimeSpecTime(&dest->ctime,src_stat->st_ctime) > 0 )
+	    if ( CompareTimeSpecTime(&dest->ctime,src_stat->st_ctime) < 0 )
 	    {
 		dest->ctime.tv_sec  = src_stat->st_ctime;
 		dest->ctime.tv_nsec = 0;
 	    }
 
-	    if ( CompareTimeSpecTime(&dest->itime,src_stat->st_mtime) > 0 )
+	    if ( CompareTimeSpecTime(&dest->itime,src_stat->st_mtime) < 0 )
 	    {
 		dest->itime.tv_sec  = src_stat->st_mtime;
 		dest->itime.tv_nsec = 0;
 	    }
-	    if ( CompareTimeSpecTime(&dest->itime,src_stat->st_ctime) > 0 )
+	    if ( CompareTimeSpecTime(&dest->itime,src_stat->st_ctime) < 0 )
 	    {
 		dest->itime.tv_sec  = src_stat->st_ctime;
 		dest->itime.tv_nsec = 0;
@@ -340,7 +335,7 @@ FileAttrib_t * MaxFileAttrib
 	 #endif
 
 	    if ( dest->size < src_stat->st_size )
-		dest->size = src_stat->st_size;
+		 dest->size = src_stat->st_size;
 	}
 	dest->mode = src_stat->st_mode;
     }

@@ -206,7 +206,7 @@ typedef struct FileAttrib_t
 {
     union
     {
-	struct timespec times[4];
+	struct timespec times[4];	// all times as array
 	struct
 	{
 	    // order compatible to utimensat() and futimens()
@@ -229,8 +229,8 @@ FileAttrib_t * ClearFileAttrib
     FileAttrib_t	* dest		// NULL or destination attribute
 );
 
-static inline FileAttrib_t * ZeroFileAttrib ( FileAttrib_t * dest )
-	{ DASSERT(dest); memset(dest,0,sizeof(*dest)); return dest; }
+static inline void ZeroFileAttrib ( FileAttrib_t * dest )
+	{ DASSERT(dest); memset(dest,0,sizeof(*dest)); }
 
 FileAttrib_t * TouchFileAttrib
 (

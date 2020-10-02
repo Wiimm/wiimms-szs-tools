@@ -3791,6 +3791,9 @@ void cmd_version_section ( bool sect_header, ccp name_short, ccp name_long )
 	"beta=%d\n"
 	"revision=" REVISION  "\n"
 	"system=" SYSTEM "\n"
+ #ifdef _POSIX_C_SOURCE
+	"posix_c_source=" CONVERT_TO_STRING(_POSIX_C_SOURCE) "\n"
+ #endif
 	"endian=%u%u%u%u %s\n"
 	"have_stattime_nsec=%d\n"
 	"author=" AUTHOR "\n"
