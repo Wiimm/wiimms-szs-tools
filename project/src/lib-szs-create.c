@@ -811,7 +811,7 @@ enumError CreateSZS
 	     #if HAVE_STATTIME_NSEC
 		if ( stat(sd.path,&st) || CompareTimeSpec(&szs.fatt.mtime,&st.st_mtim) > 0 )
 	     #else
-		if ( stat(sd.path,&st) || CompareTimeSpecTime(&szs.fatt.mtime,&st.st_mtime) > 0 )
+		if ( stat(sd.path,&st) || CompareTimeSpecTime(&szs.fatt.mtime,st.st_mtime) > 0 )
 	     #endif
 		{
 		    const bool is_compressed = IsCompressedFF(setup_param2.fform_file);
