@@ -70,6 +70,20 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			    HAVE_*			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#undef HAVE_CLOCK_GETTIME
+#if _POSIX_C_SOURCE >= 199309L
+  #define HAVE_CLOCK_GETTIME 1
+#else
+  #define HAVE_CLOCK_GETTIME 0
+#endif
+ 
+///////////////////////////////////////////////////////////////////////////////
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			    bits			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3364,6 +3378,14 @@ char * ScanSIFactor
 #define USEC_PER_DAY	(SEC_PER_DAY*USEC_PER_SEC)
 #define USEC_PER_WEEK	(SEC_PER_WEEK*USEC_PER_SEC)
 
+#define NSEC_PER_USEC	1000ull
+#define NSEC_PER_MSEC	1000000ull
+#define NSEC_PER_SEC	1000000000ull
+#define NSEC_PER_MIN	(60*NSEC_PER_SEC)
+#define NSEC_PER_HOUR	(3600*NSEC_PER_SEC)
+#define NSEC_PER_DAY	(SEC_PER_DAY*NSEC_PER_SEC)
+#define NSEC_PER_WEEK	(SEC_PER_WEEK*NSEC_PER_SEC)
+
 //--- time types
 
 typedef uint u_sec_t;	// unsigned type to store time as seconds
@@ -3372,6 +3394,8 @@ typedef u64  u_msec_t;	// unsigned type to store time as milliseconds
 typedef s64  s_msec_t;	//   signed type to store time as milliseconds
 typedef u64  u_usec_t;	// unsigned type to store time as microseconds
 typedef s64  s_usec_t;	//   signed type to store time as microseconds
+typedef u64  u_nsec_t;	// unsigned type to store time as nanoseconds
+typedef s64  s_nsec_t;	//   signed type to store time as nanoseconds
 
 // [[DayTime_t]]
 typedef struct DayTime_t
@@ -3382,6 +3406,7 @@ typedef struct DayTime_t
     int		min;	// minute of hour
     int		sec;	// second of minute
     int		usec;	// microsecond of second
+    int		nsec;	// nanosecond of second
 }
 DayTime_t;
 
@@ -3389,6 +3414,7 @@ DayTime_t;
 
 extern s64 timezone_adjust_sec;
 extern s64 timezone_adjust_usec;
+extern s64 timezone_adjust_nsec;
 extern int timezone_adjust_isdst;
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3397,25 +3423,31 @@ void SetupTimezone ( bool force );
 int GetTimezoneAdjust ( time_t tim );
 
 struct timeval	GetTimeOfDay ( bool localtime );
+struct timespec	GetClockTime ( bool localtime );
 DayTime_t	GetDayTime   ( bool localtime );
 u_sec_t		GetTimeSec   ( bool localtime );
 u_msec_t	GetTimeMSec  ( bool localtime );
 u_usec_t	GetTimeUSec  ( bool localtime );
+u_nsec_t	GetTimeNSec  ( bool localtime );
 
 u_msec_t GetTimerMSec(void);
 u_usec_t GetTimerUSec(void);
+u_nsec_t GetTimerNSec(void);
 
 static inline u64 double2msec ( double d ) { return d>0.0 ? (u64)trunc( 1e3*d+0.5 ) : 0; }
 static inline u64 double2usec ( double d ) { return d>0.0 ? (u64)trunc( 1e6*d+0.5 ) : 0; }
+static inline u64 double2nsec ( double d ) { return d>0.0 ? (u64)trunc( 1e9*d+0.5 ) : 0; }
 
 static inline double msec2double ( u64 num ) { return num * 1e-3; }
 static inline double usec2double ( u64 num ) { return num * 1e-6; }
+static inline double nsec2double ( u64 num ) { return num * 1e-9; }
 
 //--- another epoch: Monday, 2001-01-01
 
 #define EPOCH_2001_SEC  0x3a4fc880
 #define EPOCH_2001_MSEC (EPOCH_2001_SEC*MSEC_PER_SEC)
 #define EPOCH_2001_USEC (EPOCH_2001_SEC*USEC_PER_SEC)
+#define EPOCH_2001_NSEC (EPOCH_2001_SEC*NSEC_PER_SEC)
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3437,25 +3469,53 @@ ccp PrintTimeByFormatUTC
 
 //-----------------------------------------------------------------------------
 
-ccp PrintUsecByFormat
+ccp PrintNSecByFormat
 (
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-					// 1-6 '@' in row replaced by digits of 'usec'
+					// 1-9 '@' in row replaced by digits of 'nsec'
     time_t		tim,		// seconds since epoch
-    uint		usec		// micro second of second
+    uint		nsec		// nanosecond of second
 );
 
-ccp PrintUsecByFormatUTC
+ccp PrintNSecByFormatUTC
 (
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-					// 1-6 '@' in row replaced by digits of 'usec'
+					// 1-9 '@' in row replaced by digits of 'nsec'
     time_t		tim,		// seconds since epoch
-    uint		usec		// micro second of second
+    uint		nsec		// nanosecond of second
 );
+
+//-----------------------------------------------------------------------------
+
+static inline ccp PrintUSecByFormat
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    time_t		tim,		// seconds since epoch
+    uint		usec		// microsecond of second
+)
+{
+    return PrintNSecByFormat(format,tim,usec*NSEC_PER_USEC);
+}
+
+static inline ccp PrintUSecByFormatUTC
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    time_t		tim,		// seconds since epoch
+    uint		usec		// microsecond of second
+)
+{
+    return PrintNSecByFormatUTC(format,tim,usec*NSEC_PER_USEC);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -3475,6 +3535,24 @@ ccp PrintTimevalByFormatUTC
     const struct timeval *tv		// time to print, if NULL use gettimeofday()
 );
 
+//-----------------------------------------------------------------------------
+
+ccp PrintTimespecByFormat
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+    const struct timespec *ts		// time to print, if NULL use GetClockTime(false)
+);
+
+ccp PrintTimespecByFormatUTC
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+    const struct timespec *ts		// time to print, if NULL use GetClockTime(false)
+);
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ccp PrintTimeSec
@@ -3485,8 +3563,6 @@ ccp PrintTimeSec
     u_sec_t		sec		// seconds (=time) to print
 );
 
-//-----------------------------------------------------------------------------
-
 ccp PrintTimeMSec
 (
     char		* buf,		// result buffer (>23 bytes are good)
@@ -3496,8 +3572,6 @@ ccp PrintTimeMSec
     uint		fraction	// number of digits (0-3) to print as fraction
 );
 
-//-----------------------------------------------------------------------------
-
 ccp PrintTimeUSec
 (
     char		* buf,		// result buffer (>26 bytes are good)
@@ -3505,6 +3579,15 @@ ccp PrintTimeUSec
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_usec_t		usec,		// microseconds to print
     uint		fraction	// number of digits (0-6) to print as fraction
+);
+
+ccp PrintTimeNSec
+(
+    char		* buf,		// result buffer (>26 bytes are good)
+					// If NULL, a local circulary static buffer is used
+    size_t		buf_size,	// size of 'buf', ignored if buf==NULL
+    u_nsec_t		nsec,		// nanoseconds to print
+    uint		fraction	// number of digits (0-9) to print as fraction
 );
 
 //-----------------------------------------------------------------------------
@@ -3524,7 +3607,16 @@ ccp PrintTimerUSec
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     s_usec_t		usec,		// microseconds to print
-    uint		fraction	// number of digits (0-3) to print as fraction
+    uint		fraction	// number of digits (0-6) to print as fraction
+);
+
+ccp PrintTimerNSec
+(
+    char		* buf,		// result buffer (>16 bytes are good)
+					// If NULL, a local circulary static buffer is used
+    size_t		buf_size,	// size of 'buf', ignored if buf==NULL
+    s_nsec_t		nsec,		// nanoseconds to print
+    uint		fraction	// number of digits (0-9) to print as fraction
 );
 
 //-----------------------------------------------------------------------------
@@ -3535,7 +3627,8 @@ ccp PrintTimer3 // helper function
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u64			sec,		// seconds to print
-    int			usec,		// 0...999999: usec fraction, otherwise suppress ms/us output
+    int			usec,		// 0...999999: usec fraction,
+					// otherwise suppress ms/us output
     bool		aligned		// true: print aligned 3 character output
 );
 
@@ -3583,7 +3676,8 @@ ccp PrintTimer4 // helper function
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u64			sec,		// seconds to print
-    int			usec,		// 0...999999: usec fraction, otherwise suppress ms/us output
+    int			usec,		// 0...999999: usec fraction,
+					// otherwise suppress ms/us output
     bool		aligned		// true: print aligned 4 character output
 );
 
@@ -3632,7 +3726,7 @@ ccp PrintTimer6 // helper function
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u64			sec,		// seconds to print
     int			usec,		// 0...999999: usec fraction,
-					//    otherwise suppress ms/us output
+					// otherwise suppress ms/us output
     bool		aligned		// true: print aligned 6 character output
 );
 
@@ -3742,19 +3836,6 @@ static inline ccp PrintTimerSec7s
     return PrintTimerUSec7s(buf,buf_size,1000000ll*sec,mode);
 }
 
-//-----------------------------------------------------------------------------
-
-typedef struct xtime_t
-{
-    time_t	time;
-    suseconds_t	usec;
-    u64		total_usec;
-    u64	rel_usec;
-
-} xtime_t;
-
-u64 GetXTime ( xtime_t * xtime );
-
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			scan date & time		///////////////
@@ -3762,18 +3843,41 @@ u64 GetXTime ( xtime_t * xtime );
 
 // ScanInterval*() is old ==> try ScanDuration()
 
-char * ScanInterval
+//-----------------------------------------------------------------------------
+// new interface : all functions return first not scanned char
+
+char * ScanIntervalTS
 (
-    time_t	*res_time,	// not NULL: store seconds
-    u32		*res_usec,	// not NULL: store micro seconds of second
+    struct timespec *res_ts,	// not NULL: store result here
     ccp		source		// source text
 );
 
-///////////////////////////////////////////////////////////////////////////////
+char * ScanIntervalUSec
+(
+    u_usec_t	*res_usec,	// not NULL: store total microseconds
+    ccp		source		// source text
+);
+
+
+char * ScanIntervalNSec
+(
+    u_nsec_t	*res_nsec,	// not NULL: store total nanoseconds
+    ccp		source		// source text
+);
+
+//-----------------------------------------------------------------------------
+// legacy interface : all functions return first not scanned char
+
+char * ScanInterval
+(
+    time_t	*res_time,	// not NULL: store seconds
+    u32		*res_usec,	// not NULL: store microseconds of second
+    ccp		source		// source text
+);
 
 char * ScanInterval64
 (
-    u64		*res_usec,	// not NULL: store total micro seconds
+    u64		*res_usec,	// not NULL: store total microseconds
     ccp		source		// source text
 );
 
@@ -3782,7 +3886,7 @@ char * ScanInterval64
 char * ScanDateTime
 (
     time_t	*res_time,	// not NULL: store seconds
-    u32		*res_usec,	// not NULL: store micro seconds of second
+    u32		*res_usec,	// not NULL: store microseconds of second
     ccp		source,		// source text
     bool	allow_delta	// true: allow +|- interval
 );
@@ -3791,7 +3895,7 @@ char * ScanDateTime
 
 char * ScanDateTime64
 (
-    u64		*res_usec,	// not NULL: store total micro seconds
+    u64		*res_usec,	// not NULL: store total microseconds
     ccp		source,		// source text
     bool	allow_delta	// true: allow +|- interval
 );

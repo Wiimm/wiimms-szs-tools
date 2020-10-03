@@ -83,7 +83,7 @@ static void help_exit ( bool xmode )
 
 static void print_version_section ( bool print_sect_header )
 {
-    cmd_version_section(print_sect_header,WSTRT_SHORT,WSTRT_LONG);
+    cmd_version_section(print_sect_header,WSTRT_SHORT,WSTRT_LONG,long_count-1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

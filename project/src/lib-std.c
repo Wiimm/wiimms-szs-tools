@@ -3776,7 +3776,8 @@ int ScanOptSort ( ccp arg )
 ///////////////			command version/section		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void cmd_version_section ( bool sect_header, ccp name_short, ccp name_long )
+void cmd_version_section
+	( bool sect_header, ccp name_short, ccp name_long, int verbose )
 {
     if (sect_header)
 	fputs("[version]\n",stdout);
@@ -3785,29 +3786,41 @@ void cmd_version_section ( bool sect_header, ccp name_short, ccp name_long )
     const u8 * e = (u8*)&base;
     const u32 endian = be32(e);
 
-    printf( "prog=%s\n"
+    printf(
+	"prog=%s\n"
 	"name=%s\n"
 	"version=" VERSION "\n"
 	"beta=%d\n"
 	"revision=" REVISION  "\n"
 	"system=" SYSTEM "\n"
 	"endian=%u%u%u%u %s\n"
-	"have_stattime_nsec=%d\n"
-	"have_fileattrib_nsec=%d\n"
 	"author=" AUTHOR "\n"
 	"date=" DATE "\n"
 	"url=" URI_HOME "%s\n"
-	"\n"
 	, name_short
 	, name_long
 	, BETA_VERSION
 	, e[0], e[1], e[2], e[3]
 	, endian == 0x01020304 ? "little"
 	    : endian == 0x04030201 ? "big" : "mixed"
-	, HAVE_STATTIME_NSEC
-	, HAVE_FILEATTRIB_NSEC
 	, name_short
 	);
+
+    if ( verbose > 0 )
+    printf(
+ #ifdef _POSIX_C_SOURCE
+	"posix_c_source=%s\n"
+ #endif
+	"have_clock_gettime=%d\n"
+	"have_stattime_nsec=%d\n"
+ #ifdef _POSIX_C_SOURCE
+	,CONVERT_TO_STRING(_POSIX_C_SOURCE)
+ #endif
+	, HAVE_CLOCK_GETTIME
+	, HAVE_STATTIME_NSEC
+	);
+
+    putchar('\n');
 }
 
 //

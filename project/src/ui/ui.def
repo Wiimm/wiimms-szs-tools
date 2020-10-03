@@ -1850,7 +1850,8 @@
 
 #:def_cmd_opt( "VERSION", "LONG", \
 	"", \
-	"Print in long format. Ignored if option {--sections} is set." )
+	"Print in long format (like --sections without section header). If set" \
+	" twice, append developing settings." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
 	"", \

@@ -3357,11 +3357,12 @@ static enumError test_timezone ( int argc, char ** argv )
 
     for(;;)
     {
-	u_usec_t start = GetTimerUSec();
-	ccp t1 = PrintTimevalByFormatUTC("%F %T.@@@@@@ %z",0);
-	ccp t2 = PrintTimevalByFormat("%F %T.@@@@@@ %z",0);
-	u_usec_t dur = GetTimerUSec() - start;
-	printf("%s : %s : in %llu usec\n",t1,t2,dur);
+	u_nsec_t start = GetTimerNSec();
+	ccp t1 = PrintTimespecByFormatUTC("%F %T.@@@@@@@@@ %z",0);
+	ccp t2 = PrintTimespecByFormat("%F %T.@@@@@@@@@ %z",0);
+
+	u_nsec_t dur = GetTimerNSec() - start;
+	printf("%s : %s : in %llu nsec\n",t1,t2,dur);
 	fflush(stdout);
 	sleep(1800);
     }
@@ -3372,8 +3373,6 @@ static enumError test_timezone ( int argc, char ** argv )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			test_timeadjust()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
-
-//-----------------------------------------------------------------------------
 
 static enumError test_timeadjust ( int argc, char ** argv )
 {
@@ -3657,6 +3656,108 @@ static enumError test_slot_info ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_clock()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static void print_clock ( u64 sec, u64 nsec, ccp info )
+{
+    char sbuf[20], nbuf[20];
+    snprintf(sbuf,sizeof(sbuf),"%12llu",sec);
+    snprintf(nbuf,sizeof(nbuf),"%09llu",nsec);
+    printf(" %.3s %.3s %.3s %.3s . %.3s %.3s %.3s : %s\n",
+	sbuf, sbuf+3, sbuf+6, sbuf+9,
+	nbuf, nbuf+3, nbuf+6,
+	info );
+}
+
+static enumError test_clock ( int argc, char ** argv )
+{
+    struct timeval tv;
+    struct timespec ts;
+
+    print_clock(1234567890,123456789,"test");
+
+ #if HAVE_CLOCK_GETTIME
+    clock_getres(CLOCK_REALTIME,&ts);
+    print_clock(ts.tv_sec,ts.tv_nsec,"clock_getres(CLOCK_REALTIME)");
+    clock_getres(CLOCK_REALTIME_COARSE,&ts);
+    print_clock(ts.tv_sec,ts.tv_nsec,"clock_getres(CLOCK_REALTIME_COARSE)");
+ #endif
+
+    putchar('\n');
+    gettimeofday(&tv,0);
+    print_clock(tv.tv_sec,1000*tv.tv_usec,"gettimeofday()");
+
+ #if HAVE_CLOCK_GETTIME
+    clock_gettime(CLOCK_REALTIME,&ts);
+    print_clock(ts.tv_sec,ts.tv_nsec,"clock_gettime(CLOCK_REALTIME)");
+    clock_gettime(CLOCK_REALTIME_COARSE,&ts);
+    print_clock(ts.tv_sec,ts.tv_nsec,"clock_gettime(CLOCK_REALTIME_COARSE)");
+ #endif
+
+    u_usec_t usec = GetTimeUSec(false);
+    print_clock(usec/USEC_PER_SEC,usec%USEC_PER_SEC*NSEC_PER_USEC,"GetTimeUSec(false)");
+    usec = GetTimeUSec(true);
+    print_clock(usec/USEC_PER_SEC,usec%USEC_PER_SEC*NSEC_PER_USEC,"GetTimeUSec(true)");
+
+    u_usec_t nsec = GetTimeNSec(false);
+    print_clock(nsec/NSEC_PER_SEC,nsec%NSEC_PER_SEC,"GetTimeNSec(false)");
+    nsec = GetTimeNSec(true);
+    print_clock(nsec/NSEC_PER_SEC,nsec%NSEC_PER_SEC,"GetTimeNSec(true)");
+
+    DayTime_t dt = GetDayTime(false);
+    print_clock(dt.time,dt.usec*NSEC_PER_USEC,"GetDayTime(false) USec");
+    print_clock(dt.time,dt.nsec,"GetDayTime(false) NSec");
+    dt = GetDayTime(true);
+    print_clock(dt.time,dt.usec*NSEC_PER_USEC,"GetDayTime(true) USec");
+    print_clock(dt.time,dt.nsec,"GetDayTime(true) NSec");
+
+    //-------------------------------------------------------------------------
+
+    if ( argc < 2 )
+    {
+	putchar('\n');
+	const uint N = 100000000;
+
+	int i;
+	u_usec_t start = GetTimerUSec();
+	for ( i = 0; i < N; i++ )
+	    gettimeofday(&tv,0);
+	printf("%9.3f nsec / gettimeofday()\n",
+		(double)(GetTimerUSec()-start)/N);
+
+     #if HAVE_CLOCK_GETTIME
+	start = GetTimerUSec();
+	for ( i = 0; i < N; i++ )
+	    clock_gettime(CLOCK_REALTIME,&ts);
+	printf("%9.3f nsec / clock_gettime(CLOCK_REALTIME)\n",
+		(double)(GetTimerUSec()-start)/N);
+
+	start = GetTimerUSec();
+	for ( i = 0; i < N; i++ )
+	    clock_gettime(CLOCK_REALTIME_COARSE,&ts);
+	printf("%9.3f nsec / clock_gettime(CLOCK_REALTIME_COARSE)\n",
+		(double)(GetTimerUSec()-start)/N);
+     #endif
+    }
+
+    //-------------------------------------------------------------------------
+
+    int i;
+    for ( i = 1; i < argc; i++ )
+    {
+	printf("\n> %s\n",argv[i]);
+	ccp end = ScanIntervalTS(&ts,argv[i]);
+	const u_nsec_t nsec = ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
+	printf("   %s | %s\n",PrintTimerNSec(0,0,nsec,9),end);
+    }
+
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3888,6 +3989,7 @@ enum
     CMD_IN_ARCH,		// test_in_arch(argc,argv)
     CMD_SLOT_ATTRIB,		// test_slot_attrib(argc,argv)
     CMD_SLOT_INFO,		// test_slot_info(argc,argv)
+    CMD_CLOCK,			// test_clock(argc,argv)
 
     CMD__N
 };
@@ -3944,6 +4046,7 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_IN_ARCH,		"IN-ARCH",	"INARCH",	0 },
 	{ CMD_SLOT_ATTRIB,	"SLOT-ATTRIB",	"SA",		0 },
 	{ CMD_SLOT_INFO,	"SLOT-INFO",	"SI",		0 },
+	{ CMD_CLOCK,		"CLOCK",	0,		0 },
 
 	{ CMD__N,0,0,0 }
 };
@@ -4071,6 +4174,7 @@ int main ( int argc, char ** argv )
 	case CMD_IN_ARCH:		test_in_arch(argc,argv); break;
 	case CMD_SLOT_ATTRIB:		test_slot_attrib(argc,argv); break;
 	case CMD_SLOT_INFO:		test_slot_info(argc,argv); break;
+	case CMD_CLOCK:			test_clock(argc,argv); break;
 	//case CMD_HELP:
 	default:
 	    help_exit();

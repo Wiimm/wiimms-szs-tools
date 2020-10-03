@@ -2497,7 +2497,8 @@
 	" If set twice, print only the version number." },
   { T_COPT,	"SECTIONS",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
-	"Print in long format. Ignored if option {--sections} is set." },
+	"Print in long format (like --sections without section header)."
+	" If set twice, append developing settings." },
 
   //---------- COMMAND wszst HELP ----------
 

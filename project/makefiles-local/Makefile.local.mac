@@ -96,7 +96,7 @@ gen-mac-distrib:
 	@chmod a+x $(DISTRIB_PATH)/*.sh $(DISTRIB_PATH)/bin/*
 	@chmod -R a+X $(DISTRIB_PATH)
 
-	@$(DISTRIB_PATH)/bin/wszst version -l
+	@$(DISTRIB_PATH)/bin/wszst version -ll
 
 	@tar -czf $(DISTRIB_PATH).tar.gz $(DISTRIB_PATH)
 	@ln $(DISTRIB_PATH).tar.gz latest-mac.tar.gz

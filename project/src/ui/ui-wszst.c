@@ -1719,7 +1719,8 @@ static const InfoOption_t option_cmd_VERSION_BRIEF =
 static const InfoOption_t option_cmd_VERSION_LONG =
     {	OPT_LONG, false, false, false, false, false, 'l', "long",
 	0,
-	"Print in long format. Ignored if option --sections is set."
+	"Print in long format (like --sections without section header). If set"
+	" twice, append developing settings."
     };
 
 static const InfoOption_t option_cmd_TEST_VERBOSE =

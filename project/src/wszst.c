@@ -177,7 +177,7 @@ static void list_compressions_exit()
 
 static void print_version_section ( bool print_sect_header )
 {
-    cmd_version_section(print_sect_header,WSZST_SHORT,WSZST_LONG);
+    cmd_version_section(print_sect_header,WSZST_SHORT,WSZST_LONG,long_count-1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1785,7 +1785,7 @@ static enumError cmd_sha1()
 	    {
 		if (long_count>1)
 		{
-		    struct tm * tm = localtime(&FILEATTRIB_SEC(szs.fatt.mtime));
+		    struct tm * tm = localtime(&szs.fatt.mtime.tv_sec);
 		    char timbuf[40];
 		    strftime(timbuf,sizeof(timbuf),"%F %T ",tm);
 		    fputs(timbuf,stdout);
