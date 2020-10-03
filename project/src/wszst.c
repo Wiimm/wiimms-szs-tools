@@ -177,7 +177,7 @@ static void list_compressions_exit()
 
 static void print_version_section ( bool print_sect_header )
 {
-    cmd_version_section(print_sect_header,WSZST_SHORT,WSZST_LONG);
+    cmd_version_section(print_sect_header,WSZST_SHORT,WSZST_LONG,long_count-1);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

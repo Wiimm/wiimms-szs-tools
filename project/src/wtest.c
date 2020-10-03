@@ -3672,13 +3672,22 @@ static void print_clock ( u64 sec, u64 nsec, ccp info )
 
 static enumError test_clock ( int argc, char ** argv )
 {
+    struct timeval tv;
+    struct timespec ts;
+
     print_clock(1234567890,123456789,"test");
 
-    struct timeval tv;
+ #if HAVE_CLOCK_GETTIME
+    clock_getres(CLOCK_REALTIME,&ts);
+    print_clock(ts.tv_sec,ts.tv_nsec,"clock_getres(CLOCK_REALTIME)");
+    clock_getres(CLOCK_REALTIME_COARSE,&ts);
+    print_clock(ts.tv_sec,ts.tv_nsec,"clock_getres(CLOCK_REALTIME_COARSE)");
+ #endif
+
+    putchar('\n');
     gettimeofday(&tv,0);
     print_clock(tv.tv_sec,1000*tv.tv_usec,"gettimeofday()");
 
-    struct timespec ts;
  #if HAVE_CLOCK_GETTIME
     clock_gettime(CLOCK_REALTIME,&ts);
     print_clock(ts.tv_sec,ts.tv_nsec,"clock_gettime(CLOCK_REALTIME)");
@@ -3742,6 +3751,8 @@ static enumError test_clock ( int argc, char ** argv )
 	const u_nsec_t nsec = ts.tv_sec * NSEC_PER_SEC + ts.tv_nsec;
 	printf("   %s | %s\n",PrintTimerNSec(0,0,nsec,9),end);
     }
+
+    putchar('\n');
     return 0;
 }
 

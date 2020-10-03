@@ -1948,15 +1948,6 @@ mem_t EncodeByModeMem
 ///////////////			    time			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-#undef HAVE_CLOCK_GETTIME
-#if _POSIX_C_SOURCE >= 199309L
-  #define HAVE_CLOCK_GETTIME 1
-#else
-  #define HAVE_CLOCK_GETTIME 0
-#endif
- 
-///////////////////////////////////////////////////////////////////////////////
-
 s64 timezone_adjust_sec   = -1;
 s64 timezone_adjust_usec  = -1;
 s64 timezone_adjust_nsec  = -1;
