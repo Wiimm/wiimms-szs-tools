@@ -74,6 +74,10 @@ typedef enum enumOptions
 	OPT_PERFMON,
 	OPT_CUSTOM_TT,
 	OPT_XPFLAGS,
+	OPT_SPEEDOMETER,
+	OPT_RESERVED_1B9,
+	OPT_RESERVED_1BA,
+	OPT_RESERVED_1BB,
 	OPT_TRACK_DIR,
 	OPT_COPY_TRACKS,
 	OPT_MOVE_TRACKS,
@@ -97,7 +101,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 41
+	OPT__N_SPECIFIC, // == 45
 
 	//----- global options -----
 
@@ -133,7 +137,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 72
+	OPT__N_TOTAL // == 76
 
 } enumOptions;
 
@@ -166,6 +170,10 @@ typedef enum enumOptions
 //	OB_PERFMON		= 1llu << OPT_PERFMON,
 //	OB_CUSTOM_TT		= 1llu << OPT_CUSTOM_TT,
 //	OB_XPFLAGS		= 1llu << OPT_XPFLAGS,
+//	OB_SPEEDOMETER		= 1llu << OPT_SPEEDOMETER,
+//	OB_RESERVED_1B9		= 1llu << OPT_RESERVED_1B9,
+//	OB_RESERVED_1BA		= 1llu << OPT_RESERVED_1BA,
+//	OB_RESERVED_1BB		= 1llu << OPT_RESERVED_1BB,
 //	OB_TRACK_DIR		= 1llu << OPT_TRACK_DIR,
 //	OB_COPY_TRACKS		= 1llu << OPT_COPY_TRACKS,
 //	OB_MOVE_TRACKS		= 1llu << OPT_MOVE_TRACKS,
@@ -200,14 +208,20 @@ typedef enum enumOptions
 //				| OB_UPDATE
 //				| OB_PRESERVE,
 //
-//	OB_GRP_PATCH		= OB_LE_DEFINE
-//				| OB_LPAR
-//				| OB_ALIAS
-//				| OB_ENGINE
+//	OB_GRP_PARAM		= OB_ENGINE
 //				| OB_200CC
 //				| OB_PERFMON
 //				| OB_CUSTOM_TT
-//				| OB_XPFLAGS,
+//				| OB_XPFLAGS
+//				| OB_SPEEDOMETER
+//				| OB_RESERVED_1B9
+//				| OB_RESERVED_1BA
+//				| OB_RESERVED_1BB,
+//
+//	OB_GRP_PATCH		= OB_LE_DEFINE
+//				| OB_LPAR
+//				| OB_ALIAS
+//				| OB_GRP_PARAM,
 //
 //	OB_GRP_TRACK_COPY	= OB_TRACK_DIR
 //				| OB_COPY_TRACKS
@@ -282,7 +296,8 @@ typedef enum enumOptions
 //				| OB_LPAR
 //				| OB_LT_CLEAR
 //				| OB_LT_ONLINE
-//				| OB_LT_N_PLAYERS,
+//				| OB_LT_N_PLAYERS
+//				| OB_GRP_PARAM,
 //
 //	OB_CMD_CAT		= OB_COMPLETE
 //				| OB_GRP_TEXTOUT
@@ -411,6 +426,10 @@ typedef enum enumGetOpt
 	GO_PERFMON,
 	GO_CUSTOM_TT,
 	GO_XPFLAGS,
+	GO_SPEEDOMETER,
+	GO_RESERVED_1B9,
+	GO_RESERVED_1BA,
+	GO_RESERVED_1BB,
 	GO_TRACK_DIR,
 	GO_COPY_TRACKS,
 	GO_MOVE_TRACKS,

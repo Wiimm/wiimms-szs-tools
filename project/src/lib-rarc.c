@@ -223,7 +223,11 @@ int IterateFilesRARC
     }
     #endif
 
+ #if USE_ITERATOR_PARAM
+    if (it->itpar.cut_files)
+ #else
     if (it->cut_files)
+ #endif
     {
 	it->index	= 0;
 	it->fst_item	= 0;

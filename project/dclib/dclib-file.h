@@ -183,7 +183,6 @@ static inline int CompareTimeSpecVal
 static inline int CompareTimeSpecTime ( const struct timespec *a, const time_t tim )
 {
     DASSERT(a);
-    DASSERT(b);
     return a->tv_sec  < tim ? -1
 	 : a->tv_sec  > tim ?  1
 	 : a->tv_nsec > 0;
@@ -1327,6 +1326,70 @@ void RegisterFileId ( int fd );
 void UpdateOpenFiles ( bool count_current );
 uint SetOpenFilesLimit ( uint limit );
 ccp PrintOpenFiles ( bool count_current ); // print to circ buffer
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			PrintScript			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[PrintScriptFF]] // FF = File Format
+
+typedef enum PrintScriptFF
+{
+	PSFF_UNKNOWN,	// always 0
+	PSFF_JSON,
+	PSFF_BASH,
+	PSFF_SH,
+	PSFF_PHP,
+	PSFF_MAKEDOC,
+}
+PrintScriptFF;
+
+ccp GetNamePSFF ( PrintScriptFF fform );
+
+//-----------------------------------------------------------------------------
+// [[PrintScript_t]]
+
+typedef struct PrintScript_t
+{
+    FILE	*f;		// valid output file
+    PrintScriptFF fform;	// output: file format
+    ccp		varname;	// valid ponter to var name
+    bool	create_array;	// true: create ar arrays
+    bool	add_index;	// true: add index to varname
+    uint	index;		// index for array operations
+    char	sep[2];		// separator for JSON
+    char	prefix[100];	// varname prefix
+}
+PrintScript_t;
+
+//-----------------------------------------------------------------------------
+
+static inline void InitializePrintScript ( PrintScript_t *ps )
+	{ DASSERT(ps); memset(ps,0,sizeof(*ps)); }
+
+static inline void ResetPrintScript ( PrintScript_t *ps )
+	{ DASSERT(ps); memset(ps,0,sizeof(*ps)); }
+
+///////////////////////////////////////////////////////////////////////////////
+
+void PrintScriptHeader ( PrintScript_t *ps );
+void PrintScriptFooter ( PrintScript_t *ps );
+
+int PutScriptVars
+(
+    PrintScript_t	*ps,		// valid control struct
+    uint		mode,		// bit field: 1=open var, 2:close var
+    ccp			text		// text with line of format NAME=VALUE
+);
+
+int PrintScriptVars
+(
+    PrintScript_t	*ps,		// valid control struct
+    uint		mode,		// bit field: 1=open var, 2:close var
+    ccp			format,		// format of message
+    ...					// arguments
+)
+__attribute__ ((__format__(__printf__,3,4)));
 
 //
 ///////////////////////////////////////////////////////////////////////////////

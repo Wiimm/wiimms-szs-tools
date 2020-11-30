@@ -49,7 +49,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #define TITLE WCTCT_SHORT ": " WCTCT_LONG " v" VERSION " r" REVISION \
-	" " SYSTEM " - " AUTHOR " - " DATE
+	" " SYSTEM2 " - " AUTHOR " - " DATE
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -86,7 +86,7 @@ static void version_exit()
     if ( brief_count > 1 )
 	fputs( VERSION "\n", stdout );
     else if (brief_count)
-	fputs( VERSION " r" REVISION " " SYSTEM "\n", stdout );
+	fputs( VERSION " r" REVISION " " SYSTEM2 "\n", stdout );
     else if (print_sections)
 	print_version_section(true);
     else if (long_count)
@@ -816,6 +816,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 		print_header = output_mode.syntax = false;
 		break;
 
+	case GO_BMG_ENDIAN:	err += ScanOptBmgEndian(optarg); break;
 	case GO_BMG_ENCODING:	err += ScanOptBmgEncoding(optarg); break;
 	case GO_BMG_INF_SIZE:	err += ScanOptBmgInfSize(optarg,false); break;
 	case GO_BMG_MID:	err += ScanOptBmgMid(optarg); break;

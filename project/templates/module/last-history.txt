@@ -1,12 +1,20 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Time stamps of the files are now managed in nanoseconds instead of seconds.
- - wszst ANALYSE: New result "warn=": Print warnings about Item Position Bug
-   and self linked item routes with 1 point.
- - wszst CHECK: Hints about unusual TEX version 1 are suppressed now if option
-   --verbose is not set.
- - Fewer program crashes when reading faulty SZS files. 
- 
+ - Windows only: 32 bit and 64 bit versions of Cygwin are supported now.
+   The 64 bit version is recommended.
+    - 32 bit version: Cygwin DLL 3.0.7 / 2019-04-30
+    - 64 bit version: Cygwin DLL 3.1.7 / 2020-08-22
+ - Support of LE-CODE build 25:
+    - Speedometer support for LPAR-files.
+    - New option for wlect: --speedometer=off/on
+ - Again fewer program crashes when reading faulty SZS files. 
+ - BMG supports little endian files now, but only encoding UTF-8 was checked.
+   I need example files to verify other encodings (CP-1252,UTF-16,SHIFT-JIS).
+ - KCL/OBJ: Faces with any number of vertices are accepted now. Before there
+   was a limit of 50 vertices.
+ - Bug fix for CT-CODE/LE-CODE configuration file: Command 'S' stored a slot
+   number as single byte, so that only values between 0 and 255 were possible.
+
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it
 ~   is possible to create a binary MDL by reading the internal data. This is

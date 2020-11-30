@@ -58,8 +58,8 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.20a
-BETA_VERSION		= 0
+VERSION_NUM		= 2.21a
+BETA_VERSION		= 1
 			# 0:off  -1:"beta"  >0:"beta#"
 
 URI_HOME		= https://szs.wiimm.de/
@@ -78,7 +78,8 @@ endif
 URI_DOWNLOAD_I386	= $(URI_DOWNLOAD)/$(DISTRIB_I386)
 URI_DOWNLOAD_X86_64	= $(URI_DOWNLOAD)/$(DISTRIB_X86_64)
 URI_DOWNLOAD_MAC	= $(URI_DOWNLOAD)/$(DISTRIB_MAC)
-URI_DOWNLOAD_CYGWIN	= $(URI_DOWNLOAD)/$(DISTRIB_CYGWIN)
+URI_DOWNLOAD_CYGWIN32	= $(URI_DOWNLOAD)/$(DISTRIB_CYGWIN32)
+URI_DOWNLOAD_CYGWIN64	= $(URI_DOWNLOAD)/$(DISTRIB_CYGWIN64)
 
 DOWNLOAD_DIR		= /n/www/szs.wiimm.de/download
 EXPORT_DIR		= /cygdrive/n/wit/wiimms-szs-tools/bin
@@ -177,6 +178,18 @@ endif
 #endif
 # DEFINES1	+= -DHAVE_PCRE=1
 #endif
+
+ifeq ($(HAVE_SHA),1)
+ ifeq ($(SYSTEM_LINUX),1)
+  ifneq ($(STATIC),1)
+    DEFINES1	+= -DUSE_SHA_LIB
+    LIBS	+= -lcrypto
+  endif
+ else ifeq ($(SYSTEM),cygwin)
+    DEFINES1	+= -DUSE_SHA_LIB
+    LIBS	+= -lcrypto
+ endif
+endif
 
 #-------------------------------------------------------------------------------
 # tools
@@ -356,13 +369,15 @@ LIBS		+= $(LIBPNG) -lm -lncurses $(XLIBS)
 
 #-------------------------------------------------------------------------------
 
+
 DISTRIB_RM	= ./szs-v$(VERSION)-r
 DISTRIB_BASE	= szs-v$(VERSION)-r$(REVISION_NEXT)
-DISTRIB_PATH	= ./$(DISTRIB_BASE)-$(SYSTEM)
+DISTRIB_PATH	= ./$(DISTRIB_BASE)-$(SYSTEM2)
 DISTRIB_I386	= $(DISTRIB_BASE)-i386.tar.gz
 DISTRIB_X86_64	= $(DISTRIB_BASE)-x86_64.tar.gz
 DISTRIB_MAC	= $(DISTRIB_BASE)-mac.tar.gz
-DISTRIB_CYGWIN	= $(DISTRIB_BASE)-cygwin.zip
+DISTRIB_CYGWIN32 = $(DISTRIB_BASE)-cygwin32.zip
+DISTRIB_CYGWIN64 = $(DISTRIB_BASE)-cygwin64.zip
 DISTRIB_FILES	= gpl-2.0.txt $(INSTALL_SCRIPTS) $(SETUP_INFO)
 
 DOC_FILES	= doc/*.txt
@@ -432,10 +447,10 @@ $(ALL_TOOLS_X): %: %.o $(ALL_OBJECTS) $(TOBJ_ALL) Makefile | $(HELPER_TOOLS) $(U
 		$(ALL_OBJECTS) $(TOBJ_$@) $(LIBS) $(TOPT_$@) -o $@
 	@if test -f $@.exe; then $(STRIP) $@.exe; else $(STRIP) $@; fi
 
-	@mkdir -p bin/$(SYSTEM) bin/$(SYSTEM)/debug
+	@mkdir -p bin/$(SYSTEM2) bin/$(SYSTEM2)/debug
 	@if test -s $(MODE_FILE) && grep -Fq -e -DDEBUG $(MODE_FILE); \
-		then cp -p $@ bin/$(SYSTEM)/debug/; \
-		else cp -p $@ bin/; cp -p $@ bin/$(SYSTEM)/; fi
+		then cp -p $@ bin/$(SYSTEM2)/debug/; \
+		else cp -p $@ bin/; cp -p $@ bin/$(SYSTEM2)/; fi
 
 #--------------------------
 
@@ -528,6 +543,7 @@ chmod:
 	@printf "$(LOGFORMAT)" chmod 775/664 ""
 	@for d in . $(DIR_LIST); do test -d "$$d" && chmod ug+rw "$$d"/*; done || true
 	@for d in . $(DIR_LIST); do test -d "$$d" && chmod -f a+x "$$d"/*.sh; done || true
+	@find . -type f -name '*.sh' -exec chmod -f a+x {} +
 	@for d in $(DIR_LIST); do test -d "$$d" && chmod 775 "$$d"; done || true
 	@for t in $(ALL_TOOLS_X); do test -f "$$t" && chmod 775 "$$t"; done || true
 	@chmod 664 src/*.[hc] src/*/*.[hc] dclib/*.[hc]
@@ -628,6 +644,7 @@ distrib:
 ifeq ($(SYSTEM),mac)
 	@NOWIIMM=1 $(MAKE) --no-print-directory mac-distrib
 else ifeq ($(SYSTEM),cygwin)
+	rm -f version.h cygwin-copy.sh templates.sed
 	NOWIIMM=1 $(MAKE) --no-print-directory all doc cygwin-copy.sh \
 		$(CYGWIN_SCRIPTS) gen-distrib info
 else
@@ -664,6 +681,7 @@ ifeq ($(SYSTEM),cygwin)
 
 else
 
+	@printf "$(LOGFORMAT)" create "$(DISTRIB_PATH)" ""
 	@rm -rf $(DISTRIB_PATH)
 	@mkdir -p $(DISTRIB_PATH)/bin $(DISTRIB_PATH)/scripts
 	@mkdir -p $(DISTRIB_PATH)/doc $(DISTRIB_PATH)/support
@@ -699,8 +717,11 @@ copy-distrib: distrib2
 	@[[ -s "$(DISTRIB_X86_64)" ]] \
 		&& cp --preserve=time "$(DISTRIB_X86_64)" "$(DOWNLOAD_DIR)" \
 		|| true
-	@[[ -s "$(DISTRIB_CYGWIN)" ]] \
-		&& cp --preserve=time "$(DISTRIB_CYGWIN)" "$(DOWNLOAD_DIR)" \
+	@[[ -s "$(DISTRIB_CYGWIN32)" ]] \
+		&& cp --preserve=time "$(DISTRIB_CYGWIN32)" "$(DOWNLOAD_DIR)" \
+		|| true
+	@[[ -s "$(DISTRIB_CYGWIN64)" ]] \
+		&& cp --preserve=time "$(DISTRIB_CYGWIN64)" "$(DOWNLOAD_DIR)" \
 		|| true
 
 #
@@ -958,7 +979,8 @@ templates.sed: Makefile
 		's|@@DISTRIB-I386@@|$(DISTRIB_I386)|g;' \
 		's|@@DISTRIB-X86_64@@|$(DISTRIB_X86_64)|g;' \
 		's|@@DISTRIB-MAC@@|$(DISTRIB_MAC)|g;' \
-		's|@@DISTRIB-CYGWIN@@|$(DISTRIB_CYGWIN)|g;' \
+		's|@@DISTRIB-CYGWIN32@@|$(DISTRIB_CYGWIN64)|g;' \
+		's|@@DISTRIB-CYGWIN64@@|$(DISTRIB_CYGWIN32)|g;' \
 		's|@@URI-REPOS@@|$(URI_REPOS)|g;' \
 		's|@@URI-VIEWVC@@|$(URI_VIEWVC)|g;' \
 		's|@@URI-HOME@@|$(URI_HOME)|g;' \

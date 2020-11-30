@@ -12,9 +12,9 @@
 
 #-------------------------
 
-# Online, items are only transmitted correctly, if the positions of all 3 axis
-# are between -131071 and +131071. The following vector defines 3 factors to
-# increase the range at the expense of accuracy. Factors <1.0 are set to 1.0.
+# Online, item positions are only transmitted correctly, if the positions of
+# all 3 axis are between -131071 and +131071. The following vector defines 3
+# factors to increase the range at the expense of accuracy. Factors <1.0 are
+# ignored and set to 1.0.
 
 @ITEM-POS-FACTOR = v( %5.3f, %5.3f, %5.3f )
-

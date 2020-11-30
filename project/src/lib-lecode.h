@@ -115,7 +115,13 @@ typedef struct le_lpar_t
     u8	enable_perfmon;		// TRUE: performance monitor enabled
     u8	enable_custom_tt;	// TRUE: time trial for cusotm tracks enabled
     u8	enable_xpflags;		// TRUE: extended presence flags enabled
+    u8	enable_speedo;		// TRUE: speedometer is enabled
     u8	block_track;		// block used tracks for 0..20 races
+
+    // reserved for future extensions
+    u8   reserved_1b9;
+    u8   reserved_1ba;
+    u8   reserved_1bb;
 
     u16	chat_mode_1[BMG_N_CHAT]; // first set of modes for each chat message
     u16	chat_mode_2[BMG_N_CHAT]; // second set of modes for each chat message
@@ -355,9 +361,45 @@ typedef struct le_binpar_v1_1b8_t
 __attribute__ ((packed)) le_binpar_v1_1b8_t;
 
 //-----------------------------------------------------------------------------
+// [[le_binpar_v1_1bc_t]]
+
+typedef struct le_binpar_v1_1bc_t
+{
+ /*000*/ char magic[8];	// LE_PARAM_MAGIC
+ /*008*/ u32  version;		// always 1 for v1
+ /*00c*/ u32  size;		// size (and minor version)
+ /*010*/ u32  off_eod;		// offset of end-of-data
+
+ /*014*/ u32  off_cup_par;	// offset to cup param
+ /*018*/ u32  off_cup_track;	// offset of cup-track list
+ /*01c*/ u32  off_cup_arena;	// offset of cup-arena list
+ /*020*/ u32  off_course_par;	// offset of course param
+ /*024*/ u32  off_property;	// offset of property list
+ /*028*/ u32  off_music;	// offset of music list
+ /*02c*/ u32  off_flags;	// offset of music list
+
+ /*030*/ u8   engine[3];	// 100cc, 150cc, mirror (sum always 100)
+ /*033*/ u8   enable_200cc;	// TRUE: 200C enabled => 150cc, 200cc, mirror
+ /*034*/ u8   enable_perfmon;	// TRUE: performance monitor enabled
+ /*035*/ u8   enable_custom_tt;// TRUE: time trial for cusotm tracks enabled
+ /*036*/ u8   enable_xpflags;	// TRUE: extended presence flags enabled
+ /*037*/ u8   block_track;	// block used track for 0.. tracks
+ /*038*/ u16  chat_mode_1[BMG_N_CHAT]; // mode for each chat message
+ /*0f8*/ u16  chat_mode_2[BMG_N_CHAT]; // mode for each chat message
+ /*1b8*/ u8   enable_speedo;	// TRUE: speedometer is enabled
+
+ //--- reserved for future extensions
+ /*1b9*/ u8   reserved_1b9;
+ /*1ba*/ u8   reserved_1ba;
+ /*1bb*/ u8   reserved_1bb;
+ /*1bc*/
+}
+__attribute__ ((packed)) le_binpar_v1_1bc_t;
+
+//-----------------------------------------------------------------------------
 // [[le_binpar_v1_t]]
 
-typedef struct le_binpar_v1_1b8_t le_binpar_v1_t;
+typedef struct le_binpar_v1_1bc_t le_binpar_v1_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -497,6 +539,7 @@ const ctcode_t * LoadLEFile ( uint le_phase );
 enumError ApplyLEFile ( le_analyse_t * ana );
 enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode );
 void PatchLECODE ( le_analyse_t * ana );
+void PatchLPAR ( le_lpar_t * lp );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -583,7 +626,9 @@ __attribute__ ((packed)) lex_element_t;
 
 typedef struct lex_set1_t
 {
-    float3	item_factor;	// factor for item positions, always >=1.0
+    float3	item_factor;		// factor for item positions, always >=1.0
+    u8		fix_online_delay;	// fix delay of GOBJ objects
+    u8		padding[3];
 }
 __attribute__ ((packed,aligned(4))) lex_set1_t;
 
@@ -876,16 +921,26 @@ extern OffOn_t	opt_200cc;
 extern OffOn_t	opt_perfmon;
 extern OffOn_t	opt_custom_tt;
 extern OffOn_t	opt_xpflags;
+extern OffOn_t	opt_speedo;
+
+extern int	opt_reserved_1b9;
+extern int	opt_reserved_1ba;
+extern int	opt_reserved_1bb;
 
 extern bool	opt_complete;
 
-int ScanOptTrackSource ( ccp arg, int mode );
-int ScanOptAlias   ( ccp arg );
-int ScanOptEngine  ( ccp arg );
-int ScanOpt200cc   ( ccp arg );
-int ScanOptPerfMon ( ccp arg );
-int ScanOptCustomTT( ccp arg );
-int ScanOptXPFlags ( ccp arg );
+int ScanOptTrackSource	( ccp arg, int mode );
+int ScanOptAlias	( ccp arg );
+int ScanOptEngine	( ccp arg );
+int ScanOpt200cc	( ccp arg );
+int ScanOptPerfMon	( ccp arg );
+int ScanOptCustomTT	( ccp arg );
+int ScanOptXPFlags	( ccp arg );
+int ScanOptSpeedometer	( ccp arg );
+
+int ScanOptReserved_1b9 ( ccp arg );
+int ScanOptReserved_1ba ( ccp arg );
+int ScanOptReserved_1bb ( ccp arg );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

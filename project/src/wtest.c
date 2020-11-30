@@ -72,7 +72,7 @@
 
 #define NAME "wtest"
 #undef TITLE
-#define TITLE NAME " v" VERSION " r" REVISION " " SYSTEM " - " AUTHOR " - " DATE
+#define TITLE NAME " v" VERSION " r" REVISION " " SYSTEM2 " - " AUTHOR " - " DATE
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -3758,6 +3758,43 @@ static enumError test_clock ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_endian()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_endian ( int argc, char ** argv )
+{
+    const int verbose = argc > 1 ? str2l(argv[1],0,0) : 0;
+
+    printf("IS_BIG_ENDIAN=%d, IS_LITTLE_ENDIAN=%d\n\n",
+		IS_BIG_ENDIAN, IS_LITTLE_ENDIAN );
+
+    printf("BE_FUNC: bom=%02x,%02x, is_be=%u, is_le=%u, endian=%d\n",
+		be_func.bom[0], be_func.bom[1],
+		be_func.is_be, be_func.is_le, be_func.endian );
+    if (verbose)
+	HexDump16(stdout,0,0,&be_func,sizeof(be_func));
+
+    printf("LE_FUNC: bom=%02x,%02x, is_be=%u, is_le=%u, endian=%d\n",
+		le_func.bom[0], le_func.bom[1],
+		le_func.is_be, le_func.is_le, le_func.endian );
+    if (verbose)
+	HexDump16(stdout,0,0,&le_func,sizeof(le_func));
+    putchar('\n');
+
+    //-------------------------------------------------------------------------
+    
+    printf("BE: h2n(1) = %x %x %llx / n2h(1) = %x %x %llx\n",
+		be_func.h2ns(1), be_func.h2nl(1), be_func.h2n64(1),
+		be_func.n2hs(1), be_func.n2hl(1), be_func.n2h64(1) );
+    printf("LE: h2n(1) = %x %x %llx / n2h(1) = %x %x %llx\n",
+		le_func.h2ns(1), le_func.h2nl(1), le_func.h2n64(1),
+		le_func.n2hs(1), le_func.n2hl(1), le_func.n2h64(1) );
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3990,6 +4027,7 @@ enum
     CMD_SLOT_ATTRIB,		// test_slot_attrib(argc,argv)
     CMD_SLOT_INFO,		// test_slot_info(argc,argv)
     CMD_CLOCK,			// test_clock(argc,argv)
+    CMD_ENDIAN,			// test_endian(argc,argv)
 
     CMD__N
 };
@@ -4047,6 +4085,7 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_SLOT_ATTRIB,	"SLOT-ATTRIB",	"SA",		0 },
 	{ CMD_SLOT_INFO,	"SLOT-INFO",	"SI",		0 },
 	{ CMD_CLOCK,		"CLOCK",	0,		0 },
+	{ CMD_ENDIAN,		"ENDIAN",	0,		0 },
 
 	{ CMD__N,0,0,0 }
 };
@@ -4175,6 +4214,7 @@ int main ( int argc, char ** argv )
 	case CMD_SLOT_ATTRIB:		test_slot_attrib(argc,argv); break;
 	case CMD_SLOT_INFO:		test_slot_info(argc,argv); break;
 	case CMD_CLOCK:			test_clock(argc,argv); break;
+	case CMD_ENDIAN:		test_endian(argc,argv); break;
 	//case CMD_HELP:
 	default:
 	    help_exit();

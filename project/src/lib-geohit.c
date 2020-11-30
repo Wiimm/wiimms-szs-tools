@@ -668,7 +668,7 @@ enumError SaveTextGEOHIT
 
 	if (!tiny)
 	    fprintf(F.f,text_geohit_kart_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE );
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE );
 
      #if USE_OBJECT_MANAGER > 1
 	WriteObjMgrToSetupSection( F.f, &geohit->obj_mgr,
@@ -684,7 +684,7 @@ enumError SaveTextGEOHIT
 
 	if (!tiny)
 	    fprintf(F.f,text_geohit_item_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE );
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE );
 
      #if USE_OBJECT_MANAGER > 1
 	WriteObjMgrToSetupSection( F.f, &geohit->obj_mgr,

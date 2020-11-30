@@ -2377,6 +2377,7 @@ void GotoEolSI
     ScanInfo_t		* si		// valid data
 )
 {
+    DASSERT(si);
     ScanFile_t *sf = si->cur_file;
     DASSERT(sf);
     sf->prev_ptr = sf->ptr;
@@ -2511,9 +2512,9 @@ ccp FindEndOfLineSI
 
 ccp FindLineFeedSI
 (
-    ScanInfo_t		* si,		// valid data
+    const ScanInfo_t	* si,		// valid data
     ccp			ptr,		// start search here
-    bool		mark_error	// true: increment error counter
+    bool		mark_error	// true: increment error counter (ignore const)
 )
 {
     DASSERT(si);
@@ -2523,7 +2524,7 @@ ccp FindLineFeedSI
     if (mark_error)
     {
 	sf->line_err++;
-	si->total_err++;
+	((ScanInfo_t*)si)->total_err++;
     }
 
     while ( ptr < sf->end && *ptr != '\n' )
@@ -2536,13 +2537,29 @@ ccp FindLineFeedSI
 
 ccp FindNextLineFeedSI
 (
-    ScanInfo_t		* si,		// valid data
-    bool		mark_error	// true: increment error counter
+    const ScanInfo_t	* si,		// valid data
+    bool		mark_error	// true: increment error counter (ignore const)
 )
 {
     DASSERT(si);
     DASSERT(si->cur_file);
     return FindLineFeedSI(si,si->cur_file->ptr,mark_error);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+mem_t GetLineSI
+(
+    const ScanInfo_t	* si		// valid data
+)
+{
+    DASSERT(si);
+    DASSERT(si->cur_file);
+    ccp eol = FindNextLineFeedSI(si,false);
+    mem_t mem;
+    mem.ptr = si->cur_file->ptr;
+    mem.len = eol ? eol - mem.ptr : 0;
+    return mem;
 }
 
 //

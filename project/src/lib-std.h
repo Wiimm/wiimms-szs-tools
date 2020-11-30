@@ -56,7 +56,7 @@
   #include <arpa/inet.h>
 #endif
 
-#include "system.h"
+#include "dclib-system.h"
 #include "dclib-basics.h"
 #include "dclib-file.h"
 #include "dclib-debug.h"
@@ -1936,49 +1936,6 @@ valid_t IsValidCTCODE
     uint		file_size,	// NULL or size of complete file
     ccp			fname		// not NULL: print warnings with file ref
 );
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			PrintScript			///////////////
-///////////////////////////////////////////////////////////////////////////////
-// [[PrintScript_t]]
-
-typedef struct PrintScript_t
-{
-    File_t	*fo;		// pointer output file
-    bool	add_index;	// true: add index to varname
-    uint	index;		// index for array operations
-    char	sep[2];		// separator for JSON
-    char	prefix[100];	// varname prefix
-}
-PrintScript_t;
-
-static inline void InitializePrintScript ( PrintScript_t *ps )
-	{ DASSERT(ps); memset(ps,0,sizeof(*ps)); }
-
-static inline void ResetPrintScript ( PrintScript_t *ps )
-	{ DASSERT(ps); memset(ps,0,sizeof(*ps)); }
-
-///////////////////////////////////////////////////////////////////////////////
-
-void PrintScriptHeader ( PrintScript_t *ps );
-void PrintScriptFooter ( PrintScript_t *ps );
-
-int PutScriptVars
-(
-    PrintScript_t	*ps,		// valid control struct
-    uint		mode,		// bit field: 1=open var, 2:close var
-    ccp			text		// text with line of format NAME=VALUE
-);
-
-int PrintScriptVars
-(
-    PrintScript_t	*ps,		// valid control struct
-    uint		mode,		// bit field: 1=open var, 2:close var
-    ccp			format,		// format of message
-    ...					// arguments
-)
-__attribute__ ((__format__(__printf__,3,4)));
 
 //
 ///////////////////////////////////////////////////////////////////////////////

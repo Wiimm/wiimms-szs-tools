@@ -61,7 +61,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #define TITLE WBMGT_SHORT ": " WBMGT_LONG " v" VERSION " r" REVISION \
-	" " SYSTEM " - " AUTHOR " - " DATE
+	" " SYSTEM2 " - " AUTHOR " - " DATE
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -96,7 +96,7 @@ static void version_exit()
     if ( brief_count > 1 )
 	fputs( VERSION "\n", stdout );
     else if (brief_count)
-	fputs( VERSION " r" REVISION " " SYSTEM "\n", stdout );
+	fputs( VERSION " r" REVISION " " SYSTEM2 "\n", stdout );
     else if (print_sections)
 	print_version_section(true);
     else if (long_count)
@@ -291,7 +291,7 @@ static enumError cmd_extract()
 
     //--- search sections
 
-    const bmg_sect_list_t *sl = ScanSectionsBMG(raw.data,raw.data_size);
+    const bmg_sect_list_t *sl = ScanSectionsBMG(raw.data,raw.data_size,0);
  #if 0
     {
 	const bmg_sect_info_t *si;
@@ -374,7 +374,7 @@ static enumError cmd_sections()
 	    continue;
 	}
 
-	const bmg_sect_list_t *sl = ScanSectionsBMG(raw.data,raw.data_size);
+	const bmg_sect_list_t *sl = ScanSectionsBMG(raw.data,raw.data_size,0);
 	if (!sl)
 	{
 	    ERROR0(ERR_INVALID_DATA,"Can't scan binary BMG file: %s",raw.fname);
@@ -398,15 +398,16 @@ static enumError cmd_sections()
 	const uint seplen = 3*(56+max_info_len);
 	printf( "\n"
 		"%sFile: %s\n"
-		"%sSize: 0x%x = %u bytes, %u sections, encoding #%u (%s)\n"
+		"%sSize: 0x%x = %u bytes%s, %u sections, encoding #%u (%s)\n"
 		"%s%.*s\n"
 		"%s  offset    size    sect  cut       head n(elem)  n(e)\n"
 		"%s     hex     hex    size size magic size   *size  cut  info\n"
 		"%s%.*s%s\n"
 		,
 		colout->heading, param->arg,
-		colout->heading, sl->source_size, sl->source_size, sl->n_sections,
-			sl->header->encoding,
+		colout->heading, sl->source_size, sl->source_size,
+			sl->endian->is_be ? " BE" : sl->endian->is_le ? " LE" : "",
+			sl->n_sections, sl->header->encoding,
 			GetEncodingNameBMG(sl->header->encoding,"?"),
 		colout->heading, seplen, ThinLine300_3,
 		colout->heading,
@@ -815,6 +816,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_BRIEF:		brief_count++; break;
 
+	case GO_BMG_ENDIAN:	err += ScanOptBmgEndian(optarg); break;
 	case GO_BMG_ENCODING:	err += ScanOptBmgEncoding(optarg); break;
 	case GO_BMG_INF_SIZE:	err += ScanOptBmgInfSize(optarg,true); break;
 	case GO_BMG_MID:	err += ScanOptBmgMid(optarg); break;

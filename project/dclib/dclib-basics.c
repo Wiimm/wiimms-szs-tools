@@ -4672,12 +4672,7 @@ char * PrintKeywordList
     if (ret_length)
 	*ret_length = len;
 
-    if ( buf == temp )
-    {
-	buf = GetCircBuf(len+1);
-	memcpy(buf,temp,len+1);
-    }
-    return buf;
+    return buf == temp ? CopyCircBuf(temp,len+1) : buf;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4874,7 +4869,7 @@ int ScanCommandList
 	//--- scan and copy command
 
 	ccp param = cmd;
-	while ( param < endcmd && ( isalnum(*param) || *param == '-' || *param == '_' ) )
+	while ( param < endcmd && ( isalnum((int)*param) || *param == '-' || *param == '_' ) )
 	    param++;
 	cli->cmd_len = param - cmd;
 	if ( cli->cmd_len > sizeof(cli->cmd)-1 )
@@ -5059,75 +5054,6 @@ int ScanCommandList
 	 cli->read_cmd_len = cli->command_len;
 
     return cli->fail_count ? -1 : cli->cmd_count;
-}
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			global commands			///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-enumError Command_ARGTEST ( int argc, char ** argv )
-{
-    printf("ARGUMENT TEST: %u arguments:\n",argc);
-
-    int idx;
-    for ( idx = 0; idx < argc; idx++ )
-	printf("%4u.: |%s|\n",idx,argv[idx]);
-    return ERR_OK;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-enumError Command_COLORS
-(
-    int		level,		// only used, if mode==NULL
-				//  <  0: status message (ignore mode)
-				//  >= 1: include names
-				//  >= 2: include alt names
-				//  >= 3: include color names incl bold
-				//  >= 4: include background color names
-    uint	mode,		// output mode => see PrintColorSetHelper()
-    uint	format		// output format => see PrintColorSetEx()
-)
-{
-    if (!colout)
-	SetupStdMsg();
-
-    if ( level < 0 )
-    {
-	printf("%s--color=%d [%s], colorize=%d [%s]\n"
-		"term=%s\n"
-		"stdout: tty=%d, mode=%d [%s], have-color=%d, n-colors=%u%s\n",
-		colout->status,
-		opt_colorize, GetColorModeName(opt_colorize,"?"),
-		colorize_stdout, GetColorModeName(colorize_stdout,"?"),
-		getenv("TERM"), isatty(fileno(stdout)),
-		colout->col_mode, GetColorModeName(colout->col_mode,"?"),
-		colout->colorize, colout->n_colors, colout->reset );
-	return ERR_OK;
-    }
-
-    if ( !mode && level > 0 )
-	switch (level)
-	{
-	    case 1:  mode = 0x08; break;
-	    case 2:  mode = 0x18; break;
-	    case 3:  mode = 0x1b; break;
-	    default: mode = 0x1f; break;
-	}
-
-    if (!format)
-    {
-	const ColorMode_t col_mode = colout ? colout->col_mode : COLMD_AUTO;
-	PrintTextModes( stdout, 4, col_mode );
-	PrintColorModes( stdout, 4, col_mode, GCM_ALT );
-     #ifdef TEST
-	PrintColorModes( stdout, 4, col_mode, GCM_ALT|GCM_SHORT );
-     #endif
-    }
-    if ( mode || format )
-	PrintColorSetEx(stdout,4,colout,mode,format);
-    return ERR_OK;
 }
 
 //

@@ -580,7 +580,7 @@ typedef struct endian_func_t
 {
     //--- info section
 
-    u8   bom[2];	// btye order mark: BE=0xfe,0xff, LE=0xff,0xfe
+    u8   bom[2];	// byte order mark: BE=0xfe,0xff, LE=0xff,0xfe
     bool is_be;		// true: is big endian
     bool is_le;		// true: is little endian
     dcEndian_t endian;	// DC_BIG_ENDIAN or DC_LITTLE_ENDIAN
@@ -608,6 +608,16 @@ typedef struct endian_func_t
     void (*wr64) ( void * data_ptr, u64 data );
     void (*wrf4) ( void * data_ptr, float data );
     void (*wrf8) ( void * data_ptr, double data );
+
+    //--- convert functions
+
+    u16 (*n2hs)  ( u16 data );
+    u32 (*n2hl)  ( u32 data );
+    u64 (*n2h64) ( u64 data );
+
+    u16 (*h2ns)  ( u16 data );
+    u32 (*h2nl)  ( u32 data );
+    u64 (*h2n64) ( u64 data );
 
 } endian_func_t;
 
@@ -689,6 +699,8 @@ int CheckIndex1	   ( int max, int index );
 int CheckIndex1End ( int max, int index );
 int CheckIndex2    ( int max, int * p_begin, int * p_end );
 int CheckIndex2End ( int max, int * p_begin, int * p_end );
+int CheckIndexC    ( int max, int * p_begin, int count );
+int CheckIndexCEnd ( int max, int * p_begin, int count );
 
 //-----------------------------------------------------------------------------
 
@@ -1680,6 +1692,42 @@ int ScanSplitArg
 				// size must be: length of 'src' + 1
 				// if NULL, a temporary buffer is alloced.
 );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			arg_manager_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[arg_manager_t]]
+
+typedef struct arg_manager_t
+{
+    char	**argv;	// list of strings
+    int		argc;	// number of used elements in 'argv'
+    uint	size;	// >0: 'argv' is alloced to store # elements
+			// last NULL element is not counted here
+}
+arg_manager_t;
+
+//-----------------------------------------------------------------------------
+
+void ResetArgManager  ( arg_manager_t *am );
+void SetupArgManager  ( arg_manager_t *am, int argc, char ** argv, bool clone );
+void AttachArgManager ( arg_manager_t *am, int argc, char ** argv );
+void CloneArgManager  ( arg_manager_t *am, int argc, char ** argv );
+
+void AddSpaceArgManager ( arg_manager_t *am, int needed_space );
+
+void CopyArgManager ( arg_manager_t *dest, const arg_manager_t *src );
+void MoveArgManager ( arg_manager_t *dest,        arg_manager_t *src );
+
+void PrepareEditArgManager ( arg_manager_t *am, int needed_space );
+
+uint AppendArgManager ( arg_manager_t *am,          ccp arg1, ccp arg2, bool move_arg );
+uint InsertArgManager ( arg_manager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg );
+uint ReplaceArgManager( arg_manager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg );
+uint RemoveArgManager ( arg_manager_t *am, int pos, int count );
+
+void DumpArgManager ( FILE *f, int indent, const arg_manager_t *am, ccp title );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -4253,7 +4301,7 @@ typedef struct DynDataList_t
 {
     DynData_t	*list;		// pointer to the data list
     uint	used;		// number of used data elements
-    uint	size;		// number of allocated pointer in 'list'
+    uint	size;		// number of allocated pointers in 'list'
 }
 DynDataList_t;
 
@@ -4287,7 +4335,7 @@ typedef struct StringField_t
 {
     ccp		* field;		// pointer to the string field
     uint	used;			// number of used titles in the title field
-    uint	size;			// number of allocated pointer in 'field'
+    uint	size;			// number of allocated pointers in 'field'
     int	(*func_cmp)( ccp s1, ccp s2 );	// compare function, default is strcmp()
 
 } StringField_t;
@@ -4394,7 +4442,7 @@ typedef struct ParamField_t
 {
     ParamFieldItem_t	* field;	// pointer to the string field
     uint		used;		// number of used titles in the title field
-    uint		size;		// number of allocated pointer in 'field'
+    uint		size;		// number of allocated pointers in 'field'
     bool		free_data;	// true: unused data will be free'd
 					//   initialized with 'false'
     int	(*func_cmp)( ccp s1, ccp s2 );	// compare function, default is strcmp()
@@ -4454,7 +4502,7 @@ typedef struct MemMap_t
 {
     MemMapItem_t ** field;	// pointer to the item field
     uint	used;		// number of used titles in the item field
-    uint	size;		// number of allocated pointer in 'field'
+    uint	size;		// number of allocated pointers in 'field'
     u64		begin;		// first address
 
 } MemMap_t;
@@ -4833,7 +4881,15 @@ typedef struct RestoreState_t
 }
 RestoreState_t;
 
-//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+
+static inline void InitializeRestoreState ( RestoreState_t *rs )
+	{ DASSERT(rs); memset(rs,0,sizeof(*rs)); }
+
+void ResetRestoreState ( RestoreState_t *rs );
+
+///////////////////////////////////////////////////////////////////////////////
+// [[RestoreStateFunc]]
 
 typedef void (*RestoreStateFunc)
 (
@@ -4842,6 +4898,7 @@ typedef void (*RestoreStateFunc)
 );
 
 //-----------------------------------------------------------------------------
+// [[RestoreStateTab_t]]
 
 typedef struct RestoreStateTab_t
 {
@@ -4850,6 +4907,16 @@ typedef struct RestoreStateTab_t
     cvp			user_table;	// any user provided pointer
 }
 RestoreStateTab_t;
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanRestoreState
+(
+    RestoreState_t	*rs,		// valid control
+    void		*data,		// file data, modified, terminated by NULL or LF
+    uint		size,		// size of file data
+    void		**end_data	// not NULL: store end of analysed here
+);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -5110,6 +5177,11 @@ __attribute__ ((packed)) SaveRestoreTab_t;
 #define DEF_SRT_ARRAY_A(v)		DEF_SRT_ARRAY(v,0,SRT_DEF_ARRAY,0)
 #define DEF_SRT_ARRAY_AC(v)		DEF_SRT_ARRAY_C(v,0,SRT_DEF_ARRAY,0)
 #define DEF_SRT_ARRAY_END()		{0,0,0,0,SRT_DEF_ARRAY,0}
+
+//--- global array of structs
+
+#define DEF_SRT_ARRAY_GN(ne)		{0,sizeof(SRT_NAME),0,ne,SRT_DEF_ARRAY,0}
+#define DEF_SRT_ARRAY_GA(v)		{0,sizeof(*v),0,sizeof(v)/sizeof(*v),SRT_DEF_ARRAY,0}
 
 //--- special
 

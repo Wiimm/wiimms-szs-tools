@@ -269,7 +269,7 @@ typedef struct GOptions_t
     //--- parameters
 
     int		argc;		// number of parameters
-    char	**argv;		// paramters without options
+    char	**argv;		// parameters without options
 
 
     //--- named options

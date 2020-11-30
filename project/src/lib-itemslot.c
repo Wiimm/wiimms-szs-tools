@@ -672,7 +672,7 @@ enumError SaveTextITEMSLOT
     const bool tiny = brief_count > 1 || export_count;
     if (!tiny)
 	fprintf(F.f,text_itemslot_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE );
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE );
 
 
     //--- print parameters

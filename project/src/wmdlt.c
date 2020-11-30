@@ -46,7 +46,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #define TITLE WMDLT_SHORT ": " WMDLT_LONG " v" VERSION " r" REVISION \
-	" " SYSTEM " - " AUTHOR " - " DATE
+	" " SYSTEM2 " - " AUTHOR " - " DATE
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -81,7 +81,7 @@ static void version_exit()
     if ( brief_count > 1 )
 	fputs( VERSION "\n", stdout );
     else if (brief_count)
-	fputs( VERSION " r" REVISION " " SYSTEM "\n", stdout );
+	fputs( VERSION " r" REVISION " " SYSTEM2 "\n", stdout );
     else if (print_sections)
 	print_version_section(true);
     else if (long_count)

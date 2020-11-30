@@ -3585,7 +3585,9 @@ enumError ScanTextKCL
     {
 	uint	idx;
 	double3 pt;
-    } tab[KCL_MAX_PT_PER_TRI];
+    }
+    tab_buf[KCL_MAX_PT_PER_TRI], *tab = tab_buf;
+    uint tab_size = KCL_MAX_PT_PER_TRI;
 
     kcl_tri_param_t par;
     InitializeTriParam(&par,kcl,0);
@@ -3655,10 +3657,22 @@ enumError ScanTextKCL
 		//--- scan points
 
 		uint k, norm = ~0;
-		for ( k = 0; k < KCL_MAX_PT_PER_TRI; k++ )
+		for ( k = 0;; k++ )
 		{
 		    if ( k >= 3 && !NextCharSI(&si,false) )
 			break;
+
+		    if ( k >= tab_size )
+		    {
+			const uint new_size = 2*tab_size;
+			struct tab_t *new_tab = MALLOC(new_size*sizeof(*new_tab));
+			memcpy(new_tab,tab,tab_size*sizeof(*tab));
+			PRINT("KCMD_F/TAB: grow %d -> %d\n",tab_size,new_size);
+			if ( tab != tab_buf )
+			    FREE(tab);
+			tab = new_tab;
+			tab_size = new_size;
+		    }
 
 		    u32 idx;
 		    err = ScanU32SI(&si,&idx,1,0);
@@ -3683,7 +3697,7 @@ enumError ScanTextKCL
 				    && !k
 				    && (KCL_MODE & KCLMD_AUTO) )
 			    {
-				noPRINT("NORMAL FOUND: %u\n",idx-1);
+				PRINT1("NORMAL FOUND: %u\n",idx-1);
 				norm = idx - 1;
 			    }
 			}
@@ -3829,6 +3843,8 @@ enumError ScanTextKCL
 
     //--- terminate
 
+    if ( tab != tab_buf )
+	FREE(tab);
     ResetD3L(&vertex);
     ResetD3L(&normal);
     return max_err;
@@ -4938,7 +4954,7 @@ enumError SaveTextKCL
     //--- print header
 
     fprintf(F.f, text_kcl_head_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE, GetKclMode(),
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE, GetKclMode(),
 		n_vert, n_norm, n_valid_tri, n_grp );
 
     uint i;

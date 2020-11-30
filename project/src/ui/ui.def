@@ -1243,9 +1243,17 @@
 	" short cut for --no-header --brief --brief --delta --delta." \
 	" Additional, the output is limited to data sections." )
 
+#:def_opt( "BMG_ENDIAN", "bmg-endian|bmgendian", "CP", \
+	"name", \
+	"Force an endian for new BMG files. Accepted values are @BIG@ or @BE@" \
+	" for big endian, @LITTLE@ or @LE@ for little endian and @AUTO@ for" \
+	" automatic detection (default).\n" \
+	"  Mario Kart Wii uses big endian; the default if no other endian is" \
+	" defined." )
+
 #:def_opt( "BMG_ENCODING", "bmg-encoding|bmgencoding", "CP", \
 	"name", \
-	"Force a BMG encoding for new BMG files. Accepted encoding names are:" \
+	"Force an encoding for new BMG files. Accepted encoding names are" \
 	" @CP-1252@, @UTF-16BE@ (or @UTF-16@), @SHIFT-JIS@, @UTF-8@ and @AUTO@" \
 	" for automatic detection (default). Same keywords without minus signs" \
 	" are accepted too.\n" \
@@ -10161,6 +10169,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "TEXT", "BMG_ENDIAN", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "TEXT", "BMG_ENCODING", \
 	"", \
 	"" )
@@ -10278,6 +10290,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CAT", "BMG_ENDIAN", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CAT", "BMG_ENCODING", \
 	"", \
 	"" )
@@ -10340,6 +10356,10 @@
 	"Suppress the syntax information section in decoded text files." )
 
 #:def_cmd_opt( "BMG", "BRIEF", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "BMG", "BMG_ENDIAN", \
 	"", \
 	"" )
 
@@ -11359,9 +11379,17 @@
 	"  With v2.01a, this option was renamed from --msg to the more" \
 	" meaningful name --filter-bmg. The old name is still available." )
 
+#:def_opt( "BMG_ENDIAN", "endian|bmg-endian|bmgendian", "CP", \
+	"name", \
+	"Force an endian for new BMG files. Accepted values are @BIG@ or @BE@" \
+	" for big endian, @LITTLE@ or @LE@ for little endian and @AUTO@ for" \
+	" automatic detection (default).\n" \
+	"  Mario Kart Wii uses big endian; the default if no other endian is" \
+	" defined." )
+
 #:def_opt( "BMG_ENCODING", "encoding|bmg-encoding|bmgencoding", "CP", \
 	"name", \
-	"Force a BMG encoding for new BMG files. Accepted encoding names are:" \
+	"Force an encoding for new BMG files. Accepted encoding names are" \
 	" @CP-1252@, @UTF-16BE@ (or @UTF-16@), @SHIFT-JIS@, @UTF-8@ and @AUTO@" \
 	" for automatic detection (default). Same keywords without minus signs" \
 	" are accepted too.\n" \
@@ -11598,6 +11626,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CAT", "BMG_ENDIAN", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CAT", "BMG_ENCODING", \
 	"", \
 	"" )
@@ -11675,6 +11707,10 @@
 	"" )
 
 #:def_cmd_opt( "MIX", "BRIEF", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MIX", "BMG_ENDIAN", \
 	"", \
 	"" )
 
@@ -11763,6 +11799,10 @@
 	"" )
 
 #:def_cmd_opt( "IDENTIFIER", "BRIEF", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "IDENTIFIER", "BMG_ENDIAN", \
 	"", \
 	"" )
 
@@ -11859,6 +11899,10 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "BRIEF", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "BMG_ENDIAN", \
 	"", \
 	"" )
 
@@ -11966,6 +12010,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "BMG_ENDIAN", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "BMG_ENCODING", \
 	"", \
 	"" )
@@ -12039,6 +12087,10 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "BRIEF", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "BMG_ENDIAN", \
 	"", \
 	"" )
 
@@ -12384,9 +12436,17 @@
 	"", \
 	"Print BMG messages as UTF-8 text without escape sequences." )
 
+#:def_opt( "BMG_ENDIAN", "bmg-endian|bmgendian", "CP", \
+	"name", \
+	"Force an endian for new BMG files. Accepted values are @BIG@ or @BE@" \
+	" for big endian, @LITTLE@ or @LE@ for little endian and @AUTO@ for" \
+	" automatic detection (default).\n" \
+	"  Mario Kart Wii uses big endian; the default if no other endian is" \
+	" defined." )
+
 #:def_opt( "BMG_ENCODING", "bmg-encoding|bmgencoding", "CP", \
 	"name", \
-	"Force a BMG encoding for new BMG files. Accepted encoding names are:" \
+	"Force an encoding for new BMG files. Accepted encoding names are" \
 	" @CP-1252@, @UTF-16BE@ (or @UTF-16@), @SHIFT-JIS@, @UTF-8@ and @AUTO@" \
 	" for automatic detection (default). Same keywords without minus signs" \
 	" are accepted too.\n" \
@@ -12942,6 +13002,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "BMG", "BMG_ENDIAN", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "BMG", "BMG_ENCODING", \
 	"", \
 	"" )
@@ -13268,6 +13332,10 @@
 	"" )
 
 #:def_cmd_opt( "CREATE", "EXPORT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "BMG_ENDIAN", \
 	"", \
 	"" )
 
@@ -19084,9 +19152,9 @@
 #:def_opt( "PERFMON", "perf-mon|perfmon", "CO", \
 	"[=mode]", \
 	"Enable or disable the performance monitor. Mode is one of @OFF@," \
-	" @AUTO@ (default, don't change setting), @ON@ (enable it for Wii" \
-	" only; default, if option is used without parameter) or @FORCE@" \
-	" (enable it for Wii and for Dolphin)." )
+	" @AUTO@ (default, don't change setting), @ON@ (enable it for Wii and" \
+	" Wii U only; default, if option is used without parameter) or @FORCE@" \
+	" (enable it for Wii, Wii U and for Dolphin)." )
 
 #:def_opt( "CUSTOM_TT", "custom-tt|customtt", "CO", \
 	"[=mode]", \
@@ -19099,6 +19167,13 @@
 	"Enable or disable support for Extended Presence Flags. Mode is one of" \
 	" @OFF@, @AUTO@ (default) or @ON@ (default, if option is used without" \
 	" parameter). Disable it only for tests!" )
+
+#:def_opt( "SPEEDOMETER", "speedometer", "CO", \
+	"[=mode]", \
+	"Enable or disable the speedometer. Mode is one of @OFF@, @AUTO@" \
+	" (default, don't change setting), @ON@ (enable it for Wii and WiiU" \
+	" only; default, if option is used without parameter) or @FORCE@" \
+	" (enable it for Wii, Wii U and for Dolphin)." )
 
 #:def_opt( "TRACK_DIR", "track-dir|trackdir", "CP", \
 	"directory", \
@@ -19368,6 +19443,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUMP", "SPEEDOMETER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUMP", "LONG", \
 	"", \
 	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
@@ -19413,6 +19492,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DL", "SPEEDOMETER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DL", "LONG", \
 	"", \
 	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
@@ -19455,6 +19538,10 @@
 	"" )
 
 #:def_cmd_opt( "DLL", "XPFLAGS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLL", "SPEEDOMETER", \
 	"", \
 	"" )
 
@@ -19508,6 +19595,10 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "XPFLAGS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "SPEEDOMETER", \
 	"", \
 	"" )
 
@@ -19596,6 +19687,10 @@
 	"" )
 
 #:def_cmd_opt( "LPAR", "XPFLAGS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LPAR", "SPEEDOMETER", \
 	"", \
 	"" )
 
@@ -19732,6 +19827,30 @@
 	"" )
 
 #:def_cmd_opt( "CREATE", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "ENGINE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "200CC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "PERFMON", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "CUSTOM_TT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "XPFLAGS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "SPEEDOMETER", \
 	"", \
 	"" )
 

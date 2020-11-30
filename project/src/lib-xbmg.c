@@ -323,7 +323,7 @@ enumError LoadXBMG
 	if ( allow_archive && IsArchiveFF(szs.fform_arch) )
 	{
 	    bmg->src_is_arch = true;
-	    IterateFilesSZS(&szs,read_bmg,bmg,false,0,-1,SORT_NONE);
+	    IterateFilesParSZS(&szs,read_bmg,bmg,false,false,0,-1,SORT_NONE);
 	    bmg->fname = szs.fname;
 	    szs.fname = 0;
 	    ResetSZS(&szs);
@@ -380,7 +380,7 @@ enumError ScanRawDataBMG
 	AssignSZS(&szs,true,raw->data,raw->data_size,false,raw->fform,bmg->fname);
 	szs.fname = raw->fname;
 	raw->fname = 0;
-	IterateFilesSZS(&szs,read_bmg,bmg,false,0,-1,SORT_NONE);
+	IterateFilesParSZS(&szs,read_bmg,bmg,false,false,0,-1,SORT_NONE);
 	bmg->fname = szs.fname;
 	szs.fname = 0;
 	noPRINT("BMG/FNAME=%s\n",bmg->fname);
@@ -1400,6 +1400,22 @@ enumError cmd_bmg_identifier()
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    scan options		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptBmgEndian ( ccp arg )
+{
+    const KeywordTab_t *cmd = ScanKeyword(0,arg,TabEndianBMG);
+    if (!cmd)
+    {
+	ERROR0(ERR_SYNTAX,
+		"Option --bmg-endian: Invalid mode: '%s'\n",arg);
+	return 1;
+    }
+
+    opt_bmg_endian = cmd->id;
+    return 0;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 int ScanOptBmgEncoding ( ccp arg )

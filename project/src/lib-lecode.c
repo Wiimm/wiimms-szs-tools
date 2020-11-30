@@ -62,6 +62,11 @@ OffOn_t	opt_200cc		= OFFON_AUTO;
 OffOn_t	opt_perfmon		= OFFON_AUTO;
 OffOn_t	opt_custom_tt		= OFFON_AUTO;
 OffOn_t	opt_xpflags		= OFFON_AUTO;
+OffOn_t	opt_speedo		= OFFON_AUTO;
+
+int	opt_reserved_1b9	= -1;
+int	opt_reserved_1ba	= -1;
+int	opt_reserved_1bb	= -1;
 
 bool	opt_complete		= false;
 
@@ -188,6 +193,43 @@ int ScanOptXPFlags ( ccp arg )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int ScanOptSpeedometer ( ccp arg )
+{
+    const int stat
+	= ScanKeywordOffAutoOn(arg,OFFON_ON,OFFON_ON,"Option --speedo");
+    if ( stat == OFFON_ERROR )
+	return 1;
+
+    opt_speedo = stat;
+    PRINT("SPEEDO=%d\n",opt_speedo);
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptReserved_1b9 ( ccp arg )
+{
+    opt_reserved_1b9 = str2l(arg,0,10);
+    PRINT("RESERVED_1B9=%d\n",opt_reserved_1b9);
+    return 0;
+}
+
+int ScanOptReserved_1ba ( ccp arg )
+{
+    opt_reserved_1ba = str2l(arg,0,10);
+    PRINT("RESERVED_1BA=%d\n",opt_reserved_1ba);
+    return 0;
+}
+
+int ScanOptReserved_1bb ( ccp arg )
+{
+    opt_reserved_1bb = str2l(arg,0,10);
+    PRINT("RESERVED_1BB=%d\n",opt_reserved_1b9);
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 int ScanOptAlias ( ccp arg )
 {
     if ( arg && *arg )
@@ -302,7 +344,7 @@ lpar_mode_t CalcCurrentLparMode ( const le_lpar_t * lp, bool use_limit_param )
 	return temp > lp->limit_mode ? temp : lp->limit_mode;
     }
 
-    if ( lp->enable_perfmon > 1 )
+    if ( lp->enable_perfmon > 1 || lp->enable_speedo > 1 )
 	return LPM_EXPERIMENTAL;
 
     return lp->enable_perfmon || !lp->enable_xpflags
@@ -339,11 +381,15 @@ bool LimitToLparMode ( le_lpar_t * lp, lpar_mode_t lpmode )
 	    { lp->enable_perfmon = 0; modified = true; }
 	if (!lp->enable_xpflags)
 	    { lp->enable_xpflags = 1; modified = true; }
+	if ( lp->enable_speedo > 1 )
+	    { lp->enable_speedo = 1; modified = true; }
     }
     else if ( lpmode == LPM_TESTING )
     {
 	if ( lp->enable_perfmon > 1 )
 	    { lp->enable_perfmon  = 1; modified = true; }
+	if ( lp->enable_speedo > 1 )
+	    { lp->enable_speedo = 1; modified = true; }
     }
 
     return modified;
@@ -554,6 +600,7 @@ static void NormalizeLPAR ( le_lpar_t * lp )
     lp->enable_perfmon		= lp->enable_perfmon < 2 ? lp->enable_perfmon : 2;
     lp->enable_custom_tt	= lp->enable_custom_tt > 0;
     lp->enable_xpflags		= lp->enable_xpflags > 0;
+    lp->enable_speedo		= lp->enable_speedo < 2 ? lp->enable_speedo : 2;
     lp->block_track		= lp->block_track < LE_MAX_BLOCK_TRACK
 				? lp->block_track : LE_MAX_BLOCK_TRACK;
 }
@@ -583,6 +630,9 @@ static void CopyLPAR2Data ( le_analyse_t * ana )
     if ( offsetof(le_binpar_v1_t,enable_xpflags) < ana->param_size )
 	h->enable_xpflags = lp->enable_xpflags;
 
+    if ( offsetof(le_binpar_v1_t,enable_speedo) < ana->param_size )
+	h->enable_speedo = lp->enable_speedo;
+
     if ( offsetof(le_binpar_v1_t,block_track) < ana->param_size )
 	h->block_track = lp->block_track;
 
@@ -591,6 +641,15 @@ static void CopyLPAR2Data ( le_analyse_t * ana )
 
     if ( offsetof(le_binpar_v1_t,chat_mode_2) + sizeof(h->chat_mode_2) <= ana->param_size )
 	write_be16n(h->chat_mode_2,lp->chat_mode_2,BMG_N_CHAT);
+
+    // reserved (for future extensions)
+
+    if ( offsetof(le_binpar_v1_t,reserved_1b9) < ana->param_size )
+	h->reserved_1b9 = lp->reserved_1b9;
+    if ( offsetof(le_binpar_v1_t,reserved_1ba) < ana->param_size )
+	h->reserved_1ba = lp->reserved_1ba;
+    if ( offsetof(le_binpar_v1_t,reserved_1bb) < ana->param_size )
+	h->reserved_1bb = lp->reserved_1bb;
 }
 
 //
@@ -606,7 +665,7 @@ enumError SaveTextLPAR
 {
     DASSERT(lpar);
     DASSERT(fname);
-    PRINT("SaveTextLEX(%s,%d)\n",fname,set_time);
+    PRINT("SaveTextLPAR(%s,%d)\n",fname,set_time);
 
 
     //--- open file
@@ -682,7 +741,12 @@ enumError WriteSectionLPAR
     fprintf(f,"\r\n#\f\r\n%.79s\r\n\r\n[LECODE-PARAMETERS]\r\n",Hash200);
 
     const bool verbose = print_header && !brief_count && !export_count;
+    const bool have_reserved = lpar->reserved_1b9
+			    || lpar->reserved_1ba
+			    || lpar->reserved_1bb;
+
     if (verbose)
+    {
 	fprintf(f,text_lpar_sect_param_cr
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
@@ -690,10 +754,16 @@ enumError WriteSectionLPAR
 		,lpar->enable_perfmon
 		,lpar->enable_custom_tt
 		,lpar->enable_xpflags
+		,lpar->enable_speedo
 		,LE_MAX_BLOCK_TRACK
 		,lpar->block_track
 		);
+
+	if (have_reserved)
+	    fputs(text_lpar_sect_reserved_cr,f);
+    }
     else
+    {
 	fprintf(f,
 	       "\r\n"
 	       "LIMIT-MODE	= %s\r\n\r\n"
@@ -702,6 +772,7 @@ enumError WriteSectionLPAR
 	       "PERF-MONITOR	= %u\r\n"
 	       "CUSTOM-TT	= %u\r\n"
 	       "XPFLAGS		= %u\r\n"
+	       "SPEEDOMETER	= %u\r\n"
 	       "BLOCK-TRACK	= %u\r\n"
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
@@ -709,9 +780,17 @@ enumError WriteSectionLPAR
 		,lpar->enable_perfmon
 		,lpar->enable_custom_tt
 		,lpar->enable_xpflags
+		,lpar->enable_speedo
 		,lpar->block_track
 		);
 
+	if (have_reserved)
+	    fputs("\r\n",f);
+    }
+
+    if ( lpar->reserved_1b9 > 0 ) fprintf(f,"RESERVED-1B9\t= %u\r\n",lpar->reserved_1b9);
+    if ( lpar->reserved_1ba > 0 ) fprintf(f,"RESERVED-1BA\t= %u\r\n",lpar->reserved_1ba);
+    if ( lpar->reserved_1bb > 0 ) fprintf(f,"RESERVED-1BB\t= %u\r\n",lpar->reserved_1bb);
 
     //--- chat modes
 
@@ -941,6 +1020,14 @@ enumError AnalyseLEBinary
 		{
 		    le_binpar_v1_1b8_t *p	= (le_binpar_v1_1b8_t*)(data+off_param);
 		    be16n(ana->lpar.chat_mode_2,p->chat_mode_2,BMG_N_CHAT);
+		}
+		if ( param_size >= sizeof(le_binpar_v1_1bc_t) )
+		{
+		    le_binpar_v1_1bc_t *p	= (le_binpar_v1_1bc_t*)(data+off_param);
+		    ana->lpar.enable_speedo	= p->enable_speedo;
+		    ana->lpar.reserved_1b9	= p->reserved_1b9;
+		    ana->lpar.reserved_1ba	= p->reserved_1ba;
+		    ana->lpar.reserved_1bb	= p->reserved_1bb;
 		}
 		break;
 
@@ -1644,7 +1731,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
     ColorSet_t col;
     SetupColorSet(&col,f);
 
-    fprintf(f,"%*s%sLE-CODE binary, valid=%s, file size: %x/hex = %u%s\n",
+    fprintf(f,"%*s%sLE-CODE binary, valid=%s, file size: %x/hex = %u bytes%s\n",
 		indent,"",
 		col.caption, GetLEValid(ana->valid), ana->size, ana->size,
 		col.reset );
@@ -1688,10 +1775,10 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 		"%*s" "Build number:      %u\n"
 		"%*s" "Base address:      %8x/hex\n"
 		"%*s" "Entry point:       %8x/hex\n"
-		"%*s" "Total size:        %8x/hex = %u\n"
+		"%*s" "Total size:        %8x/hex = %u bytes\n"
 		"%*s" "Offset param:      %8x/hex\n"
-		"%*s" "Region code:       %c  (%s)\n"
-		"%*s" "Debug flag:        %c  (%s)\n"
+		"%*s" "Region code:       %c = %s\n"
+		"%*s" "Debug flag:        %c = %s\n"
 		"%*s" "LE version/phase:  %u\n"
 		,indent-2,"", col.heading, col.reset
 		,indent,"", h->magic
@@ -1744,7 +1831,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 		"\n%*s%s" "Parameters:%s\n"
 		"%*s" "Magic:             %.4s\n"
 		"%*s" "Version:           %u\n"
-		"%*s" "Param size:        %x/hex = %u\n"
+		"%*s" "Param size:        %x/hex = %u bytes\n"
 		,indent-2,"", col.heading, col.reset
 		,indent,"", h->magic
 		,indent,"", ntohl(h->version)
@@ -1760,28 +1847,48 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 	DASSERT(h);
 	fprintf(f,
 		"%*s" "Engine chances:    "
-			"%u + %u + %u = %u (1%s0cc,mirror)\n"
-		"%*s" "200cc:             %u (%sabled)\n"
-		"%*s" "Perform. monitor:  %u (%s)\n"
+			"%u + %u + %u = %u (1%s0cc+mirror=total)\n"
+		"%*s" "200cc:             %u = %sabled\n"
+		"%*s" "Perform. monitor:  %u = %s\n"
 		,indent,""
 			,h->engine[0], h->engine[1], h->engine[2]
 			,h->engine[0] + h->engine[1] + h->engine[2]
-			,h->enable_200cc ? "50cc,20" : "00cc,15"
+			,h->enable_200cc ? "50cc+20" : "00cc+15"
 		,indent,"", h->enable_200cc, h->enable_200cc ? "en" :"dis"
 		,indent,"", h->enable_perfmon,
-			h->enable_perfmon > 1 ? "Wii+Dolphin"
-			: h->enable_perfmon ? "Wii only" :"disabled"
+			h->enable_perfmon > 1 ? "Wii(U)+Dolphin"
+			: h->enable_perfmon ? "Wii(U) only" :"disabled"
 		);
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_37_t)  )
 	    fprintf(f,
-		"%*s" "Custom Timetrial:  %u (%sabled)\n"
-		"%*s" "Extended P-Flags:  %u (%sabled)\n"
-		"%*s" "Block tracks for:  %u races\n"
+		"%*s" "Custom Timetrial:  %u = %sabled\n"
+		"%*s" "Extended P-Flags:  %u = %sabled\n"
+		"%*s" "Block tracks for:  %u race%s\n"
 		,indent,"", h->enable_custom_tt, h->enable_custom_tt ? "en" :"dis"
 		,indent,"", h->enable_xpflags, h->enable_xpflags ? "en" :"dis"
-		,indent,"", h->block_track
+		,indent,"", h->block_track, h->block_track == 1 ? "" : "s"
 		);
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t)  )
+	{
+	    fprintf(f,
+		"%*s" "Speedometer:       %u = %s\n"
+		,indent,"", h->enable_speedo,
+			h->enable_speedo > 1 ? "Wii(U)+Dolphin"
+			: h->enable_speedo ? "Wii(U) only" :"disabled"
+		);
+
+	    if (h->reserved_1b9)
+		fprintf(f,"%*s" "Reserved 1B9:      %u\n",
+			indent,"", h->reserved_1b9 );
+	    if (h->reserved_1ba)
+		fprintf(f,"%*s" "Reserved 1BA:      %u\n",
+			indent,"", h->reserved_1ba );
+	    if (h->reserved_1bb)
+		fprintf(f,"%*s" "Reserved 1BB:      %u\n",
+			indent,"", h->reserved_1bb );
+	}
 
       #if defined(DEBUG) && defined(TEST) && 0
 	const uint po = ana->param_offset;
@@ -2241,6 +2348,30 @@ uint PatchAliasLE ( le_analyse_t * ana, ccp list )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void PatchLPAR ( le_lpar_t * lp )
+{
+    DASSERT(lp);
+
+    if (opt_engine_valid)
+	memcpy(lp->engine,opt_engine,sizeof(lp->engine));
+    if ( opt_200cc != OFFON_AUTO )
+	lp->enable_200cc = opt_200cc >= OFFON_ON;
+    if ( opt_perfmon != OFFON_AUTO )
+	lp->enable_perfmon = opt_perfmon >= OFFON_FORCE ? 2 : opt_perfmon >= OFFON_ON;
+    if ( opt_custom_tt != OFFON_AUTO )
+	lp->enable_custom_tt = opt_custom_tt >= OFFON_ON;
+    if ( opt_xpflags != OFFON_AUTO )
+	lp->enable_xpflags = opt_xpflags >= OFFON_ON;
+    if ( opt_speedo != OFFON_AUTO )
+	lp->enable_speedo = opt_speedo >= OFFON_FORCE ? 2 : opt_speedo >= OFFON_ON;
+
+    if ( opt_reserved_1b9 >= 0 ) lp->reserved_1b9 = opt_reserved_1b9;
+    if ( opt_reserved_1ba >= 0 ) lp->reserved_1ba = opt_reserved_1ba;
+    if ( opt_reserved_1bb >= 0 ) lp->reserved_1bb = opt_reserved_1bb;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void PatchLECODE ( le_analyse_t * ana )
 {
     DASSERT(ana);
@@ -2252,23 +2383,9 @@ void PatchLECODE ( le_analyse_t * ana )
     switch (ana->param_vers)
     {
      case 1:
-	{
-	    if (opt_le_alias)
-		PatchAliasLE(ana,opt_le_alias);
-
-	    le_lpar_t *lp = &ana->lpar;
-	    if (opt_engine_valid)
-		memcpy(lp->engine,opt_engine,sizeof(lp->engine));
-	    if ( opt_200cc != OFFON_AUTO )
-		lp->enable_200cc = opt_200cc >= OFFON_ON;
-	    if ( opt_perfmon != OFFON_AUTO )
-		lp->enable_perfmon = opt_perfmon >= OFFON_FORCE ? 2
-					: opt_perfmon >= OFFON_ON;
-	    if ( opt_custom_tt != OFFON_AUTO )
-		lp->enable_custom_tt = opt_custom_tt >= OFFON_ON;
-	    if ( opt_xpflags != OFFON_AUTO )
-		lp->enable_xpflags = opt_xpflags >= OFFON_ON;
-	}
+	if (opt_le_alias)
+	    PatchAliasLE(ana,opt_le_alias);
+	PatchLPAR(&ana->lpar);
 	break;
     }
 
@@ -2454,7 +2571,12 @@ enumError ScanTextLPAR_PARAM
 	{ "PERF-MONITOR",	SPM_U8,	&lpar->enable_perfmon },
 	{ "CUSTOM-TT",		SPM_S8,	&lpar->enable_custom_tt },
 	{ "XPFLAGS",		SPM_U8,	&lpar->enable_xpflags },
+	{ "SPEEDOMETER",	SPM_U8,	&lpar->enable_speedo },
 	{ "BLOCK-TRACK",	SPM_U8,	&lpar->block_track },
+
+	{ "RESERVED-1B9",	SPM_U8,	&lpar->reserved_1b9 },
+	{ "RESERVED-1BA",	SPM_U8,	&lpar->reserved_1ba },
+	{ "RESERVED-1BB",	SPM_U8,	&lpar->reserved_1bb },
 	{0}
     };
 
@@ -2693,6 +2815,8 @@ static void FixLEXElement_SET1 ( lex_set1_t *set1 )
 	if ( !isnormal(f) || f < 1.0 )
 	    write_bef4(set1->item_factor.v+i,1.0);
     }
+
+    set1->fix_online_delay = set1->fix_online_delay > 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -3042,7 +3166,7 @@ lex_item_t * AppendSet1LEX ( lex_t * lex, bool overwrite )
 {
     lex_set1_t set1;
     memset(&set1,0,sizeof(set1));
-    // AppendElementLE() do call FixLEXItem_SET1()
+    // AppendElementLE() does call FixLEXItem_SET1()
     return AppendElementLEX(lex,LEXS_SET1,&set1,sizeof(set1),false);
 }
 
@@ -3406,6 +3530,7 @@ static enumError ScanLEXElement_SET1
     const ScanParam_t ptab[] =
     {
 	{ "ITEM-POS-FACTOR",	SPM_FLOAT3_BE,	&set1.item_factor },
+	{ "FIX-ONLINE-DELAY",	SPM_U8,		&set1.fix_online_delay },
 	{0}
     };
 
@@ -3942,6 +4067,11 @@ static enumError SaveTextLEX_SET1
 		,bef4(&set1->item_factor.z)
 		);
 
+    if (set1->fix_online_delay)
+    fprintf(f,text_lex_elem_set1_develop_cr
+		,set1->fix_online_delay
+		);
+
     if ( size > sizeof(lex_set1_t) )
     {
 	fputs("\n# Hex dump for unknown settings:\n",f);
@@ -4123,18 +4253,18 @@ enumError SaveTextLEX
 	fprintf(F.f,
 		"%s[SETUP]\r\n\r\n"
 		"TOOL     = %s\r\n"
-		"SYSTEM   = %s\r\n"
+		"SYSTEM2  = %s\r\n"
 		"VERSION  = %s\r\n"
 		"REVISION = %u\r\n"
 		"DATE     = %s\r\n"
 		"\r\n",
 		section_sep,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE );
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE );
     }
     else
     {
 	fprintf(F.f, text_lex_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE );
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE );
 
 	uint i;
 	for ( i = 0; i < lex->item_used; i++ )

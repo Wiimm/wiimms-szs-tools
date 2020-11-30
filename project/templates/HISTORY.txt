@@ -417,6 +417,16 @@ szs v2.19b r8243 - 2020-08-03
  - Bug fix for wlect LPAR: Message functions are not longer printed twice.
 
 
+szs v2.20a r8279 - 2020-10-03
+
+ - Time stamps of the files are now managed in nanoseconds instead of seconds.
+ - wszst ANALYSE: New result "warn=": Print warnings about Item Position Bug
+   and self linked item routes with 1 point.
+ - wszst CHECK: Hints about unusual TEX version 1 are suppressed now if option
+   --verbose is not set.
+ - Fewer program crashes when reading faulty SZS files. 
+
+
 @@MODULE(last-history.txt)@@
 
 

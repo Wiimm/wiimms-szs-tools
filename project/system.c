@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit http://szs.wiimm.de/ for project details and sources.           *
  *                                                                         *
- *   Copyright (c) 2011-2012 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *

@@ -773,6 +773,20 @@ typedef int (*szs_iterator_func)
 );
 
 //-----------------------------------------------------------------------------
+// [[iterator_param_t]]
+
+typedef struct iterator_param_t
+{
+    bool		clean_path;	// true: clean path
+    bool		show_root_node;	// true: show root node
+    bool		cut_files;	// true: cut files into peaces
+    SortMode_t		sort_mode;	// sort files
+}
+iterator_param_t;
+
+#define USE_ITERATOR_PARAM 1
+
+//-----------------------------------------------------------------------------
 // [[szs_iterator_t]]
 
 typedef struct szs_iterator_t
@@ -781,9 +795,14 @@ typedef struct szs_iterator_t
 
     szs_file_t		* szs;		// valid szs pointer
     const endian_func_t	* endian;	// endian functions
+ #if USE_ITERATOR_PARAM
+    iterator_param_t	itpar;		// global parameters
+ #else
+    bool		clean_path;	// true: clean path
     bool		show_root_node;	// true: show root node
     bool		cut_files;	// true: cut files into peaces
     SortMode_t		sort_mode;	// sort files
+ #endif
 
     //--- client values
 
@@ -830,8 +849,8 @@ typedef struct szs_iterator_t
     int			brsub_version;	// 0 or version of parent brsub file
     s16			group;		// group index, type grp_entry_t
     s16			entry;		// entry index, type grp_entry_t
-
-} szs_iterator_t;
+}
+szs_iterator_t;
 
 //-----------------------------------------------------------------------------
 
@@ -852,6 +871,17 @@ int IterateFilesSZS
     szs_file_t		* szs,		// valid szs
     szs_iterator_func	func,		// call back function
     void		* param,	// user defined parameter
+    const iterator_param_t
+			*p_itpar,	// NULL or iteration parameters
+    int			recurse		// 0:off, <0:unlimited, >0:max depth
+);
+
+int IterateFilesParSZS
+(
+    szs_file_t		* szs,		// valid szs
+    szs_iterator_func	func,		// call back function
+    void		* param,	// user defined parameter
+    bool		clean_path,	// true: clean path from ../ and more
     bool		show_root_node,	// true: include root node in iteration
     int			recurse,	// 0:off, <0:unlimited, >0:max depth
     int			cut_files,	// <0:never, =0:auto(first level), >0:always

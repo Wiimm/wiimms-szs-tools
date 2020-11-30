@@ -248,6 +248,9 @@
 		0,
 		"Print BMG messages as UTF-8 text without escape sequences." },
 
+  { T_OPT_CP,	"BMG_ENDIAN",	"bmg-endian|bmgendian",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_CP,	"BMG_ENCODING",	"bmg-encoding|bmgencoding",
 		0, 0 /* copy of wszst */ },
 
@@ -669,6 +672,7 @@
 		" If set, cup names are exported too as MID 4200-423F."
 		" If set twice, cup/track relations are also exported as MID 4300-43FF."},
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
+  { T_COPT,	"BMG_ENDIAN",	0,0,0 },
   { T_COPT,	"BMG_ENCODING",	0,0,0 },
   { T_COPT,	"BMG_INF_SIZE",	0,0,0 },
   { T_COPT,	"BMG_MID",	0,0,0 },
@@ -733,6 +737,7 @@
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPY_GRP,	"TEXTOPT",	0,0,0 },
+  { T_COPT,	"BMG_ENDIAN",	0,0,0 },
   { T_COPT,	"BMG_ENCODING",	0,0,0 },
   { T_COPT,	"BMG_INF_SIZE",	0,0,0 },
   { T_COPT,	"BMG_MID",	0,0,0 },

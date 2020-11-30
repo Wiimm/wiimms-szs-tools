@@ -122,6 +122,7 @@ enumError DiffBMG
 
 //-----------------------------------------------------------------------------
 
+int ScanOptBmgEndian	( ccp arg );
 int ScanOptBmgEncoding	( ccp arg );
 int ScanOptBmgInfSize	( ccp arg, bool is_wbmgt );
 int ScanOptBmgMid	( ccp arg );

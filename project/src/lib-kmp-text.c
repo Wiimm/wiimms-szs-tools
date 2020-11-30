@@ -6369,7 +6369,7 @@ enumError SaveTextKMP
 	fprintf(F.f,
 		"%s[SETUP]\r\n\r\n"
 		"TOOL     = %s\r\n"
-		"SYSTEM   = %s\r\n"
+		"SYSTEM2  = %s\r\n"
 		"VERSION  = %s\r\n"
 		"REVISION = %u\r\n"
 		"DATE     = %s\r\n"
@@ -6381,14 +6381,14 @@ enumError SaveTextKMP
 		"KMP-WIM0          = %d\r\n"
 		"\r\n",
 		section_sep,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE,
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE,
 		kmp->info ? kmp->info : "",
 		kmp->kmp_version, kmp->battle_mode, kmp->wim0_export );
     }
     else
     {
 	fprintf(F.f, text_kmp_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE,
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE,
 		kmp->info ? kmp->info : "",
 		kmp->kmp_version, kmp->battle_mode, kmp->wim0_export );
 

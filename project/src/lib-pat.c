@@ -1907,7 +1907,7 @@ enumError SaveTextPAT
 	fprintf(F.f,
 		"%s[SETUP]\r\n\r\n"
 		"TOOL     = %s\r\n"
-		"SYSTEM   = %s\r\n"
+		"SYSTEM2  = %s\r\n"
 		"VERSION  = %s\r\n"
 		"REVISION = %u\r\n"
 		"DATE     = %s\r\n"
@@ -1917,13 +1917,13 @@ enumError SaveTextPAT
 		"OUTPUT-MODE = %s\r\n"
 		"\r\n",
 		section_sep,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE,
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE,
 		pat->version, pat->n_sect, outmode_info );
     }
     else
     {
 	fprintf(F.f, text_pat_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE,
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE,
 		pat->version, pat->n_sect, outmode_info );
     }
 
