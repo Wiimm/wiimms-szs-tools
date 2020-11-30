@@ -1845,13 +1845,13 @@ static void iterate_wu8
     wu8_info_t		*wu8	// valud wu8
 )
 {
-    IterateFilesSZS(szs,code_wu8_pass_1,wu8,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(szs,code_wu8_pass_1,wu8,false,false,0,-1,SORT_NONE);
     PRINT("PASS1-COUNT = %d, ERR-COUNT = %d\n",wu8->pass1_count,wu8->err_count);
     if (!wu8->err_count)
     {
 	if (!wu8->pass1_count)
 	    load_wu8(wu8,"itembox.brres",0);
-	IterateFilesSZS(szs,code_wu8_pass_2,wu8,false,0,-1,SORT_NONE);
+	IterateFilesParSZS(szs,code_wu8_pass_2,wu8,false,false,0,-1,SORT_NONE);
     }
 }
 
@@ -2406,7 +2406,7 @@ enumError CreateU8
     if ( logging > 0 )
     {
 	printf("----- internal file list -----\n");
-	IterateFilesSZS(szs,PrintFileSZS,0,true,0,0,SORT_NONE);
+	IterateFilesParSZS(szs,PrintFileSZS,0,false,true,0,0,SORT_NONE);
 	printf("------------------------------\n");
     }
 
@@ -2641,7 +2641,7 @@ enumError ExtractSZS
     eszs->szs_found	= true;
     eszs->subpath	= subpath + 1;
     eszs->subpath_len	= strlen(eszs->subpath);
-    IterateFilesSZS(&szs,extract_data_func,eszs,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(&szs,extract_data_func,eszs,false,false,0,-1,SORT_NONE);
 
     PRINT("### FOUND: lev=%d n=%d off=%x siz=%x %s\n",
 	eszs->exlevel, eszs->found_count,
@@ -2916,7 +2916,11 @@ int IterateFilesU8
 
     //----- cut files?
 
+ #if USE_ITERATOR_PARAM
+    if (it->itpar.cut_files)
+ #else
     if (it->cut_files)
+ #endif
     {
 	it->index	= 0;
 	it->fst_item	= 0;
@@ -2955,7 +2959,11 @@ int IterateFilesU8
 
     int stat = 0;
     const u8_node_t *fst;
+ #if USE_ITERATOR_PARAM
+    for ( fst = fst_base + !it->itpar.show_root_node; fst < fst_end && !stat; fst++ )
+ #else
     for ( fst = fst_base + !it->show_root_node; fst < fst_end && !stat; fst++ )
+ #endif
     {
 	while ( fst >= dir_end && stack > stack_buf )
 	{
@@ -2968,9 +2976,27 @@ int IterateFilesU8
 
 	ccp fname = (ccp)fst_end + (ntohl(fst->name_off)&0xffffff);
 	it->name = fname;
-	char * path_dest = it->trail_path = path_ptr;
+	char *path_dest = it->trail_path = path_ptr;
+ #if USE_ITERATOR_PARAM
 	while ( path_dest < path_end && *fname )
-	    *path_dest++ = *fname++;
+	{
+	    const char ch = *fname++;
+	    if ( ch != '\\' && ch != '/' || !it->itpar.clean_path )
+		*path_dest++ = ch;
+	}
+	if ( it->itpar.clean_path && path_dest == path_ptr+2
+			&& path_ptr[0] == '.' && path_ptr[1] == '.' )
+	    path_dest--;
+ #else
+	while ( path_dest < path_end && *fname )
+	{
+	    const char ch = *fname++;
+	    if ( ch != '\\' && ch != '/' || !it->clean_path )
+		*path_dest++ = ch;
+	}
+	if ( it->clean_path && path_dest == path_ptr+2 && path_ptr[0] == '.' && path_ptr[1] == '.' )
+	    path_dest--;
+ #endif
 
 	it->index	= fst - fst_base;
 	it->fst_item	= (u8_node_t*)fst;
@@ -3137,7 +3163,11 @@ static int iterate_sort_files
 	return 0;
     }
 
+ #if USE_ITERATOR_PARAM
+    SortSubFilesSZS(it->szs,it->itpar.sort_mode);
+ #else
     SortSubFilesSZS(it->szs,it->sort_mode);
+ #endif
 
     const szs_subfile_t * ptr = it->szs->subfile.list;
     const szs_subfile_t * end = ptr + it->szs->subfile.used;
@@ -3212,9 +3242,17 @@ static int iterate_sub_files
 	szs_iterator_func it_func = 0;
 	if ( it->recurse_level < it->recurse_max )
 	{
+	 #if USE_ITERATOR_PARAM
+	    it_func = GetIteratorFunction(fform,it->itpar.cut_files);
+	 #else
 	    it_func = GetIteratorFunction(fform,it->cut_files);
+	 #endif
 	}
+     #if USE_ITERATOR_PARAM
+	else if ( it->itpar.cut_files )
+     #else
 	else if ( it->cut_files )
+     #endif
 	{
 	    it_func = GetIteratorFunction(fform,true);
 	    if (GetIteratorFunction(fform,false))
@@ -3262,6 +3300,71 @@ int IterateFilesSZS
     szs_file_t		* szs,		// valid szs
     szs_iterator_func	func,		// call back function
     void		* param,	// user defined parameter
+    const iterator_param_t
+			*p_itpar,		// NULL or iteration parameters
+    int			recurse		// 0:off, <0:unlimited, >0:max depth
+)
+{
+    DASSERT(szs);
+    DASSERT(func);
+
+    iterator_param_t itpar;
+    if (p_itpar)
+	memcpy(&itpar,p_itpar,sizeof(itpar));
+    else
+	memset(&itpar,0,sizeof(itpar));
+
+    PRINT("IterateFilesParSZS(ipar=%d,clean=%d,rec=%d,cut=%d,sort=%d) ff=%s\n",
+	p_itpar!=0, itpar.clean_path, recurse, itpar.cut_files, itpar.sort_mode,
+	GetNameFF(szs->fform_file,szs->fform_arch));
+
+    szs_iterator_func ifunc
+	= GetIteratorFunction( szs->fform_arch, itpar.cut_files>=0 );
+    if (!ifunc)
+	return -1;
+
+    if ( itpar.sort_mode == SORT_NONE && IsBRSUB(szs->fform_arch) )
+	itpar.sort_mode = SORT_OFFSET;
+    const bool sort_files = itpar.sort_mode != SORT_NONE;
+    if ( sort_files && szs->subfile.used )
+	ResetFileSZS(szs,false);
+
+    szs_iterator_t it = {0};
+    it.szs		= szs;
+ #if USE_ITERATOR_PARAM
+    it.itpar		= itpar;
+ #else
+    it.cut_files	= itpar->cut_files > 0;
+    it.sort_mode	= itpar->sort_mode;
+    it.clean_path	= itpar->clean_path;
+    it.show_root_node	= itpar->show_root_node;
+ #endif
+
+    it.func_sub		= func;
+    it.func_sort	= recurse || itpar.cut_files ? iterate_sub_files : func;
+    it.func_it		= sort_files ? iterate_sort_files : it.func_sort;
+    it.param		= param;
+    it.endian		= &be_func;
+    it.recurse_max	= recurse >= 0 ? recurse : INT_MAX;
+    it.group		= GROUP_INVALID;
+    it.entry		= ENTRY_INVALID;
+
+    const int stat = ifunc(&it,false);
+    it.name = 0;
+    *it.path = 0;
+    const int stat_term = it.func_it(&it,true);
+    return stat ? stat : stat_term;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// [[IterateFilesParSZS]]
+
+int IterateFilesParSZS
+(
+    szs_file_t		* szs,		// valid szs
+    szs_iterator_func	func,		// call back function
+    void		* param,	// user defined parameter
+    bool		clean_path,	// true: clean path from ../ and more
     bool		show_root_node,	// true: include root node in iteration
     int			recurse,	// 0:off, <0:unlimited, >0:max depth
     int			cut_files,	// <0:never, =0:auto(first level), >0:always
@@ -3271,9 +3374,18 @@ int IterateFilesSZS
     DASSERT(szs);
     DASSERT(func);
 
-    PRINT("IterateFilesSZS(rec=%d,cut=%d,sort=%d) ff=%s\n",
-	recurse, cut_files, sort_mode,
+ #if USE_ITERATOR_PARAM
+    iterator_param_t itpar	= {0};
+    itpar.cut_files		= cut_files > 0;
+    itpar.sort_mode		= sort_mode;
+    itpar.clean_path		= clean_path;
+    itpar.show_root_node	= show_root_node;
+    return IterateFilesSZS(szs,func,param,&itpar,recurse);
+ #else
+    PRINT("IterateFilesParSZS(clean=%d,rec=%d,cut=%d,sort=%d) ff=%s\n",
+	clean_path,recurse, cut_files, sort_mode,
 	GetNameFF(szs->fform_file,szs->fform_arch));
+
 
     szs_iterator_func ifunc = GetIteratorFunction(szs->fform_arch,cut_files>=0);
     if (!ifunc)
@@ -3285,8 +3397,7 @@ int IterateFilesSZS
     if ( sort_files && szs->subfile.used )
 	ResetFileSZS(szs,false);
 
-    szs_iterator_t it;
-    memset(&it,0,sizeof(it));
+    szs_iterator_t it = {0};
     it.szs		= szs;
     it.cut_files	= cut_files > 0;
     it.sort_mode	= sort_mode;
@@ -3295,6 +3406,7 @@ int IterateFilesSZS
     it.func_it		= sort_files ? iterate_sort_files : it.func_sort;
     it.param		= param;
     it.endian		= &be_func;
+    it.clean_path	= clean_path;
     it.show_root_node	= show_root_node;
     it.recurse_max	= recurse >= 0 ? recurse : INT_MAX;
     it.group		= GROUP_INVALID;
@@ -3305,6 +3417,7 @@ int IterateFilesSZS
     *it.path = 0;
     const int stat_term = it.func_it(&it,true);
     return stat ? stat : stat_term;
+ #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3431,10 +3544,10 @@ uint CollectFilesSZS
 	cr.szs = szs;
 	cr.path_end = cr.path;
 	cr.last_path = EmptyString;
-	IterateFilesSZS(szs,collect_r_func,&cr,false,recurse,cut_files,SORT_NONE);
+	IterateFilesParSZS(szs,collect_r_func,&cr,false,false,recurse,cut_files,SORT_NONE);
     }
     else
-	IterateFilesSZS(szs,collect_func,0,false,0,-1,SORT_NONE);
+	IterateFilesParSZS(szs,collect_func,0,false,false,0,-1,SORT_NONE);
 
     SortSubFilesSZS(szs,sort_mode);
     noPRINT("%d/%d files collected.\n", szs->subfile.used - base, szs->subfile.used );
@@ -3460,7 +3573,7 @@ int IterateFilesData
     szs_file_t szs;
     AssignSZS(&szs,true,(u8*)data,data_size,false,fform,fname);
     const int stat
-	= IterateFilesSZS ( &szs, func, param, true, -1, 1, SORT_OFFSET );
+	= IterateFilesParSZS ( &szs, func, param, false, true, -1, 1, SORT_OFFSET );
     ResetSZS(&szs);
     return stat;
 }
@@ -3567,7 +3680,11 @@ int CutFilesBRSUB
 				(brsub_header_t*)data,n_grp,it->endian);
     u32 name_off = bcut.endian->rd32(data+brsub_header_size-4);
     ccp name_str = GETSTR(name_off,0);
+ #if USE_ITERATOR_PARAM
+    if (it->itpar.cut_files)
+ #else
     if (it->cut_files)
+ #endif
     {
 	it->name = name_str;
 	stat = func(&bcut,GROUP_IDX_BRSUB_HEADER,ENTRY_IDX_ETC);
@@ -3615,7 +3732,11 @@ int CutFilesBRSUB
 	    if ( x_size > bg_size )
 		goto plain;
 
+	 #if USE_ITERATOR_PARAM
+	    if (it->itpar.cut_files)
+	 #else
 	    if (it->cut_files)
+	 #endif
 	    {
 		bcut.path_end = it->path
 		    + snprintf(it->path,sizeof(it->path),".%s.s%0*u%s.header.n%u.bin",
@@ -3629,8 +3750,17 @@ int CutFilesBRSUB
 
 	    bcut.eptr = bcut.gptr->entry + 1;
 	    int cur_entry;
+	    const u8* max_eptr = bcut.data + bcut.size - sizeof(*bcut.eptr);
 	    for ( cur_entry = 0; cur_entry < bg_n_entry; cur_entry++, bcut.eptr++ )
 	    {
+		if ( (u8*)bcut.eptr > max_eptr )
+		{
+		    ERROR0(ERR_WARNING,
+			"Invalid offset for BRSUB file => %u of %u entries ignored: %s%s%s\n",
+			bg_n_entry - cur_entry, bg_n_entry,
+			it->szs->fname, *it->szs->fname ? "/" : "", it->path );
+		    break;
+		}
 		u32 data_off = bcut.endian->rd32(&bcut.eptr->data_off);
 		u32 name_off = bcut.endian->rd32(&bcut.eptr->name_off);
 		ccp name_ptr = GETSTR(name_off+((u8*)bcut.gptr-data),"");
@@ -3698,7 +3828,11 @@ int CutFilesBRSUB
 	}
     }
 
+ #if USE_ITERATOR_PARAM
+    if ( it->itpar.cut_files && bcut.brsub_size < bcut.size )
+ #else
     if ( it->cut_files && bcut.brsub_size < bcut.size )
+ #endif
     {
 	it->off	 = bcut.brsub_size;
 	it->size = bcut.size - bcut.brsub_size;

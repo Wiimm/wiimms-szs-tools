@@ -26,6 +26,12 @@ have_fuse=0
 [[ $NO_FUSE != 1 && -r /usr/include/fuse.h || -r /usr/local/include/fuse.h ]] \
 	&& have_fuse=1
 
+have_md5=0
+[[ -r /usr/include/openssl/md5.h ]] && have_md5=1
+
+have_sha=0
+[[ -r /usr/include/openssl/sha.h ]] && have_sha=1
+
 #---
 
 if [[ $M32 = 1 ]]
@@ -51,7 +57,7 @@ fi
 	&& defines="$defines -DHAVE_POSIX_FALLOCATE=1"
 
 gcc $xflags system.c -o system.tmp && ./system.tmp >Makefile.setup
-rm -f system.tmp
+#rm -f system.tmp
 SYSTEM=$(awk '$1=="SYSTEM" {print $3}' Makefile.setup)
 #echo "SYSTEM=|$SYSTEM|" >&2
 
@@ -171,6 +177,8 @@ cat <<- ---EOT--- >>Makefile.setup
 
 	FORCE_M32	:= $force_m32
 	HAVE_FUSE	:= $have_fuse
+	HAVE_MD5	:= $have_md5
+	HAVE_SHA	:= $have_sha
 	STATIC		:= $STATIC
 	XFLAGS		+= $xflags
 	DEFINES1	:= $defines -DDEBUG_ASSERT=1

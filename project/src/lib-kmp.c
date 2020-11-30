@@ -6571,7 +6571,7 @@ static void check_ph
 		if ( ph->pt_len == 1 )
 		    print_check_error(chk,CMOD_WARNING,sect_ph,i,0,
 			"Self linked item route with exact 1 point:"
-			" This will force a heavy lag if a red shell arrive.\n" );
+			" This will force a heavy lag if a red shell arrives.\n" );
 		else
 		    print_check_error(chk,CMOD_HINT,sect_ph,i,0,
 			"Self linked item route.\n" );

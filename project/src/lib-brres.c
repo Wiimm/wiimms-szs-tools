@@ -829,7 +829,11 @@ static int iterate_brres_group
     const brres_entry_t * entry_end	= entry + n_entries;
     int stat				= 0;
 
+ #if USE_ITERATOR_PARAM
+    if (it->itpar.cut_files)
+ #else
     if (it->cut_files)
+ #endif
     {
 	it->index	= 0;
 	it->fst_item	= 0;
@@ -957,7 +961,11 @@ int IterateFilesBRRES
 
     //----- cut files?
 
+ #if USE_ITERATOR_PARAM
+    if (it->itpar.cut_files)
+ #else
     if (it->cut_files)
+ #endif
     {
 	it->index	= 0;
 	it->fst_item	= 0;
@@ -1326,12 +1334,16 @@ int IterateStringsBRSUB
 
     it->fform = FF_UNKNOWN;
 
-    szs_iterator_t it2;
-    memset(&it2,0,sizeof(it2));
+    szs_iterator_t it2 = {0};
     it2.szs		= it->szs;
     it2.size		= it->file_size;
     it2.endian		= it->endian;
+    //it2.clean_path	= ;
+ #if USE_ITERATOR_PARAM // [[itpar]] copy itpar
+    it2.itpar.cut_files	= true;
+ #else
     it2.cut_files	= true;
+ #endif
     CutFilesBRSUB( &it2, brsub_string_func, it, 0, 0 );
     return count + it2.index;
 }
@@ -1721,7 +1733,7 @@ int DumpStructureBRRES
     if ( szs->fform_arch != FF_BRRES )
 	return -1;
 
-    return IterateFilesSZS(szs,dump_func,f,false,0,-1,SORT_NONE);
+    return IterateFilesParSZS(szs,dump_func,f,false,false,0,-1,SORT_NONE);
 }
 
 //
@@ -1982,7 +1994,7 @@ enumError CreateNameRef
     nr->brief		= brief;
 
     if ( szs->fform_arch == FF_BRRES )
-	IterateFilesSZS( szs, iterate_nr_brres,nr,  true,0,-1, SORT_NONE );
+	IterateFilesParSZS( szs, iterate_nr_brres,nr, false,true,0,-1, SORT_NONE );
     else
 	iterate_nr_brsub(nr,szs,szs->data,szs->file_size,FF_UNKNOWN);
 #if 0

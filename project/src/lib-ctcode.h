@@ -305,7 +305,7 @@ typedef struct ctcode_t
     //--- text scan support
 
     u8		used_slot[CODE_MAX_TRACKS];	// 0:free, 1:used, 2:reserved
-    u8		next_slot[CODE_MAX_TRACKS];	// predefined slots
+    u16		next_slot[CODE_MAX_TRACKS];	// predefined slots
     u8		force_slot[CODE_MAX_TRACKS];	// 0:std, 1:force slot usage
     uint	n_next_slot;			// >0: index-1 into 'next_slot' and 'force_slot'
     uint	tracks_defined;			// number of really defined tracks

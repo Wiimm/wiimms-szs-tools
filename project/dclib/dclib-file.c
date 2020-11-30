@@ -4136,6 +4136,81 @@ int ScanSections
 ///////////////			scan configuration		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+void ResetRestoreState ( RestoreState_t *rs )
+{
+    if (rs)
+    {
+	ResetParamField(&rs->param);
+	InitializeRestoreState(rs);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanRestoreState
+(
+    RestoreState_t	*rs,		// valid control
+    void		*data,		// file data, modified, terminated by NULL or LF
+    uint		size,		// size of file data
+    void		**end_data	// not NULL: store end of analysed here
+)
+{
+    DASSERT(rs);
+    DASSERT(data||!size);
+    if (!size)
+	return ERR_OK;
+
+    char *ptr = data;
+    char *end = ptr + size;
+
+    if (!rs->param.field)
+	InitializeParamField(&rs->param);
+
+    //--- scan name=value
+
+    while ( ptr < end )
+    {
+	//--- skip lines and blanks
+	while ( ptr < end && (uchar)*ptr <= ' ' )
+	    ptr++;
+
+	if ( *ptr == '[' )
+	    break;
+
+	//--- scan name
+	ccp name = ptr;
+	while ( *ptr >= '!' && *ptr <= '~' && *ptr != '=' )
+	    ptr++;
+	char *name_end = ptr;
+
+	//--- scan param
+	while ( *ptr == ' ' || *ptr == '\t' )
+	    ptr++;
+	if ( *ptr != '=' )
+	    continue;
+	if ( *++ptr == ' ' ) // skip max 1 space
+	    ptr++;
+
+	ccp value = ptr;
+	while ( (uchar)*ptr >= ' ' || *ptr == '\t' )
+	    ptr++;
+
+	*name_end = *ptr = 0;
+	InsertParamField(&rs->param,name,false,0,value);
+
+	//--- next line
+	while ( ptr < end && *ptr && *ptr != '\n' )
+	    ptr++;
+    }
+
+    if (end_data)
+	*end_data = ptr;
+
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 enumError RestoreState
 (
     const RestoreStateTab_t
@@ -4267,8 +4342,9 @@ enumError RestoreState
 	}
 	#endif
 
-	tab->func(&rs,tab->user_table);
-	if ( log_mode & RSL_UNUSED_NAMES )
+	if (tab->func)
+	    tab->func(&rs,tab->user_table);
+	if ( log_file && log_mode & RSL_UNUSED_NAMES )
 	{
 	    ParamFieldItem_t *ptr = rs.param.field, *end;
 	    for ( end = ptr + rs.param.used; ptr < end; ptr++ )
@@ -4285,7 +4361,7 @@ enumError RestoreState
 				ptr->key, len, (ccp)ptr->data );
 		}
 	}
-	ResetParamField(&rs.param);
+	ResetRestoreState(&rs);
     }
 
     return ERR_OK;
@@ -5587,6 +5663,269 @@ ccp PrintOpenFiles ( bool count_current )
 	stat_file_count.cur_limit,
 	stat_file_count.max_limit );
 };
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			PrintScript			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetNamePSFF ( PrintScriptFF fform )
+{
+    switch(fform)
+    {
+	case PSFF_UNKNOWN:	return "TEXT";
+	case PSFF_JSON:		return "JSON";
+	case PSFF_BASH:		return "BASH";
+	case PSFF_SH:		return "SH";
+	case PSFF_PHP:		return "PHP";
+	case PSFF_MAKEDOC:	return "MDOC";
+    }
+    return "???";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void PrintScriptHeader ( PrintScript_t *ps )
+{
+    DASSERT(ps);
+
+    ps->index = 0;
+    ps->add_index = false;
+    ps->sep[0] = ps->sep[1] = 0;
+
+    if ( ps->f )
+    {
+	switch (ps->fform)
+	{
+	    case PSFF_JSON:
+		if (ps->create_array)
+		    fputs("[",ps->f);
+		break;
+
+	    case PSFF_SH:
+	       ps->add_index =ps->create_array;
+	       break;
+
+	    case PSFF_PHP:
+		if (ps->create_array)
+		    fprintf(ps->f,"$%s = array();\n\n",ps->varname);
+		break;
+
+	    case PSFF_MAKEDOC:
+		if (ps->create_array)
+		    fprintf(ps->f,"%s = @LIST\n\n",ps->varname);
+		break;
+
+	    default:
+		//fputc('\n',ps->f);
+		break;
+	}
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void PrintScriptFooter ( PrintScript_t *ps )
+{
+    DASSERT(ps);
+
+    if (ps->f)
+    {
+	switch (ps->fform)
+	{
+	    case PSFF_JSON:
+		if (ps->create_array)
+		    fputs("]\n",ps->f);
+		break;
+
+	    case PSFF_SH:
+		if (ps->create_array)
+		    fprintf(ps->f,"%s_N=%u\n\n",ps->varname,ps->index);
+		break;
+
+	    case PSFF_PHP:
+		fputs("?>\n",ps->f);
+		break;
+
+	    default:
+		break;
+	}
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int PutScriptVars
+(
+    PrintScript_t	*ps,		// valid control struct
+    uint		mode,		// bit field: 1=open var, 2:close var
+    ccp			text		// text with line of format NAME=VALUE
+)
+{
+    FILE * f = ps ? ps->f : 0;
+    if (!f)
+	return 0;
+
+
+    //--- begin of output
+
+    if ( mode & 1 )
+    {
+	if ( ps->add_index )
+	    snprintf( ps->prefix, sizeof(ps->prefix),
+		"%s_%u", ps->varname, ps->index );
+	else
+	    snprintf( ps->prefix, sizeof(ps->prefix),
+		"%s", ps->varname );
+
+	switch (ps->fform)
+	{
+	 case PSFF_JSON:
+	    fprintf(f,"%s{",ps->sep);
+	    ps->sep[0] = ',';
+	    break;
+
+	 case PSFF_PHP:
+	    fputs("$d = new \\stdClass;\n",f);
+	    break;
+
+	 case PSFF_MAKEDOC:
+	    fprintf(f,"d = @MAP\n");
+	    break;
+
+	 default:
+	    break;
+	}
+    }
+
+
+    //--- print var lines
+
+    if (!text)
+	text = "";
+
+    uint count;
+    for( count = 0; ; count++ )
+    {
+	while ( *text && (uchar)*text <= ' ' )
+	    text++;
+
+	ccp ptr = text;
+	while ( *ptr && *ptr != '=' )
+	    ptr++;
+	if ( *ptr != '=' || ptr == text )
+	    break;
+
+	ccp param = ptr++;
+	while ( (uchar)*ptr >= ' ' )
+	    ptr++;
+
+	switch (ps->fform)
+	{
+	 case PSFF_JSON:
+	    fprintf(f, "%s\"%.*s\":%.*s",
+			count ? "," : "",
+			(int)( param - text ), text,
+			(int)( ptr - param - 1 ), param+1 );
+	    break;
+
+	 case PSFF_BASH:
+	    if (ps->create_array)
+	    {
+		fprintf(f, "%s_%.*s%s=(%.*s)\n", ps->prefix,
+			(int)( param - text ), text,
+			ps->index ? "+" : "",
+			(int)( ptr - param - 1 ), param+1 );
+		break;
+	    }
+	    // fall through
+
+	 case PSFF_SH:
+	    fprintf(f, "%s_%.*s=%.*s\n", ps->prefix,
+			(int)( param - text ), text,
+			(int)( ptr - param - 1 ), param+1 );
+	    break;
+
+	 case PSFF_PHP:
+	    fprintf(f, "$d->%.*s = %.*s;\n",
+			(int)( param - text ), text,
+			(int)( ptr - param - 1 ), param+1 );
+	    break;
+
+	 case PSFF_MAKEDOC:
+	    fprintf(f, "d[\"%.*s\"] = %.*s\n",
+			(int)( param - text ), text,
+			(int)( ptr - param - 1 ), param+1 );
+	    break;
+
+	 default:
+	    fprintf(f, "%20.*s = %.*s\n",
+			(int)( param - text ), text,
+			(int)( ptr - param - 1 ), param+1 );
+	    break;
+	}
+
+	text = ptr;
+    }
+
+
+    //--- end of output
+
+    if ( mode & 2 )
+    {
+	switch (ps->fform)
+	{
+	 case PSFF_JSON:
+	    fputs("}\n",f);
+	    break;
+
+	 case PSFF_PHP:
+	    fprintf(f, "$%s%s = $d;\n\n",
+			ps->prefix, ps->create_array ? "[]" : "" );
+	    break;
+
+	 case PSFF_MAKEDOC:
+	    fprintf(f, "%s %s= move(d);\n\n",
+			ps->prefix, ps->create_array ? "#" : "" );
+	    break;
+
+	 default:
+	    fputc('\n',f);
+	    break;
+	}
+	fflush(f);
+    }
+
+    ps->index++;
+    return count;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int PrintScriptVars
+(
+    PrintScript_t	*ps,		// valid control struct
+    uint		mode,		// bit field: 1=open var, 2:close var
+    ccp			format,		// format of message
+    ...					// arguments
+
+)
+{
+    DASSERT(ps);
+
+    char buf[5000];
+    if (format)
+    {
+	va_list arg;
+	va_start(arg,format);
+	vsnprintf(buf,sizeof(buf),format,arg);
+	va_end(arg);
+    }
+    else
+	*buf = 0;
+
+    return PutScriptVars(ps,mode,buf);
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////

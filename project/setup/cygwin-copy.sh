@@ -56,9 +56,18 @@ done
 #------------------------------------------------------------------------------
 # copy needed cygwin dlls
 
+CYGCHECK="$( which cygcheck 2>/dev/null )"
+
 for tool in $CYGWIN_TOOLS
 do
-    ldd "$BIN_PATH/$tool.exe" | grep -F "=> $CYGWIN_DIR/" | awk '{print $1}'
+    if [[ $CYGCHECK ]]
+    then
+	"$CYGCHECK" "$BIN_PATH/$tool.exe" \
+		| grep -E 'cygwin.*\\bin\\.*\.dll' \
+		| sed 's/.*\\//'
+    else
+	ldd "$BIN_PATH/$tool.exe" | grep -F "=> $CYGWIN_DIR/" | awk '{print $1}'
+    fi
 done | sort | uniq | while read dll
 do
     cp --preserve=time "$CYGWIN_DIR/$dll" "$BIN_PATH" || exit 1

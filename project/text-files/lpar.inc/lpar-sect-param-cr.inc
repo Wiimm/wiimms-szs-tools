@@ -24,11 +24,11 @@ LIMIT-MODE	= %s
 # expected. If 200cc is enabled, the values are for »150cc,200cc,mirror«. Any
 # number is accepted. They are normalized to get a total of 100 percent.
 # Use »0,1,0« to force 150cc. Use »0,0,0« to reset to Nintendo's VR based
-# choice. Option --engine will override these settings.
+# choice. Option --engine will overrides these settings.
 
 ENGINE		= %u,%u,%u
 
-# Enable (1) or disable (0) 200cc support. Option --200cc will override this
+# Enable (1) or disable (0) 200cc support. Option --200cc will overrides this
 # setting. LE-CODE hasn't implemented this feature yet!
 
 ENABLE-200CC	= %u
@@ -36,20 +36,27 @@ ENABLE-200CC	= %u
 # Enable (1) or disable (0) the performance monitor at Wii and Wii U. Enabling
 # is only possible if LIMIT-MODE is LE$TESTING or LE$EXPERIMENTAL. The special
 # value 2 enables it for Dolphin too, but only on LE$EXPERIMENTAL. It doesn't
-# work correctly with Dolphin. Option --perf-mon will override this setting.
+# work correctly with Dolphin. Option --perf-mon will overrides this setting.
 
 PERF-MONITOR	= %u
 
 # Enable (1) or disable (0) Time Trial for custom tracks. Option --custom-tt
-# will override this setting.
+# will overrides this setting.
 
 CUSTOM-TT	= %u
 
 # Enable (1) or disable (0) support for Extended Presence Flags. Disable it
 # only for tests! If LIMIT-MODE==LE$PRODUCTIVE, XPFLAGS is always enabled.
-# Option --xpflags will override this setting.
+# Option --xpflags will overrides this setting.
 
 XPFLAGS		= %u
+
+# Enable (1) or disable (0) the speedometer at Wii and Wii U. The special
+# value 2 enables it for Dolphin too, but only on LE$EXPERIMENTAL. It doesn't
+# work correctly with Dolphin. If enabled, the speedometer is displayed at the
+# bottom right. Option --speedometer will overrides this setting.
+
+SPEEDOMETER	= %u
 
 # Define the number of races that a previously used track is blocked. LE-CODE
 # will try to find another possible track among the selected tracks. Values

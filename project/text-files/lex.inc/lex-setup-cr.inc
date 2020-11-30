@@ -14,4 +14,4 @@ VERSION  = %s
 REVISION = %u
 DATE     = %s
 
-# Statistics: List of all included sections:
+# Statistics: List of all included sections (magic text+hex,size):

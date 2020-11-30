@@ -49,7 +49,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #define TITLE WLECT_SHORT ": " WLECT_LONG " v" VERSION " r" REVISION \
-	" " SYSTEM " - " AUTHOR " - " DATE
+	" " SYSTEM2 " - " AUTHOR " - " DATE
 
 static const char autoname[] = "/course.lex";
 
@@ -88,7 +88,7 @@ static void version_exit()
     if ( brief_count > 1 )
 	fputs( VERSION "\n", stdout );
     else if (brief_count)
-	fputs( VERSION " r" REVISION " " SYSTEM "\n", stdout );
+	fputs( VERSION " r" REVISION " " SYSTEM2 "\n", stdout );
     else if (print_sections)
 	print_version_section(true);
     else if (long_count)
@@ -814,6 +814,7 @@ static enumError cmd_create()
 	{
 	    le_lpar_t lpar;
 	    InitializeLPAR(&lpar,true);
+	    PatchLPAR(&lpar);
 	    lpar.limit_mode = LPM_FORCE_AUTOMATIC;
 	    err = SaveTextLPAR(&lpar,"-",false);
 	}
@@ -1095,6 +1096,10 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_PERFMON:	err += ScanOptPerfMon(optarg); break;
 	case GO_CUSTOM_TT:	err += ScanOptCustomTT(optarg); break;
 	case GO_XPFLAGS:	err += ScanOptXPFlags(optarg); break;
+	case GO_SPEEDOMETER:	err += ScanOptSpeedometer(optarg); break;
+	case GO_RESERVED_1B9:	err += ScanOptReserved_1b9(optarg); break;
+	case GO_RESERVED_1BA:	err += ScanOptReserved_1ba(optarg); break;
+	case GO_RESERVED_1BB:	err += ScanOptReserved_1bb(optarg); break;
 
 	case GO_TRACK_DIR:	opt_track_dest = optarg; break;
 	case GO_COPY_TRACKS:	err += ScanOptTrackSource(optarg,TFMD_COPY); break;
@@ -1123,6 +1128,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 
  #if 0 // BMG disabled for wlect
 	case GO_RAW:		raw_mode = true; break;
+	case GO_BMG_ENDIAN:	err += ScanOptBmgEndian(optarg); break;
 	case GO_BMG_ENCODING:	err += ScanOptBmgEncoding(optarg); break;
 	case GO_BMG_INF_SIZE:	err += ScanOptBmgInfSize(optarg,false); break;
 	case GO_BMG_MID:	err += ScanOptBmgMid(optarg); break;

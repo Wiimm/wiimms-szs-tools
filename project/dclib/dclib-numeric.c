@@ -711,13 +711,29 @@ void write_lef4n ( float32 * dest, const float32 * src, int n )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static inline u16 ident16 ( u16 data ) { return data; }
+static inline u32 ident32 ( u32 data ) { return data; }
+static inline u64 ident64 ( u64 data ) { return data; }
+
+static inline u16 reverse16 ( u16 data ) { return swap16(&data); }
+static inline u32 reverse32 ( u32 data ) { return swap32(&data); }
+static inline u64 reverse64 ( u64 data ) { return swap64(&data); }
+
 const endian_func_t be_func =
 {
     {0xfe,0xff}, true, false, DC_BIG_ENDIAN,
     be16, be24, be32, be40, be48, be56, be64, bef4, bef8,
     write_be16, write_be24, write_be32,
     write_be40, write_be48, write_be56, write_be64,
-    write_bef4, write_bef8
+    write_bef4, write_bef8,
+
+ #if IS_BIG_ENDIAN
+    ident16, ident32, ident64,
+    ident16, ident32, ident64,
+ #else
+    reverse16, reverse32, reverse64,
+    reverse16, reverse32, reverse64,
+ #endif
 };
 
 const endian_func_t le_func =
@@ -726,7 +742,15 @@ const endian_func_t le_func =
     le16, le24, le32, le40, le48, le56, le64, lef4, lef8,
     write_le16, write_le24, write_le32,
     write_le40, write_le48, write_le56, write_le64,
-    write_lef4, write_lef8
+    write_lef4, write_lef8,
+
+ #if IS_LITTLE_ENDIAN
+    ident16, ident32, ident64,
+    ident16, ident32, ident64,
+ #else
+    reverse16, reverse32, reverse64,
+    reverse16, reverse32, reverse64,
+ #endif
 };
 
 const endian_func_t * GetEndianFunc ( const void * byte_order_mark )
@@ -851,6 +875,72 @@ int CheckIndex2End ( int max, int * p_begin, int * p_end )
 
     *p_begin = begin;
     *p_end   = end;
+    return end - begin;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int CheckIndexC ( int max, int * p_begin, int count )
+{
+    DASSERT( max >= 0 );
+    DASSERT(p_begin);
+
+    int begin = *p_begin, end = begin + count;
+    if ( begin < 0 )
+    {
+	begin += max;
+	end = begin + count;
+	if ( begin < 0 )
+	    begin = 0;
+    }
+    else if ( begin > max )
+	begin = max;
+
+    if ( end < 0 )
+	end = 0;
+    else if ( end > max )
+	end = max;
+
+    if ( end < begin )
+    {
+	*p_begin = end;
+	return begin-end;
+    }
+
+    *p_begin = begin;
+    return end - begin;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int CheckIndexCEnd ( int max, int * p_begin, int count )
+{
+    DASSERT( max >= 0 );
+    DASSERT(p_begin);
+
+    int begin = *p_begin, end = begin + count;
+    if ( begin <= 0 )
+    {
+	begin += max;
+	end = begin + count;
+	if ( begin < 0 )
+	    begin = 0;
+    }
+    else if ( begin > max )
+	begin = max;
+
+    if ( end < 0 )
+	end = 0;
+    else if ( end > max )
+	end = max;
+
+    if ( end < begin )
+    {
+	*p_begin = end;
+	return begin-end;
+    }
+
+    *p_begin = begin;
     return end - begin;
 }
 

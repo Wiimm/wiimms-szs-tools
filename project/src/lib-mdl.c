@@ -1629,7 +1629,7 @@ enumError IterateRawDataMDL
     szs_file_t szs;
 // [[fname+]]
     AssignSZS(&szs,true,raw->data,raw->data_size,false,raw->fform,raw->fname);
-    IterateFilesSZS(&szs,iter_raw_data_mdl,&iparam,false,-1,-1,SORT_NONE);
+    IterateFilesParSZS(&szs,iter_raw_data_mdl,&iparam,false,false,-1,-1,SORT_NONE);
     ResetSZS(&szs);
     return iparam.max_err;
 }
@@ -2505,7 +2505,7 @@ enumError SaveTextMDL
 	fprintf(F.f,
 		"%s[SETUP]\r\n\r\n"
 		"TOOL     = %s\r\n"
-		"SYSTEM   = %s\r\n"
+		"SYSTEM2  = %s\r\n"
 		"VERSION  = %s\r\n"
 		"REVISION = %u\r\n"
 		"DATE     = %s\r\n"
@@ -2515,14 +2515,14 @@ enumError SaveTextMDL
 		"N-SECTIONS  = %2u\r\n"
 		"\r\n",
 		section_sep,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE,
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE,
 		mdl->name ? mdl->name : "",
 		mdl->version, mdl->n_sect );
     }
     else
     {
 	fprintf(F.f, text_mdl_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE,
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE,
 		mdl->name ? mdl->name : "",
 		mdl->version, mdl->n_sect );
     }
@@ -3478,8 +3478,8 @@ static int find_minimap_brres
 	PRINT("MDL FOUND: %x |%s|%s|  fn=%s\n",it->fform,it->path,it->name,it->szs->fname);
 	szs_file_t szs;
 	InitializeSubSZS(&szs,it->szs,it->off,it->size,FF_MDL,it->path,false);
-	int stat = IterateFilesSZS ( &szs, find_minimap_mdl, it->param,
-					true, 0, 1, SORT_NONE );
+	int stat = IterateFilesParSZS ( &szs, find_minimap_mdl, it->param,
+					false, true, 0, 1, SORT_NONE );
 	ResetSZS(&szs);
 	return stat;
     }
@@ -3507,8 +3507,8 @@ static int find_minimap_szs
 	PRINT("MAP MODEL FOUND: %x |%s|%s|\n",it->fform,it->path,it->name);
 	szs_file_t szs;
 	InitializeSubSZS(&szs,it->szs,it->off,it->size,FF_BRRES,it->path,false);
-	int stat = IterateFilesSZS ( &szs, find_minimap_brres, it->param,
-					true, 0, -1, SORT_NONE );
+	int stat = IterateFilesParSZS ( &szs, find_minimap_brres, it->param,
+					false, true, 0, -1, SORT_NONE );
 	ResetSZS(&szs);
 	return stat;
     }
@@ -3532,11 +3532,11 @@ bool FindMinimapData
     mmap->max.x = mmap->max.y = mmap->max.z = -INFINITY;
 
     if ( szs->fform_arch == FF_MDL )
-	IterateFilesSZS ( szs, find_minimap_mdl, mmap, true, 0, 1, SORT_NONE );
+	IterateFilesParSZS ( szs, find_minimap_mdl, mmap, false, true, 0, 1, SORT_NONE );
     else if ( szs->fform_arch == FF_BRRES )
-	IterateFilesSZS ( szs, find_minimap_brres, mmap, true, 0, -1, SORT_NONE );
+	IterateFilesParSZS ( szs, find_minimap_brres, mmap, false, true, 0, -1, SORT_NONE );
     else if (IsArchiveFF(szs->fform_arch))
-	IterateFilesSZS ( szs, find_minimap_szs, mmap, true, 0, -1, SORT_NONE );
+	IterateFilesParSZS ( szs, find_minimap_szs, mmap, false, true, 0, -1, SORT_NONE );
 
     PRINT_IF(mmap->posLD," posLD found, in=%d\n",
 	    (u8*)mmap->posLD >= szs->data && (u8*)mmap->posLD < szs->data + szs->size );
@@ -3883,8 +3883,8 @@ static int ana_slot42_brres
 	szs_file_t szs;
 // [[fname+]]
 	InitializeSubSZS(&szs,it->szs,it->off,it->size,FF_MDL,it->path,false);
-	int stat = IterateFilesSZS ( &szs, ana_slot42_mdl, it->param,
-					true, 0, 1, SORT_NONE );
+	int stat = IterateFilesParSZS ( &szs, ana_slot42_mdl, it->param,
+					false, true, 0, 1, SORT_NONE );
 
 	Slot42MaterialStat_t *stat42 = it->param;
 	DASSERT(stat42);
@@ -3963,8 +3963,8 @@ static int ana_slot42_szs
 	szs_file_t szs;
 // [[fname+]]
 	InitializeSubSZS(&szs,it->szs,it->off,it->size,FF_BRRES,it->path,false);
-	int stat = IterateFilesSZS ( &szs, ana_slot42_brres, it->param,
-					true, 0, -1, SORT_NONE );
+	int stat = IterateFilesParSZS ( &szs, ana_slot42_brres, it->param,
+					false, true, 0, -1, SORT_NONE );
 	ResetSZS(&szs);
 	return stat;
     }
@@ -3987,11 +3987,11 @@ Slot42MaterialStat_t GetSlot42SupportSZS ( struct szs_file_t *szs )
     PRINT("CHECK MOONVIEW [%zu] %s\n",szs->size,GetNameFF(szs->fform_arch,0));
 
     if ( szs->fform_arch == FF_MDL )
-	IterateFilesSZS ( szs, ana_slot42_mdl, &stat42, true, 0, 1, SORT_NONE );
+	IterateFilesParSZS ( szs, ana_slot42_mdl, &stat42, false, true, 0, 1, SORT_NONE );
     else if ( szs->fform_arch == FF_BRRES )
-	IterateFilesSZS ( szs, ana_slot42_brres, &stat42, true, 0, -1, SORT_NONE );
+	IterateFilesParSZS ( szs, ana_slot42_brres, &stat42, false, true, 0, -1, SORT_NONE );
     else if (IsArchiveFF(szs->fform_arch))
-	IterateFilesSZS ( szs, ana_slot42_szs, &stat42, true, 0, -1, SORT_NONE );
+	IterateFilesParSZS ( szs, ana_slot42_szs, &stat42, false, true, 0, -1, SORT_NONE );
 
     PRINT("MOONVIEW [%zu] %s: found=%x, mod=%x -> all=%d, content=%d -> ok=%d\n",
 		szs->size, GetNameFF(szs->fform_arch,0),
@@ -4540,7 +4540,7 @@ uint PatchRawDataMDL
 // [[fname+]]
     AssignSZS(&szs,true,data_ptr,data_size,false,FF_MDL,fname);
     szs.fname = fname;
-    IterateFilesSZS(&szs,patch_mdl,&mdlpat,true,0,1,SORT_NONE);
+    IterateFilesParSZS(&szs,patch_mdl,&mdlpat,false,true,0,1,SORT_NONE);
     szs.fname = 0;
     ResetSZS(&szs);
 

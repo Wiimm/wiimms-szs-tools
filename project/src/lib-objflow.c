@@ -575,7 +575,7 @@ enumError SaveTextOBJFLOW
     const bool tiny = brief_count > 1 || export_count;
     if (!tiny)
 	fprintf(F.f,text_objflow_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE );
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE );
 
  #if USE_OBJECT_MANAGER>1
     WriteObjMgrToSetupSection( F.f, &objflow->obj_mgr,

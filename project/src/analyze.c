@@ -1124,9 +1124,9 @@ void AnalyzeBREFF ( szs_file_t * szs, u8 * data, uint data_size, ccp name )
     szs_file_t szs2;
 // [[fname-]]
     InitializeSubSZS(&szs2,szs,data-szs->data,szs->size,fform,0,false);
-    IterateFilesSZS(&szs2,
+    IterateFilesParSZS(&szs2,
 		fform == FF_BREFF ? ana_breff_subfile : ana_breft_subfile,
-		f, true, false, -1, SORT_NONE );
+		f, false, true, false, -1, SORT_NONE );
     ResetSZS(&szs2);
 }
 

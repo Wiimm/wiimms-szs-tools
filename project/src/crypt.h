@@ -38,8 +38,12 @@
 #ifndef WIIMM_CRYPT_H
 #define WIIMM_CRYPT_H 1
 
-#include "crypto/wiimm-sha.h"
-#define SHA1 WIIMM_SHA1
+#ifdef USE_SHA_LIB
+  #include <openssl/sha.h>
+#else
+  #include "crypto/wiimm-sha.h"
+  #define SHA1 WIIMM_SHA1
+#endif
 
 #endif // WIIMM_CRYPT_H
 

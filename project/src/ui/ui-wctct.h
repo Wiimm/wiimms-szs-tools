@@ -61,6 +61,7 @@ typedef enum enumOptions
 	OPT_NO_HEADER,
 	OPT_BRIEF,
 	OPT_RAW,
+	OPT_BMG_ENDIAN,
 	OPT_BMG_ENCODING,
 	OPT_BMG_INF_SIZE,
 	OPT_BMG_MID,
@@ -102,7 +103,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 46
+	OPT__N_SPECIFIC, // == 47
 
 	//----- global options -----
 
@@ -140,7 +141,7 @@ typedef enum enumOptions
 	OPT_CT_LOG,
 	OPT_ALLOW_SLOTS,
 
-	OPT__N_TOTAL // == 79
+	OPT__N_TOTAL // == 80
 
 } enumOptions;
 
@@ -160,6 +161,7 @@ typedef enum enumOptions
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
 //	OB_BRIEF		= 1llu << OPT_BRIEF,
 //	OB_RAW			= 1llu << OPT_RAW,
+//	OB_BMG_ENDIAN		= 1llu << OPT_BMG_ENDIAN,
 //	OB_BMG_ENCODING		= 1llu << OPT_BMG_ENCODING,
 //	OB_BMG_INF_SIZE		= 1llu << OPT_BMG_INF_SIZE,
 //	OB_BMG_MID		= 1llu << OPT_BMG_MID,
@@ -276,6 +278,7 @@ typedef enum enumOptions
 //	OB_CMD_BMG		= OB_BRIEF
 //				| OB_LONG
 //				| OB_GRP_TEXTOUT
+//				| OB_BMG_ENDIAN
 //				| OB_BMG_ENCODING
 //				| OB_BMG_INF_SIZE
 //				| OB_BMG_MID
@@ -322,6 +325,7 @@ typedef enum enumOptions
 //	OB_CMD_CREATE		= OB_GRP_DEST
 //				| OB_IGNORE
 //				| OB_GRP_TEXTOPT
+//				| OB_BMG_ENDIAN
 //				| OB_BMG_ENCODING
 //				| OB_BMG_INF_SIZE
 //				| OB_BMG_MID
@@ -439,6 +443,7 @@ typedef enum enumGetOpt
 	GO_CHDIR,
 	GO_ROUND,
 	GO_RAW,
+	GO_BMG_ENDIAN,
 	GO_BMG_ENCODING,
 	GO_BMG_INF_SIZE,
 	GO_BMG_MID,

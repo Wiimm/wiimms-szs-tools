@@ -1833,17 +1833,24 @@ ccp FindEndOfLineSI
 
 ccp FindLineFeedSI
 (
-    ScanInfo_t		* si,		// valid data
+    const ScanInfo_t	* si,		// valid data
     ccp			ptr,		// start search here
-    bool		mark_error	// true: increment error counter
+    bool		mark_error	// true: increment error counter (ignore const)
 );
 
 //-----------------------------------------------------------------------------
 
 ccp FindNextLineFeedSI
 (
-    ScanInfo_t		* si,		// valid data
-    bool		mark_error	// true: increment error counter
+    const ScanInfo_t	* si,		// valid data
+    bool		mark_error	// true: increment error counter (ignore const)
+);
+
+//-----------------------------------------------------------------------------
+
+mem_t GetLineSI
+(
+    const ScanInfo_t	* si		// valid data
 );
 
 ///////////////////////////////////////////////////////////////////////////////

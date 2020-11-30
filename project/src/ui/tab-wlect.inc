@@ -260,6 +260,9 @@
 		0,
 		"Print BMG messages as UTF-8 text without escape sequences." },
 
+  { T_OPT_CP,	"BMG_ENDIAN",	"bmg-endian|bmgendian",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_CP,	"BMG_ENCODING",	"bmg-encoding|bmgencoding",
 		0, 0 /* copy of wszst */ },
 
@@ -436,8 +439,9 @@
 		"[=mode]",
 		"Enable or disable the performance monitor."
 		" Mode is one of @OFF@, @AUTO@ (default, don't change setting),"
-		" @ON@ (enable it for Wii only; default, if option is used without parameter)"
-		" or @FORCE@ (enable it for Wii and for Dolphin)." },
+		" @ON@ (enable it for Wii and Wii U only;"
+		" default, if option is used without parameter)"
+		" or @FORCE@ (enable it for Wii, Wii U and for Dolphin)." },
 
   { T_OPT_CO,	"CUSTOM_TT",	"custom-tt|customtt",
 		"[=mode]",
@@ -451,6 +455,29 @@
 		" Mode is one of @OFF@, @AUTO@ (default) or @ON@"
 		" (default, if option is used without parameter)."
 		" Disable it only for tests!" },
+
+  { T_OPT_CO,	"SPEEDOMETER",	"speedometer",
+		"[=mode]",
+		"Enable or disable the speedometer."
+		" Mode is one of @OFF@, @AUTO@ (default, don't change setting),"
+		" @ON@ (enable it for Wii and WiiU only;"
+		" default, if option is used without parameter)"
+		" or @FORCE@ (enable it for Wii, Wii U and for Dolphin)." },
+
+  { H_OPT_CP,	"RESERVED_1B9",	"reserved-1b9|reserved1b9",
+		"[=mode]",
+		"Set LPAR byte at offset 0x1b9 to this value."
+		" Value -1 disables this option." },
+
+  { H_OPT_CP,	"RESERVED_1BA",	"reserved-1ba|reserved1ba",
+		"[=mode]",
+		"Set LPAR byte at offset 0x1ba to this value."
+		" Value -1 disables this option." },
+
+  { H_OPT_CP,	"RESERVED_1BB",	"reserved-1bb|reserved1bb",
+		"[=mode]",
+		"Set LPAR byte at offset 0x1bb to this value."
+		" Value -1 disables this option." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -582,6 +609,20 @@
   { T_COPT,	"UPDATE",	0,0,0 },
   { T_COPT,	"PRESERVE",	0,0,0 },
 
+  //---------- wlect GROUP PARAM ----------
+
+  { T_GRP_BEG,	"PARAM",	0,0,0 },
+
+  { T_COPT,	"ENGINE",	0,0,0 },
+  { T_COPT,	"200CC",	0,0,0 },
+  { T_COPT,	"PERFMON",	0,0,0 },
+  { T_COPT,	"CUSTOM_TT",	0,0,0 },
+  { T_COPT,	"XPFLAGS",	0,0,0 },
+  { T_COPT,	"SPEEDOMETER",	0,0,0 },
+  { H_COPT,	"RESERVED_1B9",	0,0,0 },
+  { H_COPT,	"RESERVED_1BA",	0,0,0 },
+  { H_COPT,	"RESERVED_1BB",	0,0,0 },
+
   //---------- wlect GROUP PATCH ----------
 
   { T_GRP_BEG,	"PATCH",	0,0,0 },
@@ -589,11 +630,7 @@
   { T_COPT,	"LE_DEFINE",	0,0,0 },
   { T_COPT,	"LPAR",		0,0,0 },
   { T_COPT,	"ALIAS",	0,0,0 },
-  { T_COPT,	"ENGINE",	0,0,0 },
-  { T_COPT,	"200CC",	0,0,0 },
-  { T_COPT,	"PERFMON",	0,0,0 },
-  { T_COPT,	"CUSTOM_TT",	0,0,0 },
-  { T_COPT,	"XPFLAGS",	0,0,0 },
+  { T_COPY_GRP,	"PARAM",	0,0,0 },
 
   //---------- wlect GROUP PATCH_LEX ----------
 
@@ -797,6 +834,7 @@
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"LPAR",		0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LT_CLEAR",	0,0,0 },
   { T_COPT,	"LT_ONLINE",	0,0,0 },
   { T_COPT,	"LT_N_PLAYERS",	0,0,0 },
@@ -805,6 +843,8 @@
   { T_COPT,	"LT_ENGINE",	0,0,0 },
   { T_COPT,	"LT_RANDOM",	0,0,0 },
   { T_COPT,	"LEX_PURGE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"PARAM",	0,0,0 },
 
   //---------- COMMAND wlect CAT ----------
 

@@ -35,12 +35,17 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifdef __CYGWIN__
+#ifndef USE_SHA_LIB
+ #ifdef __CYGWIN__
     #define SHA1_ASM
     #ifdef WIIMM_INCLUDE_SSL_ASM
-	#include "sha1-586-cygwin.s"
+	#if defined(__x86_64__)
+	    #include "sha1-cygwin64.s"
+	#else
+	    #include "sha1-586-cygwin.s"
+	#endif
     #endif
-#elif defined(__linux__)
+ #elif defined(__linux__)
     #if defined(__i386__)
 	#define SHA1_ASM
 	#ifdef WIIMM_INCLUDE_SSL_ASM
@@ -52,5 +57,6 @@
 	    #include "sha1-x86_64.s"
 	#endif
     #endif
-#endif
+ #endif
+#endif // !USE_SHA_LIB
 

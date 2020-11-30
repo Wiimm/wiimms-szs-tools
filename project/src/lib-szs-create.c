@@ -1519,7 +1519,7 @@ bool NormalizeExSZS
     memset(&norm,0,sizeof(norm));
     norm.rm_aiparam = rm_aiparam;
     norm.clean_lex = clean_lex;
-    IterateFilesSZS(szs,norm_collect_func,&norm,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(szs,norm_collect_func,&norm,false,false,0,-1,SORT_NONE);
 
     if (autoadd)
 	AddMissingFiles(szs,0,0,&norm,2);
@@ -2643,7 +2643,7 @@ bool PatchSZS ( szs_file_t * szs )
 	{
 	    PRINT("** PatchSZS() **\n");
 	    ScanTformBegin();
-	    IterateFilesSZS(szs,transform_collect_func,&dirty,false,-1,-1,SORT_NONE);
+	    IterateFilesParSZS(szs,transform_collect_func,&dirty,false,false,-1,-1,SORT_NONE);
 	    TformScriptEnd();
 	    ClearSpecialFilesSZS(szs);
 	}
@@ -2965,7 +2965,7 @@ static int check_file_func
 // [[fname+]]
 	    InitializeSubSZS(&subszs,it->szs,it->off,it->size,fform,it->path,false);
 	    subszs.fname = it->path;
-	    IterateFilesSZS(&subszs,check_mdl_func,chk,true,0,1,SORT_NONE);
+	    IterateFilesParSZS(&subszs,check_mdl_func,chk,false,true,0,1,SORT_NONE);
 	    subszs.fname = 0;
 	    ResetSZS(&subszs);
 	}
@@ -3117,7 +3117,7 @@ int CheckSZS
 
     //--- check BRRES + BRSUB
 
-    IterateFilesSZS(szs,check_brres_func,&chk,false,-1,0,SORT_AUTO);
+    IterateFilesParSZS(szs,check_brres_func,&chk,false,false,-1,0,SORT_AUTO);
 
 
     //--- find KCL
@@ -3377,7 +3377,7 @@ int CheckSZS
 
     //--- check images
 
-    IterateFilesSZS(szs,check_file_func,&chk,false,-1,0,SORT_AUTO);
+    IterateFilesParSZS(szs,check_file_func,&chk,false,false,-1,0,SORT_AUTO);
     if (chk.img_count)
 	print_check_error( &chk, CMOD_INFO,
 		"Geometry of %u images checked.\n",chk.img_count);
@@ -3666,7 +3666,7 @@ int CheckBRRES
     SetupColorSet(&chk.col,stdlog);
     chk.szs  = szs;
     chk.mode = check_mode;
-    IterateFilesSZS(szs,check_brres,&chk,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(szs,check_brres,&chk,false,false,0,-1,SORT_NONE);
 
     if (parent_chk)
     {
@@ -4621,7 +4621,7 @@ enumError ExtractFilesSZS
 	? 1
 	: recurse_level || IsArchiveFF(szs->fform_arch) ? -1 : 0;
     PRINT("cut_files=%d\n",cut_files);
-    IterateFilesSZS(szs,extract_func,&ep,false,0,cut_files,SORT_NONE);
+    IterateFilesParSZS(szs,extract_func,&ep,true,false,0,cut_files,SORT_NONE);
 
 
     //----- write setup file

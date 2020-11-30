@@ -1522,10 +1522,19 @@
 		" if their difference is less than or equal to epsilon."
 		" The default value is @" CONVERT_TO_STRING(DEF_EPSILON_POS) "@." },
 
+  { T_OPT_CP,	"BMG_ENDIAN",	"bmg-endian|bmgendian",
+		"name",
+		"Force an endian for new BMG files."
+		" Accepted values are @BIG@ or @BE@ for big endian, @LITTLE@ or @LE@"
+		" for little endian and @AUTO@ for automatic detection (default)."
+		"\n "
+		" Mario Kart Wii uses big endian;"
+		" the default if no other endian is defined." },
+
   { T_OPT_CP,	"BMG_ENCODING",	"bmg-encoding|bmgencoding",
 		"name",
-		"Force a BMG encoding for new BMG files."
-		" Accepted encoding names are: @CP-1252@, @UTF-16BE@ (or @UTF-16@),"
+		"Force an encoding for new BMG files."
+		" Accepted encoding names are @CP-1252@, @UTF-16BE@ (or @UTF-16@),"
 		" @SHIFT-JIS@, @UTF-8@ and @AUTO@ for automatic detection (default)."
 		" Same keywords without minus signs are accepted too."
 		"\n "
@@ -2400,6 +2409,7 @@
 
   { T_GRP_BEG,	"BMG",	0,0,0 },
 
+  { T_COPT,	"BMG_ENDIAN",	0,0,0 },
   { T_COPT,	"BMG_ENCODING",	0,0,0 },
   { T_COPT,	"BMG_INF_SIZE",	0,0,0 },
   { T_COPT,	"BMG_MID",	0,0,0 },

@@ -3792,7 +3792,7 @@ void cmd_version_section
 	"version=" VERSION "\n"
 	"beta=%d\n"
 	"revision=" REVISION  "\n"
-	"system=" SYSTEM "\n"
+	"system=" SYSTEM2 "\n"
 	"endian=%u%u%u%u %s\n"
 	"author=" AUTHOR "\n"
 	"date=" DATE "\n"

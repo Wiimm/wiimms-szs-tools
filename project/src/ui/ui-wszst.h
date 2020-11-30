@@ -109,6 +109,7 @@ typedef enum enumOptions
 	OPT_DELTA,
 	OPT_DIFF,
 	OPT_EPSILON,
+	OPT_BMG_ENDIAN,
 	OPT_BMG_ENCODING,
 	OPT_BMG_INF_SIZE,
 	OPT_BMG_MID,
@@ -186,7 +187,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 130
+	OPT__N_SPECIFIC, // == 131
 
 	//----- global options -----
 
@@ -261,7 +262,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 200
+	OPT__N_TOTAL // == 201
 
 } enumOptions;
 
@@ -329,6 +330,7 @@ typedef enum enumOptions
 //	OB_DELTA		= 1llu << OPT_DELTA,
 //	OB_DIFF			= 1llu << OPT_DIFF,
 //	OB_EPSILON		= 1llu << OPT_EPSILON,
+//	OB_BMG_ENDIAN		= 1llu << OPT_BMG_ENDIAN,
 //	OB_BMG_ENCODING		= 1llu << OPT_BMG_ENCODING,
 //	OB_BMG_INF_SIZE		= 1llu << OPT_BMG_INF_SIZE,
 //	OB_BMG_MID		= 1llu << OPT_BMG_MID,
@@ -478,7 +480,8 @@ typedef enum enumOptions
 //				| OB_EXPORT
 //				| OB_NO_PARAM,
 //
-//	OB_GRP_BMG		= OB_BMG_ENCODING
+//	OB_GRP_BMG		= OB_BMG_ENDIAN
+//				| OB_BMG_ENCODING
 //				| OB_BMG_INF_SIZE
 //				| OB_BMG_MID
 //				| OB_FORCE_ATTRIB
@@ -1121,6 +1124,7 @@ typedef enum enumGetOpt
 	GO_DELTA,
 	GO_DIFF,
 	GO_EPSILON,
+	GO_BMG_ENDIAN,
 	GO_BMG_ENCODING,
 	GO_BMG_INF_SIZE,
 	GO_BMG_MID,

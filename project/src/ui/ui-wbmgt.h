@@ -72,6 +72,7 @@ typedef enum enumOptions
 	OPT_PATCH_BMG,
 	OPT_MACRO_BMG,
 	OPT_FILTER_BMG,
+	OPT_BMG_ENDIAN,
 	OPT_BMG_ENCODING,
 	OPT_BMG_INF_SIZE,
 	OPT_BMG_MID,
@@ -87,7 +88,7 @@ typedef enum enumOptions
 	OPT_EXPORT,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 31
+	OPT__N_SPECIFIC, // == 32
 
 	//----- global options -----
 
@@ -121,7 +122,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 60
+	OPT__N_TOTAL // == 61
 
 } enumOptions;
 
@@ -152,6 +153,7 @@ typedef enum enumOptions
 //	OB_PATCH_BMG		= 1llu << OPT_PATCH_BMG,
 //	OB_MACRO_BMG		= 1llu << OPT_MACRO_BMG,
 //	OB_FILTER_BMG		= 1llu << OPT_FILTER_BMG,
+//	OB_BMG_ENDIAN		= 1llu << OPT_BMG_ENDIAN,
 //	OB_BMG_ENCODING		= 1llu << OPT_BMG_ENCODING,
 //	OB_BMG_INF_SIZE		= 1llu << OPT_BMG_INF_SIZE,
 //	OB_BMG_MID		= 1llu << OPT_BMG_MID,
@@ -180,6 +182,7 @@ typedef enum enumOptions
 //
 //	OB_GRP_TEXTOUT		= OB_NO_HEADER
 //				| OB_BRIEF
+//				| OB_BMG_ENDIAN
 //				| OB_BMG_ENCODING
 //				| OB_BMG_INF_SIZE
 //				| OB_BMG_MID
@@ -261,6 +264,7 @@ typedef enum enumOptions
 //				| OB_FILTER_BMG,
 //
 //	OB_CMD_ENCODE		= OB_GRP_DEST
+//				| OB_BMG_ENDIAN
 //				| OB_BMG_ENCODING
 //				| OB_BMG_INF_SIZE
 //				| OB_BMG_MID
@@ -378,6 +382,7 @@ typedef enum enumGetOpt
 	GO_ALIGN,
 	GO_MACRO_BMG,
 	GO_FILTER_BMG,
+	GO_BMG_ENDIAN,
 	GO_BMG_ENCODING,
 	GO_BMG_INF_SIZE,
 	GO_BMG_MID,

@@ -584,9 +584,17 @@ enumError DecodeBZIP2buf
     DASSERT(src);
 
     uint dest_need = ntohl(*(u32*)src);
-    *dest_written = dest_need;
     PRINT("DecodeBZIP2buf() %u -> %u,%u bytes\n",src_size,dest_size,dest_need);
 
+    if ( be32(src+4) == 0x52415730 ) // "RAW0" == not compressed
+    {
+	const uint copy_len = dest_size < dest_need ? dest_size : dest_need;
+	*dest_written = copy_len;
+	memcpy(dest,(u8*)src+8,copy_len);
+	return ERR_OK;
+    }
+
+    *dest_written = dest_need;
     int bzerror = BZ2_bzBuffToBuffDecompress ( (char*)dest, dest_written,
 				(char*)src+4, src_size-4, 0, 0 );
 

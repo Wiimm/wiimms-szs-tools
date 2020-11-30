@@ -175,7 +175,7 @@ typedef struct BZ2Manager_t
     //--- source
 
     cvp		src_data;	// BZ2 is automatically detected and
-				// decoded by DecodeBZIP2. Nver NULL
+				// decoded by DecodeBZIP2(). Never NULL
     uint	src_size;	// size of 'src_data'
 
     //--- decoded
@@ -304,7 +304,7 @@ typedef struct BZ2Source_t
 
     cvp		src_data;	// NULL or internal fall back data.
 				// BZ2 is automatically detected and
-				// decoded by DecodeBZIP2.
+				// decoded by DecodeBZIP2().
     uint	src_size;	// size of 'src_data'
 
     file_format_t fform;	// not FF_UNKNOWN: Allow only this type

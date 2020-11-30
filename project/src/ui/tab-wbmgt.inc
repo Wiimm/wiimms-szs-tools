@@ -337,6 +337,9 @@
   { T_OPT_CMP,	"FILTER_BMG",	"filter-bmg|filterbmg|fb|msg",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_CP,	"BMG_ENDIAN",	"endian|bmg-endian|bmgendian",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_CP,	"BMG_ENCODING",	"encoding|bmg-encoding|bmgencoding",
 		0, 0 /* copy of wszst */ },
 
@@ -406,6 +409,8 @@
 
   { T_COPT,	"NO_HEADER",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"BMG_ENDIAN",	0,0,0 },
   { T_COPT,	"BMG_ENCODING",	0,0,0 },
   { T_COPT,	"BMG_INF_SIZE",	0,0,0 },
   { T_COPT,	"BMG_MID",	0,0,0 },
@@ -578,6 +583,8 @@
 
   { T_CMD_BEG,	"ENCODE",	0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"BMG_ENDIAN",	0,0,0 },
   { T_COPT,	"BMG_ENCODING",	0,0,0 },
   { T_COPT,	"BMG_INF_SIZE",	0,0,0 },
   { T_COPT,	"BMG_MID",	0,0,0 },

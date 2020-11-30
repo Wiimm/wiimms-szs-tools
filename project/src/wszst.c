@@ -71,10 +71,10 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 #define TITLE WSZST_SHORT ": " WSZST_LONG " v" VERSION " r" REVISION \
-	" " SYSTEM " - " AUTHOR " - " DATE
+	" " SYSTEM2 " - " AUTHOR " - " DATE
 
 #define TOOLSET_TITLE TOOLSET_SHORT ": " TOOLSET_LONG " v" VERSION " r" REVISION \
-	" " SYSTEM " - " AUTHOR " - " DATE
+	" " SYSTEM2 " - " AUTHOR " - " DATE
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -187,7 +187,7 @@ static void version_exit()
     if ( brief_count > 1 )
 	fputs( VERSION "\n", stdout );
     else if (brief_count)
-	fputs( VERSION " r" REVISION " " SYSTEM "\n", stdout );
+	fputs( VERSION " r" REVISION " " SYSTEM2 "\n", stdout );
     else if (print_sections)
 	print_version_section(true);
     else if (long_count)
@@ -1210,7 +1210,7 @@ enumError cmd_brsub()
 	cb.szs    = &szs;
 	cb.mode   = long_count;
 	cb.sep_fw = 3*99;
-	IterateFilesSZS(&szs,check_brsub,&cb,false,-1,-1,SORT_NONE);
+	IterateFilesParSZS(&szs,check_brsub,&cb,false,false,-1,-1,SORT_NONE);
 	line_count += cb.line_count;
 
 	if ( print_header && cb.header_printed )
@@ -1345,9 +1345,9 @@ static enumError cmd_list ( int long_level )
 	    printf("\n* Files of %s\n",param->arg);
 
 	if ( long_count > 2 )
-	    IterateFilesSZS(&szs,PrintFileSZS,0,true,opt_recurse,opt_cut,opt_sort);
+	    IterateFilesParSZS(&szs,PrintFileSZS,0,false,true,opt_recurse,opt_cut,opt_sort);
 	else
-	    IterateFilesSZS(&szs,list_func,0,false,opt_recurse,opt_cut,opt_sort);
+	    IterateFilesParSZS(&szs,list_func,0,false,false,opt_recurse,opt_cut,opt_sort);
 	ResetSZS(&szs);
     }
 
@@ -1482,7 +1482,7 @@ static enumError cmd_ilist ( int long_level )
 	else if ( n_param > 1 )
 	    printf("\n* Files of %s\n",param->arg);
 
-	IterateFilesSZS(&szs,ilist_func,0,false,-1,0,opt_sort);
+	IterateFilesParSZS(&szs,ilist_func,0,false,false,-1,0,opt_sort);
 	ResetSZS(&szs);
     }
 
@@ -1647,7 +1647,7 @@ static enumError cmd_memory()
 		    Minus300 );
 	}
 
-	IterateFilesSZS(&szs,memory_func,&dm,false,opt_recurse,opt_cut,SORT_OFFSET);
+	IterateFilesParSZS(&szs,memory_func,&dm,false,false,opt_recurse,opt_cut,SORT_OFFSET);
 	ResetSZS(&szs);
     }
 
@@ -1738,7 +1738,7 @@ static enumError cmd_sha1()
 	    return err;
 	}
 
-	if ( opt_norm || need_norm > 0 )
+	if ( opt_norm || need_norm > 0 || opt_rm_aiparam )
 	    NormalizeSZS(&szs);
 
 	char checksum[100];
@@ -1854,6 +1854,27 @@ static enumError cmd_sha1()
 ///////////////			command analyze			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+static void SetupPrintScript ( PrintScript_t *ps )
+{
+    DASSERT(ps);
+
+    InitializePrintScript(ps);
+    ps->varname		= script_varname;
+    ps->create_array	= script_array > 0;
+
+    switch(script_fform)
+    {
+      case FF_JSON:	ps->fform = PSFF_JSON; break;
+      case FF_BASH:	ps->fform = PSFF_BASH; break;
+      case FF_SH:	ps->fform = PSFF_SH; break;
+      case FF_PHP:	ps->fform = PSFF_PHP; break;
+      case FF_MAKEDOC:	ps->fform = PSFF_MAKEDOC; break;
+      default:		ps->fform = PSFF_UNKNOWN; break;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 static enumError cmd_analyze()
 {
     static ccp def_path = "\1P/\1F\1?T";
@@ -1873,8 +1894,7 @@ static enumError cmd_analyze()
     InitializeFile(&fo);
 
     PrintScript_t ps;
-    InitializePrintScript(&ps);
-    ps.fo = &fo;
+    SetupPrintScript(&ps);
 
     ParamList_t *param;
     for ( param = first_param; param; param = param->next )
@@ -1928,6 +1948,7 @@ static enumError cmd_analyze()
 		max_err = err;
 		break;
 	    }
+	    ps.f = fo.f;
 	    PrintScriptHeader(&ps);
 	}
 
@@ -2054,6 +2075,7 @@ static enumError cmd_analyze()
 	if (!script_array)
 	{
 	    PrintScriptFooter(&ps);
+	    ps.f = 0;
 	    ResetFile(&fo,0);
 	}
     }
@@ -4113,7 +4135,7 @@ static enumError job_update
     up.update_sub	= recurse_level < opt_recurse;
     up.indent		= indent + 2;
 
-    IterateFilesSZS(szs,update_func,&up,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(szs,update_func,&up,false,false,0,-1,SORT_NONE);
     return ERR_OK;
 }
 
@@ -4745,8 +4767,7 @@ static enumError cmd_ghost()
     InitializeFile(&fo);
 
     PrintScript_t ps;
-    InitializePrintScript(&ps);
-    ps.fo = &fo;
+    SetupPrintScript(&ps);
 
     ParamList_t *param;
     for ( param = first_param; param; param = param->next )
@@ -4787,6 +4808,7 @@ static enumError cmd_ghost()
 		max_err = err;
 		break;
 	    }
+	    ps.f = fo.f;
 	    PrintScriptHeader(&ps);
 	}
 
@@ -4816,6 +4838,7 @@ static enumError cmd_ghost()
 	if (!script_array)
 	{
 	    PrintScriptFooter(&ps);
+	    ps.f = 0;
 	    ResetFile(&fo,0);
 	}
     }
@@ -5113,6 +5136,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_NO_PARAM:	print_param = false; break;
 	case GO_EPSILON:	err += ScanOptEpsilon(optarg); break;
 
+	case GO_BMG_ENDIAN:	err += ScanOptBmgEndian(optarg); break;
 	case GO_BMG_ENCODING:	err += ScanOptBmgEncoding(optarg); break;
 	case GO_BMG_INF_SIZE:	err += ScanOptBmgInfSize(optarg,false); break;
 	case GO_BMG_MID:	err += ScanOptBmgMid(optarg); break;

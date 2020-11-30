@@ -2525,7 +2525,7 @@ enumError ScanBrresCTCODE
 
     szs_file_t szs;
     AssignSZS(&szs,true,(void*)data,data_size,false,FF_BRRES,0);
-    IterateFilesSZS(&szs,iter_brres_ctcode,ctcode,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(&szs,iter_brres_ctcode,ctcode,false,false,0,-1,SORT_NONE);
     ResetSZS(&szs);
 
     return ERR_OK;
@@ -2928,7 +2928,7 @@ enumError SaveTextCTCODE
 
     MARK_USED(keybuf,namebuf);
     fprintf( F.f, text_ctcode_setup_cr,
-		tool_name, SYSTEM, VERSION, REVISION_NUM, DATE,
+		tool_name, SYSTEM2, VERSION, REVISION_NUM, DATE,
 		 ctcode->ctb.ct_mode,
 		ctcode->n_racing_cups,
 		ctcode->max_racing_cups,
