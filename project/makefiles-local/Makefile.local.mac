@@ -16,7 +16,7 @@ mac1: mac-x86_64
 
 	@for i in $(MAIN_TOOLS); do \
 	    lipo -create bin/x86_64/$${i} -output $${i}; \
-	    ln -f $${i} bin/$${i}; \
+	    cp -p $${i} bin/$${i}; \
 	done
 	@rm -rf bin/x86_64
 	@echo "done"
@@ -29,7 +29,7 @@ mac2: mac-i386 mac-x86_64
 
 	@for i in $(MAIN_TOOLS); do \
 	    lipo -create bin/i386/$${i} bin/x86_64/$${i} -output $${i}; \
-	    ln -f $${i} bin/$${i}; \
+	    cp -p $${i} bin/$${i}; \
 	done
 	@rm -rf bin/i386 bin/x86_64
 	@echo "done"
@@ -42,7 +42,7 @@ mac3: mac-i386 mac-x86_64 mac-ppc
 
 	@for i in $(MAIN_TOOLS); do \
 	    lipo -create bin/ppc/$${i} bin/i386/$${i} bin/x86_64/$${i} -output $${i}; \
-	    ln -f $${i} bin/$${i}; \
+	    cp -p $${i} bin/$${i}; \
 	done;
 	@rm -rf bin/ppc bin/i386 bin/x86_64
 	@echo "done"
@@ -89,7 +89,7 @@ gen-mac-distrib:
 	@mkdir -p $(DISTRIB_PATH)/bin $(DISTRIB_PATH)/doc
 
 	@cp -p $(DISTRIB_FILES) $(DISTRIB_PATH)
-	@ln -f $(MAIN_TOOLS) $(WDF_LINKS) $(DISTRIB_PATH)/bin
+	@cp -p $(MAIN_TOOLS) $(WDF_LINKS) $(DISTRIB_PATH)/bin
 	@cp -p $(DOC_FILES) $(DISTRIB_PATH)/doc
 
 	@chmod -R 755 $(DISTRIB_PATH)

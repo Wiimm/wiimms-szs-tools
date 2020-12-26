@@ -2069,7 +2069,7 @@ void CopyTrackFile ( uint tid, ccp name )
 	    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
 	    {
 		snprintf(dest,sizeof(dest),"%s/%03x.szs",opt_track_dest,tid);
-		if (TransferFile(src,dest,ptr->num,0666))
+		if (!TransferFile(src,dest,ptr->num,0666))
 		{
 		    PathCatBufPPE(src,sizeof(src),ptr->key,name,"_d.szs");
 		    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
@@ -2815,8 +2815,6 @@ static void FixLEXElement_SET1 ( lex_set1_t *set1 )
 	if ( !isnormal(f) || f < 1.0 )
 	    write_bef4(set1->item_factor.v+i,1.0);
     }
-
-    set1->fix_online_delay = set1->fix_online_delay > 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -3524,13 +3522,15 @@ static enumError ScanLEXElement_SET1
 
     //--- setup data
 
-    lex_set1_t set1;
-    memset(&set1,0,sizeof(set1));
+    lex_set1_t set1 = {0};
 
     const ScanParam_t ptab[] =
     {
 	{ "ITEM-POS-FACTOR",	SPM_FLOAT3_BE,	&set1.item_factor },
-	{ "FIX-ONLINE-DELAY",	SPM_U8,		&set1.fix_online_delay },
+	{ "TEST1",		SPM_U8,		set1.test+0 },
+	{ "TEST2",		SPM_U8,		set1.test+1 },
+	{ "TEST3",		SPM_U8,		set1.test+2 },
+	{ "TEST4",		SPM_U8,		set1.test+3 },
 	{0}
     };
 
@@ -4067,9 +4067,9 @@ static enumError SaveTextLEX_SET1
 		,bef4(&set1->item_factor.z)
 		);
 
-    if (set1->fix_online_delay)
-    fprintf(f,text_lex_elem_set1_develop_cr
-		,set1->fix_online_delay
+    if (*(u32*)set1->test)
+	fprintf(f,text_lex_elem_set1_develop_cr
+		,set1->test[0],set1->test[1],set1->test[2],set1->test[3]
 		);
 
     if ( size > sizeof(lex_set1_t) )

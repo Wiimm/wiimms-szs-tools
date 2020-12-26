@@ -627,8 +627,7 @@ __attribute__ ((packed)) lex_element_t;
 typedef struct lex_set1_t
 {
     float3	item_factor;		// factor for item positions, always >=1.0
-    u8		fix_online_delay;	// fix delay of GOBJ objects
-    u8		padding[3];
+    u8		test[4];		// 4 test values (TEST1..TEST4)
 }
 __attribute__ ((packed,aligned(4))) lex_set1_t;
 
@@ -643,7 +642,7 @@ typedef struct lex_hipt_rule_t
     u8		to;	//      && CHKT <= to
     u8		mode;	// result: 0=hide, 1:show
 }
-__attribute__ ((packed,)) lex_hipt_rule_t;
+__attribute__ ((packed)) lex_hipt_rule_t;
 
 //-----------------------------------------------------------------------------
 // [[lex_test_t]]

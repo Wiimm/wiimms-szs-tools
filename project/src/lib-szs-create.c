@@ -4898,6 +4898,8 @@ void AnalyseSZS
 
     //--- scan KMP
 
+    bool valid_track = true; // use temp var because of early 'return'
+
     if (szs->course_kmp_data)
     {
 	SHA1(szs->course_kmp_data,szs->course_kmp_size,sha1_data.hash);
@@ -5009,8 +5011,18 @@ void AnalyseSZS
 	    ct_dest = StringCopyE(ct_dest,ct_end,",xpf");
 	}
 
+	if (szs->kmp_special[HAVEKMP_COOB_R])
+	    ct_dest = StringCopyE(ct_dest,ct_end,",coob-r");
+	if (szs->kmp_special[HAVEKMP_COOB_K])
+	    ct_dest = StringCopyE(ct_dest,ct_end,",coob-k");
+	if (szs->kmp_special[HAVEKMP_UOOB])
+	    ct_dest = StringCopyE(ct_dest,ct_end,",uoob");
+
 	ResetKMP(&kmp);
     }
+    else
+	valid_track = false;
+
 
     if ( szs->szs_special[HAVESZS_ITEM_SLOT_TABLE] )
 	ct_dest = StringCopyE(ct_dest,ct_end,",itemslot");
@@ -5038,6 +5050,8 @@ void AnalyseSZS
 	SHA1(szs->course_kcl_data,szs->course_kcl_size,sha1_data.hash);
 	Sha1Bin2Hex(as->sha1_kcl,sha1_data.hash);
     }
+    else
+	valid_track = false;
 
 
     //--- course model (course_model.brres, course_d_model.brres)
@@ -5052,6 +5066,8 @@ void AnalyseSZS
 	SHA1(szs->course_d_model_data,szs->course_d_model_size,sha1_data.hash);
 	Sha1Bin2Hex(as->sha1_course,sha1_data.hash);
     }
+    else
+	valid_track = false;
 
 
     //--- vrcorn (vrcorn_model.brres)
@@ -5061,6 +5077,8 @@ void AnalyseSZS
 	SHA1(szs->vrcorn_model_data,szs->vrcorn_model_size,sha1_data.hash);
 	Sha1Bin2Hex(as->sha1_vrcorn,sha1_data.hash);
     }
+    else
+	valid_track = false;
 
 
     //--- minimap (map_model.brres)
@@ -5070,6 +5088,8 @@ void AnalyseSZS
 	SHA1(szs->map_model_data,szs->map_model_size,sha1_data.hash);
 	Sha1Bin2Hex(as->sha1_minimap,sha1_data.hash);
     }
+    else
+	valid_track = false;
 
 
     //--- finalize ct_attrib by "lex" and "warn"
@@ -5080,6 +5100,7 @@ void AnalyseSZS
     if (szs->warn_bits)
 	ct_dest = StringCat2E(ct_dest,ct_end,",warn=",GetWarnSZSNames(szs->warn_bits,'+'));
 
+    as->valid_track = valid_track;
     as->duration_usec = GetTimerUSec() - start_usec;
 }
 

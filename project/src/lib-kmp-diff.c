@@ -111,6 +111,19 @@ static void print_rot ( uint n, const float *f1, const float *f2 )
 
 //-----------------------------------------------------------------------------
 
+static void print_dec8_6 ( uint n, const u8 *u1, const u8 *u2 )
+{
+    while ( n-- > 0 )
+    {
+	printf(" %s%6s",
+		*u1 == *u2 ? colout->COL_OK : colout->COL_WARN, PrintU8M1(*u1) );
+	u1++;
+	u2++;
+    }
+}
+
+//-----------------------------------------------------------------------------
+
 static void print_hex16 ( uint n, const u16 *u1, const u16 *u2 )
 {
     while ( n-- > 0 )
@@ -914,12 +927,15 @@ static void print_area
 		mode, OK_WARN1(e1,e2,mode), OK_WARN1(e1,e2,type) );
 	print_float(3,e1->position,e2->position,epsilon_pos);
 	putchar(' ');
-	print_hex16(4,e1->setting,e2->setting);
+	print_hex16(2,e1->setting,e2->setting);
 
 	printf("%s\n%c %s%5u  %s%5u",
 		colout->reset, mode,
-		OK_WARN1(e1,e2,dest_id), OK_WARN1(e1,e2,unknown) );
+		OK_WARN1(e1,e2,dest_id), OK_WARN1(e1,e2,prio) );
 	print_float(3,e1->rotation,e2->rotation,epsilon_rot);
+	putchar(' ');
+	print_dec8_6(2,&e1->route,&e2->route);
+	print_hex16(1,&e1->unknown_2e,&e2->unknown_2e);
 
 	printf("%s\n%-14c", colout->reset, mode );
 	print_float(3,e1->scale,e2->scale,epsilon_scale);
@@ -928,16 +944,17 @@ static void print_area
     }
     else
     {
-	printf(	"%c %5u %5u  %11.3f %11.3f %11.3f  %#6x %#6x %#6x %#6x\n"
-		"%c %5u %5u  %11.3f %11.3f %11.3f\n"
+	printf(	"%c %5u %5u  %11.3f %11.3f %11.3f  %#6x %#6x\n"
+		"%c %5u %5u  %11.3f %11.3f %11.3f  %6s %6s %#6x\n"
 		"%c %24.3f %11.3f %11.3f\n",
 		mode, 
 		 e1->mode, e1->type,
 		 e1->position[0], e1->position[1], e1->position[2],
-		 e1->setting[0], e1->setting[1], e1->setting[2], e1->setting[3],
+		 e1->setting[0], e1->setting[1],
 		mode,
-		 e1->dest_id, e1->unknown,
+		 e1->dest_id, e1->prio,
 		 e1->rotation[0], e1->rotation[1], e1->rotation[2],
+		 PrintU8M1(e1->route), PrintU8M1(e1->enemy), e1->unknown_2e,
 		mode,
 		e1->scale[0], e1->scale[1], e1->scale[2] );
     }
@@ -973,11 +990,12 @@ static int diff_area ( const sort_area_t *e1, const sort_area_t *e2 )
     uint count	= ( e1->data.mode	!= e2->data.mode )
 		+ ( e1->data.type	!= e2->data.type )
 		+ ( e1->data.dest_id	!= e2->data.dest_id )
-		+ ( e1->data.unknown	!= e2->data.unknown );
-
-    uint i;
-    for ( i = 0; i < 4; i++ )
-	count += e1->data.setting[i] != e2->data.setting[i];
+		+ ( e1->data.prio	!= e2->data.prio )
+		+ ( e1->data.setting[0]	!= e2->data.setting[0] )
+		+ ( e1->data.setting[1]	!= e2->data.setting[1] )
+		+ ( e1->data.route	!= e2->data.route )
+		+ ( e1->data.enemy	!= e2->data.enemy )
+		+ ( e1->data.unknown_2e	!= e2->data.unknown_2e );
 
     count += fabsf( e1->data.position[0] - e2->data.position[0] ) > epsilon_pos
 	  || fabsf( e1->data.position[1] - e2->data.position[1] ) > epsilon_pos

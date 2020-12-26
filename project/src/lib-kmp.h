@@ -520,11 +520,14 @@ typedef struct kmp_area_entry_t
   /*0x00*/  u8		mode;		// mode of area
   /*0x01*/  u8		type;		// type of area
   /*0x02*/  u8		dest_id;	// index into CAME
-  /*0x03*/  u8		unknown;
+  /*0x03*/  u8		prio;		// higher number => higher priority
   /*0x04*/  float32	position[3];
   /*0x10*/  float32	rotation[3];
   /*0x1c*/  float32	scale[3];
-  /*0x28*/  u16		setting[4];
+  /*0x28*/  u16		setting[2];
+  /*0x2c*/  u8		route;
+  /*0x2d*/  u8		enemy;
+  /*0x2e*/  u16		unknown_2e;
   /*0x30*/
 }
 __attribute__ ((packed)) kmp_area_entry_t;

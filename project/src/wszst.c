@@ -1984,6 +1984,7 @@ static enumError cmd_analyze()
 		 "sha1_course=\"%s\"\n"
 		 "sha1_vrcorn=\"%s\"\n"
 		 "sha1_minimap=\"%s\"\n"
+		"valid_track=%u\n"
 		"is_arena=\"%u %s\"\n"
 		"n_ckpt0=%d\n"
 		"lap_count=%d\n"
@@ -2017,6 +2018,7 @@ static enumError cmd_analyze()
 		 ,as.sha1_course
 		 ,as.sha1_vrcorn
 		 ,as.sha1_minimap
+		,as.valid_track
 		,szs.is_arena
 		,is_arena_name[szs.is_arena]
 		,as.ckpt0_count

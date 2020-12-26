@@ -3907,21 +3907,34 @@ static enumError ScanTextAREA
 	}
 	else if ( si->cur_file->revision < 2956 )
 	{
-	    // 2011-08-26, v0.17a, r2956 -> new table layout
-
 	    ScanBE16SI(si,(u16*)&entry->mode,2,0);
 	     ScanFloatV3SI(si,entry->position,1);
 	     ScanU16SI(si,entry->setting,4,0);
 	    ScanFloatV3SI(si,entry->rotation,1);
 	    ScanFloatV3SI(si,entry->scale,1);
 	}
-	else
+	else if ( si->cur_file->revision < 8317 )
 	{
+	    // since  2011-08-26, v0.17a, r2956 -> new table layout
+
 	    ScanU8SI(si,&entry->mode,2,0);
 	     ScanFloatV3SI(si,entry->position,1);
 	     ScanU16SI(si,entry->setting,4,0);
 	    ScanU8SI(si,&entry->dest_id,2,0);
 	     ScanFloatV3SI(si,entry->rotation,1);
+	    ScanFloatV3SI(si,entry->scale,1);
+	}
+	else
+	{
+	    // since  2020-12-04, v2.22a, r8317 -> new table layout
+
+	    ScanU8SI(si,&entry->mode,2,0);
+	     ScanFloatV3SI(si,entry->position,1);
+	     ScanU16SI(si,entry->setting,2,0);
+	    ScanU8SI(si,&entry->dest_id,2,0);
+	     ScanFloatV3SI(si,entry->rotation,1);
+	     ScanU8SI(si,&entry->route,2,0);
+	     ScanU16SI(si,&entry->unknown_2e,1,0);
 	    ScanFloatV3SI(si,entry->scale,1);
 	}
 	CheckEolSI(si);
@@ -6470,11 +6483,12 @@ enumError SaveTextKMP
     {
 	*buf1 = 0;
 	PrintNameIL(F.f,ill+KMP_AREA,i,6,8,0);
+
 	fprintf(F.f,
-		"%#4x %#4x  %12.3f %11.3f %11.3f  %#6x %#6x %#6x %#6x\r\n >",
+		"%#4x %#4x  %12.3f %11.3f %11.3f  %#6x %#6x\r\n >",
 		area->mode, area->type,
 		 area->position[0], area->position[1], area->position[2],
-		 area->setting[0], area->setting[1], area->setting[2], area->setting[3] );
+		 area->setting[0], area->setting[1] );
 
 	if ( area->type == 0x00 )
 	    PrintNameIL(F.f,ill+KMP_CAME,area->dest_id,10,10,2);
@@ -6482,11 +6496,12 @@ enumError SaveTextKMP
 	    fprintf(F.f,"%#10x",area->dest_id);
 
 	fprintf(F.f,
-		" %#4x  %12.3f %11.3f %11.3f\r\n"
+		" %#4x  %12.3f %11.3f %11.3f  %6s %6s %#6x\r\n"
 		    " > %28.3f %11.3f %11.3f\r\n"
-		"#%.84s\r\n",
-		area->unknown,
+		"#%.78s\r\n",
+		area->prio,
 		 area->rotation[0], area->rotation[1], area->rotation[2],
+		 PrintU8M1(area->route), PrintU8M1(area->enemy), area->unknown_2e, 
 		area->scale[0], area->scale[1], area->scale[2],
 		Minus300 );
     }

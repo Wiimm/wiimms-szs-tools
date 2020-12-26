@@ -22,10 +22,6 @@ revision_next=$revision_num
 
 tim=($(date '+%s %Y-%m-%d %T %Y'))
 
-have_fuse=0
-[[ $NO_FUSE != 1 && -r /usr/include/fuse.h || -r /usr/local/include/fuse.h ]] \
-	&& have_fuse=1
-
 have_md5=0
 [[ -r /usr/include/openssl/md5.h ]] && have_md5=1
 
@@ -38,7 +34,6 @@ if [[ $M32 = 1 ]]
 then
     force_m32=1
     libdir=lib
-    have_fuse=0
     xflags="-m32"
     defines=-DFORCE_M32=1
 else
@@ -176,7 +171,6 @@ cat <<- ---EOT--- >>Makefile.setup
 	YEAR		:= ${tim[3]}
 
 	FORCE_M32	:= $force_m32
-	HAVE_FUSE	:= $have_fuse
 	HAVE_MD5	:= $have_md5
 	HAVE_SHA	:= $have_sha
 	STATIC		:= $STATIC

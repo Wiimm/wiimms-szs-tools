@@ -148,6 +148,9 @@ typedef enum have_kmp_obj_t
     HAVEKMP_X_DEFOBJ,		// XPF: Definition object
     HAVEKMP_X_RANDOM,		// XPF: Random scenarios
     HAVEKMP_EPROP_SPEED,	// 0x1a6:Epropeller   setting #8>0  => speed
+    HAVEKMP_COOB_R,		// Conditional Out of Bounds by Riidefi
+    HAVEKMP_COOB_K,		// Conditional Out of Bounds by kHacker35000vr
+    HAVEKMP_UOOB,		// Unconditional Out of Bounds
     HAVEKMP__N
 }
 __attribute__ ((packed)) have_kmp_obj_t;

@@ -1466,7 +1466,7 @@ char * PrintID
 )
 {
     if (!buf)
-	buf = GetCircBuf( id_len + 1);
+	buf = GetCircBuf( id_len + 1 );
 
     ccp src = id;
     char * dest = buf;

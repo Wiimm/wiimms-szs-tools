@@ -1338,8 +1338,9 @@ typedef struct analyse_szs_t
 
     int		ckpt0_count;		// number of LC in CKPT, -1 unknown
     int		lap_count;		// STGI lap counter
-    u16		speed_mod;		// STGI speed mod
     float	speed_factor;		// STGI speed factor
+    u16		speed_mod;		// STGI speed mod
+    u8		valid_track;		// 1: valid track or arena file
 
     char	gobj_info[20];		// gobj counters
     char	ct_attrib[300];		// collected ct attributes

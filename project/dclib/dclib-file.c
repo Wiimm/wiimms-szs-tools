@@ -1893,7 +1893,7 @@ enumError TransferFile
 	return ERR_MISSING_PARAM;
 
     if (IsSameFile(src,dest))
-	return ERR_OK;
+	return ERR_NOTHING_TO_DO;
 
     if ( tfer_mode & TFMD_J_MOVE1 )
     {

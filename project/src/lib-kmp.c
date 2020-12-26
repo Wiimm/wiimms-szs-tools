@@ -2802,7 +2802,8 @@ enumError ScanRawKMP
 	DASSERT(entry);
 	memcpy(entry,area,sizeof(*entry));
 	bef4n(entry->position,area->position,9);
-	be16n(entry->setting,area->setting,4);
+	be16n(entry->setting,area->setting,2);
+	be16n(&entry->unknown_2e,&area->unknown_2e,1);
     }
 
 
@@ -3508,7 +3509,8 @@ enumError CreateRawKMP
 	const kmp_area_entry_t * src = (kmp_area_entry_t*)dlist->list + i;
 	memcpy(area,src,sizeof(*area));
 	write_bef4n(area->position,src->position,9);
-	write_be16n(area->setting,src->setting,4);
+	write_be16n(area->setting,src->setting,2);
+	write_be16n(&area->unknown_2e,&src->unknown_2e,1);
     }
 
 
@@ -6092,6 +6094,9 @@ const kmp_obj_info_t have_kmp_info[HAVEKMP__N] =
     { 0, "xobj",	"XPF: Definition object" },		// HAVEKMP_X_DEFOBJ
     { 0, "xrnd",	"XPF: Random scenarios" },		// HAVEKMP_X_RANDOM
     { 0, "eprop-speed",	"Epropeller with speed setting" },	// HAVEKMP_EPROP_SPEED
+    { 0, "coob-r",	"Conditional OOB by Riidefi" },		// HAVEKMP_COOB_R
+    { 0, "coob-k",	"Conditional OOB by kHacker35000vr" },	// HAVEKMP_COOB_K
+    { 0, "uoob",	"Unconditional OOB" },			// HAVEKMP_UOOB
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -6106,9 +6111,29 @@ void DetectSpecialKMP
     DASSERT(res);
     memset(res,0,sizeof(kmp_special_t));
 
+    //--- AREA
+
+    const kmp_area_entry_t *area = (kmp_area_entry_t*)kmp->dlist[KMP_AREA].list;
+    const kmp_area_entry_t *area_end = area + kmp->dlist[KMP_AREA].used;
+    for ( ; area < area_end; area++ )
+    {
+	if ( area->type == 10 )
+	{
+	    if ( area->route == 0xff && area->setting[0] + area->setting[1] )
+		res[HAVEKMP_COOB_R]++;
+	    else if ( area->route == 1 )
+		res[HAVEKMP_COOB_K]++;
+	    else
+		res[HAVEKMP_UOOB]++;
+	}
+    }
+
+
+    //--- GOBJ
+
     const kmp_gobj_entry_t *gobj = (kmp_gobj_entry_t*)kmp->dlist[KMP_GOBJ].list;
-    const kmp_gobj_entry_t *gend = gobj + kmp->dlist[KMP_GOBJ].used;
-    for ( ; gobj < gend; gobj++ )
+    const kmp_gobj_entry_t *gobj_end = gobj + kmp->dlist[KMP_GOBJ].used;
+    for ( ; gobj < gobj_end; gobj++ )
     {
 	if ( gobj->pflags )
 	{
