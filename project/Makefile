@@ -17,7 +17,7 @@
 ##   This file is part of the SZS project.                         ##
 ##   Visit https://szs.wiimm.de/ for project details and sources.  ##
 ##                                                                 ##
-##   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>      ##
+##   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>      ##
 ##                                                                 ##
 #####################################################################
 
@@ -58,7 +58,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.22a
+VERSION_NUM		= 2.23a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -143,7 +143,7 @@ DEFINES1	+= -DLARGE_FILES -D_FILE_OFFSET_BITS=64
 DEFINES1	+= -DWSZST			# compile szs tools (switch for shared sources)
 DEFINES1	+= -DDEBUG_ASSERT		# enable ASSERTions in release version too
 DEFINES1	+= -DEXTENDED_ERRORS=1		# enable extended error messages (function,line,file)
-DEFINES1	+= -DUIOPT_INDEX_SIZE=300	# define max number of options (default 0x100)
+DEFINES1	+= -DUIOPT_INDEX_SIZE=310	# define max number of options (default 0x100)
 
 CFLAGS		+= -fomit-frame-pointer -fno-strict-aliasing -funroll-loops
 CFLAGS		+= -Wall -Wno-parentheses -Wno-unused-function
@@ -241,7 +241,7 @@ XOBJ_COMMON	= lib-common.o lib-geohit.o lib-itemslot.o lib-minigame.o lib-objflo
 
 XOBJ_LIB	= analyze.o lib-szs-create.o lib-xbmg.o \
 			lib-mdl.o lib-pat.o lib-transform.o \
-			lib-ctcode.o lib-lecode.o \
+			lib-ctcode.o lib-lex.o lib-lecode.o \
 			lib-staticr.o db-dol.o db-ctcode.o getopt.o \
 			$(XOBJ_KMP) $(XOBJ_COMMON) $(XOBJ_KCL) lib-kcl-image.o lib-rkg.o \
 			$(XOBJ_OBJECT) $(XOBJ_PARSER) $(XOBJ_IMAGE)
@@ -249,14 +249,14 @@ XOBJ_LIB	= analyze.o lib-szs-create.o lib-xbmg.o \
 TOBJ_gen-ui	= $(XOBJ_OBJECT)
 TOBJ_wszst	= $(XOBJ_LIB) $(WRAPPER_OBJ)
 TOBJ_wbmgt	= lib-xbmg.o $(XOBJ_OBJECT)
-TOBJ_wctct	= lib-ctcode.o lib-lecode.o lib-xbmg.o db-ctcode.o \
+TOBJ_wctct	= lib-ctcode.o lib-lex.o lib-lecode.o lib-xbmg.o db-ctcode.o \
 			$(XOBJ_PARSER) $(XOBJ_IMAGE) $(XOBJ_OBJECT)
 TOBJ_wimgt	= $(XOBJ_IMAGE) $(XOBJ_OBJECT)
 TOBJ_wkclt	= lib-transform.o $(XOBJ_KCL) $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wkmpt	= $(XOBJ_KMP) lib-transform.o \
 			$(XOBJ_KCL) lib-kcl-image.o \
 			$(XOBJ_IMAGE) $(XOBJ_PARSER) $(XOBJ_OBJECT)
-TOBJ_wlect	= lib-lecode.o lib-ctcode.o lib-xbmg.o db-ctcode.o \
+TOBJ_wlect	= lib-lex.o lib-lecode.o lib-ctcode.o lib-xbmg.o db-ctcode.o \
 			$(XOBJ_PARSER) $(XOBJ_IMAGE) $(XOBJ_OBJECT)
 TOBJ_wmdlt	= lib-mdl.o lib-transform.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wpatt	= lib-pat.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
@@ -488,7 +488,7 @@ $(ASM_OBJECTS): %.o: %.S Makefile
 $(SETUP_FILES): templates.sed $(SETUP_DIR)/$@
 	@printf "$(LOGFORMAT)" create "$@" ""
 	@chmod 775 $(GEN_TEMPLATE)
-	@$(GEN_TEMPLATE) $@
+	@$(GEN_TEMPLATE) "$@"
 
 .PHONY : setup-files
 setup-files: templates.sed version.h install.sh
@@ -662,7 +662,7 @@ ifeq ($(SYSTEM),cygwin)
 	@rm -rf $(DISTRIB_PATH)/* 2>/dev/null || true
 	@rm -rf $(DISTRIB_PATH) 2>/dev/null || true
 	@mkdir -p $(DISTRIB_PATH)/bin/windows-sendto
-	@mkdir -p $(DISTRIB_PATH)/scripts
+	@mkdir -p $(DISTRIB_PATH)/scripts $(DISTRIB_PATH)/tmp
 	@mkdir -p $(DISTRIB_PATH)/doc $(DISTRIB_PATH)/support
 	@./cygwin-copy.sh
 	@printf '@cmd\r\n' >$(DISTRIB_PATH)/bin/szs-console.bat

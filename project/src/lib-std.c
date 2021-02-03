@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -63,6 +63,7 @@
 #include "dclib-ui.h"
 #include "lib-mkw.h"
 #include "db-mkw.h"
+#include "crypt.h"
 #include "logo.inc"
 
 #ifdef WIN_SZS_LIB
@@ -81,7 +82,7 @@
 ccp		tool_name		= "?";
 ccp		share_path		= 0;
 ccp		search_path[6]		= {0};
-ccp		auto_add_path[6]	= {0}; // same size as search path
+ccp		auto_add_path[6]	= {0};	// same size as search path
 volatile int	SIGINT_level		= 0;
 volatile int	verbose			= 0;
 volatile int	logging			= 0;
@@ -120,6 +121,10 @@ file_format_t	fform_compr_force	= 0;
 file_format_t	script_fform		= FF_TXT;
 ccp		script_varname		= "res";
 int		script_array		= 0;
+LowerUpper_t	opt_case		= LOUP_AUTO;
+int		opt_pmodes		= 0;
+uint		opt_fmodes_include	= 0;
+uint		opt_fmodes_exclude	= 0;
 int		opt_pt_dir		= 0;
 bool		opt_links		= false;
 bool		opt_rm_aiparam		= false;
@@ -306,6 +311,26 @@ const char is_arena_name[ARENA__N][9] =
 	"found",	// ARENA_FOUND
 	"dispatch",	// ARENA_DISPATCH
 };
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			debugging helper		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info )
+{
+    if (data)
+    {
+	sha1_hash_t hash;
+	SHA1(data,size,hash);
+
+	sha1_hex_t hex;
+	Sha1Bin2Hex(hex,hash);
+
+	fprintf(stderr,"%s %s(), %s @%u : [%u] %s\n",
+		hex, func, file, line, size, info ? info : "" );
+    }
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -3228,6 +3253,66 @@ int ScanOptRecurse ( ccp arg )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptCase ( ccp arg )
+{
+    const int stat = ScanKeywordLowerAutoUpper(arg,LOUP_AUTO,0,"Option --case");
+    if ( stat == LOUP_ERROR )
+	return 1;
+
+    opt_case = stat;
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptFModes ( ccp arg )
+{
+    opt_fmodes_include = 0;
+    opt_fmodes_exclude = 0;
+
+    if (!arg)
+	return 0;
+
+    const int NO   = 0x1000;
+    const int BOTH = 0x1001;
+    static const KeywordTab_t keytab[] =
+    {
+	{ FZM_SECTION,		"SECTION",	0,	BOTH*FZM_SECTION },
+	{ FZM_VISUAL,		"VISUAL",	0,	BOTH*FZM_VISUAL },
+	{ FZM_GAMEPLAY,		"GAMEPLAY",	0,	BOTH*FZM_GAMEPLAY },
+	{ FZM_BATTLE,		"BATTLE",	0,	BOTH*FZM_BATTLE },
+	{ FZM_RACING,		"RACING",	0,	BOTH*FZM_RACING },
+	{ FZM_TIMETRIAL,	"TIMETRIAL",	0,	BOTH*FZM_TIMETRIAL },
+	{ FZM_OFFLINE,		"OFFLINE",    "LOCAL",	BOTH*FZM_OFFLINE },
+	{ FZM_ONLINE,		"ONLINE",	0,	BOTH*FZM_ONLINE },
+
+	{ NO*FZM_SECTION,	"-SECTION",	0,	BOTH*FZM_SECTION },
+	{ NO*FZM_VISUAL,	"-VISUAL",	0,	BOTH*FZM_VISUAL },
+	{ NO*FZM_GAMEPLAY,	"-GAMEPLAY",	0,	BOTH*FZM_GAMEPLAY },
+	{ NO*FZM_BATTLE,	"-BATTLE",	0,	BOTH*FZM_BATTLE },
+	{ NO*FZM_RACING,	"-RACING",	0,	BOTH*FZM_RACING },
+	{ NO*FZM_TIMETRIAL,	"-TIMETRIAL",	0,	BOTH*FZM_TIMETRIAL },
+	{ NO*FZM_OFFLINE,	"-OFFLINE",   "-LOCAL",	BOTH*FZM_OFFLINE },
+	{ NO*FZM_ONLINE,	"-ONLINE",	0,	BOTH*FZM_ONLINE },
+
+	{0,0,0,0}
+    };
+
+    const s64 stat = ScanKeywordList(arg,keytab,0,true,0,0,
+					"Option --filter",ERR_SYNTAX);
+    if ( stat == -1 )
+	return 1;
+
+    opt_fmodes_include = stat & FZM__MASK;
+    opt_fmodes_exclude = stat/NO & FZM__MASK;
+
+    PRINT("--filter: %02x %02x\n",opt_fmodes_include,opt_fmodes_exclude);
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 SlotMode_t opt_slot = SLOTMD_NONE;
@@ -5176,33 +5261,7 @@ uint GetMkwMusicSlot ( uint tid )
 #ifdef __APPLE__
 ///////////////////////////////////////////////////////////////////////////////
 
-void * memmem ( const void *l, size_t l_len, const void *s, size_t s_len )
-{
-    register char *cur, *last;
-    const char *cl = (const char *)l;
-    const char *cs = (const char *)s;
-
-    /* we need something to compare */
-    if (l_len == 0 || s_len == 0)
-	return NULL;
-
-    /* "s" must be smaller or equal to "l" */
-    if (l_len < s_len)
-	    return NULL;
-
-    /* special case where s_len == 1 */
-    if (s_len == 1)
-	return memchr(l, (int)*cs, l_len);
-
-    /* the last position where its possible to find "s" in "l" */
-    last = (char *)cl + l_len - s_len;
-
-    for (cur = (char *)cl; cur <= last; cur++)
-	if (cur[0] == cs[0] && memcmp(cur, cs, s_len) == 0)
-	    return cur;
-
-    return NULL;
-}
+int ____chkstk_darwin() { return 0; }
 
 ///////////////////////////////////////////////////////////////////////////////
 #endif // __APPLE__

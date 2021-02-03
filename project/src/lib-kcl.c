@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1096,9 +1096,9 @@ void RoundPointsKCL
 
     for ( ; n-- > 0; td++ )
     {
-	double *d = &td->pt->x;
+	double *d = td->pt->v;
 	uint i;
-	for ( i = 0; i < sizeof(td->pt)/sizeof(*d); i++, d++ )
+	for ( i = 0; i < sizeof(td->pt->v)/sizeof(*d); i++, d++ )
 	    *d = ldexp(round(ldexp(*d,round_pow2)),-round_pow2);
 	td->status |= TD_INVALID_NORM;
     }
@@ -1129,9 +1129,9 @@ void RoundNormalsKCL
 
     for ( ; n-- > 0; td++ )
     {
-	float *f = &td->normal->x;
+	float *f = td->normal->v;
 	uint i;
-	for ( i = 0; i < sizeof(td->normal)/sizeof(*f); i++, f++ )
+	for ( i = 0; i < sizeof(td->normal->v)/sizeof(*f); i++, f++ )
 	    *f = ldexpf(roundf(ldexpf(*f,round_pow2)),-round_pow2);
     }
 }

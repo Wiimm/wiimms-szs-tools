@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2020 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -178,7 +178,7 @@ void PutLines
     int		first_line,	// length without prefix of already printed first line
     ccp		prefix,		// NULL or prefix for each line
     ccp		text,		// text to print
-    ccp		eol		// End Of Line test. If NULL -> LF
+    ccp		eol		// End-Of-Line text. If NULL -> LF
 )
 {
     DASSERT(f);
@@ -339,7 +339,7 @@ uint PutColoredLines
     int			indent,		// indent of output
     int			fw,		// field width; indent+prefix+eol don't count
     ccp			prefix,		// NULL or prefix for each line
-    ccp			eol,		// End Of Line test. If NULL -> LF
+    ccp			eol,		// End-Of-Line text. If NULL -> LF
     ccp			text		// text to print
 )
 {
@@ -629,7 +629,7 @@ uint PrintArgColoredLines
     int			indent,		// indent of output
     int			fw,		// field width; indent+prefix+eol don't count
     ccp			prefix,		// NULL or prefix for each line
-    ccp			eol,		// End Of Line test. If NULL -> LF
+    ccp			eol,		// End-Of-Line text. If NULL -> LF
     ccp			format,		// format string for vsnprintf()
     va_list		arg		// parameters for 'format'
 )
@@ -670,7 +670,7 @@ uint PrintColoredLines
     int			indent,		// indent of output
     int			fw,		// field width; indent+prefix+eol don't count
     ccp			prefix,		// NULL or prefix for each line
-    ccp			eol,		// End Of Line test. If NULL -> LF
+    ccp			eol,		// End-Of-Line text. If NULL -> LF
     ccp			format,		// format string for vsnprintf()
     ...					// arguments for 'vsnprintf(format,...)'
 )
@@ -1003,7 +1003,11 @@ uint stdout_seq_count = 0;
 ///////////////////////////////////////////////////////////////////////////////
 
 uint opt_width = 0;
+uint opt_max_width = 0;
 uint opt_height = 0;
+uint opt_max_height = 0;
+
+//-----------------------------------------------------------------------------
 
 int ScanOptWidth ( ccp arg )
 {
@@ -1021,6 +1025,24 @@ int ScanOptWidth ( ccp arg )
 			);
 }
 
+int ScanOptMaxWidth ( ccp arg )
+{
+    return ERR_OK != ScanSizeOptU32(
+			&opt_max_width,		// u32 * num
+			arg,			// ccp source
+			1,			// default_factor1
+			0,			// int force_base
+			"max-width",		// ccp opt_name
+			40,			// u64 min
+			10000,			// u64 max
+			1,			// u32 multiple
+			0,			// u32 pow2
+			true			// bool print_err
+			);
+}
+
+//-----------------------------------------------------------------------------
+
 int ScanOptHeight ( ccp arg )
 {
     return ERR_OK != ScanSizeOptU32(
@@ -1037,13 +1059,30 @@ int ScanOptHeight ( ccp arg )
 			);
 }
 
+int ScanOptMaxHeight ( ccp arg )
+{
+    return ERR_OK != ScanSizeOptU32(
+			&opt_max_height,	// u32 * num
+			arg,			// ccp source
+			1,			// default_factor1
+			0,			// int force_base
+			"max-height",		// ccp opt_name
+			40,			// u64 min
+			10000,			// u64 max
+			1,			// u32 multiple
+			0,			// u32 pow2
+			true			// bool print_err
+			);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 term_size_t GetTermSize ( int default_width, int default_height )
 {
-    TRACE("GetTermWidth(%d,%d) opt=%d,%d\n",
-	default_width, default_height, opt_width, opt_height );
+    PRINT1("GetTermWidth(%d,%d) opt=%d,%d, max=%d,%d\n",
+	default_width, default_height,
+	opt_width, opt_height, opt_max_width, opt_max_height );
 
     term_size_t ts;
     if ( opt_width > 0 && opt_height > 0 )
@@ -1054,10 +1093,16 @@ term_size_t GetTermSize ( int default_width, int default_height )
     else
     {
 	ts = GetTermSizeFD(STDOUT_FILENO,default_width,default_height);
-	if (  opt_width > 0 )
+
+	if ( opt_width > 0 )
 	    ts.width = opt_width;
-	if (  opt_height > 0 )
+	else if ( opt_max_width > 0 && ts.width > opt_max_width )
+	    ts.width = opt_max_width;
+
+	if ( opt_height > 0 )
 	    ts.height = opt_height;
+	else if ( opt_max_height > 0 && ts.height > opt_max_height )
+	    ts.height = opt_max_height;
     }
 
     return ts;
@@ -1125,11 +1170,8 @@ int GetTermWidth ( int default_value, int min_value )
 {
     TRACE("GetTermWidth(%d,%d) opt=%d\n",default_value,min_value,opt_width);
 
-    int term_width = opt_width > 0
-			? opt_width
-			: GetTermWidthFD(STDOUT_FILENO,-1,min_value);
-
-    return term_width > 0 ? term_width : default_value;
+    const term_size_t ts = GetTermSize(default_value,25);
+    return ts.width > min_value ? ts.width : min_value;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1138,7 +1180,7 @@ int GetTermWidthFD ( int fd, int default_value, int min_value )
 {
     TRACE("GetTermWidthFD(%d,%d,%d)\n",fd,default_value,min_value);
 
-    term_size_t ts = GetTermSizeFD(fd,default_value,25);
+    const term_size_t ts = GetTermSizeFD(fd,default_value,25);
     return ts.width > min_value ? ts.width : min_value;
 }
 
@@ -1149,11 +1191,8 @@ int GetTermHeight ( int default_value, int min_value )
 {
     TRACE("GetTermHeight(%d,%d) opt=%d\n",default_value,min_value,opt_height);
 
-    int term_height = opt_height > 0
-			? opt_height
-			: GetTermHeightFD(STDOUT_FILENO,-1,min_value);
-
-    return term_height > 0 ? term_height : default_value;
+    const term_size_t ts = GetTermSize(80,default_value);
+    return ts.width > min_value ? ts.width : min_value;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1162,7 +1201,7 @@ int GetTermHeightFD ( int fd, int default_value, int min_value )
 {
     TRACE("GetTermHeightFD(%d,%d,%d)\n",fd,default_value,min_value);
 
-    term_size_t ts = GetTermSizeFD(fd,default_value,25);
+    const term_size_t ts = GetTermSizeFD(fd,80,default_value);
     return ts.height > min_value ? ts.height : min_value;
 }
 
@@ -3051,6 +3090,8 @@ const ColorSet_t * GetColorSet0()
 
 const ColorSet_t * GetColorSet8()
 {
+    // [[new-color]]
+
     static ColorSet_t col = {0};
     if (!col.col_mode)
     {
@@ -3078,6 +3119,7 @@ const ColorSet_t * GetColorSet8()
 	 col.debug		= STRDUP(GetTextMode(1,TTM_COL_DEBUG));
 	 col.log		= STRDUP(GetTextMode(1,TTM_COL_LOG));
 	col.name		= STRDUP(GetTextMode(1,TTM_COL_NAME));
+	col.op			= STRDUP(GetTextMode(1,TTM_COL_OP));
 	col.value		= STRDUP(GetTextMode(1,TTM_COL_VALUE));
 	col.success		= STRDUP(GetTextMode(1,TTM_COL_SUCCESS));
 	col.error		= STRDUP(GetTextMode(1,TTM_COL_ERROR));
@@ -3154,6 +3196,8 @@ const ColorSet_t * GetColorSet8()
 
 const ColorSet_t * GetColorSet256()
 {
+    // [[new-color]]
+
     static ColorSet_t col = {0};
     if (!col.col_mode)
     {
@@ -3358,6 +3402,7 @@ ccp GetColorByName ( const ColorSet_t *colset, ccp name )
 
     static const struct cdef_t tab[] =
     {
+	// [[new-color]]
 	DEF1(abort)
 	DEF1(b_black)
 	DEF1(b_blue)
@@ -3410,6 +3455,7 @@ ccp GetColorByName ( const ColorSet_t *colset, ccp name )
 	DEF1(name)
 	DEF1(off)
 	DEF1(on)
+	DEF1(op)
 	DEF1(open)
 	DEF2(opt,option)
 	DEF1(option)
@@ -3505,6 +3551,8 @@ void PrintColorSetHelper
 					//  16: include alternative names too (e.g. HL)
 )
 {
+    // [[new-color]]
+
     DASSERT(f);
     DASSERT(func);
 
@@ -3583,6 +3631,7 @@ void PrintColorSetHelper
 	JOB1(4,log);
 
 	JOB1(4,name);
+	JOB1(4,op);
 	JOB1(4,value);		if (alt) JOB2(12,val,value);
 	JOB1(4,success);
 	JOB1(4,error);
@@ -3698,12 +3747,14 @@ static void PrintColorSetPHP
     {
 	DASSERT(col_string);
 
+	fprintf(f,"    $COL->%s%.*s= ", col_name, (29-(int)strlen(col_name))/8, Tabs20 );
+
 	char buf[50];
 	PrintEscapedString(buf,sizeof(buf),col_string,-1,CHMD_ESC,0,0);
 	if (memcmp(buf,"\\x1B",4))
-	    fprintf(f,"$COL->%-15s = \"%s\";\n",col_name,buf);
+	    fprintf(f,"\"%s\";\n",buf);
 	else
-	    fprintf(f,"$COL->%-15s = \"\\033%s\";\n",col_name,buf+4);
+	    fprintf(f,"\"\\033%s\";\n",buf+4);
     }
 }
 
@@ -4181,6 +4232,8 @@ static void ViewColorsPredef_helper
 
 void ViewColorsPredef ( ColorView_t *cv, uint mode )
 {
+    // [[new-color]]
+
     DASSERT(cv);
     SetupColorView(cv);
     DASSERT(cv->colset);
@@ -4226,6 +4279,7 @@ void ViewColorsPredef ( ColorView_t *cv, uint mode )
 	JOB1(log);
 
 	JOB1(name);
+	JOB1(op);
 	JOB1(value);	if (alt) JOB2(val,value);
 	JOB1(success);
 	JOB1(error);

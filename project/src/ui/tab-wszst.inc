@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -229,6 +229,10 @@
 		    "wszst _SUBFILE [files]",
 		"Test sub-file system." },
 
+  { H_DEF_CMD,	"TESTNORM",	"_NORM",
+		    "wszst _NORM key...",
+		"This hidden command tests the iteration of norming." },
+
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
   { T_DEF_CMD,	"LIST",		"LIST|LS",
@@ -329,6 +333,10 @@
   { T_DEF_CMD,	"ANALYZE",	"ANALYZE|ANA|ANALYSE",
 		    "wszst ANALYZE [source]...",
 		"Analyse track files and print results in machine readable format." },
+
+  { H_DEF_CMD,	"FEATURES",	"FEATURES",
+		    "wszst FEATURES [source]...",
+		"Analyse track files and a feature list in machine readable format." },
 
   { T_DEF_CMD,	"DISTRIBUTION",	"DISTRIBUTION|DIST",
 		    "wszst DISTRIBUTION result source...\n"
@@ -639,6 +647,14 @@
 		"Define the terminal width (number of columns)"
 		" for help and some other messages"
 		" and disable the automatic detection of the terminal width." },
+
+  { T_OPT_GP|F_IGNORE,
+		"MAX_WIDTH",	"max-width|maxwidth",
+		"maxwidth",
+		"Define the maximum terminal width (number of columns)"
+		" for help and some other messages"
+		" and disable the automatic detection of the terminal width."
+		" This option is ignored if {--width} is set." },
 
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0,
@@ -1060,7 +1076,7 @@
 		" @FAST, NEW, CENTER, ROUND, NORMALS, MTL,"
 		" WIIMM, TRIANGLES, OUT-SWAP, G, USEMTL, CLIP, IN-SWAP, AUTO, HEX4,"
 		" HEX23, HEX, DROP-UNUSED, DROP-FIXED, DROP-INVALID, DROP,"
-		" RM-FACEDOWN, RM-FACEUP, FIX-ALL,"
+		" RM-FACEDOWN, RM-FACEUP, FIX-ALL, TINY-0 ... TINY-7,"
 		" CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT@ and @LOG@."
 		"\1 See https://szs.wiimm.de/opt/kcl for details." },
 
@@ -1154,7 +1170,7 @@
 		" MASK-PFLAGS, RM-LECODE, PURGE-GOBJ, FULL-DEFOBJ,"
 		" DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL,"
 		" 1LAP ... 9LAPS, MAX-LAPS, RM-EMPTY,"
-		" INPLACE, SILENT@ and @LOG@."
+		" TINY-0 ... TINY-7, INPLACE, SILENT@ and @LOG@."
 		"\1 See https://szs.wiimm.de/opt/kmp for details." },
 
   { T_OPT_GP,	"SPEED_MOD",	"speed-mod|speedmod",
@@ -1375,7 +1391,22 @@
 		0,
 		"Delete LEX sections without any impact."
 		" Delete sub-file course.lex if it no longer contains a section."
-		" This option is executed after all --lt-* options." },
+		" This option is executed after all --lt-* and --lex-* options." },
+
+  { H_OPT_G,	"LEX_FEATURES",	"lex-features|lexfeatures",
+		0,
+		"Calculate LEX setion FEA0 (features) by analysing the track file."
+		" If no features found, delete the section and the possibly empty sub-file"
+		" course.lex. If features found, then insert the section or update"
+		" an existing section. If necessary, the sub-file course.lex is created."
+		" This option is executed after all --lt-* options and after --lex-purge." },
+
+  { H_OPT_G,	"LEX_RM_FEAT",	"lex-rm-features|lexrmfeatures",
+		0,
+		"Remove LEX setion FEA0 (features) if exists"
+		" and the possibly empty sub-file course.lex."
+		" This option is ignored if --lex-features is set."
+		" It is executed after all --lt-* options and after --lex-purge." },
 
   { T_OPT_CMP,	"LOAD_BMG",	"load-bmg|loadbmg",
 		"file",
@@ -1817,6 +1848,31 @@
   { T_OPT_GP,	"AVAR",		"avar",
 		"varname",
 		"Shortcut for: {--array --var name}" },
+
+  { T_OPT_GP,	"CASE",		"case",
+		"case",
+		"@CASE@ is one of @LOWER@, @AUTO@ (default) or @UPPER@."
+		"If @LOWER@ or @UPPER@ are set, then the lower/upper case"
+		" of the variable names is adjusted accordingly." },
+
+  { H_OPT_C,	"PMODES",	"pmodes|print-modes|printmodes",
+		0,
+		"--pmodes is an abbreviation for --print-mode."
+		" If set, a comma-separated list of letters is added to the end of each feature."
+		" The letters used are:"
+		" @S@ (section), @V@ (visual), @B@ (battle), @R@ (racing),"
+		" @T@ (time trial), @L@ (local=offline) and @O@ (online)." },
+
+  { H_OPT_CP,	"FMODES",	"fmodes|feature-modes|featuremodes",
+		"list",
+		"--fmodes is an abbreviation for --feature-modes and declares an output filter."
+		" @LIST@ is a keyword list. The keywords are:"
+		" @SECTION, VISUAL, GAMEPLAY, BATTLE, RACING, TIMETRIAL, OFFLINE@ and @ONLINE@."
+		" A feature is only printed if *all* set keywords match."
+		"\n "
+		" Each keyword can also be used with a minus as prefix to define"
+		" a second condition. In this case the feature is excluded"
+		" from printing if *any* set keywords match." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -2318,6 +2374,8 @@
   { T_COPT,	"LT_ENGINE",	0,0,0 },
   { T_COPT,	"LT_RANDOM",	0,0,0 },
   { T_COPT,	"LEX_PURGE",	0,0,0 },
+  { H_COPT,	"LEX_FEATURES",	0,0,0 },
+  { H_COPT,	"LEX_RM_FEAT",	0,0,0 },
   { T_COPT,	"PATCH_BMG",	0,0,0 },
   { T_COPT,	"MACRO_BMG",	0,0,0 },
   { T_COPT,	"FILTER_BMG",	0,0,0 },
@@ -2381,6 +2439,7 @@
   { T_COPT,	"VAR",		0,0,0 },
   { T_COPT,	"ARRAY",	0,0,0 },
   { T_COPT,	"AVAR",		0,0,0 },
+  { T_COPT,	"CASE",		0,0,0 },
 
   //---------- wszst GROUP ALIGN ----------
 
@@ -2515,6 +2574,7 @@
   { T_CMD_BEG,	"HELP",		0,0,0 },
 
   { T_COPT,	"WIDTH",	0,0,0 },
+  { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wszst ARGTEST ----------
@@ -2872,6 +2932,26 @@
 	"Suppress logging of input and output files." },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"SCRIPT",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"DEST",		0,0,0 },
+  { T_COPT,	"DEST2",	0,0,0 },
+
+  //---------- COMMAND wszst FEATURES ----------
+
+  { T_CMD_BEG,	"FEATURES",	0,0,0 },
+  { T_COPT,	"BRIEF",	0,0,
+	"Suppres any comments at all."
+	" If set twice, suppress empty lines (for grouping) too."
+	" If set three times, omit inactive features (=0) too." },
+  { T_COPT,	"LONG",		0,0,
+	"Print additnal comments." },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_COPT,	"QUIET",	0,0,
+	"Suppress logging of input and output files." },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"SCRIPT",	0,0,0 },
+  { T_COPT,	"PMODES",	0,0,0 },
+  { T_COPT,	"FMODES",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"DEST",		0,0,0 },
   { T_COPT,	"DEST2",	0,0,0 },

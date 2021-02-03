@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -250,6 +250,7 @@ CmpFuncSubFile GetCmpFunc
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			enum mark			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[szs_marker_t]]
 
 // Flags:
 //  _U : object used
@@ -293,6 +294,36 @@ __attribute__ ((packed)) have_szs_file_t;
 
 extern const ccp have_szs_name[HAVESZS__N];
 extern const ccp have_szs_file[HAVESZS__N];
+extern const file_format_t have_szs_fform[HAVESZS__N];
+
+//-----------------------------------------------------------------------------
+// [[have_file_mode_t]] [[szs_special_t]]
+
+typedef enum have_file_mode_t
+{
+    HFM_NONE,		// file not found/exist
+    HFM_ORIGINAL,	// file found, but original data
+    HFM_MODIFIED,	// file found, modified data
+}
+__attribute__ ((packed)) have_file_mode_t;
+
+typedef have_file_mode_t szs_special_t[HAVESZS__N];
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			szs_have_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[szs_have_t]]
+
+typedef struct szs_have_t
+{
+    bool	valid;		// TRUE: SZS analyzed
+    szs_special_t szs;		// u8-list: one of have_file_mode_t (H_*)
+    kmp_special_t kmp;		// u8-list: elem>0: number of special KMP objects found
+    uint	lex_sect;	// bit field for found lex sections
+    uint	lex_feat;	// bit field for found lex features
+}
+szs_have_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -409,26 +440,65 @@ typedef struct szs_file_t
 					// 3: all materials found & content ok
 
     warn_bits_t	warn_bits;		// warning summary
-    bool	szs_special[HAVESZS__N]; // true: special file found
-    kmp_special_t kmp_special;		// list: >0: number of special KMP objects found
-    uint	have_lex;		// bit field for found lex eleemnts
+    szs_have_t	have;			// complete have status
 
     ParamField_t *special_file;		// list with files of directory /common/
 
 } szs_file_t;
 
 //-----------------------------------------------------------------------------
+// [[szs_norm_info_t]]
+// [[norm]]
+
+typedef enum szs_norm_info_t
+{
+    SZI_NORM,		// N: file is normed
+    SZI_PT_DIR,		// P: have pt_dir
+    SZI_AI_PARAM,	// A: have AI param
+    SZI_SPEED,		// S: have speed KMP/STGI factoe
+    SZI_LAPS,		// #: (1-9) KMP/STGI number of laps
+    SZI_RM_LEX_FEA0,	// F: have LEX section FEA0
+    SZI_RM_LEX_TEST,	// T: have LEX section TEST
+
+    SZI__N		// number of flags
+}
+szs_norm_info_t;
+
+//-----------------------------------------------------------------------------
 // [[szs_norm_t]]
+// [[norm]]
 
 typedef struct szs_norm_t
 {
+    //--- status
+
     u32		namepool_size;
     u32		total_size;
     bool	have_pt_dir;
-    bool	rm_aiparam;
-    bool	clean_lex;
 
-} szs_norm_t;
+    //--- jobs
+
+    bool	force_pt_dir;		// force './' as prefix for each subfile
+    bool	rm_aiparam;		// remove subfiles with name 'aiparam*'
+    bool	clean_lex;		// [[obsolete]] when following params become active
+
+    //--- not implemented yet
+
+    bool	auto_add;		// autoadd files
+    bool	norm_speed;		// normalize speed (KMP/STGI)
+    u8		max_laps;		// >0: limit number of laps (KMP/STGI)
+    u8		set_laps;		// >0: set number of laps (KMP/STGI)
+    bool	rm_lex_test;		// remove LEX section TEST
+    bool	manage_lex_fea0;	// manage LEX section FEA0: 0:off, 1:remove, 2:auto
+    bool	purge_lex;		// purge lex section and remove course.bin if empty
+
+    //--- for output via PrintNorm()
+
+    FILE *f;				// NULL or output file    
+    int  indent;			// indention
+    char modified[SZI__N+1];		// info vector about modification -> szs_norm_info_t
+}
+szs_norm_t;
 
 //-----------------------------------------------------------------------------
 
@@ -468,7 +538,14 @@ void AssignSZS
     uint		size,		// size of 'data'
     bool		move_data,	// true: free 'data' on reset
     file_format_t	fform,		// not FF_UNKNOWN: use this type
-    ccp			fname		// NULL or file names
+    ccp			fname		// NULL or file name
+);
+
+void CopySZS
+(
+    szs_file_t		*szs,		// SZS to initialize
+    bool		init_szs,	// true: InitializeSZS(), false: ResetSZS()
+    const szs_file_t	*source		// source SZS
 );
 
 enumError LoadSZS
@@ -518,6 +595,8 @@ enumError CompressSZS ( szs_file_t * szs, bool remove_uncompressed );
 bool NormalizeSZS ( szs_file_t *szs );
 bool NormalizeExSZS ( szs_file_t *szs, bool rm_aiparam, bool clean_lex, bool autoadd );
 bool PatchSZS ( szs_file_t * szs );
+bool CanBeATrackSZS ( szs_file_t * szs );
+void CalcHaveSZS ( szs_file_t * szs );
 
 enumError DecompressSZS
 (
@@ -758,7 +837,7 @@ void FindSpecialFilesSZS
 );
 
 ccp CreateSpecialFileInfo
-	( szs_file_t * szs, bool add_value, ccp return_if_empty );
+	( szs_file_t * szs, uint select, bool add_value, ccp return_if_empty );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1310,7 +1389,6 @@ enumError CompressBZ ( szs_file_t * szs, bool remove_uncompressed );
 
 typedef struct analyse_szs_t
 {
-
     //--- db+sha1 check sums
 
     char	db64[CHECKSUM_DB_SIZE+1];
@@ -1332,6 +1410,7 @@ typedef struct analyse_szs_t
     slot_info_t		slotinfo;	// slot data
     kmp_finish_t	kmp_finish;	// finish line
     kmp_usedpos_t	used_pos;	// used positions
+    szs_have_t		have;		// complete have status, copy of szs_file_t::have
 
 
     //--- more stats

@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2020 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -191,9 +191,13 @@ static inline int CompareTimeSpecTime ( const struct timespec *a, const time_t t
 static inline bool IsTimeSpecNull ( const struct timespec *ts )
 {
     return !ts
-	|| ts->tv_nsec > 1000000000 // includes UTIME_NOW || UTIME_OMIT
+	|| (unsigned long)ts->tv_nsec > 999999999 // includes UTIME_NOW and UTIME_OMIT
 	|| !ts->tv_nsec && !ts->tv_sec;
 }
+
+//-----------------------------------------------------------------------------
+
+void SetAMTimes ( ccp fname, const struct timespec times[2] );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1336,11 +1340,13 @@ ccp PrintOpenFiles ( bool count_current ); // print to circ buffer
 typedef enum PrintScriptFF
 {
 	PSFF_UNKNOWN,	// always 0
+	PSFF_ASSIGN,
 	PSFF_JSON,
 	PSFF_BASH,
 	PSFF_SH,
 	PSFF_PHP,
 	PSFF_MAKEDOC,
+	PSFF_C,
 }
 PrintScriptFF;
 
@@ -1354,11 +1360,16 @@ typedef struct PrintScript_t
     FILE	*f;		// valid output file
     PrintScriptFF fform;	// output: file format
     ccp		varname;	// valid ponter to var name
+    LowerUpper_t force_case;	// change case of var names if not LOUP_AUTO
     bool	create_array;	// true: create ar arrays
     bool	add_index;	// true: add index to varname
+    bool	ena_empty;	// true: enable empty lines
+    bool	ena_comments;	// true: enable comments
+    uint	count;		// number of printed records (used for seoarators)
     uint	index;		// index for array operations
     char	sep[2];		// separator for JSON
-    char	prefix[100];	// varname prefix
+    char	prefix[100];	// var name prefix
+    ccp		boc;		// begin of comment
 }
 PrintScript_t;
 
@@ -1379,7 +1390,7 @@ int PutScriptVars
 (
     PrintScript_t	*ps,		// valid control struct
     uint		mode,		// bit field: 1=open var, 2:close var
-    ccp			text		// text with line of format NAME=VALUE
+    ccp			text		// text with lines of format NAME=VALUE
 );
 
 int PrintScriptVars

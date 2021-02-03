@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -57,6 +57,8 @@
 #include "lib-image.h"
 #include "lib-object.h"
 #include "lib-checksum.h"
+#include "lib-common.h"
+#include "lib-bzip2.h"
 #include "crypt.h"
 
 #include "setup.inc"
@@ -106,6 +108,7 @@ static const alter_file_t * ShallRemoveFile ( ccp fname )
 
 static bool AddSlotFiles ( szs_file_t *szs, struct szs_norm_t * norm )
 {
+// [[norm]]
     DASSERT(szs);
     bool dirty = false;
     if ( szs->fform_arch == FF_U8 || szs->fform_arch == FF_WU8 )
@@ -1103,8 +1106,6 @@ enumError LoadObjFileListSZS
 	}
     }
 
-    //DetectSpecialKMP(&kmp,szs->kmp_special);
-
 
     //--- slot analysis: 31+71, 62
 
@@ -1252,6 +1253,7 @@ void FindSpecialFilesSZS
 	{
 	    szs->course_kcl_data = szs->data + file->offset;
 	    szs->course_kcl_size = file->size;
+	    LOG_SHA1(szs->course_kcl_data,szs->course_kcl_size,"course.kcl");
 	}
 	else if ( !szs->course_kmp_data && !strcasecmp(fname,"course.kmp") )
 	{
@@ -1262,7 +1264,7 @@ void FindSpecialFilesSZS
 	{
 	    szs->course_lex_data = szs->data + file->offset;
 	    szs->course_lex_size = file->size;
-	    szs->szs_special[HAVESZS_COURSE_LEX] = true;
+	    szs->have.szs[HAVESZS_COURSE_LEX] = HFM_MODIFIED;
 	}
 	else if ( !szs->course_model_data && !strcasecmp(fname,"course_model.brres") )
 	{
@@ -1310,9 +1312,17 @@ void FindSpecialFilesSZS
 	{
 	    uint i;
 	    for ( i = 0; i < HAVESZS__N; i++ )
-		if ( !szs->szs_special[i] && !strcasecmp(fname,have_szs_file[i]) )
+		if ( !strcasecmp(fname,have_szs_file[i]) )
 		{
-		    szs->szs_special[i] = true;
+		    const BZ2Manager_t *bm = GetCommonBZ2Manager(have_szs_fform[i]);
+		    const have_file_mode_t hfm = 
+				   bm
+				&& file->size == bm->size
+				&& !memcmp( file->data ? file->data : szs->data + file->offset,
+						bm->data, bm->size )
+				? HFM_ORIGINAL : HFM_MODIFIED;
+		    if ( szs->have.szs[i] < hfm )
+			szs->have.szs[i] = hfm;
 		    break;
 		}
 	}
@@ -1325,7 +1335,7 @@ void FindSpecialFilesSZS
 ///////////////////////////////////////////////////////////////////////////////
 
 ccp CreateSpecialFileInfo
-	( szs_file_t * szs, bool add_value, ccp return_if_empty )
+	( szs_file_t * szs, uint select, bool add_value, ccp return_if_empty )
 {
     DASSERT(szs);
 
@@ -1336,7 +1346,7 @@ ccp CreateSpecialFileInfo
     {
 	uint i, val = 0;
 	for ( i = 0; i < HAVESZS__N; i++ )
-	    if ( szs->szs_special[i] )
+	    if ( 1 << szs->have.szs[i] & select )
 		val |= 1 << i;
 	dest = snprintfE( dest, buf+sizeof(buf), "%u=" , val );
     }
@@ -1344,7 +1354,7 @@ ccp CreateSpecialFileInfo
     uint i;
     ccp sep = "";
     for ( i = 0; i < HAVESZS__N; i++ )
-	if ( szs->szs_special[i] )
+	if ( 1 << szs->have.szs[i] & select )
 	{
 	    dest = StringCat2E(dest,buf+sizeof(buf),sep,have_szs_name[i]);
 	    sep = ",";
@@ -1369,6 +1379,7 @@ static int norm_collect_func
     if (term)
 	return 0;
 
+// [[norm]]
     szs_norm_t * norm = it->param;
     DASSERT(norm);
 
@@ -1400,9 +1411,9 @@ static int norm_collect_func
 	lex_t lex;
 	u8 *data = it->szs->data + it->off;
 	enumError err = ScanRawLEX(&lex,true,data,it->size,0);
-	if ( !err && PatchLEX(&lex) && CreateRawLEX(&lex) == ERR_OK )
+	if ( !err && PatchLEX(&lex,&it->szs->have) && CreateRawLEX(&lex) == ERR_OK )
 	{
-	    if (!lex.have_lex)
+	    if (!lex.have_sect)
 	    {
 		PATCH_ACTION_LOG("Remove","SZS","%s\n","course.lex");
 		return 0;
@@ -1515,6 +1526,7 @@ bool NormalizeExSZS
 
     ResetFileSZS(szs,false);
 
+// [[norm]]
     szs_norm_t norm;
     memset(&norm,0,sizeof(norm));
     norm.rm_aiparam = rm_aiparam;
@@ -1524,7 +1536,7 @@ bool NormalizeExSZS
     if (autoadd)
 	AddMissingFiles(szs,0,0,&norm,2);
     AddSlotFiles(szs,&norm);
-    AddTestLEX(szs,&norm);
+    AddSectionsLEX(szs,&norm,&szs->have);
     SortSubFilesSZS(szs,SORT_AUTO);
 
     uint old_size	= szs->size;
@@ -1711,7 +1723,7 @@ static int add_missing_file
     if ( is_course_lex )
     {
 	InitializeLEX(&lex);
-	if ( PatchLEX(&lex) && CreateRawLEX(&lex) == ERR_OK )
+	if ( PatchLEX(&lex,&am->szs->have) && CreateRawLEX(&lex) == ERR_OK )
 	    size = lex.raw_data_size;
     }
 
@@ -1778,6 +1790,7 @@ int AddMissingFileSZS
     int			log_indent	// >-1: print log with indention
 )
 {
+// [[norm]]
     DASSERT(szs);
     DASSERT(fname);
     DASSERT(fform);
@@ -1801,6 +1814,7 @@ enumError AddMissingFiles
     int			log_indent	// >-1: print log with indention
 )
 {
+// [[norm]]
     DASSERT(szs);
     DASSERT( sd || norm );
 
@@ -1855,9 +1869,12 @@ enumError AddMissingFiles
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void AddTestLEX ( szs_file_t *szs, szs_norm_t *norm )
+void AddSectionsLEX ( szs_file_t *szs, szs_norm_t *norm, const szs_have_t * have )
 {
+// [[norm]]
     DASSERT(szs);
+    bool add_course_lex = false;
+
     if (HaveActivePatchTestLEX())
     {
 	lex_test_t temp;
@@ -1865,8 +1882,20 @@ void AddTestLEX ( szs_file_t *szs, szs_norm_t *norm )
 	bool empty;
 	PatchTestLEX(&temp,&empty);
 	if ( !empty || force_lex_test )
-	    AddMissingFileSZS(szs,"course.lex",FF_LEX,norm,verbose<1?-1:0);
+	    add_course_lex = true;
     }
+
+    if ( HavePatchFeaturesLEX() && have && have->valid )
+    {
+	features_szs_t fs;
+	SetupFeaturesSZS(&fs,have,true);
+	if ( GetFeaturesStatusSZS(&fs) > 1 )
+	    add_course_lex = true;
+	ResetFeaturesSZS(&fs);
+    }
+
+    if (add_course_lex)
+	AddMissingFileSZS(szs,"course.lex",FF_LEX,norm,verbose<1?-1:0);
 }
 
 //
@@ -2528,9 +2557,9 @@ static int transform_collect_func
 		{
 		    lex_t lex;
 		    enumError err = ScanRawLEX(&lex,true,data,it->size,0);
-		    if ( !err && PatchLEX(&lex) && CreateRawLEX(&lex) == ERR_OK )
+		    if ( !err && PatchLEX(&lex,&szs->have) && CreateRawLEX(&lex) == ERR_OK )
 		    {
-			if (!lex.have_lex)
+			if (!lex.have_sect)
 			{
 			    LEX_ACTION_LOG(false,"Remove LEX, old_size %u.\n",it->size);
 
@@ -2562,8 +2591,8 @@ static int transform_collect_func
 			}
 			*dirty = 1;
 		    }
-		    PRINT("PATCH/LEX: modified=%d, have_lex:%x\n",
-				lex.modified, lex.have_lex );
+		    PRINT("PATCH/LEX: modified=%d, have_lex:%x,%x\n",
+				lex.modified, lex.have_sect, lex.have_feat );
 		    ResetLEX(&lex);
 		}
 		break;
@@ -2618,6 +2647,8 @@ static int transform_collect_func
 bool PatchSZS ( szs_file_t * szs )
 {
     DASSERT(szs);
+    CalcHaveSZS(szs);
+
     const bool patch_lex = HaveActivePatchLEX();
  #ifdef TEST
     static int done = 0;
@@ -2650,6 +2681,30 @@ bool PatchSZS ( szs_file_t * szs )
     }
 
     return dirty != 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool CanBeATrackSZS ( szs_file_t * szs )
+{
+    FindSpecialFilesSZS(szs,false);
+    return szs->course_kcl_data
+	&& szs->course_kmp_data
+	&& ( szs->course_model_data || szs->course_d_model_data );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void CalcHaveSZS ( szs_file_t * szs )
+{
+    DASSERT(szs);
+    if ( szs->data && !szs->have.valid && CanBeATrackSZS(szs) )
+    {
+	szs_file_t temp;
+	CopySZS(&temp,true,szs);
+	szs->have = temp.have;
+	ResetSZS(&temp);
+    }
 }
 
 //
@@ -3288,9 +3343,14 @@ int CheckSZS
 
 	int i;
 	for ( i = 0; i < HAVESZS__N; i++ )
-	    if (szs->szs_special[i])
+	{
+	    if ( szs->have.szs[i] >= HFM_MODIFIED )
 		print_check_error( &chk, CMOD_HINT,
 				"Special file:    ./%s\n",have_szs_file[i]);
+	    else if ( szs->have.szs[i] >= HFM_ORIGINAL )
+		print_check_error( &chk, CMOD_HINT,
+				"Original file:   ./%s\n",have_szs_file[i]);
+	}
 
 	//--- test optional files
 
@@ -3308,7 +3368,7 @@ int CheckSZS
 		const DbFileFILE_t *ptr = DbFileFILE + i;
 	     #ifdef TEST0
 		print_check_error( &chk, CMOD_HINT,
-				"Optional file [%02x]:   ./%s\n",
+				"Optional file [%02x]: ./%s\n",
 				szs->used_file->d[i], ptr->file );
 	     #else
 		print_check_error( &chk, CMOD_HINT,
@@ -3347,7 +3407,7 @@ int CheckSZS
 
     if ( !(found_flags & DBF_REQUIRED2) )
 	print_check_error( &chk, CMOD_WARNING,
-		"Missing file: ./course_model.brres (or '_d' variant)\n" );
+		"Missing file:    ./course_model.brres (or '_d' variant)\n" );
 
     int i;
     const DbFileFILE_t *ptr = DbFileFILE;
@@ -3360,7 +3420,7 @@ int CheckSZS
 	{
 	    if (!IsFileOptionalSZS(szs,ptr))
 		print_check_error( &chk, CMOD_WARNING,
-				"Missing file: ./%s\n", ptr->file );
+				"Missing file:    ./%s\n", ptr->file );
 	}
     }
 
@@ -4803,6 +4863,11 @@ void InitializeAnalyseSZS ( analyse_szs_t * as )
 	TRACE_SIZEOF(slot_info_t);
 	TRACE_SIZEOF(kmp_finish_t);
 	TRACE_SIZEOF(kmp_usedpos_t);
+	TRACE_SIZEOF(szs_have_t);
+	TRACE_SIZEOF(szs_have_t);
+	TRACE_SIZEOF(have_file_mode_t);
+	TRACE_SIZEOF(szs_special_t);
+	TRACE_SIZEOF(kmp_special_t);
 	TRACE("-\n");
     }
  #endif
@@ -4844,6 +4909,13 @@ void AnalyseSZS
 
     const u_usec_t start_usec = GetTimerUSec();
 
+    analyse_szs_t as0;
+    if (!as)
+    {
+	as = &as0;
+	init_sa = true;
+    }
+
     DASSERT(as);
     if (init_sa)
 	InitializeAnalyseSZS(as);
@@ -4878,7 +4950,8 @@ void AnalyseSZS
 	lex_t lex;
 	InitializeLEX(&lex);
 	ScanLEX(&lex,false,szs->course_lex_data,szs->course_lex_size);
-	szs->have_lex = lex.have_lex;
+	szs->have.lex_sect = lex.have_sect;
+	szs->have.lex_feat = lex.have_feat;
 	SetupLexInfo(&as->lexinfo,&lex);
 	ResetLEX(&lex);
     }
@@ -4992,30 +5065,30 @@ void AnalyseSZS
 	    ResetPFlagScenarios(&ap);
 	}
 
-	DetectSpecialKMP(&kmp,szs->kmp_special);
-	if (  szs->kmp_special[HAVEKMP_WOODBOX_HT]
-	   || szs->kmp_special[HAVEKMP_MUSHROOM_CAR]
-	   || szs->kmp_special[HAVEKMP_PENGUIN_POS]
-	   || szs->kmp_special[HAVEKMP_EPROP_SPEED]
+	DetectSpecialKMP(&kmp,szs->have.kmp);
+	if (  szs->have.kmp[HAVEKMP_WOODBOX_HT]
+	   || szs->have.kmp[HAVEKMP_MUSHROOM_CAR]
+	   || szs->have.kmp[HAVEKMP_PENGUIN_POS]
+	   || szs->have.kmp[HAVEKMP_EPROP_SPEED]
 	)
 	{
 	    ct_dest = StringCopyE(ct_dest,ct_end,",gobj");
 	}
 
-	if (  szs->kmp_special[HAVEKMP_X_PFLAGS]
-	   || szs->kmp_special[HAVEKMP_X_COND]
-	   || szs->kmp_special[HAVEKMP_X_DEFOBJ]
-	   || szs->kmp_special[HAVEKMP_X_RANDOM]
+	if (  szs->have.kmp[HAVEKMP_X_PFLAGS]
+	   || szs->have.kmp[HAVEKMP_X_COND]
+	   || szs->have.kmp[HAVEKMP_X_DEFOBJ]
+	   || szs->have.kmp[HAVEKMP_X_RANDOM]
 	)
 	{
 	    ct_dest = StringCopyE(ct_dest,ct_end,",xpf");
 	}
 
-	if (szs->kmp_special[HAVEKMP_COOB_R])
+	if (szs->have.kmp[HAVEKMP_COOB_R])
 	    ct_dest = StringCopyE(ct_dest,ct_end,",coob-r");
-	if (szs->kmp_special[HAVEKMP_COOB_K])
+	if (szs->have.kmp[HAVEKMP_COOB_K])
 	    ct_dest = StringCopyE(ct_dest,ct_end,",coob-k");
-	if (szs->kmp_special[HAVEKMP_UOOB])
+	if (szs->have.kmp[HAVEKMP_UOOB])
 	    ct_dest = StringCopyE(ct_dest,ct_end,",uoob");
 
 	ResetKMP(&kmp);
@@ -5024,22 +5097,22 @@ void AnalyseSZS
 	valid_track = false;
 
 
-    if ( szs->szs_special[HAVESZS_ITEM_SLOT_TABLE] )
+    if ( szs->have.szs[HAVESZS_ITEM_SLOT_TABLE] >= HFM_MODIFIED )
 	ct_dest = StringCopyE(ct_dest,ct_end,",itemslot");
 
-    if ( szs->szs_special[HAVESZS_OBJFLOW] )
+    if ( szs->have.szs[HAVESZS_OBJFLOW] >= HFM_MODIFIED )
 	ct_dest = StringCopyE(ct_dest,ct_end,",objflow");
 
-    if (  szs->szs_special[HAVESZS_GHT_ITEM]
-       || szs->szs_special[HAVESZS_GHT_ITEM_OBJ]
-       || szs->szs_special[HAVESZS_GHT_KART]
-       || szs->szs_special[HAVESZS_GHT_KART_OBJ]
+    if (  szs->have.szs[HAVESZS_GHT_ITEM]	>= HFM_MODIFIED
+       || szs->have.szs[HAVESZS_GHT_ITEM_OBJ]	>= HFM_MODIFIED
+       || szs->have.szs[HAVESZS_GHT_KART]	>= HFM_MODIFIED
+       || szs->have.szs[HAVESZS_GHT_KART_OBJ]	>= HFM_MODIFIED
     )
     {
 	ct_dest = StringCopyE(ct_dest,ct_end,",geohit");
     }
 
-    if ( szs->szs_special[HAVESZS_MINIGAME] )
+    if ( szs->have.szs[HAVESZS_MINIGAME] >= HFM_MODIFIED )
 	ct_dest = StringCopyE(ct_dest,ct_end,",minigame");
 
 
@@ -5100,8 +5173,10 @@ void AnalyseSZS
     if (szs->warn_bits)
 	ct_dest = StringCat2E(ct_dest,ct_end,",warn=",GetWarnSZSNames(szs->warn_bits,'+'));
 
-    as->valid_track = valid_track;
-    as->duration_usec = GetTimerUSec() - start_usec;
+    szs->have.valid	= true;
+    as->have		= szs->have;
+    as->valid_track	= valid_track;
+    as->duration_usec	= GetTimerUSec() - start_usec;
 }
 
 //

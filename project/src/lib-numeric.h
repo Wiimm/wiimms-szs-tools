@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -196,6 +196,8 @@ typedef enum lex_gmode_t
     LEX_GMODE_COIN	= LEX_GMODE__BASE + KMP_GMODE_COIN,
     LEX_GMODE_VERSUS	= LEX_GMODE__BASE + KMP_GMODE_VERSUS,
     LEX_GMODE_ITEMRAIN	= LEX_GMODE__BASE + KMP_GMODE_ITEMRAIN,
+
+    LEX_GMODE__N
 }
 lex_gmode_t;
 
@@ -300,6 +302,8 @@ int ScanOptMaxMipmaps	( ccp arg );
 int ScanOptMipmapSize	( ccp arg );
 int ScanOptPtDir	( ccp arg );
 int ScanOptRecurse	( ccp arg );
+int ScanOptCase		( ccp arg );
+int ScanOptFModes	( ccp arg );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -920,7 +924,7 @@ static inline bool isScalarVM ( VarMode_t mode )
 	{ return mode <= VAR_DOUBLE; }
 
 static inline bool isNumericVM ( VarMode_t mode )
-	{ return mode >= VAR_INT || mode <= VAR_VECTOR; }
+	{ return mode >= VAR_INT && mode <= VAR_VECTOR; }
 
 ///////////////////////////////////////////////////////////////////////////////
 // [[Var_t]]

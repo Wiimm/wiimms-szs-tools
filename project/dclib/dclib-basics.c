@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2020 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -551,6 +551,38 @@ char * StringLowerS ( char * buf, size_t buf_size, ccp src )
     return StringLowerE(buf,buf+buf_size,src);
 }
 
+//-----------------------------------------------------------------------------
+
+char * MemLowerE ( char * buf, ccp buf_end, mem_t src )
+{
+    // RESULT: end of copied string pointing to NULL
+    // 'src.ptr' may be a NULL pointer.
+
+    if ( buf >= buf_end )
+	return (char*)buf_end - 1;
+
+    DASSERT(buf);
+    DASSERT(buf<buf_end);
+    buf_end--;
+
+    if ( src.ptr )
+    {
+	ccp src_end = src.ptr + src.len;
+	while( buf < buf_end && src.ptr < src_end )
+	    *buf++ = tolower((int)*src.ptr++);
+    }
+
+    *buf = 0;
+    return buf;
+}
+
+//-----------------------------------------------------------------------------
+
+char * MemLowerS ( char * buf, size_t buf_size, mem_t src )
+{
+    return MemLowerE(buf,buf+buf_size,src);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 char * StringUpperE ( char * buf, ccp buf_end, ccp src )
@@ -578,6 +610,38 @@ char * StringUpperE ( char * buf, ccp buf_end, ccp src )
 char * StringUpperS ( char * buf, size_t buf_size, ccp src )
 {
     return StringUpperE(buf,buf+buf_size,src);
+}
+
+//-----------------------------------------------------------------------------
+
+char * MemUpperE ( char * buf, ccp buf_end, mem_t src )
+{
+    // RESULT: end of copied string pointing to NULL
+    // 'src.ptr' may be a NULL pointer.
+
+    if ( buf >= buf_end )
+	return (char*)buf_end - 1;
+
+    DASSERT(buf);
+    DASSERT(buf<buf_end);
+    buf_end--;
+
+    if ( src.ptr )
+    {
+	ccp src_end = src.ptr + src.len;
+	while( buf < buf_end && src.ptr < src_end )
+	    *buf++ = toupper((int)*src.ptr++);
+    }
+
+    *buf = 0;
+    return buf;
+}
+
+//-----------------------------------------------------------------------------
+
+char * MemUpperS ( char * buf, size_t buf_size, mem_t src )
+{
+    return MemUpperE(buf,buf+buf_size,src);
 }
 
 //
@@ -4775,6 +4839,63 @@ ccp GetKeywordOffAutoOn ( OffOn_t value )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			LOWER/AUTO/UPPER		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const KeywordTab_t KeyTab_LOWER_AUTO_UPPER[] =
+{
+  { LOUP_LOWER,		"LOWER",	"LOWERCASE",	0 },
+  { LOUP_LOWER,		"LOCASE",	"-1",		0 },
+  { LOUP_AUTO,		"AUTO",		"0",		0 },
+  { LOUP_UPPER,		"UPPER",	"UPPERCASE",	0 },
+  { LOUP_UPPER,		"UPCASE",	"1",		0 },
+  { 0,0,0,0 }
+};
+
+//-----------------------------------------------------------------------------
+
+int ScanKeywordLowerAutoUpper
+(
+    // returns one of LOUP_*
+
+    ccp			arg,		// argument to scan
+    int			on_empty,	// return this value on empty
+    uint		max_num,	// >0: additionally accept+return number <= max_num
+    ccp			object		// NULL (silent) or object for error messages
+)
+{
+    if ( !arg || !*arg )
+	return on_empty;
+
+    int status;
+    const KeywordTab_t *key = ScanKeyword(&status,arg,KeyTab_LOWER_AUTO_UPPER);
+    if (key)
+	return key->id;
+
+    if ( max_num > 0 )
+    {
+	char *end;
+	const int num = str2l(arg,&end,10);
+	if ( !*end && num >= LOUP_LOWER && num <= max_num )
+	    return num;
+    }
+
+    if (object)
+	PrintKeywordError(KeyTab_LOWER_AUTO_UPPER,arg,status,0,object);
+
+    return LOUP_ERROR;
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetKeywordLowerAutoUpper ( LowerUpper_t value )
+{
+    const KeywordTab_t *key = GetKewordById(KeyTab_OFF_AUTO_ON,value);
+    return key ? key->name1 : "?";
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			scan command lists		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -7775,6 +7896,17 @@ void * dc_memrchr ( cvp src, int ch, size_t size )
 	if ( *--ptr == ch )
 	    return (void*)ptr;
     return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool IsMemConst ( cvp mem, uint size, u8 val )
+{
+    if (!size)
+	return true;
+
+    const u8 *src = (u8*)mem;
+    return *src == val && !memcmp(src,src+1,size-1);
 }
 
 //

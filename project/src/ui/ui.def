@@ -503,6 +503,12 @@
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
 
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -865,7 +871,8 @@
 	" @FAST, NEW, CENTER, ROUND, NORMALS, MTL, WIIMM, TRIANGLES, OUT-SWAP," \
 	" G, USEMTL, CLIP, IN-SWAP, AUTO, HEX4, HEX23, HEX, DROP-UNUSED," \
 	" DROP-FIXED, DROP-INVALID, DROP, RM-FACEDOWN, RM-FACEUP, FIX-ALL," \
-	" CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT@ and @LOG@." )
+	" TINY-0 ... TINY-7, CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT@" \
+	" and @LOG@." )
 
 #:def_opt( "KCL_FLAG", "kcl-flag|kclflag", "CP", \
 	"joblist", \
@@ -935,7 +942,8 @@
 	" RIGHT, WIDE, NARROW, FIX-CKPH, FIX-ENPH, FIX-ITPH, FIX-PH," \
 	" FIX-CKNEXT, FIX-CKJGPT, FIX-CK, FIX-ALL, MASK-PFLAGS, RM-LECODE," \
 	" PURGE-GOBJ, FULL-DEFOBJ, DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL, 1LAP ..." \
-	" 9LAPS, MAX-LAPS, RM-EMPTY, INPLACE, SILENT@ and @LOG@." )
+	" 9LAPS, MAX-LAPS, RM-EMPTY, TINY-0 ... TINY-7, INPLACE, SILENT@ and" \
+	" @LOG@." )
 
 #:def_opt( "SPEED_MOD", "speed-mod|speedmod", "GP", \
 	"factor", \
@@ -1106,7 +1114,7 @@
 	"", \
 	"Delete LEX sections without any impact. Delete sub-file course.lex if" \
 	" it no longer contains a section. This option is executed after all" \
-	" --lt-* options." )
+	" --lt-* and --lex-* options." )
 
 #:def_opt( "LOAD_BMG", "load-bmg|loadbmg", "CMP", \
 	"file", \
@@ -1490,6 +1498,12 @@
 	"varname", \
 	"Shortcut for: {--array --var name}" )
 
+#:def_opt( "CASE", "case", "GP", \
+	"case", \
+	"@CASE@ is one of @LOWER@, @AUTO@ (default) or @UPPER@.If @LOWER@ or" \
+	" @UPPER@ are set, then the lower/upper case of the variable names is" \
+	" adjusted accordingly." )
+
 #:def_opt( "SOURCE", "s|source|src", "CP", \
 	"path", \
 	"Define a secondary source path (directory/file).\n" \
@@ -1862,6 +1876,10 @@
 	" twice, append developing settings." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -5025,11 +5043,84 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ANALYZE", "CASE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ANALYZE", "DEST", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ANALYZE", "DEST2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "BRIEF", \
+	"", \
+	"Suppres any comments at all. If set twice, suppress empty lines (for" \
+	" grouping) too. If set three times, omit inactive features (=0) too." )
+
+#:def_cmd_opt( "FEATURES", "LONG", \
+	"", \
+	"Print additnal comments." )
+
+#:def_cmd_opt( "FEATURES", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "QUIET", \
+	"", \
+	"Suppress logging of input and output files." )
+
+#:def_cmd_opt( "FEATURES", "SH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "BASH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "JSON", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "PHP", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "MAKEDOC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "VAR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "ARRAY", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "AVAR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "CASE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "PMODES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "FMODES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "DEST", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "DEST2", \
 	"", \
 	"" )
 
@@ -10888,6 +10979,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "GHOST", "CASE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "GHOST", "DEST", \
 	"", \
 	"" )
@@ -11136,6 +11231,12 @@
 	"width", \
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
+
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -11486,6 +11587,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
 	"" )
@@ -11562,6 +11667,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST", "MAX_WIDTH", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST", "PATCH_BMG", \
 	"", \
 	"" )
@@ -11582,6 +11691,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SLOTS", "MAX_WIDTH", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SLOTS", "PATCH_BMG", \
 	"", \
 	"" )
@@ -11595,6 +11708,10 @@
 	"" )
 
 #:def_cmd_opt( "DIFF", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DIFF", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -12341,6 +12458,12 @@
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
 
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -12772,6 +12895,10 @@
 	"Print in long format. Ignored if option {--sections} is set." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -13658,6 +13785,12 @@
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
 
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -13947,6 +14080,10 @@
 	"Print in long format. Ignored if option {--sections} is set." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -14613,6 +14750,12 @@
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
 
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -14833,7 +14976,8 @@
 	" @FAST, NEW, CENTER, ROUND, NORMALS, MTL, WIIMM, TRIANGLES, OUT-SWAP," \
 	" G, USEMTL, CLIP, IN-SWAP, AUTO, HEX4, HEX23, HEX, DROP-UNUSED," \
 	" DROP-FIXED, DROP-INVALID, DROP, RM-FACEDOWN, RM-FACEUP, FIX-ALL," \
-	" CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT@ and @LOG@." )
+	" TINY-0 ... TINY-7, CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT@" \
+	" and @LOG@." )
 
 #:def_opt( "KCL_FLAG", "kcl-flag|kclflag", "CP", \
 	"joblist", \
@@ -15036,6 +15180,10 @@
 	"Print in long format. Ignored if option {--sections} is set." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -16926,6 +17074,12 @@
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
 
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -17259,7 +17413,8 @@
 	" @FAST, NEW, CENTER, ROUND, NORMALS, MTL, WIIMM, TRIANGLES, OUT-SWAP," \
 	" G, USEMTL, CLIP, IN-SWAP, AUTO, HEX4, HEX23, HEX, DROP-UNUSED," \
 	" DROP-FIXED, DROP-INVALID, DROP, RM-FACEDOWN, RM-FACEUP, FIX-ALL," \
-	" CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT@ and @LOG@." )
+	" TINY-0 ... TINY-7, CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT@" \
+	" and @LOG@." )
 
 #:def_opt( "KCL_FLAG", "kcl-flag|kclflag", "CP", \
 	"joblist", \
@@ -17329,7 +17484,8 @@
 	" RIGHT, WIDE, NARROW, FIX-CKPH, FIX-ENPH, FIX-ITPH, FIX-PH," \
 	" FIX-CKNEXT, FIX-CKJGPT, FIX-CK, FIX-ALL, MASK-PFLAGS, RM-LECODE," \
 	" PURGE-GOBJ, FULL-DEFOBJ, DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL, 1LAP ..." \
-	" 9LAPS, MAX-LAPS, RM-EMPTY, INPLACE, SILENT@ and @LOG@." )
+	" 9LAPS, MAX-LAPS, RM-EMPTY, TINY-0 ... TINY-7, INPLACE, SILENT@ and" \
+	" @LOG@." )
 
 #:def_opt( "SPEED_MOD", "speed-mod|speedmod", "GP", \
 	"factor", \
@@ -17557,6 +17713,10 @@
 	"Print in long format. Ignored if option {--sections} is set." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -17888,6 +18048,10 @@
 	"" )
 
 #:def_cmd_opt( "OBJECTS", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "OBJECTS", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -18945,6 +19109,12 @@
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
 
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -19335,6 +19505,10 @@
 	"Print in long format. Ignored if option {--sections} is set." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -20141,6 +20315,12 @@
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
 
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -20499,6 +20679,10 @@
 	"Print in long format. Ignored if option {--sections} is set." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -21361,6 +21545,12 @@
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
 
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -21566,6 +21756,10 @@
 	"Print in long format. Ignored if option {--sections} is set." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 
@@ -21922,6 +22116,12 @@
 	"width", \
 	"Define the terminal width (number of columns) for help and some other" \
 	" messages and disable the automatic detection of the terminal width." )
+
+#:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
+	"maxwidth", \
+	"Define the maximum terminal width (number of columns) for help and" \
+	" some other messages and disable the automatic detection of the" \
+	" terminal width. This option is ignored if {--width} is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -22437,6 +22637,10 @@
 	"Print in long format. Ignored if option {--sections} is set." )
 
 #:def_cmd_opt( "HELP", "WIDTH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
 

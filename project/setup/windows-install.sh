@@ -34,7 +34,7 @@ fi
 #------------------------------------------------------------------------------
 # pre definitions
 
-BIN_FILES="wszst wbmgt wimgt wkclt wkmpt wstrt "
+BIN_FILES="@@BIN-FILES@@"
 SHARE_FILES=""
 WIN_INSTALL_PATH="Wiimm/SZS"
 

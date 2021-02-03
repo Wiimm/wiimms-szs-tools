@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -81,6 +81,18 @@ const ccp have_szs_file[HAVESZS__N] =
     "common/minigame.kmg",		// HAVESZS_MINIGAME
 };
 
+const file_format_t have_szs_fform[HAVESZS__N] =
+{
+    FF_LEX,		// HAVESZS_COURSE_LEX
+    FF_OBJFLOW,		// HAVESZS_OBJFLOW
+    FF_GH_ITEM,		// HAVESZS_GHT_ITEM
+    FF_GH_IOBJ,		// HAVESZS_GHT_ITEM_OBJ
+    FF_GH_KART,		// HAVESZS_GHT_KART
+    FF_GH_KOBJ,		// HAVESZS_GHT_KART_OBJ
+    FF_ITEMSLT,		// HAVESZS_ITEM_SLOT_TABLE
+    FF_KMG,		// HAVESZS_MINIGAME
+};
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			szs_file_t			///////////////
@@ -90,12 +102,12 @@ void InitializeSZS ( szs_file_t * szs )
 {
     DASSERT(szs);
     memset(szs,0,sizeof(*szs));
-    szs->fname = EmptyString;
-    InitializeStringPool(&szs->string_pool);
-    szs->endian = &be_func;
-    szs->n_cannon = -1;
-    szs->ff_version = -1;
+    szs->fname		= EmptyString;
+    szs->endian		= &be_func;
+    szs->n_cannon	= -1;
+    szs->ff_version	= -1;
 
+    InitializeStringPool(&szs->string_pool);
     InitializeSubfileList(&szs->subfile);
 }
 
@@ -166,7 +178,7 @@ void AssignSZS
     uint		size,		// size of 'data'
     bool		move_data,	// true: free 'data' on reset
     file_format_t	fform,		// not FF_UNKNOWN: use this type
-    ccp			fname		// NULL or file names
+    ccp			fname		// NULL or file name
 )
 {
     DASSERT(szs);
@@ -202,6 +214,30 @@ void AssignSZS
 	szs->ff_attrib		= GetAttribFF(fform);
 // [[version-suffix]]
 	szs->ff_version		= GetVersionFF(szs->fform_arch,szs->data,szs->size,0);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void CopySZS
+(
+    szs_file_t		*szs,		// SZS to initialize
+    bool		init_szs,	// true: InitializeSZS(), false: ResetSZS()
+    const szs_file_t	*source		// source SZS
+)
+{
+    DASSERT(szs);
+
+
+    if ( source && source->data )
+	AssignSZS( szs, init_szs,
+		MEMDUP(source->data,source->size), source->size, true,
+		source->fform_current, source->fname );
+    else
+    {
+	if (!init_szs)
+	    ResetSZS(szs);
+	InitializeSZS(szs);
     }
 }
 
@@ -455,11 +491,12 @@ enumError LoadSZS
 
     if (decompress)
     {
-	enumError err = DecompressSZS(szs,true,0);
-	return err ? err : DecodeWU8(szs);
+	err = DecompressSZS(szs,true,0);
+	if (!err)
+	    err = DecodeWU8(szs);
     }
 
-    return ERR_OK;
+    return err;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

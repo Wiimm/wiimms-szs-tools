@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2020 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -204,7 +204,12 @@ FileAttrib_t * ClearFileAttrib
 	dest->atime.tv_nsec =
 	dest->mtime.tv_nsec =
 	dest->ctime.tv_nsec =
-	dest->itime.tv_nsec = UTIME_OMIT;
+	dest->itime.tv_nsec =
+     #ifdef UTIME_OMIT
+		UTIME_OMIT;
+     #else
+		-2;
+     #endif
     }
     return dest;
 }
@@ -383,11 +388,34 @@ FileAttrib_t * NormalizeFileAttrib
 
 const struct timespec null_timespec = {0,0};
 
+///////////////////////////////////////////////////////////////////////////////
+
 int CompareTimeSpec0 ( const struct timespec *a, const struct timespec *b )
 {
     if (!a) a = &null_timespec;
     if (!b) b = &null_timespec;
     return CompareTimeSpec(a,b);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SetAMTimes ( ccp fname, const struct timespec times[2] )
+{
+ #ifdef UTIME_OMIT
+    utimensat(AT_FDCWD,fname,times,0);
+ #else
+    struct timeval tv[2];
+    tv[1].tv_sec  = times[1].tv_sec;
+    tv[1].tv_usec = times[1].tv_nsec / 1000;
+    if (IsTimeSpecNull(times+0))
+    {
+	tv[0].tv_sec  = times[0].tv_sec;
+	tv[0].tv_usec = times[0].tv_nsec / 1000;
+    }
+    else
+	tv[0] = tv[1];
+    utimes(fname,tv);
+ #endif
 }
 
 //
@@ -791,7 +819,7 @@ enumError CloseFile
 			unlink(f->fname);
 		    }
 		    else if ( set_time == 1 && !IsTimeSpecNull(&f->fatt.mtime) )
-			utimensat(AT_FDCWD,f->fname,f->fatt.times,0);
+			SetAMTimes(f->fname,f->fatt.times);
 		    else if ( set_time > 1 || f->fmode & FM_TOUCH )
 		    {
 			utime(f->fname,0);
@@ -5674,11 +5702,13 @@ ccp GetNamePSFF ( PrintScriptFF fform )
     switch(fform)
     {
 	case PSFF_UNKNOWN:	return "TEXT";
+	case PSFF_ASSIGN:	return "ASSIGN";
 	case PSFF_JSON:		return "JSON";
 	case PSFF_BASH:		return "BASH";
 	case PSFF_SH:		return "SH";
 	case PSFF_PHP:		return "PHP";
 	case PSFF_MAKEDOC:	return "MDOC";
+	case PSFF_C:		return "C";
     }
     return "???";
 }
@@ -5700,24 +5730,35 @@ void PrintScriptHeader ( PrintScript_t *ps )
 	    case PSFF_JSON:
 		if (ps->create_array)
 		    fputs("[",ps->f);
+		ps->boc = 0;
 		break;
 
 	    case PSFF_SH:
 	       ps->add_index =ps->create_array;
+		ps->boc = "#";
 	       break;
 
 	    case PSFF_PHP:
 		if (ps->create_array)
 		    fprintf(ps->f,"$%s = array();\n\n",ps->varname);
+		ps->boc = "#";
 		break;
 
 	    case PSFF_MAKEDOC:
 		if (ps->create_array)
 		    fprintf(ps->f,"%s = @LIST\n\n",ps->varname);
+		ps->boc = "#!";
+		break;
+
+	    case PSFF_C:
+		if (ps->create_array)
+		    fprintf(ps->f,"%s = @LIST\n\n",ps->varname);
+		ps->boc = "//";
 		break;
 
 	    default:
 		//fputc('\n',ps->f);
+		ps->boc = "#";
 		break;
 	}
     }
@@ -5759,24 +5800,26 @@ int PutScriptVars
 (
     PrintScript_t	*ps,		// valid control struct
     uint		mode,		// bit field: 1=open var, 2:close var
-    ccp			text		// text with line of format NAME=VALUE
+    ccp			text		// text with lines of format NAME=VALUE
 )
 {
     FILE * f = ps ? ps->f : 0;
     if (!f)
 	return 0;
+    DASSERT(ps);
 
 
     //--- begin of output
 
     if ( mode & 1 )
     {
+	ps->count = 0;
+
 	if ( ps->add_index )
 	    snprintf( ps->prefix, sizeof(ps->prefix),
 		"%s_%u", ps->varname, ps->index );
 	else
-	    snprintf( ps->prefix, sizeof(ps->prefix),
-		"%s", ps->varname );
+	    StringCopyS( ps->prefix, sizeof(ps->prefix), ps->varname );
 
 	switch (ps->fform)
 	{
@@ -5801,39 +5844,79 @@ int PutScriptVars
 
     //--- print var lines
 
-    if (!text)
-	text = "";
+    ccp ptr = text ? text : "";
+    char varbuf[200];
 
-    uint count;
-    for( count = 0; ; count++ )
+    for(;;)
     {
-	while ( *text && (uchar)*text <= ' ' )
-	    text++;
+	if ( ps->ena_empty && ps->boc )
+	{
+	    while ( *ptr == ' ' || *ptr == '\t' )
+		ptr++;
+	    if ( *ptr == '\n' )
+	    {
+		ptr++;
+		fputc('\n',f);
+		continue;
+	    }
+	}
+	else
+	    while ( *ptr && (uchar)*ptr <= ' ' )
+		ptr++;
 
-	ccp ptr = text;
+	if ( *ptr == '#' )
+	{
+	    ccp comment = ++ptr;
+	    while ( (uchar)*ptr >= ' ' )
+		ptr++;
+	    if ( ps->ena_comments && ps->boc )
+		fprintf(f,"%s%.*s\n",ps->boc,(int)(ptr-comment),comment);
+	    goto next_line;
+	}
+
+	ccp varname = ptr;
 	while ( *ptr && *ptr != '=' )
 	    ptr++;
-	if ( *ptr != '=' || ptr == text )
+	if ( *ptr != '=' || ptr == varname )
 	    break;
 
+	const int varlen = ptr - varname;
+	if ( ps->force_case <= LOUP_LOWER )
+	{
+	    MemLowerS(varbuf,sizeof(varbuf),MemByS(varname,varlen));
+	    varname = varbuf;
+	}
+	else if ( ps->force_case >= LOUP_UPPER )
+	{
+	    varname = MemUpperS(varbuf,sizeof(varbuf),MemByS(varname,varlen));
+	    varname = varbuf;
+	}
+	
 	ccp param = ptr++;
 	while ( (uchar)*ptr >= ' ' )
 	    ptr++;
 
 	switch (ps->fform)
 	{
+	 case PSFF_ASSIGN:
+	    fprintf(f, "%.*s = %.*s\n",
+			varlen, varname,
+			(int)( ptr - param - 1 ), param+1 );
+	    break;
+
 	 case PSFF_JSON:
 	    fprintf(f, "%s\"%.*s\":%.*s",
-			count ? "," : "",
-			(int)( param - text ), text,
+			ps->count ? "," : "",
+			varlen, varname,
 			(int)( ptr - param - 1 ), param+1 );
 	    break;
 
 	 case PSFF_BASH:
 	    if (ps->create_array)
 	    {
-		fprintf(f, "%s_%.*s%s=(%.*s)\n", ps->prefix,
-			(int)( param - text ), text,
+		fprintf(f, "%s_%.*s%s=(%.*s)\n",
+			ps->prefix,
+			varlen, varname,
 			ps->index ? "+" : "",
 			(int)( ptr - param - 1 ), param+1 );
 		break;
@@ -5841,31 +5924,39 @@ int PutScriptVars
 	    // fall through
 
 	 case PSFF_SH:
-	    fprintf(f, "%s_%.*s=%.*s\n", ps->prefix,
-			(int)( param - text ), text,
+	    fprintf(f, "%s_%.*s=%.*s\n",
+			ps->prefix,
+			varlen, varname,
 			(int)( ptr - param - 1 ), param+1 );
 	    break;
 
 	 case PSFF_PHP:
+	 case PSFF_C:
 	    fprintf(f, "$d->%.*s = %.*s;\n",
-			(int)( param - text ), text,
+			varlen, varname,
 			(int)( ptr - param - 1 ), param+1 );
 	    break;
 
 	 case PSFF_MAKEDOC:
 	    fprintf(f, "d[\"%.*s\"] = %.*s\n",
-			(int)( param - text ), text,
+			varlen, varname,
 			(int)( ptr - param - 1 ), param+1 );
 	    break;
 
 	 default:
 	    fprintf(f, "%20.*s = %.*s\n",
-			(int)( param - text ), text,
+			varlen, varname,
 			(int)( ptr - param - 1 ), param+1 );
 	    break;
 	}
+	ps->count++;
 
-	text = ptr;
+	//-- skip to next line
+     next_line:
+	while ( *ptr && (uchar)*ptr <= ' ' && *ptr != '\n' )
+	    ptr++;
+	if ( *ptr == '\n' )
+	    ptr++;
     }
 
 
@@ -5897,7 +5988,7 @@ int PutScriptVars
     }
 
     ps->index++;
-    return count;
+    return ps->count;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

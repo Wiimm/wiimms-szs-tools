@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -115,6 +115,7 @@ typedef enum enumOptions
 	OPT_ALLOW_ALL,
 	OPT_COMPATIBLE,
 	OPT_WIDTH,
+	OPT_MAX_WIDTH,
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
@@ -152,7 +153,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 91
+	OPT__N_TOTAL // == 92
 
 } enumOptions;
 
@@ -449,6 +450,7 @@ typedef enum enumGetOpt
 	GO_ALLOW_ALL,
 	GO_COMPATIBLE,
 	GO_WIDTH,
+	GO_MAX_WIDTH,
 	GO_DE,
 	GO_COLORS,
 	GO_NO_COLORS,
@@ -523,7 +525,7 @@ typedef enum enumGetOpt
 //extern const struct option OptionLong[];
 //extern u8 OptionUsed[OPT__N_TOTAL+1];
 //extern const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE];
-//UIOPT_INDEX_SIZE := 0x12c = 300
+//UIOPT_INDEX_SIZE := 0x136 = 310
 //extern const InfoCommand_t CommandInfo[CMD__N+1];
 extern const InfoUI_t InfoUI_wkmpt;
 

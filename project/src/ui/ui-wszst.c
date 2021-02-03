@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -670,6 +670,25 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" formats."
     },
 
+    {	OPT_PMODES, false, true, false, false, false, 0, "pmodes",
+	0,
+	"--pmodes is an abbreviation for --print-mode. If set, a"
+	" comma-separated list of letters is added to the end of each feature."
+	" The letters used are: S (section), V (visual), B (battle), R"
+	" (racing), T (time trial), L (local=offline) and O (online)."
+    },
+
+    {	OPT_FMODES, false, true, false, false, false, 0, "fmodes",
+	"list",
+	"--fmodes is an abbreviation for --feature-modes and declares an"
+	" output filter. LIST is a keyword list. The keywords are: SECTION,"
+	" VISUAL, GAMEPLAY, BATTLE, RACING, TIMETRIAL, OFFLINE and ONLINE. A"
+	" feature is only printed if *all* set keywords match.\n"
+	"  Each keyword can also be used with a minus as prefix to define a"
+	" second condition. In this case the feature is excluded from printing"
+	" if *any* set keywords match."
+    },
+
     {	OPT_ANALYZE, false, true, false, false, true, 0, "analyze",
 	"outfile",
 	"Run in analyze mode and write results to the entered file."
@@ -1103,7 +1122,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Print in machine readable sections and parameter lines."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 131
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 133
 
     //----- global options -----
 
@@ -1145,6 +1164,13 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"width",
 	"Define the terminal width (number of columns) for help and some other"
 	" messages and disable the automatic detection of the terminal width."
+    },
+
+    {	OPT_MAX_WIDTH, false, false, false, true, false, 0, "max-width",
+	"maxwidth",
+	"Define the maximum terminal width (number of columns) for help and"
+	" some other messages and disable the automatic detection of the"
+	" terminal width. This option is ignored if --width is set."
     },
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
@@ -1279,8 +1305,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" the octree creation. The other allowed keywords are: FAST, NEW,"
 	" CENTER, ROUND, NORMALS, MTL, WIIMM, TRIANGLES, OUT-SWAP, G, USEMTL,"
 	" CLIP, IN-SWAP, AUTO, HEX4, HEX23, HEX, DROP-UNUSED, DROP-FIXED,"
-	" DROP-INVALID, DROP, RM-FACEDOWN, RM-FACEUP, FIX-ALL, CONV-FACEUP,"
-	" WEAK-WALLS, SORT, INPLACE, SILENT and LOG. See"
+	" DROP-INVALID, DROP, RM-FACEDOWN, RM-FACEUP, FIX-ALL, TINY-0 ..."
+	" TINY-7, CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT and LOG. See"
 	" https://szs.wiimm.de/opt/kcl for details."
     },
 
@@ -1324,7 +1350,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" WIDE, NARROW, FIX-CKPH, FIX-ENPH, FIX-ITPH, FIX-PH, FIX-CKNEXT,"
 	" FIX-CKJGPT, FIX-CK, FIX-ALL, MASK-PFLAGS, RM-LECODE, PURGE-GOBJ,"
 	" FULL-DEFOBJ, DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL, 1LAP ... 9LAPS,"
-	" MAX-LAPS, RM-EMPTY, INPLACE, SILENT and LOG. See"
+	" MAX-LAPS, RM-EMPTY, TINY-0 ... TINY-7, INPLACE, SILENT and LOG. See"
 	" https://szs.wiimm.de/opt/kmp for details."
     },
 
@@ -1488,7 +1514,24 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	0,
 	"Delete LEX sections without any impact. Delete sub-file course.lex if"
 	" it no longer contains a section. This option is executed after all"
-	" --lt-* options."
+	" --lt-* and --lex-* options."
+    },
+
+    {	OPT_LEX_FEATURES, false, true, false, false, false, 0, "lex-features",
+	0,
+	"Calculate LEX setion FEA0 (features) by analysing the track file. If"
+	" no features found, delete the section and the possibly empty"
+	" sub-file course.lex. If features found, then insert the section or"
+	" update an existing section. If necessary, the sub-file course.lex is"
+	" created. This option is executed after all --lt-* options and after"
+	" --lex-purge."
+    },
+
+    {	OPT_LEX_RM_FEAT, false, true, false, false, false, 0, "lex-rm-features",
+	0,
+	"Remove LEX setion FEA0 (features) if exists and the possibly empty"
+	" sub-file course.lex. This option is ignored if --lex-features is"
+	" set. It is executed after all --lt-* options and after --lex-purge."
     },
 
     {	OPT_CACHE, false, false, false, false, false, 0, "cache",
@@ -1664,6 +1707,13 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Shortcut for: '--array --var name'"
     },
 
+    {	OPT_CASE, false, false, false, false, false, 0, "case",
+	"case",
+	"CASE is one of LOWER, AUTO (default) or UPPER.If LOWER or UPPER are"
+	" set, then the lower/upper case of the variable names is adjusted"
+	" accordingly."
+    },
+
     {	OPT_OLD, false, true, false, false, false, 0, "OLD",
 	0,
 	"Developer option: Cancel --NEW and use old implementation if"
@@ -1689,7 +1739,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 201
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 207
 
 };
 
@@ -1972,6 +2022,25 @@ static const InfoOption_t option_cmd_ANALYZE_QUIET =
 	"Suppress logging of input and output files."
     };
 
+static const InfoOption_t option_cmd_FEATURES_BRIEF =
+    {	OPT_BRIEF, false, false, false, false, false, 'B', "brief",
+	0,
+	"Suppres any comments at all. If set twice, suppress empty lines (for"
+	" grouping) too. If set three times, omit inactive features (=0) too."
+    };
+
+static const InfoOption_t option_cmd_FEATURES_LONG =
+    {	OPT_LONG, false, false, false, false, false, 'l', "long",
+	0,
+	"Print additnal comments."
+    };
+
+static const InfoOption_t option_cmd_FEATURES_QUIET =
+    {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
+	0,
+	"Suppress logging of input and output files."
+    };
+
 static const InfoOption_t option_cmd_DISTRIBUTION_SOURCE =
     {	OPT_SOURCE, false, false, false, false, false, 's', "source",
 	"path",
@@ -2154,6 +2223,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_CODE,		"_CODE",	0,		0 },
     { CMD_RECODE,	"_RECODE",	0,		0 },
     { CMD_SUBFILE,	"_SUBFILE",	0,		0 },
+    { CMD_TESTNORM,	"_NORM",	0,		0 },
     { CMD_LIST,		"LIST",		"LS",		0 },
     { CMD_LIST_L,	"LIST-L",	"LL",		0 },
     { CMD_LIST_L,	"LISTL",	0,		0 },
@@ -2180,6 +2250,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_SHA1,		"SHA1",		0,		0 },
     { CMD_ANALYZE,	"ANALYZE",	"ANA",		0 },
     { CMD_ANALYZE,	"ANALYSE",	0,		0 },
+    { CMD_FEATURES,	"FEATURES",	0,		0 },
     { CMD_DISTRIBUTION,	"DISTRIBUTION",	"DIST",		0 },
     { CMD_DIFF,		"DIFF",		"CMP",		0 },
     { CMD_CHECK,	"CHECK",	0,		0 },
@@ -2232,6 +2303,8 @@ static const struct option OptionLong[] =
 	 { "allowall",		0, 0, GO_ALLOW_ALL },
 	{ "compatible",		1, 0, GO_COMPATIBLE },
 	{ "width",		1, 0, GO_WIDTH },
+	{ "max-width",		1, 0, GO_MAX_WIDTH },
+	 { "maxwidth",		1, 0, GO_MAX_WIDTH },
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
@@ -2351,6 +2424,10 @@ static const struct option OptionLong[] =
 	 { "ltrandom",		1, 0, GO_LT_RANDOM },
 	{ "lex-purge",		0, 0, GO_LEX_PURGE },
 	 { "lexpurge",		0, 0, GO_LEX_PURGE },
+	{ "lex-features",	0, 0, GO_LEX_FEATURES },
+	 { "lexfeatures",	0, 0, GO_LEX_FEATURES },
+	{ "lex-rm-features",	0, 0, GO_LEX_RM_FEAT },
+	 { "lexrmfeatures",	0, 0, GO_LEX_RM_FEAT },
 	{ "load-bmg",		1, 0, GO_LOAD_BMG },
 	 { "loadbmg",		1, 0, GO_LOAD_BMG },
 	{ "patch-bmg",		1, 0, GO_PATCH_BMG },
@@ -2439,6 +2516,13 @@ static const struct option OptionLong[] =
 	{ "var",		1, 0, GO_VAR },
 	{ "array",		0, 0, GO_ARRAY },
 	{ "avar",		1, 0, GO_AVAR },
+	{ "case",		1, 0, GO_CASE },
+	{ "pmodes",		0, 0, GO_PMODES },
+	 { "print-modes",	0, 0, GO_PMODES },
+	 { "printmodes",	0, 0, GO_PMODES },
+	{ "fmodes",		1, 0, GO_FMODES },
+	 { "feature-modes",	1, 0, GO_FMODES },
+	 { "featuremodes",	1, 0, GO_FMODES },
 	{ "analyze",		1, 0, GO_ANALYZE },
 	 { "analyse",		1, 0, GO_ANALYZE },
 	{ "analyze-mode",	1, 0, GO_ANALYZE_MODE },
@@ -2627,170 +2711,176 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x081   */	OPT_ALLOW_ALL,
 	/* 0x082   */	OPT_COMPATIBLE,
 	/* 0x083   */	OPT_WIDTH,
-	/* 0x084   */	OPT_DE,
-	/* 0x085   */	OPT_COLORS,
-	/* 0x086   */	OPT_NO_COLORS,
-	/* 0x087   */	OPT_CT_CODE,
-	/* 0x088   */	OPT_LE_CODE,
-	/* 0x089   */	OPT_CHDIR,
-	/* 0x08a   */	OPT_TOUCH,
-	/* 0x08b   */	OPT_AUTO,
-	/* 0x08c   */	OPT_SET_FLAGS,
-	/* 0x08d   */	OPT_SET_SCALE,
-	/* 0x08e   */	OPT_SET_ROT,
-	/* 0x08f   */	OPT_SET_X,
-	/* 0x090   */	OPT_SET_Y,
-	/* 0x091   */	OPT_SET_Z,
-	/* 0x092   */	OPT_XCENTER,
-	/* 0x093   */	OPT_YCENTER,
-	/* 0x094   */	OPT_ZCENTER,
-	/* 0x095   */	OPT_CENTER,
-	/* 0x096   */	OPT_SCALE,
-	/* 0x097   */	OPT_SHIFT,
-	/* 0x098   */	OPT_XSS,
-	/* 0x099   */	OPT_YSS,
-	/* 0x09a   */	OPT_ZSS,
-	/* 0x09b   */	OPT_ROT,
-	/* 0x09c   */	OPT_XROT,
-	/* 0x09d   */	OPT_YROT,
-	/* 0x09e   */	OPT_ZROT,
-	/* 0x09f   */	OPT_YPOS,
-	/* 0x0a0   */	OPT_TRANSLATE,
-	/* 0x0a1   */	OPT_NULL,
-	/* 0x0a2   */	OPT_NEXT,
-	/* 0x0a3   */	OPT_ASCALE,
-	/* 0x0a4   */	OPT_AROT,
-	/* 0x0a5   */	OPT_TFORM_SCRIPT,
-	/* 0x0a6   */	OPT_MINIMAP,
-	/* 0x0a7   */	OPT_RM_GOBJ,
-	/* 0x0a8   */	OPT_BATTLE,
-	/* 0x0a9   */	OPT_EXPORT_FLAGS,
-	/* 0x0aa   */	OPT_ROUTE_OPTIONS,
-	/* 0x0ab   */	OPT_WIM0,
-	/* 0x0ac   */	OPT_SLOT,
-	/* 0x0ad   */	OPT_LOAD_KCL,
-	/* 0x0ae   */	OPT_KCL,
-	/* 0x0af   */	OPT_KCL_FLAG,
-	/* 0x0b0   */	OPT_KCL_SCRIPT,
-	/* 0x0b1   */	OPT_TRI_AREA,
-	/* 0x0b2   */	OPT_TRI_HEIGHT,
-	/* 0x0b3   */	OPT_FLAG_FILE,
-	/* 0x0b4   */	OPT_XTRIDATA,
-	/* 0x0b5   */	OPT_KMP,
-	/* 0x0b6   */	OPT_SPEED_MOD,
-	/* 0x0b7   */	OPT_KTPT2,
-	/* 0x0b8   */	OPT_TFORM_KMP,
-	/* 0x0b9   */	OPT_REPAIR_XPF,
-	/* 0x0ba   */	OPT_GAMEMODES,
-	/* 0x0bb   */	OPT_MDL,
-	/* 0x0bc   */	OPT_PAT,
-	/* 0x0bd   */	OPT_PATCH_FILE,
-	/* 0x0be   */	OPT_KMG_LIMIT,
-	/* 0x0bf   */	OPT_KMG_COPY,
-	/* 0x0c0   */	OPT_LT_CLEAR,
-	/* 0x0c1   */	OPT_LT_ONLINE,
-	/* 0x0c2   */	OPT_LT_N_PLAYERS,
-	/* 0x0c3   */	OPT_LT_COND_BIT,
-	/* 0x0c4   */	OPT_LT_GAME_MODE,
-	/* 0x0c5   */	OPT_LT_ENGINE,
-	/* 0x0c6   */	OPT_LT_RANDOM,
-	/* 0x0c7   */	OPT_LEX_PURGE,
-	/* 0x0c8   */	OPT_LOAD_BMG,
-	/* 0x0c9   */	OPT_PATCH_BMG,
-	/* 0x0ca   */	OPT_MACRO_BMG,
-	/* 0x0cb   */	OPT_FILTER_BMG,
-	/* 0x0cc   */	OPT_CACHE,
-	/* 0x0cd   */	OPT_CNAME,
-	/* 0x0ce   */	OPT_ID,
-	/* 0x0cf   */	OPT_BASE64,
-	/* 0x0d0   */	OPT_DB64,
-	/* 0x0d1   */	OPT_CODING,
-	/* 0x0d2   */	OPT_VERIFY,
-	/* 0x0d3   */	OPT_ROUND,
-	/* 0x0d4   */	OPT_PIPE,
-	/* 0x0d5   */	OPT_DELTA,
-	/* 0x0d6   */	OPT_DIFF,
-	/* 0x0d7   */	OPT_EPSILON,
-	/* 0x0d8   */	OPT_BMG_ENDIAN,
-	/* 0x0d9   */	OPT_BMG_ENCODING,
-	/* 0x0da   */	OPT_BMG_INF_SIZE,
-	/* 0x0db   */	OPT_BMG_MID,
-	/* 0x0dc   */	OPT_FORCE_ATTRIB,
-	/* 0x0dd   */	OPT_DEF_ATTRIB,
-	/* 0x0de   */	OPT_NO_ATTRIB,
-	/* 0x0df   */	OPT_X_ESCAPES,
-	/* 0x0e0   */	OPT_OLD_ESCAPES,
-	/* 0x0e1   */	OPT_NO_BMG_COLORS,
-	/* 0x0e2   */	OPT_BMG_COLORS,
-	/* 0x0e3   */	OPT_NO_BMG_INLINE,
-	/* 0x0e4   */	OPT_AUTOADD_PATH,
-	/* 0x0e5   */	OPT_STRIP,
-	/* 0x0e6   */	OPT_UTF_8,
-	/* 0x0e7   */	OPT_NO_UTF_8,
-	/* 0x0e8   */	OPT_FORCE,
-	/* 0x0e9   */	OPT_REPAIR_MAGICS,
-	/* 0x0ea   */	OPT_TINY,
-	/* 0x0eb   */	OPT_YAZ0,
-	/* 0x0ec   */	OPT_YAZ1,
-	/* 0x0ed   */	OPT_XYZ,
-	/* 0x0ee   */	OPT_BZ,
-	/* 0x0ef   */	OPT_SH,
-	/* 0x0f0   */	OPT_BASH,
-	/* 0x0f1   */	OPT_JSON,
-	/* 0x0f2   */	OPT_PHP,
-	/* 0x0f3   */	OPT_MAKEDOC,
-	/* 0x0f4   */	OPT_VAR,
-	/* 0x0f5   */	OPT_ARRAY,
-	/* 0x0f6   */	OPT_AVAR,
-	/* 0x0f7   */	OPT_ANALYZE,
-	/* 0x0f8   */	OPT_ANALYZE_MODE,
-	/* 0x0f9   */	OPT_OLD,
-	/* 0x0fa   */	OPT_STD,
-	/* 0x0fb   */	OPT_NEW,
-	/* 0x0fc   */	OPT_EXTRACT,
-	/* 0x0fd   */	OPT_NUMBER,
-	/* 0x0fe   */	OPT_REMOVE_SRC,
-	/* 0x0ff   */	OPT_IGNORE_SETUP,
-	/* 0x100   */	OPT_PURGE,
-	/* 0x101   */	OPT_ALIGN_U8,
-	/* 0x102   */	OPT_ALIGN_PACK,
-	/* 0x103   */	OPT_ALIGN_BRRES,
-	/* 0x104   */	OPT_ALIGN_BREFF,
-	/* 0x105   */	OPT_ALIGN_BREFT,
-	/* 0x106   */	OPT_ALIGN,
-	/* 0x107   */	OPT_ENCODE_ALL,
-	/* 0x108   */	OPT_ENCODE_IMG,
-	/* 0x109   */	OPT_NO_ENCODE,
-	/* 0x10a   */	OPT_NO_RECURSE,
-	/* 0x10b   */	OPT_AUTO_ADD,
-	/* 0x10c   */	OPT_NO_ECHO,
-	/* 0x10d   */	OPT_PT_DIR,
-	/* 0x10e   */	OPT_RM_AIPARAM,
-	/* 0x10f   */	OPT_U8,
-	/* 0x110   */	OPT_SZS,
-	/* 0x111   */	OPT_WU8,
-	/* 0x112   */	OPT_XWU8,
-	/* 0x113   */	OPT_WBZ,
-	/* 0x114   */	OPT_PACK,
-	/* 0x115   */	OPT_BRRES,
-	/* 0x116   */	OPT_BREFF,
-	/* 0x117   */	OPT_BREFT,
-	/* 0x118   */	OPT_NO_COMPRESS,
-	/* 0x119   */	OPT_FAST,
-	/* 0x11a   */	OPT_LINKS,
-	/* 0x11b   */	OPT_BASEDIR,
-	/* 0x11c   */	OPT_DECODE,
-	/* 0x11d   */	OPT_MIPMAPS,
-	/* 0x11e   */	OPT_NO_MIPMAPS,
-	/* 0x11f   */	OPT_N_MIPMAPS,
-	/* 0x120   */	OPT_MAX_MIPMAPS,
-	/* 0x121   */	OPT_MIPMAP_SIZE,
-	/* 0x122   */	OPT_FAST_MIPMAPS,
-	/* 0x123   */	OPT_CMPR_DEFAULT,
-	/* 0x124   */	OPT_CUT,
-	/* 0x125   */	OPT_RAW,
-	/* 0x126   */	OPT_SECTIONS,
-	/* 0x127   */	 0,0,0,0, 0,
+	/* 0x084   */	OPT_MAX_WIDTH,
+	/* 0x085   */	OPT_DE,
+	/* 0x086   */	OPT_COLORS,
+	/* 0x087   */	OPT_NO_COLORS,
+	/* 0x088   */	OPT_CT_CODE,
+	/* 0x089   */	OPT_LE_CODE,
+	/* 0x08a   */	OPT_CHDIR,
+	/* 0x08b   */	OPT_TOUCH,
+	/* 0x08c   */	OPT_AUTO,
+	/* 0x08d   */	OPT_SET_FLAGS,
+	/* 0x08e   */	OPT_SET_SCALE,
+	/* 0x08f   */	OPT_SET_ROT,
+	/* 0x090   */	OPT_SET_X,
+	/* 0x091   */	OPT_SET_Y,
+	/* 0x092   */	OPT_SET_Z,
+	/* 0x093   */	OPT_XCENTER,
+	/* 0x094   */	OPT_YCENTER,
+	/* 0x095   */	OPT_ZCENTER,
+	/* 0x096   */	OPT_CENTER,
+	/* 0x097   */	OPT_SCALE,
+	/* 0x098   */	OPT_SHIFT,
+	/* 0x099   */	OPT_XSS,
+	/* 0x09a   */	OPT_YSS,
+	/* 0x09b   */	OPT_ZSS,
+	/* 0x09c   */	OPT_ROT,
+	/* 0x09d   */	OPT_XROT,
+	/* 0x09e   */	OPT_YROT,
+	/* 0x09f   */	OPT_ZROT,
+	/* 0x0a0   */	OPT_YPOS,
+	/* 0x0a1   */	OPT_TRANSLATE,
+	/* 0x0a2   */	OPT_NULL,
+	/* 0x0a3   */	OPT_NEXT,
+	/* 0x0a4   */	OPT_ASCALE,
+	/* 0x0a5   */	OPT_AROT,
+	/* 0x0a6   */	OPT_TFORM_SCRIPT,
+	/* 0x0a7   */	OPT_MINIMAP,
+	/* 0x0a8   */	OPT_RM_GOBJ,
+	/* 0x0a9   */	OPT_BATTLE,
+	/* 0x0aa   */	OPT_EXPORT_FLAGS,
+	/* 0x0ab   */	OPT_ROUTE_OPTIONS,
+	/* 0x0ac   */	OPT_WIM0,
+	/* 0x0ad   */	OPT_SLOT,
+	/* 0x0ae   */	OPT_LOAD_KCL,
+	/* 0x0af   */	OPT_KCL,
+	/* 0x0b0   */	OPT_KCL_FLAG,
+	/* 0x0b1   */	OPT_KCL_SCRIPT,
+	/* 0x0b2   */	OPT_TRI_AREA,
+	/* 0x0b3   */	OPT_TRI_HEIGHT,
+	/* 0x0b4   */	OPT_FLAG_FILE,
+	/* 0x0b5   */	OPT_XTRIDATA,
+	/* 0x0b6   */	OPT_KMP,
+	/* 0x0b7   */	OPT_SPEED_MOD,
+	/* 0x0b8   */	OPT_KTPT2,
+	/* 0x0b9   */	OPT_TFORM_KMP,
+	/* 0x0ba   */	OPT_REPAIR_XPF,
+	/* 0x0bb   */	OPT_GAMEMODES,
+	/* 0x0bc   */	OPT_MDL,
+	/* 0x0bd   */	OPT_PAT,
+	/* 0x0be   */	OPT_PATCH_FILE,
+	/* 0x0bf   */	OPT_KMG_LIMIT,
+	/* 0x0c0   */	OPT_KMG_COPY,
+	/* 0x0c1   */	OPT_LT_CLEAR,
+	/* 0x0c2   */	OPT_LT_ONLINE,
+	/* 0x0c3   */	OPT_LT_N_PLAYERS,
+	/* 0x0c4   */	OPT_LT_COND_BIT,
+	/* 0x0c5   */	OPT_LT_GAME_MODE,
+	/* 0x0c6   */	OPT_LT_ENGINE,
+	/* 0x0c7   */	OPT_LT_RANDOM,
+	/* 0x0c8   */	OPT_LEX_PURGE,
+	/* 0x0c9   */	OPT_LEX_FEATURES,
+	/* 0x0ca   */	OPT_LEX_RM_FEAT,
+	/* 0x0cb   */	OPT_LOAD_BMG,
+	/* 0x0cc   */	OPT_PATCH_BMG,
+	/* 0x0cd   */	OPT_MACRO_BMG,
+	/* 0x0ce   */	OPT_FILTER_BMG,
+	/* 0x0cf   */	OPT_CACHE,
+	/* 0x0d0   */	OPT_CNAME,
+	/* 0x0d1   */	OPT_ID,
+	/* 0x0d2   */	OPT_BASE64,
+	/* 0x0d3   */	OPT_DB64,
+	/* 0x0d4   */	OPT_CODING,
+	/* 0x0d5   */	OPT_VERIFY,
+	/* 0x0d6   */	OPT_ROUND,
+	/* 0x0d7   */	OPT_PIPE,
+	/* 0x0d8   */	OPT_DELTA,
+	/* 0x0d9   */	OPT_DIFF,
+	/* 0x0da   */	OPT_EPSILON,
+	/* 0x0db   */	OPT_BMG_ENDIAN,
+	/* 0x0dc   */	OPT_BMG_ENCODING,
+	/* 0x0dd   */	OPT_BMG_INF_SIZE,
+	/* 0x0de   */	OPT_BMG_MID,
+	/* 0x0df   */	OPT_FORCE_ATTRIB,
+	/* 0x0e0   */	OPT_DEF_ATTRIB,
+	/* 0x0e1   */	OPT_NO_ATTRIB,
+	/* 0x0e2   */	OPT_X_ESCAPES,
+	/* 0x0e3   */	OPT_OLD_ESCAPES,
+	/* 0x0e4   */	OPT_NO_BMG_COLORS,
+	/* 0x0e5   */	OPT_BMG_COLORS,
+	/* 0x0e6   */	OPT_NO_BMG_INLINE,
+	/* 0x0e7   */	OPT_AUTOADD_PATH,
+	/* 0x0e8   */	OPT_STRIP,
+	/* 0x0e9   */	OPT_UTF_8,
+	/* 0x0ea   */	OPT_NO_UTF_8,
+	/* 0x0eb   */	OPT_FORCE,
+	/* 0x0ec   */	OPT_REPAIR_MAGICS,
+	/* 0x0ed   */	OPT_TINY,
+	/* 0x0ee   */	OPT_YAZ0,
+	/* 0x0ef   */	OPT_YAZ1,
+	/* 0x0f0   */	OPT_XYZ,
+	/* 0x0f1   */	OPT_BZ,
+	/* 0x0f2   */	OPT_SH,
+	/* 0x0f3   */	OPT_BASH,
+	/* 0x0f4   */	OPT_JSON,
+	/* 0x0f5   */	OPT_PHP,
+	/* 0x0f6   */	OPT_MAKEDOC,
+	/* 0x0f7   */	OPT_VAR,
+	/* 0x0f8   */	OPT_ARRAY,
+	/* 0x0f9   */	OPT_AVAR,
+	/* 0x0fa   */	OPT_CASE,
+	/* 0x0fb   */	OPT_PMODES,
+	/* 0x0fc   */	OPT_FMODES,
+	/* 0x0fd   */	OPT_ANALYZE,
+	/* 0x0fe   */	OPT_ANALYZE_MODE,
+	/* 0x0ff   */	OPT_OLD,
+	/* 0x100   */	OPT_STD,
+	/* 0x101   */	OPT_NEW,
+	/* 0x102   */	OPT_EXTRACT,
+	/* 0x103   */	OPT_NUMBER,
+	/* 0x104   */	OPT_REMOVE_SRC,
+	/* 0x105   */	OPT_IGNORE_SETUP,
+	/* 0x106   */	OPT_PURGE,
+	/* 0x107   */	OPT_ALIGN_U8,
+	/* 0x108   */	OPT_ALIGN_PACK,
+	/* 0x109   */	OPT_ALIGN_BRRES,
+	/* 0x10a   */	OPT_ALIGN_BREFF,
+	/* 0x10b   */	OPT_ALIGN_BREFT,
+	/* 0x10c   */	OPT_ALIGN,
+	/* 0x10d   */	OPT_ENCODE_ALL,
+	/* 0x10e   */	OPT_ENCODE_IMG,
+	/* 0x10f   */	OPT_NO_ENCODE,
+	/* 0x110   */	OPT_NO_RECURSE,
+	/* 0x111   */	OPT_AUTO_ADD,
+	/* 0x112   */	OPT_NO_ECHO,
+	/* 0x113   */	OPT_PT_DIR,
+	/* 0x114   */	OPT_RM_AIPARAM,
+	/* 0x115   */	OPT_U8,
+	/* 0x116   */	OPT_SZS,
+	/* 0x117   */	OPT_WU8,
+	/* 0x118   */	OPT_XWU8,
+	/* 0x119   */	OPT_WBZ,
+	/* 0x11a   */	OPT_PACK,
+	/* 0x11b   */	OPT_BRRES,
+	/* 0x11c   */	OPT_BREFF,
+	/* 0x11d   */	OPT_BREFT,
+	/* 0x11e   */	OPT_NO_COMPRESS,
+	/* 0x11f   */	OPT_FAST,
+	/* 0x120   */	OPT_LINKS,
+	/* 0x121   */	OPT_BASEDIR,
+	/* 0x122   */	OPT_DECODE,
+	/* 0x123   */	OPT_MIPMAPS,
+	/* 0x124   */	OPT_NO_MIPMAPS,
+	/* 0x125   */	OPT_N_MIPMAPS,
+	/* 0x126   */	OPT_MAX_MIPMAPS,
+	/* 0x127   */	OPT_MIPMAP_SIZE,
+	/* 0x128   */	OPT_FAST_MIPMAPS,
+	/* 0x129   */	OPT_CMPR_DEFAULT,
+	/* 0x12a   */	OPT_CUT,
+	/* 0x12b   */	OPT_RAW,
+	/* 0x12c   */	OPT_SECTIONS,
+	/* 0x12d   */	 0,0,0,0, 0,0,0,0, 0,
 };
 
 //
@@ -2798,652 +2888,670 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[131] = // cmd #1
+static u8 option_allowed_cmd_VERSION[133] = // cmd #1
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,1,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,1
 };
 
-static u8 option_allowed_cmd_HELP[131] = // cmd #2
+static u8 option_allowed_cmd_HELP[133] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_ARGTEST[131] = // cmd #3
+static u8 option_allowed_cmd_ARGTEST[133] = // cmd #3
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_TEST[131] = // cmd #4
+static u8 option_allowed_cmd_TEST[133] = // cmd #4
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_COLORS[131] = // cmd #5
+static u8 option_allowed_cmd_COLORS[133] = // cmd #5
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,1,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_ERROR[131] = // cmd #6
+static u8 option_allowed_cmd_ERROR[133] = // cmd #6
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,1
 };
 
-static u8 option_allowed_cmd_FILETYPE[131] = // cmd #7
+static u8 option_allowed_cmd_FILETYPE[133] = // cmd #7
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[131] = // cmd #8
+static u8 option_allowed_cmd_FILEATTRIB[133] = // cmd #8
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_BRSUB[131] = // cmd #9
+static u8 option_allowed_cmd_BRSUB[133] = // cmd #9
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_SYMBOLS[131] = // cmd #10
+static u8 option_allowed_cmd_SYMBOLS[133] = // cmd #10
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_FUNCTIONS[131] = // cmd #11
+static u8 option_allowed_cmd_FUNCTIONS[133] = // cmd #11
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_CALCULATE[131] = // cmd #12
+static u8 option_allowed_cmd_CALCULATE[133] = // cmd #12
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_MATRIX[131] = // cmd #13
+static u8 option_allowed_cmd_MATRIX[133] = // cmd #13
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,1,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_FLOAT[131] = // cmd #14
+static u8 option_allowed_cmd_FLOAT[133] = // cmd #14
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_VR_CALC[131] = // cmd #15
+static u8 option_allowed_cmd_VR_CALC[133] = // cmd #15
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,1,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_VR_RACE[131] = // cmd #16
+static u8 option_allowed_cmd_VR_RACE[133] = // cmd #16
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_AUTOADD[131] = // cmd #17
+static u8 option_allowed_cmd_AUTOADD[133] = // cmd #17
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,0,1,0,  0,1,0,1,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  1,0,0,1,0, 1,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_TRACKS[131] = // cmd #18
+static u8 option_allowed_cmd_TRACKS[133] = // cmd #18
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,1,0,0,  1,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_SCANCACHE[131] = // cmd #19
+static u8 option_allowed_cmd_SCANCACHE[133] = // cmd #19
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_EXPORT[131] = // cmd #20
-{
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
-};
-
-static u8 option_allowed_cmd_CODE[131] = // cmd #21
+static u8 option_allowed_cmd_EXPORT[133] = // cmd #20
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_RECODE[131] = // cmd #22
+static u8 option_allowed_cmd_CODE[133] = // cmd #21
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_SUBFILE[131] = // cmd #23
+static u8 option_allowed_cmd_RECODE[133] = // cmd #22
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  0,1,1,1,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_LIST[131] = // cmd #24
+static u8 option_allowed_cmd_SUBFILE[133] = // cmd #23
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,1,0,
-    1,1,1,1,1, 1,1,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,0,1,1, 1,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_LIST_L[131] = // cmd #25
+static u8 option_allowed_cmd_TESTNORM[133] = // cmd #24
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,1,0,
-    1,1,1,1,1, 1,1,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_LIST_LL[131] = // cmd #26
+static u8 option_allowed_cmd_LIST[133] = // cmd #25
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,1,0,
-    1,1,1,1,1, 1,1,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    1,0,1,1,1, 1,1,1,1,1,  1,0,0
 };
 
-static u8 option_allowed_cmd_LIST_LLL[131] = // cmd #27
+static u8 option_allowed_cmd_LIST_L[133] = // cmd #26
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,1,0,
-    1,1,1,1,1, 1,1,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    1,0,1,1,1, 1,1,1,1,1,  1,0,0
 };
 
-static u8 option_allowed_cmd_LIST_A[131] = // cmd #28
+static u8 option_allowed_cmd_LIST_LL[133] = // cmd #27
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,1,0,
-    1,1,1,1,1, 1,1,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    1,0,1,1,1, 1,1,1,1,1,  1,0,0
 };
 
-static u8 option_allowed_cmd_LIST_LA[131] = // cmd #29
+static u8 option_allowed_cmd_LIST_LLL[133] = // cmd #28
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,1,0,
-    1,1,1,1,1, 1,1,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    1,0,1,1,1, 1,1,1,1,1,  1,0,0
 };
 
-static u8 option_allowed_cmd_NAME_REF[131] = // cmd #30
+static u8 option_allowed_cmd_LIST_A[133] = // cmd #29
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    1,0,1,1,1, 1,1,1,1,1,  1,0,0
+};
+
+static u8 option_allowed_cmd_LIST_LA[133] = // cmd #30
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    1,0,1,1,1, 1,1,1,1,1,  1,0,0
+};
+
+static u8 option_allowed_cmd_NAME_REF[133] = // cmd #31
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,1,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_ILIST[131] = // cmd #31
+static u8 option_allowed_cmd_ILIST[133] = // cmd #32
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_ILIST_L[131] = // cmd #32
+static u8 option_allowed_cmd_ILIST_L[133] = // cmd #33
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_ILIST_LL[131] = // cmd #33
+static u8 option_allowed_cmd_ILIST_LL[133] = // cmd #34
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_ILIST_A[131] = // cmd #34
+static u8 option_allowed_cmd_ILIST_A[133] = // cmd #35
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_ILIST_LA[131] = // cmd #35
+static u8 option_allowed_cmd_ILIST_LA[133] = // cmd #36
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,1,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_MEMORY[131] = // cmd #36
+static u8 option_allowed_cmd_MEMORY[133] = // cmd #37
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,0,0
 };
 
-static u8 option_allowed_cmd_MEMORY_A[131] = // cmd #37
+static u8 option_allowed_cmd_MEMORY_A[133] = // cmd #38
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,0,0
 };
 
-static u8 option_allowed_cmd_DUMP[131] = // cmd #38
+static u8 option_allowed_cmd_DUMP[133] = // cmd #39
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,0,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,0,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_SHA1[131] = // cmd #39
+static u8 option_allowed_cmd_SHA1[133] = // cmd #40
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,0,1,0,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,0,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,0,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_ANALYZE[131] = // cmd #40
+static u8 option_allowed_cmd_ANALYZE[133] = // cmd #41
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_DISTRIBUTION[131] = // cmd #41
+static u8 option_allowed_cmd_FEATURES[133] = // cmd #42
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,1,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,1,1,0, 0,0,1,1,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
+};
+
+static u8 option_allowed_cmd_DISTRIBUTION[133] = // cmd #43
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,1, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,1, 1,0,0,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,1,1,0,0,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_DIFF[131] = // cmd #42
+static u8 option_allowed_cmd_DIFF[133] = // cmd #44
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,0,
-    0,0,0,0,0, 0,0,1,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,1,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,
+    0,0,0,0,0, 0,0,0,0,1,  1,0,0
 };
 
-static u8 option_allowed_cmd_CHECK[131] = // cmd #43
+static u8 option_allowed_cmd_CHECK[133] = // cmd #45
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,1,0,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,0, 1,0,0,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,0,1,0,0,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_SLOTS[131] = // cmd #44
+static u8 option_allowed_cmd_SLOTS[133] = // cmd #46
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,0,0,0,0, 1,0,0,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,0,1,0,0,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_STGI[131] = // cmd #45
+static u8 option_allowed_cmd_STGI[133] = // cmd #47
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_ISARENA[131] = // cmd #46
+static u8 option_allowed_cmd_ISARENA[133] = // cmd #48
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_NORMALIZE[131] = // cmd #47
+static u8 option_allowed_cmd_NORMALIZE[133] = // cmd #49
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 0,0,1,1,1,
-    1,1,1,0,0, 0,0,1,0,0,  1,1,1,1,1, 1,1,0,0,0,  0,0,0,1,1, 1,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,1,0,0,1,
+    1,1,1,1,1, 0,0,0,0,1,  0,0,1,1,1, 1,1,1,1,0,  0,0,0,0,0, 1,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_PATCH[131] = // cmd #48
+static u8 option_allowed_cmd_PATCH[133] = // cmd #50
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 0,0,1,1,1,
-    1,1,1,0,0, 0,0,1,0,0,  1,1,1,1,1, 1,1,0,0,0,  0,0,1,1,1, 1,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,1,0,0,1,
+    1,1,1,1,1, 0,0,0,0,1,  0,0,1,1,1, 1,1,1,1,0,  0,0,0,0,1, 1,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_COPY[131] = // cmd #49
+static u8 option_allowed_cmd_COPY[133] = // cmd #51
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 0,0,1,1,1,
-    1,1,1,0,0, 0,0,1,0,0,  1,1,1,1,1, 1,1,0,0,0,  0,0,1,1,1, 1,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,1,0,0,1,
+    1,1,1,1,1, 0,0,0,0,1,  0,0,1,1,1, 1,1,1,1,0,  0,0,0,0,1, 1,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_DUPLICATE[131] = // cmd #50
+static u8 option_allowed_cmd_DUPLICATE[133] = // cmd #52
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,1,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 0,0,1,1,1,
-    1,1,1,0,0, 0,0,1,0,0,  1,1,1,1,1, 1,1,0,0,0,  0,0,1,1,1, 1,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,1,0,0,1,
+    1,1,1,1,1, 0,0,0,0,1,  0,0,1,1,1, 1,1,1,1,0,  0,0,0,0,1, 1,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_MINIMAP[131] = // cmd #51
+static u8 option_allowed_cmd_MINIMAP[133] = // cmd #53
 {
     0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,1,1, 0,0,1,1,1,
-    1,1,1,0,0, 0,0,1,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,1,1,1, 1,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,0, 1,1,0,0,1,
+    1,1,1,1,1, 0,0,0,0,1,  0,0,1,1,0, 0,0,0,0,0,  0,0,0,0,1, 1,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_COMPRESS[131] = // cmd #52
+static u8 option_allowed_cmd_COMPRESS[133] = // cmd #54
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 0,0,1,1,1,
-    1,1,1,0,0, 0,0,1,0,0,  1,1,1,1,1, 1,1,0,0,0,  0,0,1,1,1, 1,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,1,0,0,1,
+    1,1,1,1,1, 0,0,0,0,1,  0,0,1,1,1, 1,1,1,1,0,  0,0,0,0,1, 1,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_DECOMPRESS[131] = // cmd #53
+static u8 option_allowed_cmd_DECOMPRESS[133] = // cmd #55
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 0,0,1,1,1,
-    1,1,1,0,0, 0,0,1,0,0,  1,1,1,0,1, 0,0,0,0,0,  0,0,0,0,1, 1,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,1,0,0,1,
+    1,1,1,1,1, 0,0,0,0,1,  0,0,1,1,1, 0,1,0,0,0,  0,0,0,0,0, 0,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_ENCODE[131] = // cmd #54
+static u8 option_allowed_cmd_ENCODE[133] = // cmd #56
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,0,1,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0,1,
+    1,1,1,1,1, 1,1,1,1,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_CREATE[131] = // cmd #55
+static u8 option_allowed_cmd_CREATE[133] = // cmd #57
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 1,1,1,1,1,  0,1,1,1,0, 1,0,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 1,0,0,0,0,
-    1,1,1,1,1, 1,1,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,0,1,1,1,  1,1,0,1,1, 1,0,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,0,1,0,0,
+    0,0,1,1,1, 1,1,1,1,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_UPDATE[131] = // cmd #56
+static u8 option_allowed_cmd_UPDATE[133] = // cmd #58
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,1, 1,1,1,1,1,  0,1,1,1,1, 0,0,0,0,0,
-    0,0,0,1,1, 1,1,0,1,1,  0,0,0,0,0, 0,0,0,0,0,  0,1,1,1,0, 0,0,1,0,0,
-    0,0,0,0,0, 0,0,0,1,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  1,1,0,0,0, 0,1,1,1,1,  1,1,0,1,1, 1,1,0,0,0,
+    0,0,0,0,0, 1,1,1,1,0,  1,1,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,0,0,0,1,
+    0,0,0,0,0, 0,0,0,0,0,  1,0,0
 };
 
-static u8 option_allowed_cmd_EXTRACT[131] = // cmd #57
+static u8 option_allowed_cmd_EXTRACT[133] = // cmd #59
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,1,1,  0,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,1,1,0,  0,0,1,1,0, 1,1,1,1,1,  0,1,1,1,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,
-    1,1,0,0,0, 1,1,1,1,1,  0
+    0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,1, 1,0,1,1,1,  1,1,0,1,1, 1,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,
+    1,1,1,1,0, 0,0,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_XDECODE[131] = // cmd #58
+static u8 option_allowed_cmd_XDECODE[133] = // cmd #60
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,1,1,  0,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,1,1,0,  0,0,1,1,0, 1,1,1,1,1,  0,1,1,1,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,
-    1,1,0,0,0, 1,1,1,1,1,  0
+    0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,1, 1,0,1,1,1,  1,1,0,1,1, 1,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,
+    1,1,1,1,0, 0,0,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_XEXPORT[131] = // cmd #59
+static u8 option_allowed_cmd_XEXPORT[133] = // cmd #61
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,1,1,  0,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,1,1,0,  0,0,1,1,0, 1,1,1,1,1,  0,1,1,1,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,
-    1,1,0,0,0, 1,1,1,1,1,  0
+    0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,1, 1,0,1,1,1,  1,1,0,1,1, 1,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,
+    1,1,1,1,0, 0,0,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_XALL[131] = // cmd #60
+static u8 option_allowed_cmd_XALL[133] = // cmd #62
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,1,1,  0,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,1,1,0,  0,0,1,1,0, 1,1,1,1,1,  0,1,1,1,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,
-    1,1,0,0,0, 1,1,1,1,1,  0
+    0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,1, 1,0,1,1,1,  1,1,0,1,1, 1,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,
+    1,1,1,1,0, 0,0,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_XCOMMON[131] = // cmd #61
+static u8 option_allowed_cmd_XCOMMON[133] = // cmd #63
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  0,1,1,1,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,0,1,1, 1,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_BINARY[131] = // cmd #62
+static u8 option_allowed_cmd_BINARY[133] = // cmd #64
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  0,1,1,1,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,0,1,1, 1,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_TEXT[131] = // cmd #63
+static u8 option_allowed_cmd_TEXT[133] = // cmd #65
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  0,1,1,0,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,0,  0,0,0,0,0, 1,1,1,1,1,  0,1,1,1,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    1,1,1,1,1, 1,1,1,1,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,0,1,1, 1,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,1,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_CAT[131] = // cmd #64
+static u8 option_allowed_cmd_CAT[133] = // cmd #66
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  0,1,1,0,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    1,1,1,1,1, 1,1,1,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,1,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_BMG[131] = // cmd #65
+static u8 option_allowed_cmd_BMG[133] = // cmd #67
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  0,0,0,0,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    1,1,1,1,1, 1,1,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_KCL[131] = // cmd #66
+static u8 option_allowed_cmd_KCL[133] = // cmd #68
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,1,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_KMP[131] = // cmd #67
+static u8 option_allowed_cmd_KMP[133] = // cmd #69
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,0, 1,0,0,1,1,  1,0,0,0,0, 0,0,0,1,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_LEX[131] = // cmd #68
+static u8 option_allowed_cmd_LEX[133] = // cmd #70
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_INFO[131] = // cmd #69
+static u8 option_allowed_cmd_INFO[133] = // cmd #71
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_GHOST[131] = // cmd #70
+static u8 option_allowed_cmd_GHOST[133] = // cmd #72
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,1,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_YAZDUMP[131] = // cmd #71
+static u8 option_allowed_cmd_YAZDUMP[133] = // cmd #73
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,1,1,  0,1,1,1,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,0,1,1, 1,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_VEHICLE[131] = // cmd #72
+static u8 option_allowed_cmd_VEHICLE[133] = // cmd #74
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,1,0,1,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,1,0,  1,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
 
@@ -3460,6 +3568,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_ALLOW_ALL,
 	OptionInfo + OPT_COMPATIBLE,
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
@@ -3523,6 +3632,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_VAR,
 	OptionInfo + OPT_ARRAY,
 	OptionInfo + OPT_AVAR,
+	OptionInfo + OPT_CASE,
 
 	0
 };
@@ -3539,6 +3649,7 @@ static const InfoOption_t * option_tab_cmd_VERSION[] =
 static const InfoOption_t * option_tab_cmd_HELP[] =
 {
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 
 	0
 };
@@ -3739,6 +3850,12 @@ static const InfoOption_t * option_tab_cmd_SUBFILE[] =
 	OptionInfo + OPT_OVERWRITE,
 	OptionInfo + OPT_NUMBER,
 	OptionInfo + OPT_REMOVE_DEST,
+
+	0
+};
+
+static const InfoOption_t * option_tab_cmd_TESTNORM[] =
+{
 
 	0
 };
@@ -4695,6 +4812,36 @@ static const InfoOption_t * option_tab_cmd_ANALYZE[] =
 	OptionInfo + OPT_VAR,
 	OptionInfo + OPT_ARRAY,
 	OptionInfo + OPT_AVAR,
+	OptionInfo + OPT_CASE,
+
+	OptionInfo + OPT_NONE, // separator
+
+	OptionInfo + OPT_DEST,
+	OptionInfo + OPT_DEST2,
+
+	0
+};
+
+static const InfoOption_t * option_tab_cmd_FEATURES[] =
+{
+	&option_cmd_FEATURES_BRIEF,
+	&option_cmd_FEATURES_LONG,
+	OptionInfo + OPT_IGNORE,
+	&option_cmd_FEATURES_QUIET,
+
+	OptionInfo + OPT_NONE, // separator
+
+	OptionInfo + OPT_SH,
+	OptionInfo + OPT_BASH,
+	OptionInfo + OPT_JSON,
+	OptionInfo + OPT_PHP,
+	OptionInfo + OPT_MAKEDOC,
+	OptionInfo + OPT_VAR,
+	OptionInfo + OPT_ARRAY,
+	OptionInfo + OPT_AVAR,
+	OptionInfo + OPT_CASE,
+	OptionInfo + OPT_PMODES,
+	OptionInfo + OPT_FMODES,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -6525,6 +6672,7 @@ static const InfoOption_t * option_tab_cmd_GHOST[] =
 	OptionInfo + OPT_VAR,
 	OptionInfo + OPT_ARRAY,
 	OptionInfo + OPT_AVAR,
+	OptionInfo + OPT_CASE,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -6583,7 +6731,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" SZS, U8, PACK, BRRES, BREFF, BREFT and RARC archives. It is also a"
 	" wrapper to all other tools.",
 	0,
-	63,
+	65,
 	option_tab_tool,
 	0
     },
@@ -6621,7 +6769,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" The third variant (with a valid command name) prints details about"
 	" the declared command. The fourth variant prints an overview about"
 	" all commands and all global options.",
-	1,
+	2,
 	option_tab_cmd_HELP,
 	option_allowed_cmd_HELP
     },
@@ -6976,6 +7124,20 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	option_allowed_cmd_SUBFILE
     },
 
+    {	CMD_TESTNORM,
+	true,
+	false,
+	false,
+	"_NORM",
+	0,
+	"wszst _NORM key...",
+	"This hidden command tests the iteration of norming.",
+	0,
+	0,
+	option_tab_cmd_TESTNORM,
+	option_allowed_cmd_TESTNORM
+    },
+
     {	CMD_LIST,
 	false,
 	false,
@@ -7232,9 +7394,23 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wszst ANALYZE [source]...",
 	"Analyse track files and print results in machine readable format.",
 	0,
-	13,
+	14,
 	option_tab_cmd_ANALYZE,
 	option_allowed_cmd_ANALYZE
+    },
+
+    {	CMD_FEATURES,
+	true,
+	false,
+	false,
+	"FEATURES",
+	0,
+	"wszst FEATURES [source]...",
+	"Analyse track files and a feature list in machine readable format.",
+	0,
+	17,
+	option_tab_cmd_FEATURES,
+	option_allowed_cmd_FEATURES
     },
 
     {	CMD_DISTRIBUTION,
@@ -7757,7 +7933,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wszst GHOST [source]...",
 	"Analyse each file and print a summary about the ghost data.",
 	0,
-	12,
+	13,
 	option_tab_cmd_GHOST,
 	option_allowed_cmd_GHOST
     },

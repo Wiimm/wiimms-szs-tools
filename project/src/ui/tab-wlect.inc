@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -207,6 +207,10 @@
 		"WIDTH",	"width",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_GP|F_IGNORE,
+		"MAX_WIDTH",	"max-width|maxwidth",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0, 0 /* copy of wszst */ },
 
@@ -371,6 +375,12 @@
 		0,
 		"Delete LEX sections without any impact."
 		" This option is executed after all --lt-* options." },
+
+  { H_OPT_G,	"LEX_RM_FEAT",	"rm-features|rmfeatures|lex-rm-features|lexrmfeatures",
+		0,
+		"Remove LEX setion FEA0 (features) if exists."
+		" It is executed after --lex-purge."
+		" {--lex-rm-features} is an alternative name." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -643,6 +653,7 @@
 //  { T_COPT,	"LT_ENGINE",	0,0,0 },
 //  { T_COPT,	"LT_RANDOM",	0,0,0 },
 //  { T_COPT,	"LEX_PURGE",	0,0,0 },
+//  { H_COPT,	"LEX_RM_FEAT",	0,0,0 },
 
   //---------- wlect GROUP TRACK_COPY ----------
 
@@ -687,6 +698,7 @@
   { T_CMD_BEG,	"HELP",		0,0,0 },
 
   { T_COPT,	"WIDTH",	0,0,0 },
+  { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wlect ARGTEST ----------
@@ -843,6 +855,7 @@
   { T_COPT,	"LT_ENGINE",	0,0,0 },
   { T_COPT,	"LT_RANDOM",	0,0,0 },
   { T_COPT,	"LEX_PURGE",	0,0,0 },
+  { H_COPT,	"LEX_RM_FEAT",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"PARAM",	0,0,0 },
 

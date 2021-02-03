@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -4136,6 +4136,17 @@ int main ( int argc, char ** argv )
 
     //printf(" |" MM1(XXX) "|" MM2(XXX) "\n");
 
+    if (0)
+    {
+	double3 d3;
+	double *d = d3.v;
+	printf("%zu/%zu=%zu\n",sizeof(d3.v),sizeof(*d),sizeof(d3.v)/sizeof(*d));
+
+	float3 f3;
+	float *f = f3.v;
+	printf("%zu/%zu=%zu\n",sizeof(f3.v),sizeof(*f),sizeof(f3.v)/sizeof(*f));
+    }
+    
     if (0)
     {
 	double34 x;

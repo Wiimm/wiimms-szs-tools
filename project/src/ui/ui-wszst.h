@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -127,6 +127,8 @@ typedef enum enumOptions
 	OPT_SORT,
 	OPT_TRANSFORM,
 	OPT_STRIP,
+	OPT_PMODES,
+	OPT_FMODES,
 	OPT_ANALYZE,
 	OPT_ANALYZE_MODE,
 	OPT_SOURCE,
@@ -187,7 +189,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 131
+	OPT__N_SPECIFIC, // == 133
 
 	//----- global options -----
 
@@ -197,6 +199,7 @@ typedef enum enumOptions
 	OPT_ALLOW_ALL,
 	OPT_COMPATIBLE,
 	OPT_WIDTH,
+	OPT_MAX_WIDTH,
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
@@ -233,6 +236,8 @@ typedef enum enumOptions
 	OPT_LT_ENGINE,
 	OPT_LT_RANDOM,
 	OPT_LEX_PURGE,
+	OPT_LEX_FEATURES,
+	OPT_LEX_RM_FEAT,
 	OPT_CACHE,
 	OPT_CNAME,
 	OPT_MAX_FILE_SIZE,
@@ -257,12 +262,13 @@ typedef enum enumOptions
 	OPT_VAR,
 	OPT_ARRAY,
 	OPT_AVAR,
+	OPT_CASE,
 	OPT_OLD,
 	OPT_STD,
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 201
+	OPT__N_TOTAL // == 207
 
 } enumOptions;
 
@@ -348,6 +354,8 @@ typedef enum enumOptions
 //	OB_SORT			= 1llu << OPT_SORT,
 //	OB_TRANSFORM		= 1llu << OPT_TRANSFORM,
 //	OB_STRIP		= 1llu << OPT_STRIP,
+//	OB_PMODES		= 1llu << OPT_PMODES,
+//	OB_FMODES		= 1llu << OPT_FMODES,
 //	OB_ANALYZE		= 1llu << OPT_ANALYZE,
 //	OB_ANALYZE_MODE		= 1llu << OPT_ANALYZE_MODE,
 //	OB_SOURCE		= 1llu << OPT_SOURCE,
@@ -698,6 +706,15 @@ typedef enum enumOptions
 //				| OB_DEST
 //				| OB_DEST2,
 //
+//	OB_CMD_FEATURES		= OB_BRIEF
+//				| OB_LONG
+//				| OB_IGNORE
+//				| OB_GRP_SCRIPT
+//				| OB_PMODES
+//				| OB_FMODES
+//				| OB_DEST
+//				| OB_DEST2,
+//
 //	OB_CMD_DISTRIBUTION	= OB_IGNORE
 //				| OB_NORM
 //				| OB_LINKS
@@ -929,6 +946,7 @@ typedef enum enumCommands
 	CMD_CODE,
 	CMD_RECODE,
 	CMD_SUBFILE,
+	CMD_TESTNORM,
 
 	CMD_LIST,
 	CMD_LIST_L,
@@ -950,6 +968,7 @@ typedef enum enumCommands
 
 	CMD_SHA1,
 	CMD_ANALYZE,
+	CMD_FEATURES,
 	CMD_DISTRIBUTION,
 
 	CMD_DIFF,
@@ -987,7 +1006,7 @@ typedef enum enumCommands
 
 	CMD_VEHICLE,
 
-	CMD__N // == 73
+	CMD__N // == 75
 
 } enumCommands;
 
@@ -1040,6 +1059,7 @@ typedef enum enumGetOpt
 	GO_ALLOW_ALL,
 	GO_COMPATIBLE,
 	GO_WIDTH,
+	GO_MAX_WIDTH,
 	GO_DE,
 	GO_COLORS,
 	GO_NO_COLORS,
@@ -1108,6 +1128,8 @@ typedef enum enumGetOpt
 	GO_LT_ENGINE,
 	GO_LT_RANDOM,
 	GO_LEX_PURGE,
+	GO_LEX_FEATURES,
+	GO_LEX_RM_FEAT,
 	GO_LOAD_BMG,
 	GO_PATCH_BMG,
 	GO_MACRO_BMG,
@@ -1155,6 +1177,9 @@ typedef enum enumGetOpt
 	GO_VAR,
 	GO_ARRAY,
 	GO_AVAR,
+	GO_CASE,
+	GO_PMODES,
+	GO_FMODES,
 	GO_ANALYZE,
 	GO_ANALYZE_MODE,
 	GO_OLD,
@@ -1217,7 +1242,7 @@ typedef enum enumGetOpt
 //extern const struct option OptionLong[];
 //extern u8 OptionUsed[OPT__N_TOTAL+1];
 //extern const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE];
-//UIOPT_INDEX_SIZE := 0x12c = 300
+//UIOPT_INDEX_SIZE := 0x136 = 310
 //extern const InfoCommand_t CommandInfo[CMD__N+1];
 extern const InfoUI_t InfoUI_wszst;
 

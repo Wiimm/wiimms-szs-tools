@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -67,6 +67,30 @@
 #if HAVE_XSRC
  #include "xsrc/x-std.h"
 #endif
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			debugging helper		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#undef LOG_SHA1_ENABLED
+#undef LOG_SHA1
+
+#if defined(TEST) || defined(DEBUG)
+  #define LOG_SHA1_ENABLED 1
+#elif HAVE_WIIMM_EXT
+  #define LOG_SHA1_ENABLED 0
+#else
+  #define LOG_SHA1_ENABLED 0
+#endif
+
+#if LOG_SHA1_ENABLED
+  #define LOG_SHA1(d,s,i) LogSHA1(__FUNCTION__,__FILE__,__LINE__,d,s,i)
+#else
+  #define LOG_SHA1(d,s,i)
+#endif
+
+void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2149,7 +2173,7 @@ extern bool		use_utf8;
 extern bool		use_de;
 extern bool		ctcode_enabled;
 extern bool		lecode_enabled;
-extern uint		opt_ct_mode;	// calculated by ctcode_enabled & lecode_enabled
+extern uint		opt_ct_mode;		// calculated by ctcode_enabled & lecode_enabled
 extern int		testmode;
 extern int		force_count;
 extern uint		opt_tiny;
@@ -2178,6 +2202,10 @@ extern file_format_t	fform_compr_force;
 extern file_format_t	script_fform;
 extern ccp		script_varname;
 extern int		script_array;
+extern LowerUpper_t	opt_case;
+extern int		opt_pmodes;
+extern uint		opt_fmodes_include;
+extern uint		opt_fmodes_exclude;
 extern int		opt_pt_dir;
 extern bool		opt_links;
 extern bool		opt_rm_aiparam;

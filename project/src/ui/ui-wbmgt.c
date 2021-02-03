@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -337,6 +337,13 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" messages and disable the automatic detection of the terminal width."
     },
 
+    {	OPT_MAX_WIDTH, false, false, false, true, false, 0, "max-width",
+	"maxwidth",
+	"Define the maximum terminal width (number of columns) for help and"
+	" some other messages and disable the automatic detection of the"
+	" terminal width. This option is ignored if --width is set."
+    },
+
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
 	"Be quiet and print only error messages. Multiple usage is possible."
@@ -515,7 +522,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 61
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 62
 
 };
 
@@ -641,6 +648,8 @@ static const struct option OptionLong[] =
 	 { "allowall",		0, 0, GO_ALLOW_ALL },
 	{ "compatible",		1, 0, GO_COMPATIBLE },
 	{ "width",		1, 0, GO_WIDTH },
+	{ "max-width",		1, 0, GO_MAX_WIDTH },
+	 { "maxwidth",		1, 0, GO_MAX_WIDTH },
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
@@ -794,39 +803,40 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x081   */	OPT_ALLOW_ALL,
 	/* 0x082   */	OPT_COMPATIBLE,
 	/* 0x083   */	OPT_WIDTH,
-	/* 0x084   */	OPT_DE,
-	/* 0x085   */	OPT_COLORS,
-	/* 0x086   */	OPT_NO_COLORS,
-	/* 0x087   */	OPT_CT_CODE,
-	/* 0x088   */	OPT_LE_CODE,
-	/* 0x089   */	OPT_CHDIR,
-	/* 0x08a   */	OPT_POINTS,
-	/* 0x08b   */	OPT_UTF_8,
-	/* 0x08c   */	OPT_NO_UTF_8,
-	/* 0x08d   */	OPT_FORCE,
-	/* 0x08e   */	OPT_REPAIR_MAGICS,
-	/* 0x08f   */	OPT_OLD,
-	/* 0x090   */	OPT_STD,
-	/* 0x091   */	OPT_NEW,
-	/* 0x092   */	OPT_EXTRACT,
-	/* 0x093   */	OPT_NUMBER,
-	/* 0x094   */	OPT_ALIGN,
-	/* 0x095   */	OPT_MACRO_BMG,
-	/* 0x096   */	OPT_FILTER_BMG,
-	/* 0x097   */	OPT_BMG_ENDIAN,
-	/* 0x098   */	OPT_BMG_ENCODING,
-	/* 0x099   */	OPT_BMG_INF_SIZE,
-	/* 0x09a   */	OPT_BMG_MID,
-	/* 0x09b   */	OPT_FORCE_ATTRIB,
-	/* 0x09c   */	OPT_DEF_ATTRIB,
-	/* 0x09d   */	OPT_NO_ATTRIB,
-	/* 0x09e   */	OPT_X_ESCAPES,
-	/* 0x09f   */	OPT_OLD_ESCAPES,
-	/* 0x0a0   */	OPT_NO_BMG_COLORS,
-	/* 0x0a1   */	OPT_BMG_COLORS,
-	/* 0x0a2   */	OPT_NO_BMG_INLINE,
-	/* 0x0a3   */	OPT_SECTIONS,
-	/* 0x0a4   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+	/* 0x084   */	OPT_MAX_WIDTH,
+	/* 0x085   */	OPT_DE,
+	/* 0x086   */	OPT_COLORS,
+	/* 0x087   */	OPT_NO_COLORS,
+	/* 0x088   */	OPT_CT_CODE,
+	/* 0x089   */	OPT_LE_CODE,
+	/* 0x08a   */	OPT_CHDIR,
+	/* 0x08b   */	OPT_POINTS,
+	/* 0x08c   */	OPT_UTF_8,
+	/* 0x08d   */	OPT_NO_UTF_8,
+	/* 0x08e   */	OPT_FORCE,
+	/* 0x08f   */	OPT_REPAIR_MAGICS,
+	/* 0x090   */	OPT_OLD,
+	/* 0x091   */	OPT_STD,
+	/* 0x092   */	OPT_NEW,
+	/* 0x093   */	OPT_EXTRACT,
+	/* 0x094   */	OPT_NUMBER,
+	/* 0x095   */	OPT_ALIGN,
+	/* 0x096   */	OPT_MACRO_BMG,
+	/* 0x097   */	OPT_FILTER_BMG,
+	/* 0x098   */	OPT_BMG_ENDIAN,
+	/* 0x099   */	OPT_BMG_ENCODING,
+	/* 0x09a   */	OPT_BMG_INF_SIZE,
+	/* 0x09b   */	OPT_BMG_MID,
+	/* 0x09c   */	OPT_FORCE_ATTRIB,
+	/* 0x09d   */	OPT_DEF_ATTRIB,
+	/* 0x09e   */	OPT_NO_ATTRIB,
+	/* 0x09f   */	OPT_X_ESCAPES,
+	/* 0x0a0   */	OPT_OLD_ESCAPES,
+	/* 0x0a1   */	OPT_NO_BMG_COLORS,
+	/* 0x0a2   */	OPT_BMG_COLORS,
+	/* 0x0a3   */	OPT_NO_BMG_INLINE,
+	/* 0x0a4   */	OPT_SECTIONS,
+	/* 0x0a5   */	 0,0,0,0, 0,0,0,0, 0,0,0,
 	/* 0x0b0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -834,7 +844,8 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x0f0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x100   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x110   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x130   */	 0,0,0,0, 0,0,
 };
 
 //
@@ -982,6 +993,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_ALLOW_ALL,
 	OptionInfo + OPT_COMPATIBLE,
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
@@ -1018,6 +1030,7 @@ static const InfoOption_t * option_tab_cmd_VERSION[] =
 static const InfoOption_t * option_tab_cmd_HELP[] =
 {
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 
 	0
 };
@@ -1102,6 +1115,7 @@ static const InfoOption_t * option_tab_cmd_LIST[] =
 {
 	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_PATCH_BMG,
 	OptionInfo + OPT_MACRO_BMG,
 	OptionInfo + OPT_FILTER_BMG,
@@ -1113,6 +1127,7 @@ static const InfoOption_t * option_tab_cmd_SLOTS[] =
 {
 	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_PATCH_BMG,
 	OptionInfo + OPT_MACRO_BMG,
 	OptionInfo + OPT_FILTER_BMG,
@@ -1123,6 +1138,7 @@ static const InfoOption_t * option_tab_cmd_SLOTS[] =
 static const InfoOption_t * option_tab_cmd_DIFF[] =
 {
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_PATCH_BMG,
 	OptionInfo + OPT_MACRO_BMG,
 	OptionInfo + OPT_FILTER_BMG,
@@ -1353,7 +1369,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wbmgt [option]... command [option|parameter|file]...",
 	"Wiimms BMG Tool : Convert and patch raw and text BMG (message) files.",
 	0,
-	23,
+	24,
 	option_tab_tool,
 	0
     },
@@ -1391,7 +1407,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" The third variant (with a valid command name) prints details about"
 	" the declared command. The fourth variant prints an overview about"
 	" all commands and all global options.",
-	1,
+	2,
 	option_tab_cmd_HELP,
 	option_allowed_cmd_HELP
     },
@@ -1561,7 +1577,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"List messages to proof the content. Patches are applied before"
 	" listing. The lines are cut to fit the terminal width.",
 	0,
-	5,
+	6,
 	option_tab_cmd_LIST,
 	option_allowed_cmd_LIST
     },
@@ -1576,7 +1592,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Print a slot ordered list with slot number, message id, delta and"
 	" attributes. Patches are applied before listing.",
 	0,
-	5,
+	6,
 	option_tab_cmd_SLOTS,
 	option_allowed_cmd_SLOTS
     },
@@ -1594,7 +1610,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" each source file is compared with a file in the destination. Patches"
 	" are applied to all sources before comparing.",
 	0,
-	6,
+	7,
 	option_tab_cmd_DIFF,
 	option_allowed_cmd_DIFF
     },

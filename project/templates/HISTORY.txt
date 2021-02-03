@@ -445,6 +445,15 @@ szs v2.21a r8311 - 2020-11-30
    number as single byte, so that only values between 0 and 255 were possible.
 
 
+szs v2.22a r8323 - 2020-12-26
+
+ - KMP/AREA: The table layout of text output changed. Therefor parameter
+   @REVISION is important to select the correct scanning mode.
+ - KMP/AREA: Detection of "Conditional Out of Bounds".
+ - Bug fix for tool wlect: Coping/Moving/Linking source file with options
+   --copy-tracks, --move-tracks and --link-tracks failed for *_d.files.
+
+
 @@MODULE(last-history.txt)@@
 
 

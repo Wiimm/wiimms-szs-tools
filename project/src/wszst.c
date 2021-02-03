@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -976,6 +976,37 @@ enumError cmd_subfile()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			command _TESTNORM		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void PrintNorm ( const szs_norm_t *norm )
+{
+    if ( !norm || !norm->f )
+	return;
+
+    
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SetupNormByOptions ( szs_norm_t *norm )
+{
+    DASSERT(norm);
+    memset(norm,0,sizeof(*norm));
+    memset(norm->modified,'-',SZI__N);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError cmd_testnorm()
+{
+    if (!first_param)
+	return ERR_OK;
+
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command BRSUB			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[check_brsub_t]]
@@ -1860,7 +1891,10 @@ static void SetupPrintScript ( PrintScript_t *ps )
 
     InitializePrintScript(ps);
     ps->varname		= script_varname;
+    ps->force_case	= opt_case;
     ps->create_array	= script_array > 0;
+    ps->ena_empty	= brief_count < 2 ;
+    ps->ena_comments	= brief_count < 1 ;
 
     switch(script_fform)
     {
@@ -2000,9 +2034,12 @@ static enumError cmd_analyze()
 		 "used_pos_suggest=\"%s\"\n"
 		"ktpt2=\"%s %4.2f %4.2f\"\n"
 		"gobj=\"%s\"\n"
-		"special_kmp=\"%s\"\n"
 		"special_files=\"%s\"\n"
+		"original_files=\"%s\"\n"
+		"modified_files=\"%s\"\n"
+		"special_kmp=\"%s\"\n"
 		"lex_sections=\"%s\"\n"
+		"lex_features=\"%s\"\n"
 		"warn=\"%u=%s\"\n"
 		"ct_attributes=\"%s\"\n"
 		"name_attributes=\"%.*s\"\n"
@@ -2047,9 +2084,12 @@ static enumError cmd_analyze()
 		,as.kmp_finish.distance
 		,as.kmp_finish.dir_delta
 		,as.gobj_info
-		,CreateSpecialInfoKMP(szs.kmp_special,true,"")
-		,CreateSpecialFileInfo(&szs,true,"")
-		,CreateSectionInfoLEX(szs.have_lex,true,"")
+		,CreateSpecialFileInfo(&szs,~(1<<HFM_NONE),true,"")
+		,CreateSpecialFileInfo(&szs,1<<HFM_ORIGINAL,true,"")
+		,CreateSpecialFileInfo(&szs,1<<HFM_MODIFIED,true,"")
+		,CreateSpecialInfoKMP(szs.have.kmp,true,"")
+		,CreateSectionInfoLEX(szs.have.lex_sect,true,"")
+		,CreateFeatureInfoLEX(szs.have.lex_feat,true,"")
 		,szs.warn_bits,GetWarnSZSNames(szs.warn_bits,' ')
 		,as.ct_attrib+1
 		,name_attrib_len,name_attrib
@@ -2085,6 +2125,125 @@ static enumError cmd_analyze()
     PrintScriptFooter(&ps);
     ResetPrintScript(&ps);
     ResetFile(&fo,0);
+    ResetAnalyseSZS(&as);
+    ResetSZS(&szs);
+    return max_err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			command features		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_features()
+{
+    static ccp def_path = "\1P/\1F\1?T";
+    CheckOptDest("-",false);
+    char dest[PATH_MAX];
+    enumError max_err = ERR_OK;
+    if (!strcmp(opt_dest,"-"))
+	fputc('\n',stdout);
+
+    szs_file_t szs;
+    InitializeSZS(&szs);
+
+    analyse_szs_t as;
+    InitializeAnalyseSZS(&as);
+
+    features_szs_t fs;
+    InitializeFeaturesSZS(&fs);
+    const int comments = brief_count > 0 ? -brief_count : long_count;
+
+    File_t fo;
+    InitializeFile(&fo);
+
+    PrintScript_t ps;
+    SetupPrintScript(&ps);
+    if ( ps.fform == PSFF_UNKNOWN && comments >= 0 )
+	ps.fform = PSFF_ASSIGN;
+
+    ParamList_t *param;
+    for ( param = first_param; param; param = param->next )
+    {
+	NORMALIZE_FILENAME_PARAM(param);
+
+	ResetSZS(&szs);
+	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
+	    continue;
+	if ( err > ERR_WARNING )
+	{
+	    if ( max_err < err )
+		max_err = err;
+	    continue;
+	}
+
+	if (!fo.f)
+	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+			GetExtFF(script_fform,0),false);
+
+	if ( verbose > 0 )
+	{
+	    fprintf(stdlog,"%sANALYZE %s:%s => %s:%s\n",
+			verbose > 0 ? "\n" : "",
+			GetNameFF(szs.fform_file,szs.fform_arch), szs.fname,
+			GetNameFF(script_fform,0), dest );
+	    fflush(stdlog);
+	}
+
+
+	//--- analyse szs
+
+	AnalyseSZS(&as,false,&szs,param->arg);
+	SetupFeaturesSZS(&fs,&as.have,false);
+
+
+	//--- status
+
+	if ( err >= ERR_WARNING )
+	{
+	    if ( max_err < err )
+		 max_err = err;
+	    continue;
+	}
+
+	if (!fo.f)
+	{
+	    enumError err = CreateFile(&fo,false,dest,FM_STDIO|FM_OVERWRITE);
+	    if (err)
+	    {
+		max_err = err;
+		break;
+	    }
+	    ps.f = fo.f;
+	    PrintScriptHeader(&ps);
+	}
+
+
+	//--- name attributes ('dest' can be used now)
+
+	PrintEscapedString(dest,sizeof(dest),param->arg,-1,CHMD_UTF8,'"',0);
+
+
+	//--- print result
+
+	PrintScriptVars(&ps,1,"file=\"%s\"\n",dest);
+	PrintFeaturesSZS( &ps, &fs, false, comments,
+				opt_pmodes, opt_fmodes_include, opt_fmodes_exclude );
+	PutScriptVars(&ps,2,0);
+
+	if (!script_array)
+	{
+	    PrintScriptFooter(&ps);
+	    ps.f = 0;
+	    ResetFile(&fo,0);
+	}
+    }
+
+    PrintScriptFooter(&ps);
+    ResetPrintScript(&ps);
+    ResetFile(&fo,0);
+    ResetFeaturesSZS(&fs);
     ResetAnalyseSZS(&as);
     ResetSZS(&szs);
     return max_err;
@@ -4945,6 +5104,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_ALLOW_ALL:	allow_all = true; break;
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
+	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
@@ -5020,6 +5180,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_LT_GAME_MODE:	err += ScanOptLtGameMode(optarg); break;
 	case GO_LT_ENGINE:	err += ScanOptLtEngine(optarg); break;
 	case GO_LT_RANDOM:	err += ScanOptLtRandom(optarg); break;
+	case GO_LEX_FEATURES:	opt_lex_features = true; break;
+	case GO_LEX_RM_FEAT:	opt_lex_rm_features = true; break;
 	case GO_LEX_PURGE:	opt_lex_purge = true; break;
 
 	case GO_UTF_8:		use_utf8 = true; break;
@@ -5078,6 +5240,9 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_VAR:		script_varname = optarg; break;
 	case GO_ARRAY:		script_array++; break;
 	case GO_AVAR:		script_array++; script_varname = optarg; break;
+	case GO_CASE:		err += ScanOptCase(optarg); break;
+	case GO_PMODES:		opt_pmodes++; break;
+	case GO_FMODES:		err += ScanOptFModes(optarg); break;
 
 	case GO_PT_DIR:		err += ScanOptPtDir(optarg); break;
 	case GO_LINKS:		opt_links = true; break;
@@ -5262,6 +5427,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_CODE:		err = cmd_code(); break;
 	case CMD_RECODE:	err = cmd_recode(); break;
 	case CMD_SUBFILE:	err = cmd_subfile(); break;
+	case CMD_TESTNORM:	err = cmd_testnorm(); break;
 
 	case CMD_LIST:		err = cmd_list(0); break;
 	case CMD_LIST_L:	err = cmd_list(1); break;
@@ -5283,6 +5449,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_MEMORY_A:	set_all(1); err = cmd_memory(); break;
 	case CMD_SHA1:		err = cmd_sha1(); break;
 	case CMD_ANALYZE:	err = cmd_analyze(); break;
+	case CMD_FEATURES:	err = cmd_features(); break;
 	case CMD_DISTRIBUTION:	err = cmd_distribution(); break;
 	case CMD_DIFF:		err = cmd_diff(); break;
 

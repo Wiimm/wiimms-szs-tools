@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -709,14 +709,15 @@ static enumError cmd_create()
 	 "Possible keywords:\n"
 	 "  LEX    : Create a with all sections except »TEST«.\n"
 	 "  LEX+   : Create a complete LEX text file.\n"
-	 "  SET1   : Create a LEX text files with section »SET1« only.\n"
-	 "  CANNON : Create a LEX text files with section »CANN« only.\n"
-	 "  TEST   : Create a LEX text files with section »TEST« only.\n"
+	 "  SET1   : Create a LEX text file with section »SET1« only.\n"
+	 "  CANNON : Create a LEX text file with section »CANN« only.\n"
+	 "  TEST   : Create a LEX text file with section »TEST« only.\n"
 	 "  LPAR   : Create a LPAR text file as template.\n"
  #if HAVE_WIIMM_EXT
 	 "\n"
 	 "Hidden keyword:\n"
-	 "  DEVELOP : Like LEX+, but include all devoloper sections.\n"
+	 "  FEATURES : Create a LEX text file with section »FEA0« only.\n"
+	 "  DEVELOP  : Like LEX+, but include all devoloper sections.\n"
  #endif
 	 "\n",stderr);
 
@@ -726,12 +727,13 @@ static enumError cmd_create()
 
     //--- data
 
-    enum { C_LEX, C_SET1, C_CANNON, C_HIDE_PT, C_TEST, C_LPAR };
+    enum { C_LEX, C_FEATURES, C_SET1, C_CANNON, C_HIDE_PT, C_TEST, C_LPAR };
     static const KeywordTab_t tab[] =
     {
 	{ C_LEX,	"LEX",		0,		0 },
 	{ C_LEX,	"LEX+",		0,		1 },
 	{ C_LEX,	"DEVELOP",	0,		2 },
+	{ C_FEATURES,	"FEATURES",	0,		0 },
 	{ C_SET1,	"SET1",		0,		0 },
 	{ C_CANNON,	"CANNON",	0,		0 },
 	{ C_HIDE_PT,	"HIPT",		0,		0 },
@@ -763,7 +765,17 @@ static enumError cmd_create()
 	    InitializeLEX(&lex);
 	    lex.develop = cmd->opt > 1;
 	    UpdateLEX(&lex,true,cmd->opt>0);
-	    PatchLEX(&lex);
+	    PatchLEX(&lex,0);
+	    err = SaveTextLEX(&lex,"-",false);
+	    ResetLEX(&lex);
+	}
+	break;
+
+     case C_FEATURES:
+	{
+	    lex_t lex;
+	    InitializeLEX(&lex);
+	    AppendFea0LEX(&lex,false,0);
 	    err = SaveTextLEX(&lex,"-",false);
 	    ResetLEX(&lex);
 	}
@@ -1044,6 +1056,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_ALLOW_ALL:	allow_all = true; break;
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
+	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
@@ -1124,6 +1137,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_LT_GAME_MODE:	err += ScanOptLtGameMode(optarg); break;
 	case GO_LT_ENGINE:	err += ScanOptLtEngine(optarg); break;
 	case GO_LT_RANDOM:	err += ScanOptLtRandom(optarg); break;
+	case GO_LEX_RM_FEAT:	opt_lex_rm_features = true; break;
 	case GO_LEX_PURGE:	opt_lex_purge = true; break;
 
  #if 0 // BMG disabled for wlect

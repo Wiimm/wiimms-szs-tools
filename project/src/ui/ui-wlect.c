@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -407,6 +407,13 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" messages and disable the automatic detection of the terminal width."
     },
 
+    {	OPT_MAX_WIDTH, false, false, false, true, false, 0, "max-width",
+	"maxwidth",
+	"Define the maximum terminal width (number of columns) for help and"
+	" some other messages and disable the automatic detection of the"
+	" terminal width. This option is ignored if --width is set."
+    },
+
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
 	"Be quiet and print only error messages. Multiple usage is possible."
@@ -533,6 +540,12 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" all --lt-* options."
     },
 
+    {	OPT_LEX_RM_FEAT, false, true, false, false, false, 0, "rm-features",
+	0,
+	"Remove LEX setion FEA0 (features) if exists. It is executed after"
+	" --lex-purge. --lex-rm-features is an alternative name."
+    },
+
     {	OPT_TEST, false, false, false, false, true, 't', "test",
 	0,
 	"Run in test mode, modify nothing.\n"
@@ -585,7 +598,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 76
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 78
 
 };
 
@@ -742,6 +755,8 @@ static const struct option OptionLong[] =
 	 { "allowall",		0, 0, GO_ALLOW_ALL },
 	{ "compatible",		1, 0, GO_COMPATIBLE },
 	{ "width",		1, 0, GO_WIDTH },
+	{ "max-width",		1, 0, GO_MAX_WIDTH },
+	 { "maxwidth",		1, 0, GO_MAX_WIDTH },
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
@@ -791,6 +806,10 @@ static const struct option OptionLong[] =
 	 { "ltrandom",		1, 0, GO_LT_RANDOM },
 	{ "lex-purge",		0, 0, GO_LEX_PURGE },
 	 { "lexpurge",		0, 0, GO_LEX_PURGE },
+	{ "rm-features",	0, 0, GO_LEX_RM_FEAT },
+	 { "rmfeatures",	0, 0, GO_LEX_RM_FEAT },
+	 { "lex-rm-features",	0, 0, GO_LEX_RM_FEAT },
+	 { "lexrmfeatures",	0, 0, GO_LEX_RM_FEAT },
 	{ "test",		0, 0, 't' },
 	{ "force",		0, 0, GO_FORCE },
 	{ "repair-magics",	2, 0, GO_REPAIR_MAGICS },
@@ -913,63 +932,66 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x081   */	OPT_ALLOW_ALL,
 	/* 0x082   */	OPT_COMPATIBLE,
 	/* 0x083   */	OPT_WIDTH,
-	/* 0x084   */	OPT_DE,
-	/* 0x085   */	OPT_COLORS,
-	/* 0x086   */	OPT_NO_COLORS,
-	/* 0x087   */	OPT_CT_CODE,
-	/* 0x088   */	OPT_LE_CODE,
-	/* 0x089   */	OPT_CHDIR,
-	/* 0x08a   */	OPT_ROUND,
-	/* 0x08b   */	OPT_NO_ECHO,
-	/* 0x08c   */	OPT_UTF_8,
-	/* 0x08d   */	OPT_NO_UTF_8,
-	/* 0x08e   */	OPT_LT_CLEAR,
-	/* 0x08f   */	OPT_LT_ONLINE,
-	/* 0x090   */	OPT_LT_N_PLAYERS,
-	/* 0x091   */	OPT_LT_COND_BIT,
-	/* 0x092   */	OPT_LT_GAME_MODE,
-	/* 0x093   */	OPT_LT_ENGINE,
-	/* 0x094   */	OPT_LT_RANDOM,
-	/* 0x095   */	OPT_LEX_PURGE,
-	/* 0x096   */	OPT_FORCE,
-	/* 0x097   */	OPT_REPAIR_MAGICS,
-	/* 0x098   */	OPT_OLD,
-	/* 0x099   */	OPT_STD,
-	/* 0x09a   */	OPT_NEW,
-	/* 0x09b   */	OPT_EXTRACT,
-	/* 0x09c   */	OPT_LE_DEFINE,
-	/* 0x09d   */	OPT_LPAR,
-	/* 0x09e   */	OPT_ALIAS,
-	/* 0x09f   */	OPT_ENGINE,
-	/* 0x0a0   */	OPT_200CC,
-	/* 0x0a1   */	OPT_PERFMON,
-	/* 0x0a2   */	OPT_CUSTOM_TT,
-	/* 0x0a3   */	OPT_XPFLAGS,
-	/* 0x0a4   */	OPT_SPEEDOMETER,
-	/* 0x0a5   */	OPT_RESERVED_1B9,
-	/* 0x0a6   */	OPT_RESERVED_1BA,
-	/* 0x0a7   */	OPT_RESERVED_1BB,
-	/* 0x0a8   */	OPT_TRACK_DIR,
-	/* 0x0a9   */	OPT_COPY_TRACKS,
-	/* 0x0aa   */	OPT_MOVE_TRACKS,
-	/* 0x0ab   */	OPT_MOVE1_TRACKS,
-	/* 0x0ac   */	OPT_LINK_TRACKS,
-	/* 0x0ad   */	OPT_LOAD_BMG,
-	/* 0x0ae   */	OPT_PATCH_BMG,
-	/* 0x0af   */	OPT_MACRO_BMG,
-	/* 0x0b0   */	OPT_PATCH_NAMES,
-	/* 0x0b1   */	OPT_ORDER_BY,
-	/* 0x0b2   */	OPT_ORDER_ALL,
-	/* 0x0b3   */	OPT_NUMBER,
-	/* 0x0b4   */	OPT_SECTIONS,
-	/* 0x0b5   */	 0,0,0,0, 0,0,0,0, 0,0,0,
+	/* 0x084   */	OPT_MAX_WIDTH,
+	/* 0x085   */	OPT_DE,
+	/* 0x086   */	OPT_COLORS,
+	/* 0x087   */	OPT_NO_COLORS,
+	/* 0x088   */	OPT_CT_CODE,
+	/* 0x089   */	OPT_LE_CODE,
+	/* 0x08a   */	OPT_CHDIR,
+	/* 0x08b   */	OPT_ROUND,
+	/* 0x08c   */	OPT_NO_ECHO,
+	/* 0x08d   */	OPT_UTF_8,
+	/* 0x08e   */	OPT_NO_UTF_8,
+	/* 0x08f   */	OPT_LT_CLEAR,
+	/* 0x090   */	OPT_LT_ONLINE,
+	/* 0x091   */	OPT_LT_N_PLAYERS,
+	/* 0x092   */	OPT_LT_COND_BIT,
+	/* 0x093   */	OPT_LT_GAME_MODE,
+	/* 0x094   */	OPT_LT_ENGINE,
+	/* 0x095   */	OPT_LT_RANDOM,
+	/* 0x096   */	OPT_LEX_PURGE,
+	/* 0x097   */	OPT_LEX_RM_FEAT,
+	/* 0x098   */	OPT_FORCE,
+	/* 0x099   */	OPT_REPAIR_MAGICS,
+	/* 0x09a   */	OPT_OLD,
+	/* 0x09b   */	OPT_STD,
+	/* 0x09c   */	OPT_NEW,
+	/* 0x09d   */	OPT_EXTRACT,
+	/* 0x09e   */	OPT_LE_DEFINE,
+	/* 0x09f   */	OPT_LPAR,
+	/* 0x0a0   */	OPT_ALIAS,
+	/* 0x0a1   */	OPT_ENGINE,
+	/* 0x0a2   */	OPT_200CC,
+	/* 0x0a3   */	OPT_PERFMON,
+	/* 0x0a4   */	OPT_CUSTOM_TT,
+	/* 0x0a5   */	OPT_XPFLAGS,
+	/* 0x0a6   */	OPT_SPEEDOMETER,
+	/* 0x0a7   */	OPT_RESERVED_1B9,
+	/* 0x0a8   */	OPT_RESERVED_1BA,
+	/* 0x0a9   */	OPT_RESERVED_1BB,
+	/* 0x0aa   */	OPT_TRACK_DIR,
+	/* 0x0ab   */	OPT_COPY_TRACKS,
+	/* 0x0ac   */	OPT_MOVE_TRACKS,
+	/* 0x0ad   */	OPT_MOVE1_TRACKS,
+	/* 0x0ae   */	OPT_LINK_TRACKS,
+	/* 0x0af   */	OPT_LOAD_BMG,
+	/* 0x0b0   */	OPT_PATCH_BMG,
+	/* 0x0b1   */	OPT_MACRO_BMG,
+	/* 0x0b2   */	OPT_PATCH_NAMES,
+	/* 0x0b3   */	OPT_ORDER_BY,
+	/* 0x0b4   */	OPT_ORDER_ALL,
+	/* 0x0b5   */	OPT_NUMBER,
+	/* 0x0b6   */	OPT_SECTIONS,
+	/* 0x0b7   */	 0,0,0,0, 0,0,0,0, 0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0f0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x100   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x110   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x130   */	 0,0,0,0, 0,0,
 };
 
 //
@@ -1129,6 +1151,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_ALLOW_ALL,
 	OptionInfo + OPT_COMPATIBLE,
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
@@ -1170,6 +1193,7 @@ static const InfoOption_t * option_tab_cmd_VERSION[] =
 static const InfoOption_t * option_tab_cmd_HELP[] =
 {
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 
 	0
 };
@@ -1508,7 +1532,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wlect [option]... command [option|parameter|file]...",
 	"Wiimms LE-CODE Tool : Manage the LE-CODE and LEX extensions.",
 	0,
-	25,
+	26,
 	option_tab_tool,
 	0
     },
@@ -1546,7 +1570,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" The third variant (with a valid command name) prints details about"
 	" the declared command. The fourth variant prints an overview about"
 	" all commands and all global options.",
-	1,
+	2,
 	option_tab_cmd_HELP,
 	option_allowed_cmd_HELP
     },

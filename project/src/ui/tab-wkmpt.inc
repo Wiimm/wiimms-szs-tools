@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -253,6 +253,10 @@
 
   { T_OPT_GP|F_IGNORE,
 		"WIDTH",	"width",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GP|F_IGNORE,
+		"MAX_WIDTH",	"max-width|maxwidth",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GM,	"QUIET",	"q|quiet",
@@ -657,6 +661,7 @@
   { T_CMD_BEG,	"HELP",		0,0,0 },
 
   { T_COPT,	"WIDTH",	0,0,0 },
+  { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wkmpt ARGTEST ----------
@@ -767,6 +772,7 @@
   { T_CMD_BEG,	"OBJECTS",	0,0,0 },
 
   { T_COPT,	"WIDTH",	0,0,0 },
+  { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
 	"Don't print the file list and the info line(s)."

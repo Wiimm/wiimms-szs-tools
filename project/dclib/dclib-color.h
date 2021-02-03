@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2020 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -129,9 +129,11 @@ typedef struct term_size_t
 }
 term_size_t;
 
-extern uint opt_width, opt_height;
-int ScanOptWidth ( ccp arg );
-int ScanOptHeight ( ccp arg );
+extern uint opt_width, opt_max_width, opt_height, opt_max_height;
+int ScanOptWidth	( ccp arg );
+int ScanOptMaxWidth	( ccp arg );
+int ScanOptHeight	( ccp arg );
+int ScanOptMaxHeight	( ccp arg );
 
 term_size_t GetTermSize   ( int default_width, int default_height );
 term_size_t GetTermSizeFD ( int fd, int default_width, int default_height );
@@ -272,6 +274,7 @@ typedef enum TermTextMode_t
 
 	//--- and her are some recommendations for unique colors
 	//--- these Colors are also used to setup 'ColorSet_t'
+	// [[new-color]]
 
 	TTM_COL_SETUP		= TTM_BOLD	| TTM_BLUE	| TTM_BG_BLACK,
 	TTM_COL_RUN		= TTM_BOLD	| TTM_WHITE	| TTM_BG_BLACK,
@@ -290,6 +293,7 @@ typedef enum TermTextMode_t
 	TTM_COL_LOG		= TTM_BOLD	| TTM_WHITE	| TTM_BG_BLUE,
 
 	TTM_COL_NAME		= TTM_NO_BOLD	| TTM_CYAN	| TTM_BG_BLACK,
+	TTM_COL_OP		= TTM_BOLD	| TTM_WHITE	| TTM_BG_BLACK,
 	TTM_COL_VALUE		= TTM_NO_BOLD	| TTM_GREEN	| TTM_BG_BLACK,
 	TTM_COL_SUCCESS		= TTM_BOLD	| TTM_GREEN	| TTM_BG_BLACK,
 	TTM_COL_ERROR		= TTM_NO_BOLD	| TTM_BLACK	|  TTM_BG_YELLOW,
@@ -444,6 +448,7 @@ typedef struct ColorSet_t
     ccp lf;	    // pointer to 'EmptyString' or to 'LF20';
 
     //--- data, always begins with 'reset'
+    // [[new-color]]
 
     ccp reset;
 
@@ -464,6 +469,7 @@ typedef struct ColorSet_t
     ccp log;
 
     ccp name;
+    ccp op;
     ccp value;
     ccp success;
     ccp error;

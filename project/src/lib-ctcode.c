@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -545,6 +545,12 @@ void ResetDataCTCODE ( ctcode_t * ctcode, bool create_empty )
 
 
     //--- misc
+
+    if (ctcode->lpar)
+    {
+	FREE(ctcode->lpar);
+	ctcode->lpar = 0;
+    }
 
     SetupUsedSlotsCTCODE(ctcode);
     CalcCupRefCTCODE(ctcode,true);
@@ -2649,6 +2655,13 @@ enumError ScanLEBinCTCODE
 	}
 	ctcode->n_tracks = max_tidx+1;
     }
+
+
+    //--- copy lecode parameter
+
+    if (!ctcode->lpar)
+	ctcode->lpar = MALLOC(sizeof(*ctcode->lpar));
+    *ctcode->lpar = ana.lpar;
 
 
     //--- terminate

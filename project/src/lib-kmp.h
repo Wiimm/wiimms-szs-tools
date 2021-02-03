@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -45,7 +45,7 @@
 
 #include "lib-std.h"
 #include "lib-object.h"
-#include "lib-lecode.h"
+#include "lib-lex.h"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -980,7 +980,7 @@ typedef enum kmp_mode_t
      KMPMD_M_TINY	 = KMPMD_TINY_7,
 
     KMPMD_RM_EMPTY	= KMPMD_TINY_1 << 3,	// skip empty KMP sections
-    KMPMD_MINIMIZE	= KMPMD_RM_EMPTY << 1,	// minimize KMP by reordering
+    KMPMD_MINIMIZE	= KMPMD_RM_EMPTY << 1,	// minimize KMP by reordering [[obsolete]] not used
 
     //--- tests
 

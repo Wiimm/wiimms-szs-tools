@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -986,7 +986,7 @@ static void analyze_kcl ( kcl_t *kcl )
 	}
 
 	float *f = td->normal->v;
-	uint nf = sizeof(td->normal)/sizeof(float);
+	uint nf = sizeof(td->normal->v)/sizeof(*f);
 	for ( ; nf > 0; nf--, f++ )
 	{
 	    if ( n_min > *f ) n_min = *f;
@@ -1120,6 +1120,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_ALLOW_ALL:	allow_all = true; break;
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
+	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;

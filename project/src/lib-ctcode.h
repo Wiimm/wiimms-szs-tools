@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -290,6 +290,8 @@ typedef struct ctcode_t
     bool		replace_at;	// true: Replace "@..@" on track names
     bool		use_lecode;	// true: enable le-code support
     bool		use_le_flags;	// true: le_flags enabled
+    struct le_lpar_t	*lpar;		// NULL or LPAR parameters
+    
 
     //--- misc
 

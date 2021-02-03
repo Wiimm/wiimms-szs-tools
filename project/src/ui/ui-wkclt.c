@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -409,6 +409,13 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" messages and disable the automatic detection of the terminal width."
     },
 
+    {	OPT_MAX_WIDTH, false, false, false, true, false, 0, "max-width",
+	"maxwidth",
+	"Define the maximum terminal width (number of columns) for help and"
+	" some other messages and disable the automatic detection of the"
+	" terminal width. This option is ignored if --width is set."
+    },
+
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
 	"Be quiet and print only error messages. Multiple usage is possible."
@@ -494,8 +501,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" the octree creation. The other allowed keywords are: FAST, NEW,"
 	" CENTER, ROUND, NORMALS, MTL, WIIMM, TRIANGLES, OUT-SWAP, G, USEMTL,"
 	" CLIP, IN-SWAP, AUTO, HEX4, HEX23, HEX, DROP-UNUSED, DROP-FIXED,"
-	" DROP-INVALID, DROP, RM-FACEDOWN, RM-FACEUP, FIX-ALL, CONV-FACEUP,"
-	" WEAK-WALLS, SORT, INPLACE, SILENT and LOG. See"
+	" DROP-INVALID, DROP, RM-FACEDOWN, RM-FACEUP, FIX-ALL, TINY-0 ..."
+	" TINY-7, CONV-FACEUP, WEAK-WALLS, SORT, INPLACE, SILENT and LOG. See"
 	" https://szs.wiimm.de/opt/kcl for details."
     },
 
@@ -626,7 +633,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 70
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 71
 
 };
 
@@ -880,6 +887,8 @@ static const struct option OptionLong[] =
 	 { "allowall",		0, 0, GO_ALLOW_ALL },
 	{ "compatible",		1, 0, GO_COMPATIBLE },
 	{ "width",		1, 0, GO_WIDTH },
+	{ "max-width",		1, 0, GO_MAX_WIDTH },
+	 { "maxwidth",		1, 0, GO_MAX_WIDTH },
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
@@ -1029,49 +1038,50 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x081   */	OPT_ALLOW_ALL,
 	/* 0x082   */	OPT_COMPATIBLE,
 	/* 0x083   */	OPT_WIDTH,
-	/* 0x084   */	OPT_DE,
-	/* 0x085   */	OPT_COLORS,
-	/* 0x086   */	OPT_NO_COLORS,
-	/* 0x087   */	OPT_CT_CODE,
-	/* 0x088   */	OPT_LE_CODE,
-	/* 0x089   */	OPT_CHDIR,
-	/* 0x08a   */	OPT_SCALE,
-	/* 0x08b   */	OPT_SHIFT,
-	/* 0x08c   */	OPT_XSS,
-	/* 0x08d   */	OPT_YSS,
-	/* 0x08e   */	OPT_ZSS,
-	/* 0x08f   */	OPT_ROT,
-	/* 0x090   */	OPT_XROT,
-	/* 0x091   */	OPT_YROT,
-	/* 0x092   */	OPT_ZROT,
-	/* 0x093   */	OPT_TRANSLATE,
-	/* 0x094   */	OPT_NULL,
-	/* 0x095   */	OPT_NEXT,
-	/* 0x096   */	OPT_ASCALE,
-	/* 0x097   */	OPT_AROT,
-	/* 0x098   */	OPT_TFORM_SCRIPT,
-	/* 0x099   */	OPT_KCL,
-	/* 0x09a   */	OPT_KCL_FLAG,
-	/* 0x09b   */	OPT_KCL_SCRIPT,
-	/* 0x09c   */	OPT_TRI_AREA,
-	/* 0x09d   */	OPT_TRI_HEIGHT,
-	/* 0x09e   */	OPT_FLAG_FILE,
-	/* 0x09f   */	OPT_XTRIDATA,
-	/* 0x0a0   */	OPT_SLOT,
-	/* 0x0a1   */	OPT_ROUND,
-	/* 0x0a2   */	OPT_NO_ECHO,
-	/* 0x0a3   */	OPT_UTF_8,
-	/* 0x0a4   */	OPT_NO_UTF_8,
-	/* 0x0a5   */	OPT_FORCE,
-	/* 0x0a6   */	OPT_REPAIR_MAGICS,
-	/* 0x0a7   */	OPT_TINY,
-	/* 0x0a8   */	OPT_OLD,
-	/* 0x0a9   */	OPT_STD,
-	/* 0x0aa   */	OPT_NEW,
-	/* 0x0ab   */	OPT_EXTRACT,
-	/* 0x0ac   */	OPT_NUMBER,
-	/* 0x0ad   */	OPT_SECTIONS,
-	/* 0x0ae   */	 0,0,
+	/* 0x084   */	OPT_MAX_WIDTH,
+	/* 0x085   */	OPT_DE,
+	/* 0x086   */	OPT_COLORS,
+	/* 0x087   */	OPT_NO_COLORS,
+	/* 0x088   */	OPT_CT_CODE,
+	/* 0x089   */	OPT_LE_CODE,
+	/* 0x08a   */	OPT_CHDIR,
+	/* 0x08b   */	OPT_SCALE,
+	/* 0x08c   */	OPT_SHIFT,
+	/* 0x08d   */	OPT_XSS,
+	/* 0x08e   */	OPT_YSS,
+	/* 0x08f   */	OPT_ZSS,
+	/* 0x090   */	OPT_ROT,
+	/* 0x091   */	OPT_XROT,
+	/* 0x092   */	OPT_YROT,
+	/* 0x093   */	OPT_ZROT,
+	/* 0x094   */	OPT_TRANSLATE,
+	/* 0x095   */	OPT_NULL,
+	/* 0x096   */	OPT_NEXT,
+	/* 0x097   */	OPT_ASCALE,
+	/* 0x098   */	OPT_AROT,
+	/* 0x099   */	OPT_TFORM_SCRIPT,
+	/* 0x09a   */	OPT_KCL,
+	/* 0x09b   */	OPT_KCL_FLAG,
+	/* 0x09c   */	OPT_KCL_SCRIPT,
+	/* 0x09d   */	OPT_TRI_AREA,
+	/* 0x09e   */	OPT_TRI_HEIGHT,
+	/* 0x09f   */	OPT_FLAG_FILE,
+	/* 0x0a0   */	OPT_XTRIDATA,
+	/* 0x0a1   */	OPT_SLOT,
+	/* 0x0a2   */	OPT_ROUND,
+	/* 0x0a3   */	OPT_NO_ECHO,
+	/* 0x0a4   */	OPT_UTF_8,
+	/* 0x0a5   */	OPT_NO_UTF_8,
+	/* 0x0a6   */	OPT_FORCE,
+	/* 0x0a7   */	OPT_REPAIR_MAGICS,
+	/* 0x0a8   */	OPT_TINY,
+	/* 0x0a9   */	OPT_OLD,
+	/* 0x0aa   */	OPT_STD,
+	/* 0x0ab   */	OPT_NEW,
+	/* 0x0ac   */	OPT_EXTRACT,
+	/* 0x0ad   */	OPT_NUMBER,
+	/* 0x0ae   */	OPT_SECTIONS,
+	/* 0x0af   */	 0,
 	/* 0x0b0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1079,7 +1089,8 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x0f0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x100   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x110   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x130   */	 0,0,0,0, 0,0,
 };
 
 //
@@ -1275,6 +1286,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_ALLOW_ALL,
 	OptionInfo + OPT_COMPATIBLE,
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
@@ -1312,6 +1324,7 @@ static const InfoOption_t * option_tab_cmd_VERSION[] =
 static const InfoOption_t * option_tab_cmd_HELP[] =
 {
 	OptionInfo + OPT_WIDTH,
+	OptionInfo + OPT_MAX_WIDTH,
 
 	0
 };
@@ -1957,7 +1970,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms KCL Tool : Analyze, modify, export and create KCL and OBJ"
 	" files.",
 	0,
-	24,
+	25,
 	option_tab_tool,
 	0
     },
@@ -1995,7 +2008,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" The third variant (with a valid command name) prints details about"
 	" the declared command. The fourth variant prints an overview about"
 	" all commands and all global options.",
-	1,
+	2,
 	option_tab_cmd_HELP,
 	option_allowed_cmd_HELP
     },

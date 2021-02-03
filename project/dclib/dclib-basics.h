@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2020 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1235,10 +1235,15 @@ static inline char * StringCopySMem ( char * buf, size_t bufsize, mem_t mem )
 static inline char * StringCopyEMem ( char * buf, ccp buf_end, mem_t mem )
 	{ return StringCopyEM(buf,buf_end,mem.ptr,mem.len); }
 
-char * StringLowerS  ( char * buf, size_t bufsize, ccp src );
-char * StringLowerE  ( char * buf, ccp buf_end,    ccp src );
-char * StringUpperS  ( char * buf, size_t bufsize, ccp src );
-char * StringUpperE  ( char * buf, ccp buf_end,    ccp src );
+char * StringLowerS ( char * buf, size_t bufsize, ccp src );
+char * StringLowerE ( char * buf, ccp buf_end,    ccp src );
+char * StringUpperS ( char * buf, size_t bufsize, ccp src );
+char * StringUpperE ( char * buf, ccp buf_end,    ccp src );
+
+char * MemLowerE    ( char * buf, ccp buf_end,    mem_t src );
+char * MemLowerS    ( char * buf, size_t bufsize, mem_t src );
+char * MemUpperE    ( char * buf, ccp buf_end,    mem_t src );
+char * MemUpperS    ( char * buf, size_t bufsize, mem_t src );
 
 // special handling for unsigned decimals
 int StrNumCmp ( ccp a, ccp b );
@@ -2050,7 +2055,7 @@ void PutLines
     int		first_line,	// length without prefix of already printed first line
     ccp		prefix,		// NULL or prefix for each line
     ccp		text,		// text to print
-    ccp		eol		// End Of Line test. If NULL -> LF
+    ccp		eol		// End-Of-Line text. If NULL -> LF
 );
 
 void PrintArgLines
@@ -2113,7 +2118,7 @@ uint PutColoredLines
     int			indent,		// indent of output
     int			fw,		// field width; indent+prefix+eol don't count
     ccp			prefix,		// NULL or prefix for each line
-    ccp			eol,		// End Of Line test. If NULL -> LF
+    ccp			eol,		// End-Of-Line text. If NULL -> LF
     ccp			text		// text to print
 );
 
@@ -2126,7 +2131,7 @@ uint PrintArgColoredLines
     int			indent,		// indent of output
     int			fw,		// field width; indent+prefix+eol don't count
     ccp			prefix,		// NULL or prefix for each line
-    ccp			eol,		// End Of Line test. If NULL -> LF
+    ccp			eol,		// End-Of-Line text. If NULL -> LF
     ccp			format,		// format string for vsnprintf()
     va_list		arg		// parameters for 'format'
 );
@@ -2140,7 +2145,7 @@ uint PrintColoredLines
     int			indent,		// indent of output
     int			fw,		// field width; indent+prefix+eol don't count
     ccp			prefix,		// NULL or prefix for each line
-    ccp			eol,		// End Of Line test. If NULL -> LF
+    ccp			eol,		// End-Of-Line text. If NULL -> LF
     ccp			format,		// format string for vsnprintf()
     ...					// arguments for 'vsnprintf(format,...)'
 )
@@ -2725,7 +2730,7 @@ enumError Command_COLORS
     uint	format		// output format => see PrintColorSetEx()
 );
 
-
+//
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			OFF/AUTO/ON/FORCE		///////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -2755,7 +2760,36 @@ int ScanKeywordOffAutoOn
 
 ccp GetKeywordOffAutoOn ( OffOn_t value );
 
-////
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			LOWER/AUTO/UPPER		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[LowerUpper_t]]
+
+typedef enum LowerUpper_t
+{
+    LOUP_ERROR	= -99,
+    LOUP_LOWER	=  -1,
+    LOUP_AUTO	=   0,
+    LOUP_UPPER	=   1,
+}
+LowerUpper_t;
+
+extern const KeywordTab_t KeyTab_LOWER_AUTO_UPPER[];
+
+int ScanKeywordLowerAutoUpper
+(
+    // returns one of LOUP_*
+
+    ccp			arg,		// argument to scan
+    int			on_empty,	// return this value on empty
+    uint		max_num,	// >0: additionally accept+return number <= max_num
+    ccp			object		// NULL (silent) or object for error messages
+);
+
+ccp GetKeywordLowerAutoUpper ( LowerUpper_t value );
+
+//
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			scan command lists		///////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -5525,6 +5559,7 @@ static inline char * snprintfE ( char *buf, char *end, ccp format, ... )
 ///////////////////////////////////////////////////////////////////////////////
 
 void * dc_memrchr ( cvp src, int ch, size_t size );
+bool IsMemConst ( cvp mem, uint size, u8 val );
 
 #ifdef __APPLE__
  #define memrchr dc_memrchr
