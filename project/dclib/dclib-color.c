@@ -1080,7 +1080,7 @@ int ScanOptMaxHeight ( ccp arg )
 
 term_size_t GetTermSize ( int default_width, int default_height )
 {
-    PRINT1("GetTermWidth(%d,%d) opt=%d,%d, max=%d,%d\n",
+    PRINT0("GetTermWidth(%d,%d) opt=%d,%d, max=%d,%d\n",
 	default_width, default_height,
 	opt_width, opt_height, opt_max_width, opt_max_height );
 
