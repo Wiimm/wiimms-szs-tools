@@ -49,12 +49,9 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
-
-#ifndef WIN_SZS_LIB
-  #include <sys/time.h>
-  #include <unistd.h>
-  #include <arpa/inet.h>
-#endif
+#include <sys/time.h>
+#include <unistd.h>
+#include <arpa/inet.h>
 
 #include "dclib-system.h"
 #include "dclib-basics.h"
@@ -98,6 +95,7 @@ void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 ///////////////////////////////////////////////////////////////////////////////
 // also used by UI
 
+#define CONFIG_FILE		"wiimms-szs-tools.conf"
 #define SZS_SETUP_FILE		"wszst-setup.txt"
 #define CHECK_FILE_SIZE		0x800
 #define OPT_PNG_TYPE_CLASS	0x7fef0bff
@@ -233,6 +231,7 @@ typedef enum warn_enum_t
 {
     WARNSZS_ITEMPOS,		// item-pos bug
     WARNSZS_SELF_ITPH,		// self linked ITPT route
+    WARNSZS_NO_MINIMAP,		// no minimap found
     WARNSZS__N
 }
 warn_enum_t;
@@ -824,8 +823,8 @@ uint IsolateFilename
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool SetupAutoAdd();
-bool DefineAutoAddPath ( ccp path );
+bool IsAutoAddAvailable();
+void DefineAutoAddPath ( ccp path );
 s64  FindAutoAdd ( ccp fname, ccp ext, char *buf, uint buf_size );
 
 //
@@ -1287,6 +1286,7 @@ typedef enum slot_info_type_t
     SIT_NOT,		// not defined
     SIT_GENERIC,	// generic slot: "arena" or music by race/arena slot
     SIT_RECOMMEND,	// recommended slot: "r##" | "a##" | "m*"
+    SIT_MANDATORY3,	// mandatory alternative: "31+42+71" | "31+62+71"
     SIT_MANDATORY2,	// mandatory alternative: "31+71"
     SIT_MANDATORY,	// mandatory slot: "##"
 }
@@ -1308,11 +1308,13 @@ typedef struct slot_info_t
     slot_info_type_t	arena_mode;	// 0:not, 1:"arena", 2:"a##"
     slot_info_type_t	music_mode;	// 0:not, 1:generic, 2:"m*"
     bool		have_31_71;	// true: "31+71" found!
+    bool		have_31_42_71;	// true: "31+42+71" found!
+    bool		have_31_62_71;	// true: "31+62+71" found!
 
-    char		race_info[6];	// race slot as text: "##" | "r##" | "31+71"
+    char		race_info[9];	// race slot as text: "##" | "r##" | "31+71" | "31+41+71"
     char		arena_info[6];	// arena slot as text: "arena" | "a##"
     char		music_info[5];	// music slot as text: "m##" | "ma##"
-    char		slot_attrib[17];// normalized slot atribute, combi of race+arena+music
+    char		slot_attrib[20];// normalized slot atribute, combi of race+arena+music
 
 }
 slot_info_t;
@@ -1355,6 +1357,7 @@ typedef struct FormatFieldItem_t
 } FormatFieldItem_t;
 
 //-----------------------------------------------------------------------------
+// [[FormatField_t]]
 
 typedef struct FormatField_t
 {
@@ -1650,6 +1653,7 @@ void DumpTrackFileList
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			scan setup files		///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[SetupDef_t]]
 
 typedef struct SetupDef_t
 {
@@ -1661,12 +1665,14 @@ typedef struct SetupDef_t
 } SetupDef_t;
 
 //-----------------------------------------------------------------------------
+// [[ListDef_t]]
 
 typedef struct ListDef_t
 {
     ccp			name;		// section name
     bool		append;		// true: append string instead of insert
-    StringField_t	*sf;		// valid pointer to string field
+    StringField_t	*sf;		// NULL or valid pointer to string field
+    exmem_list_t	*eml;		// NULL or valid pointer to exmem list
 
 } ListDef_t;
 
@@ -1679,13 +1685,13 @@ size_t ResetSetup
 
 enumError ScanSetupFile
 (
-    SetupDef_t	* sdef,		// object list terminated with an element 'name=NULL'
-    ListDef_t	* ldef,		// NULL or object list terminated
-				// with an element 'name=NULL'
-    ccp		path1,		// filename of text file, part 1
-    ccp		path2,		// filename of text file, part 2
-    SubDir_t	* sdir,		// not NULL: use it and ignore 'path1'
-    bool	silent		// true: suppress error message if file not found
+    SetupDef_t		* sdef,		// object list terminated with an element 'name=NULL'
+    const ListDef_t	* ldef,		// NULL or object list terminated
+					// with an element 'name=NULL'
+    ccp			path1,		// filename of text file, part 1
+    ccp			path2,		// filename of text file, part 2
+    SubDir_t		* sdir,		// not NULL: use it and ignore 'path1'
+    bool		silent		// true: suppress error message if file not found
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1961,7 +1967,48 @@ valid_t IsValidCTCODE
     ccp			fname		// not NULL: print warnings with file ref
 );
 
-//
+////
+///////////////////////////////////////////////////////////////////////////////
+///////////////			scan configuration		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[config_t]]
+
+typedef struct config_t
+{
+    ccp config_file;
+    ccp base_path;
+    ccp install_path;
+    ccp install_config;
+    ccp share_path;
+    ccp autoadd_path;
+}
+config_t;
+
+//-----------------------------------------------------------------------------
+
+static inline void InitializeConfig ( config_t *config )
+	{ DASSERT(config); memset(config,0,sizeof(*config)); }
+
+void ResetConfig ( config_t *config );
+
+enumError ScanConfig
+(
+    config_t		*config,	// store configuration here
+    ccp			path,		// NULL or path
+    bool		silent		// true: suppress printing of error messages
+);
+
+void SearchConfigHelper ( search_file_list_t *sfl, int stop_mode );
+const config_t * GetConfig(void);
+void PrintConfig ( FILE *f, const config_t *config, bool verbose );
+void PrintConfigScript ( FILE *f, const config_t *config );
+void PrintConfigFile ( FILE *f, const config_t *config );
+
+const StringField_t * GetSearchList(void);
+const StringField_t * GetAutoaddList(void);
+
+extern ccp autoadd_destination;
+
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    misc			///////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -2001,6 +2048,7 @@ data_tab_t;
 void cmd_version_section
 	( bool sect_header, ccp name_short, ccp name_long, int verbose );
 
+enumError cmd_config();
 enumError cmd_argtest ( int argc, char ** argv );
 enumError cmd_error();
 enumError cmd_filetype();
@@ -2102,6 +2150,8 @@ extern const char *TableEncode64BySetup;
 int ScanOptCoding64 ( ccp arg );
 EncodeMode_t SetupCoding64 ( EncodeMode_t mode, EncodeMode_t fallback );
 
+void SetupPrintScriptByOptions ( PrintScript_t *ps );
+
 ///////////////////////////////////////////////////////////////////////////////
 
 uint GetMkwMusicSlot	( uint tid );
@@ -2160,10 +2210,11 @@ extern const u8 TestDataLEX[8*1];
 ///////////////			    vars			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+extern ccp		opt_config;
+extern ccp		config_path;
 extern ccp		tool_name;
+extern ccp		std_share_path;
 extern ccp		share_path;
-extern ccp		search_path[];
-extern ccp		auto_add_path[6];
 extern volatile int	SIGINT_level;
 extern volatile int	verbose;
 extern volatile int	logging;
@@ -2206,6 +2257,7 @@ extern LowerUpper_t	opt_case;
 extern int		opt_pmodes;
 extern uint		opt_fmodes_include;
 extern uint		opt_fmodes_exclude;
+extern int		opt_install;
 extern int		opt_pt_dir;
 extern bool		opt_links;
 extern bool		opt_rm_aiparam;

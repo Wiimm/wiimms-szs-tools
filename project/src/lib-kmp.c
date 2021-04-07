@@ -1257,7 +1257,7 @@ void SetupClassNamePH
     const struct inttab_t *ptr;
     for ( ptr = inttab; ptr->name; ptr++ )
     {
-	ParamFieldItem_t *it = FindInsertParamField(&ph->class_name,ptr->name,false,0);
+	ParamFieldItem_t *it = FindInsertParamField(&ph->class_name,ptr->name,false,0,0);
 	DASSERT(it);
 	it->num = ptr->val;
     }
@@ -1285,7 +1285,7 @@ int InsertClassNamePH
 	SetupClassNamePH(ph);
 
     bool old_found;
-    ParamFieldItem_t *it = FindInsertParamField(&ph->class_name,cname,false,&old_found);
+    ParamFieldItem_t *it = FindInsertParamField(&ph->class_name,cname,false,0,&old_found);
     DASSERT(it);
     if (!old_found)
     {
@@ -1489,7 +1489,7 @@ void RenameGroupKMP
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			KMP pathes			///////////////
+///////////////			KMP paths			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 typedef struct kmp_link_t
@@ -5755,12 +5755,14 @@ void EvaluateUsedPosObj ( kmp_usedpos_obj_t *obj )
 	     value = temp;
 
 	const float fail = obj->allowed.v[i];
+	const float err  = fail -  2500.0;
 	const float warn = fail -  5000.0;
 	const float hint = fail - 10000.0;
 
-	if      ( rating < WLEVEL_FAIL && value > fail ) rating = WLEVEL_FAIL;
-	else if ( rating < WLEVEL_WARN && value > warn ) rating = WLEVEL_WARN;
-	else if ( rating < WLEVEL_HINT && value > hint ) rating = WLEVEL_HINT;
+	if      ( rating < WLEVEL_FAIL  && value > fail ) rating = WLEVEL_FAIL;
+	else if ( rating < WLEVEL_ERROR && value > err  ) rating = WLEVEL_ERROR;
+	else if ( rating < WLEVEL_WARN  && value > warn ) rating = WLEVEL_WARN;
+	else if ( rating < WLEVEL_HINT  && value > hint ) rating = WLEVEL_HINT;
 
 	if ( i == 1 )
 	{
@@ -6050,7 +6052,14 @@ void CheckWarnKMP ( kmp_t *kmp, kmp_usedpos_t *up )
     }
 
     CheckUsedPos(kmp,up);
-    if ( up->suggest->max_rating >= WLEVEL_WARN )
+ #if 0
+    PRINT1("O:  "); PrintUsedPosObj(stderr,0,&up->orig);
+    PRINT1("OL: "); PrintUsedPosObj(stderr,0,&up->orig_lex);
+    PRINT1("C:  "); PrintUsedPosObj(stderr,0,&up->center);
+    PRINT1("CL: "); PrintUsedPosObj(stderr,0,&up->center_lex);
+    PRINT1("S:  "); PrintUsedPosObj(stderr,0,up->suggest);
+ #endif
+    if ( up->orig_lex.max_rating >= WLEVEL_ERROR )
 	kmp->warn_bits |= 1 << WARNSZS_ITEMPOS;
 
     //-------------------------------------------------------------------------

@@ -102,6 +102,132 @@ __attribute__ ((packed)) le_usage_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			lecode debug			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[lecode_debug_t]] [[copy-lecode]] copy changes to LE-CODE
+
+typedef enum lecode_debug_t
+{
+    LEDEB_ENABLED	= 0x0001,
+    LEDEB_OPPONENT	= 0x0002,
+    LEDEB_SPACE		= 0x0004,
+
+    LEDEB_POSITION	= 0x0008,
+    LEDEB_CHECK_POINT	= 0x0030, // 2 bits!
+    LEDEB_RESPAWN	= 0x0040,
+    LEDEB_LAP_POS	= 0x0080,
+
+    //--- derived values
+
+    LEDEB__STD		= 0x00f9,   // standard output
+    LEDEB__OUTPUT	= 0x00f8,   // flags that produce output
+    LEDEB__ALL		= 0x00ff,   // all flags
+
+    LEDEB_S_CHECK_POINT	= 4,	// shift for LEDEB_CHECKPOINT
+    LEDEB_M_CHECK_POINT	= 3,	// mask after shift
+
+    //--- special values
+
+    LEDEB__N_CONFIG	=  4,	// number of debug configurations
+    LEDEB__N_LINE	= 10,	// number of debug lines of each configuration
+}
+lecode_debug_t;
+
+//-----------------------------------------------------------------------------
+// [[lecode_debug_info_t]]
+
+typedef struct lecode_debug_info_t
+{
+    lecode_debug_t	mode;		// mode to iterate
+    bool		filter_active;	// true: iterate only values >0
+
+    int			index;		// internal index
+    lecode_debug_t	relevant;	// relevant bits for name=value
+    ccp			name;		// NULL or name of parameter
+    uint		value;		// related value
+}
+lecode_debug_info_t;
+
+//-----------------------------------------------------------------------------
+
+ccp GetDebugModeSummary ( const lecode_debug_info_t *ldi );
+
+bool GetFirstDebugMode
+	( lecode_debug_info_t *ldi, lecode_debug_t mode, bool filter_active );
+bool GetNextDebugMode ( lecode_debug_info_t *ldi );
+
+
+static inline bool isDebugModeOutput ( lecode_debug_t mode )
+	{ return mode & LEDEB__OUTPUT; }
+
+static inline bool isDebugModeActive ( lecode_debug_t mode )
+	{ return mode & LEDEB_ENABLED && mode & LEDEB__OUTPUT; }
+
+//-----------------------------------------------------------------------------
+// [[lecode_debug_ex_t]]
+
+typedef struct lecode_debug_ex_t
+{
+    // encoded data
+    lecode_debug_t mode;	
+
+    // decoded data
+    u8 enabled;
+    u8 opponent;
+    u8 space;
+    u8 position;
+    u8 check_point;
+    u8 respawn;
+    u8 lap_pos;
+
+    // status
+    bool have_output;	// would produce output if ENABLED
+    bool is_active;	// will produce output
+}
+lecode_debug_ex_t;
+
+//-----------------------------------------------------------------------------
+
+lecode_debug_t DecodeLecodeDebug ( lecode_debug_ex_t *lde, lecode_debug_t mode );
+lecode_debug_t EncodeLecodeDebug ( lecode_debug_ex_t *lde );
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[le_debug_mode_t]] [[copy-lecode]] copy changes to LE-CODE
+
+typedef enum le_debug_mode_t
+{
+    DEBUGMD_OFF,	// debug disabled at all
+    DEBUGMD_ENABLED,	// debug enabled, but hidden
+    DEBUGMD_DEBUG1,	// debug enabled, start with config #0 [DEBUG-1]
+    DEBUGMD_DEBUG2,	// debug enabled, start with config #1 [DEBUG-2]
+    DEBUGMD_DEBUG3,	// debug enabled, start with config #2 [DEBUG-3]
+    DEBUGMD_DEBUG4,	// debug enabled, start with config #3 [DEBUG-4]
+
+    DEBUGMD__N		// number of debug modes
+}
+le_debug_mode_t;
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[predef_debug_t]]
+
+typedef enum predef_debug_t
+{
+    PREDEBUG_OFF,	// no predefinition
+    PREDEBUG_CLEAR,	// clear all
+    PREDEBUG_STANDARD,	// 1 line: standard setup
+    PREDEBUG_OPPONENT,	// 2 lines: standard for player + opponent
+    PREDEBUG_VERTICAL,	// vertical output
+}
+predef_debug_t;
+
+//-----------------------------------------------------------------------------
+
+ccp GetPredefDebugName ( predef_debug_t pd_mode );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			    le_lpar_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[le_lpar_t]]
@@ -112,16 +238,19 @@ typedef struct le_lpar_t
 
     u8	engine[3];		// 100cc, 150cc, mirror (sum always 100)
     u8	enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
-    u8	enable_perfmon;		// TRUE: performance monitor enabled
+    u8	enable_perfmon;		// >0: performance monitor enabled; >1: for dolphin too
     u8	enable_custom_tt;	// TRUE: time trial for cusotm tracks enabled
     u8	enable_xpflags;		// TRUE: extended presence flags enabled
-    u8	enable_speedo;		// TRUE: speedometer is enabled
+    u8	enable_speedo;		// speedometer selection (0..3), see SPEEDO_*
     u8	block_track;		// block used tracks for 0..20 races
+    u8	no_speedo_if_debug;	// 1 bit for each debug configuration
+    u8  item_cheat;		// 0:disabled, 1:enabled
 
-    // reserved for future extensions
-    u8   reserved_1b9;
-    u8   reserved_1ba;
-    u8   reserved_1bb;
+    u8  debug_mode;		// debug mode
+    u8  debug_predef[LEDEB__N_CONFIG];
+				// information about used predefined mode
+    u32 debug[LEDEB__N_CONFIG][LEDEB__N_LINE];
+				// debug line settings, see LEDEB_*
 
     u16	chat_mode_1[BMG_N_CHAT]; // first set of modes for each chat message
     u16	chat_mode_2[BMG_N_CHAT]; // second set of modes for each chat message
@@ -163,34 +292,29 @@ enumError ScanTextLPAR
     uint		data_size	// size of 'data'
 );
 
-enumError ScanTextLPAR_PARAM
-(
-    le_lpar_t		*lpar,		// LE-CODE parameters
-    ScanInfo_t		*si,		// valid data
-    bool		is_pass2	// false: pass1; true: pass2
-);
-
-enumError ScanTextLPAR_CHAT
-(
-    le_lpar_t		*lpar,		// LE-CODE parameters
-    ScanInfo_t		*si,		// valid data
-    bool		is_pass2	// false: pass1; true: pass2
-);
-
 //-----------------------------------------------------------------------------
 
 enumError SaveTextLPAR
 (
-    const le_lpar_t	*lpar,		// LE-CODE parameters
+    le_lpar_t		*lpar,		// LE-CODE parameters
     ccp			fname,		// filename of destination
     bool		set_time	// true: set time stamps
 );
-
 
 enumError WriteSectionLPAR
 (
     FILE		*f,		// output files
     const le_lpar_t	*lpar		// LE-CODE parameters
+);
+
+//-----------------------------------------------------------------------------
+
+bool SetupLecodeDebugLPAR
+(
+    le_lpar_t		*lpar,		// LE-CODE parameters
+    uint		config,		// configuration index 0..
+    uint		setup_mode,	// setup mode, one of PREDEBUG_*
+    int			*hide_speedo	// if not NULL: store new mode here
 );
 
 //
@@ -274,6 +398,8 @@ typedef struct le_binpar_v1_35_t
 }
 __attribute__ ((packed)) le_binpar_v1_35_t;
 
+_Static_assert(sizeof(le_binpar_v1_35_t)==0x35,"le_binpar_v1_35_t");
+
 //-----------------------------------------------------------------------------
 // [[le_binpar_v1_37_t]]
 
@@ -300,6 +426,8 @@ typedef struct le_binpar_v1_37_t
  /*37*/
 }
 __attribute__ ((packed)) le_binpar_v1_37_t;
+
+_Static_assert(sizeof(le_binpar_v1_37_t)==0x37,"le_binpar_v1_37_t");
 
 //-----------------------------------------------------------------------------
 // [[le_binpar_v1_f8_t]]
@@ -329,6 +457,8 @@ typedef struct le_binpar_v1_f8_t
  /*f8*/
 }
 __attribute__ ((packed)) le_binpar_v1_f8_t;
+
+_Static_assert(sizeof(le_binpar_v1_f8_t)==0xf8,"le_binpar_v1_f8_t");
 
 //-----------------------------------------------------------------------------
 // [[le_binpar_v1_1b8_t]]
@@ -360,46 +490,92 @@ typedef struct le_binpar_v1_1b8_t
 }
 __attribute__ ((packed)) le_binpar_v1_1b8_t;
 
+_Static_assert(sizeof(le_binpar_v1_1b8_t)==0x1b8,"le_binpar_v1_1b8_t");
+
 //-----------------------------------------------------------------------------
 // [[le_binpar_v1_1bc_t]]
 
 typedef struct le_binpar_v1_1bc_t
 {
- /*000*/ char magic[8];	// LE_PARAM_MAGIC
- /*008*/ u32  version;		// always 1 for v1
- /*00c*/ u32  size;		// size (and minor version)
- /*010*/ u32  off_eod;		// offset of end-of-data
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*008*/ u32  version;			// always 1 for v1
+ /*00c*/ u32  size;			// size (and minor version)
+ /*010*/ u32  off_eod;			// offset of end-of-data
 
- /*014*/ u32  off_cup_par;	// offset to cup param
- /*018*/ u32  off_cup_track;	// offset of cup-track list
- /*01c*/ u32  off_cup_arena;	// offset of cup-arena list
- /*020*/ u32  off_course_par;	// offset of course param
- /*024*/ u32  off_property;	// offset of property list
- /*028*/ u32  off_music;	// offset of music list
- /*02c*/ u32  off_flags;	// offset of music list
+ /*014*/ u32  off_cup_par;		// offset to cup param
+ /*018*/ u32  off_cup_track;		// offset of cup-track list
+ /*01c*/ u32  off_cup_arena;		// offset of cup-arena list
+ /*020*/ u32  off_course_par;		// offset of course param
+ /*024*/ u32  off_property;		// offset of property list
+ /*028*/ u32  off_music;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of music list
 
- /*030*/ u8   engine[3];	// 100cc, 150cc, mirror (sum always 100)
- /*033*/ u8   enable_200cc;	// TRUE: 200C enabled => 150cc, 200cc, mirror
- /*034*/ u8   enable_perfmon;	// TRUE: performance monitor enabled
- /*035*/ u8   enable_custom_tt;// TRUE: time trial for cusotm tracks enabled
- /*036*/ u8   enable_xpflags;	// TRUE: extended presence flags enabled
- /*037*/ u8   block_track;	// block used track for 0.. tracks
- /*038*/ u16  chat_mode_1[BMG_N_CHAT]; // mode for each chat message
- /*0f8*/ u16  chat_mode_2[BMG_N_CHAT]; // mode for each chat message
- /*1b8*/ u8   enable_speedo;	// TRUE: speedometer is enabled
+ /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
+ /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
+ /*034*/ u8   enable_perfmon;		// >0: performance monitor enabled; >1: for dolphin too
+ /*035*/ u8   enable_custom_tt;		// TRUE: time trial for cusotm tracks enabled
+ /*036*/ u8   enable_xpflags;		// TRUE: extended presence flags enabled
+ /*037*/ u8   block_track;		// block used track for 0.. tracks
+ /*038*/ u16  chat_mode_1[BMG_N_CHAT];	// mode for each chat message
+ /*0f8*/ u16  chat_mode_2[BMG_N_CHAT];	// mode for each chat message
+ /*1b8*/ u8   enable_speedo;		// speedometer mode (0..2), see SPEEDO_*
+ /*1b9*/ u8   no_speedo_if_debug;	// if bit is set: suppress speedometer
+ /*1ba*/ u8   debug_mode;		// debug mode (0..), see DEBUGMD_*
 
  //--- reserved for future extensions
- /*1b9*/ u8   reserved_1b9;
- /*1ba*/ u8   reserved_1ba;
  /*1bb*/ u8   reserved_1bb;
+
  /*1bc*/
 }
 __attribute__ ((packed)) le_binpar_v1_1bc_t;
 
+_Static_assert(sizeof(le_binpar_v1_1bc_t)==0x1bc,"le_binpar_v1_1bc_t");
+
+//-----------------------------------------------------------------------------
+// [[le_binpar_v1_260_t]]
+
+typedef struct le_binpar_v1_260_t
+{
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*008*/ u32  version;			// always 1 for v1
+ /*00c*/ u32  size;			// size (and minor version)
+ /*010*/ u32  off_eod;			// offset of end-of-data
+
+ /*014*/ u32  off_cup_par;		// offset to cup param
+ /*018*/ u32  off_cup_track;		// offset of cup-track list
+ /*01c*/ u32  off_cup_arena;		// offset of cup-arena list
+ /*020*/ u32  off_course_par;		// offset of course param
+ /*024*/ u32  off_property;		// offset of property list
+ /*028*/ u32  off_music;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of music list
+
+ /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
+ /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
+ /*034*/ u8   enable_perfmon;		// >0: performance monitor enabled; >1: for dolphin too
+ /*035*/ u8   enable_custom_tt;		// TRUE: time trial for cusotm tracks enabled
+ /*036*/ u8   enable_xpflags;		// TRUE: extended presence flags enabled
+ /*037*/ u8   block_track;		// block used track for 0.. tracks
+ /*038*/ u16  chat_mode_1[BMG_N_CHAT];	// mode for each chat message
+ /*0f8*/ u16  chat_mode_2[BMG_N_CHAT];	// mode for each chat message
+ /*1b8*/ u8   enable_speedo;		// speedometer selection (0..2), see SPEEDO_*
+ /*1b9*/ u8   no_speedo_if_debug;	// if bit is set: suppress speedometer
+ /*1ba*/ u8   debug_mode;		// debug mode (0..), see DEBUGMD_*
+ /*1bb*/ u8   item_cheat;		// 0:disabled, 1:enabled
+
+ /*1bc*/ u8   debug_predef[LEDEB__N_CONFIG];
+					// information about used predefined mode
+ /*1c0*/ u32  debug[LEDEB__N_CONFIG][LEDEB__N_LINE];
+					// debug line settings, see LEDEB_*
+ /*260*/
+}
+__attribute__ ((packed)) le_binpar_v1_260_t;
+
+_Static_assert(sizeof(le_binpar_v1_260_t)==0x260,"le_binpar_v1_260_t");
+
 //-----------------------------------------------------------------------------
 // [[le_binpar_v1_t]]
 
-typedef struct le_binpar_v1_1bc_t le_binpar_v1_t;
+typedef struct le_binpar_v1_260_t le_binpar_v1_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -568,11 +744,8 @@ extern OffOn_t	opt_200cc;
 extern OffOn_t	opt_perfmon;
 extern OffOn_t	opt_custom_tt;
 extern OffOn_t	opt_xpflags;
-extern OffOn_t	opt_speedo;
-
-extern int	opt_reserved_1b9;
-extern int	opt_reserved_1ba;
-extern int	opt_reserved_1bb;
+extern int	opt_speedo;
+extern int	opt_lecode_debug;
 
 extern bool	opt_complete;
 
@@ -584,10 +757,7 @@ int ScanOptPerfMon	( ccp arg );
 int ScanOptCustomTT	( ccp arg );
 int ScanOptXPFlags	( ccp arg );
 int ScanOptSpeedometer	( ccp arg );
-
-int ScanOptReserved_1b9 ( ccp arg );
-int ScanOptReserved_1ba ( ccp arg );
-int ScanOptReserved_1bb ( ccp arg );
+int ScanOptDebug	( ccp arg );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

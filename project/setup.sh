@@ -51,7 +51,11 @@ fi
 	&& grep -qw posix_fallocate /usr/include/fcntl.h \
 	&& defines="$defines -DHAVE_POSIX_FALLOCATE=1"
 
-gcc $xflags system.c -o system.tmp && ./system.tmp >Makefile.setup
+#gcc $xflags system.c -o system.tmp && ./system.tmp >Makefile.setup
+gcc $xflags -E -DPRINT_SYSTEM_SETTINGS system.c \
+	| awk -F= '/^result_/ {printf("%s := %s\n",substr($1,8),gensub(/"/,"","g",$2))}' \
+	> Makefile.setup
+
 #rm -f system.tmp
 SYSTEM=$(awk '$1=="SYSTEM" {print $3}' Makefile.setup)
 #echo "SYSTEM=|$SYSTEM|" >&2

@@ -315,13 +315,16 @@ enumError Command_COLORS
 
     if ( level < 0 )
     {
+	ccp term = getenv("TERM");
+	if (!term)
+	    term = "?";
 	printf("%s--color=%d [%s], colorize=%d [%s]\n"
 		"term=%s\n"
 		"stdout: tty=%d, mode=%d [%s], have-color=%d, n-colors=%u%s\n",
 		colout->status,
 		opt_colorize, GetColorModeName(opt_colorize,"?"),
 		colorize_stdout, GetColorModeName(colorize_stdout,"?"),
-		getenv("TERM"), isatty(fileno(stdout)),
+		term, isatty(fileno(stdout)),
 		colout->col_mode, GetColorModeName(colout->col_mode,"?"),
 		colout->colorize, colout->n_colors, colout->reset );
 	return ERR_OK;

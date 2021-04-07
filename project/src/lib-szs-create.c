@@ -1107,12 +1107,14 @@ enumError LoadObjFileListSZS
     }
 
 
-    //--- slot analysis: 31+71, 62
+    //--- slot analysis: 31+71, 31+x+71, 62
 
     szs->slot_analyzed = true;
 
-    szs->slot_31_71 = ( used_obj.d[GOBJ_SUN_DS]  ? SLOT_31_71_SUNDS : 0 )
-		    | ( used_obj.d[GOBJ_PYLON01] ? SLOT_31_71_PYLON01 : 0 );
+// [[31+42+71+]]
+    szs->slot_31_xx_71
+		= ( used_obj.d[GOBJ_SUN_DS]  ? SLOT_31_71_SUNDS : 0 )
+		| ( used_obj.d[GOBJ_PYLON01] ? SLOT_31_71_PYLON01 : 0 );
 
     szs->slot_62 = used_obj.d[GOBJ_HEYHO_SHIP] != 0;
 
@@ -1199,7 +1201,7 @@ static void AddSpecialFile
     snprintf(buf,sizeof(buf),"%s %s",GetNameFF(fform,0),fname);
 
     ParamFieldItem_t *it
-	= InsertParamFieldEx(szs->special_file,buf,false,size,0);
+	= FindInsertParamField(szs->special_file,buf,false,size,0);
     if (!it->data)
     {
 	sha1_hash_t *hash = MALLOC(sizeof(sha1_hash_t));
@@ -1818,7 +1820,7 @@ enumError AddMissingFiles
     DASSERT(szs);
     DASSERT( sd || norm );
 
-    if (!SetupAutoAdd())
+    if (!IsAutoAddAvailable())
 	return ERR_OK;
 
     char path_buf[PATH_MAX];
@@ -3518,19 +3520,19 @@ int CheckSZS
     }
 
 
-    //--- slot 3.1 and 7.1
+    //--- slot 3.1, 4.2 and 7.1
 
-    if (szs->slot_31_71)
+    if (szs->slot_31_xx_71)
     {
-	if ( szs->slot_31_71 == (SLOT_31_71_SUNDS|SLOT_31_71_PYLON01) )
+	if ( szs->slot_31_xx_71 == (SLOT_31_71_SUNDS|SLOT_31_71_PYLON01) )
 	    print_check_error( &chk, CMOD_SLOT,
-		"Track will only run at slots 3.1 and 7.1,"
+		"Track will only run at slots 3.1, 4.2, 6.2 and 7.1,"
 		" because objects 'sunDS' and 'pylon01' are used.\n" );
 	else
 	    print_check_error( &chk, CMOD_SLOT,
-		"Track will only run at slots 3.1 and 7.1,"
+		"Track will only run at slots 3.1, 4.2, 6.2 and 7.1,"
 		" because object '%s' is used.\n",
-		szs->slot_31_71 &  SLOT_31_71_SUNDS ? "sunDS" : "pylon01" );
+		szs->slot_31_xx_71 & SLOT_31_71_SUNDS ? "sunDS" : "pylon01" );
     }
 
 
@@ -3757,12 +3759,14 @@ static void set_required_slot
 (
     int			slot[MKW_N_TRACKS],	// status vector
     uint		slot1,		// first required slot index
-    uint		slot2		// second required slot index
+    uint		slot2,		// second required slot index
+    uint		slot3,		// third required slot index
+    uint		slot4		// fourth required slot index
 )
 {
     uint i;
     for ( i = 0; i < MKW_N_TRACKS; i++ )
-	if ( i != slot1 && i != slot2 )
+	if ( i != slot1 && i != slot2 && i != slot3 && i != slot4 )
 	    slot[i] = -1;
 	else if (!slot[i])
 	    slot[i] = 1;
@@ -3792,7 +3796,7 @@ int FindSlotsSZS
 					//	 0: unknown
 					//	+1: slot possible
     int			*required_slot	// if not NULL: return 0|31|61|62
-					// 31 is an alias for "31+71"
+					// 31 is an alias for "31+71" or "31+41+71"
 )
 {
     DASSERT(szs);
@@ -3854,11 +3858,11 @@ int FindSlotsSZS
     int stat = 1;
 
 
-    //--- analyze slots 3.1 & 7.1
+    //--- analyze slots 3.1 & 4.2 & 7.1
 
-    if (szs->slot_31_71)
+    if (szs->slot_31_xx_71)
     {
-	set_required_slot(slot,ISLOT(3,1),ISLOT(7,1));
+	set_required_slot(slot,ISLOT(3,1),ISLOT(4,2),ISLOT(6,2),ISLOT(7,1));
 	stat = -1;
 	if (required_slot)
 	    *required_slot = 31;
@@ -3876,7 +3880,7 @@ int FindSlotsSZS
 
     if (need_ice_brres)
     {
-	set_required_slot(slot,ISLOT(6,1),ISLOT(6,1));
+	set_required_slot(slot,ISLOT(6,1),ISLOT(6,1),ISLOT(6,1),ISLOT(6,1));
 	if (!szs->have_ice_brres)
 	    SLOT(6,1) = -1;
 	else
@@ -3895,7 +3899,7 @@ int FindSlotsSZS
     if (szs->slot_62)
     {
 	stat = -1;
-	set_required_slot(slot,ISLOT(6,2),ISLOT(6,2));
+	set_required_slot(slot,ISLOT(6,2),ISLOT(6,2),ISLOT(6,2),ISLOT(6,2));
 	if (required_slot)
 	    *required_slot = 62;
     }
@@ -3911,9 +3915,6 @@ int FindSlotsSZS
     //dump_slots(stat,slot,"END");
     return stat;
 }
-
-#undef SLOT
-#undef ISLOT
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3960,50 +3961,29 @@ void AnalyzeSlot ( slot_ana_t *sa, szs_file_t *szs )
     StringCopyS(sa->slot_info,sizeof(sa->slot_info),buf);
 
     if ( sa->required_slot == 31 )
-	StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"31+71");
+    {
+	if ( sa->slot[ISLOT(6,2)] > 0 )
+	    StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"31+62+71");
+	else if ( sa->slot[ISLOT(4,2)] > 0 )
+	    StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"31+42+71");
+	else
+	    StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"31+71");
+    }
     else if ( sa->required_slot )
 	snprintf(sa->mandatory_slot,sizeof(sa->mandatory_slot),"%u",sa->required_slot);
 }
+
+#undef SLOT
+#undef ISLOT
 
 ///////////////////////////////////////////////////////////////////////////////
 
 ccp CreateSlotInfo ( szs_file_t *szs )
 {
     DASSERT(szs);
- #if 1
     slot_ana_t sa;
     AnalyzeSlot(&sa,szs);
     return CopyCircBuf(sa.slot_info,strlen(sa.slot_info)+1);
- #else
-    int slot[MKW_N_TRACKS];
-    int required_slot;
-    const int stat = FindSlotsSZS(szs,slot,&required_slot);
-
-    if ( szs->is_arena >= ARENA_FOUND )
-	return "arena";
-
-    static char buf[500];
-    char *dest = buf;
-
-    uint i;
-    for ( i = 0; i < MKW_N_TRACKS; i++ )
-	if ( slot[i] != stat )
-	{
-	    if ( dest > buf )
-		*dest++ = ',';
-	    dest = snprintfE(dest,buf+sizeof(buf),"%c%u.%u",
-		    slot[i] < 0 ? '-' : slot[i] > 0 ? '+' : '?' ,
-		    i/4+1, i%4+1 );
-	}
-
-    if ( dest == buf )
-	*dest++ = '%';
-    *dest++ = 0;
-    const uint size = dest - buf;
-    char *res = GetCircBuf(size);
-    memcpy(res,buf,size);
-    return res;
- #endif
 }
 
 //
@@ -5115,6 +5095,12 @@ void AnalyseSZS
     if ( szs->have.szs[HAVESZS_MINIGAME] >= HFM_MODIFIED )
 	ct_dest = StringCopyE(ct_dest,ct_end,",minigame");
 
+    if ( szs->have.szs[HAVESZS_AIPARAM_BAA] >= HFM_ORIGINAL
+	|| szs->have.szs[HAVESZS_AIPARAM_BAS] >= HFM_ORIGINAL
+    )
+    {
+	ct_dest = StringCopyE(ct_dest,ct_end,",aiparam");
+    }
 
     //--- scan KCL
 
@@ -5162,7 +5148,7 @@ void AnalyseSZS
 	Sha1Bin2Hex(as->sha1_minimap,sha1_data.hash);
     }
     else
-	valid_track = false;
+	szs->warn_bits |= 1 << WARNSZS_NO_MINIMAP;
 
 
     //--- finalize ct_attrib by "lex" and "warn"

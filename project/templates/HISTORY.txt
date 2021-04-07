@@ -454,6 +454,15 @@ szs v2.22a r8323 - 2020-12-26
    --copy-tracks, --move-tracks and --link-tracks failed for *_d.files.
 
 
+szs v2.23a r8357 - 2021-02-03
+
+ - Buf fix for option --le-define=FILE, if FILE is a lecode binary. In this
+   case, the special functions of chat messages are copied now.
+ - wszst ANALYSE: Detection of additional files (like ObjFlow.bin) that have
+   not been changed.
+ - MAC support improved.
+
+
 @@MODULE(last-history.txt)@@
 
 

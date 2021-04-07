@@ -59,6 +59,10 @@
 		    "wkmpt HELP [--width=wd] [ignored]...",
 		0 /* copy of wszst */ },
 
+  { T_DEF_CMD,	"CONFIG",	"CONFIG",
+		    "wkmpt CONFIG [options]...",
+		CONFIG_CMD },
+
   { T_DEF_CMD,	"ARGTEST",	"ARGTEST",
 		    "wkmpt ARGTEST ...",
 		0 /* copy of wszst */ },
@@ -243,6 +247,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_S,	"XHELP",	"xhelp",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GP,	"CONFIG",	"config",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_G,	"ALLOW_ALL",	"allow-all|allowall",
@@ -663,6 +670,14 @@
   { T_COPT,	"WIDTH",	0,0,0 },
   { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
+
+  //---------- COMMAND wkmpt CONFIG ----------
+
+  { T_CMD_BEG,	"CONFIG",	0,0,0 },
+
+  { T_COPT,	"CONFIG",	0,0,0 },
+  { T_COPT,	"LONG",		0,0,
+	"If set, print the search list too." },
 
   //---------- COMMAND wkmpt ARGTEST ----------
 

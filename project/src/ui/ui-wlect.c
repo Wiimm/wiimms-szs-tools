@@ -171,27 +171,15 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_SPEEDOMETER, true, false, false, false, false, 0, "speedometer",
 	"[=mode]",
 	"Enable or disable the speedometer. Mode is one of OFF, AUTO (default,"
-	" don't change setting), ON (enable it for Wii and WiiU only; default,"
-	" if option is used without parameter) or FORCE (enable it for Wii,"
-	" Wii U and for Dolphin)."
+	" don't change setting), ON (default, if option is used without"
+	" parameter) or FRACTION (=1DIGIT), 2DIGITS and 3DIGITS."
     },
 
-    {	OPT_RESERVED_1B9, false, true, false, false, false, 0, "reserved-1b9",
-	"[=mode]",
-	"Set LPAR byte at offset 0x1b9 to this value. Value -1 disables this"
-	" option."
-    },
-
-    {	OPT_RESERVED_1BA, false, true, false, false, false, 0, "reserved-1ba",
-	"[=mode]",
-	"Set LPAR byte at offset 0x1ba to this value. Value -1 disables this"
-	" option."
-    },
-
-    {	OPT_RESERVED_1BB, false, true, false, false, false, 0, "reserved-1bb",
-	"[=mode]",
-	"Set LPAR byte at offset 0x1bb to this value. Value -1 disables this"
-	" option."
+    {	OPT_DEBUG, false, false, false, false, false, 0, "debug",
+	"mode",
+	"Enable or disable the debug output while racing. Mode is one of OFF,"
+	" AUTO (default, don't change setting), USER or 100 to 199 for"
+	" predefined setups."
     },
 
     {	OPT_TRACK_DIR, false, false, false, false, true, 0, "track-dir",
@@ -363,7 +351,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Print in machine readable sections and parameter lines."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 45
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 43
 
     //----- global options -----
 
@@ -381,6 +369,15 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	0,
 	"Stop parsing the command line and print a help message with all"
 	" commands included. Exit after printing."
+    },
+
+    {	OPT_CONFIG, false, false, false, false, false, 0, "config",
+	"file",
+	"Define a configuration file or a directory as source. In later case,"
+	" file 'wiimms-szs-tools.conf' is searched.\n"
+	"  If option is not not set, then file 'wiimms-szs-tools.conf' is"
+	" searched in different directories. Use command 'wszst CONFIG' to get"
+	" more details."
     },
 
     {	OPT_ALLOW_ALL, false, false, false, false, false, 0, "allow-all",
@@ -598,7 +595,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 78
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 77
 
 };
 
@@ -624,6 +621,12 @@ static const InfoOption_t option_cmd_VERSION_LONG =
     {	OPT_LONG, false, false, false, false, false, 'l', "long",
 	0,
 	"Print in long format. Ignored if option --sections is set."
+    };
+
+static const InfoOption_t option_cmd_CONFIG_LONG =
+    {	OPT_LONG, false, false, false, false, false, 'l', "long",
+	0,
+	"If set, print the search list too."
     };
 
 static const InfoOption_t option_cmd_COLORS_LONG =
@@ -713,6 +716,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_VERSION,	"VERSION",	0,		0 },
     { CMD_HELP,		"HELP",		"H",		0 },
     { CMD_HELP,		"?",		0,		0 },
+    { CMD_CONFIG,	"CONFIG",	0,		0 },
     { CMD_ARGTEST,	"ARGTEST",	0,		0 },
     { CMD_TEST,		"TEST",		0,		0 },
     { CMD_COLORS,	"COLORS",	0,		0 },
@@ -724,6 +728,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_CALCULATE,	"CALCULATE",	0,		0 },
     { CMD_FLOAT,	"FLOAT",	0,		0 },
     { CMD_EXPORT,	"_EXPORT",	0,		0 },
+    { CMD_DPAD,		"_DPAD",	0,		0 },
     { CMD_DUMP,		"DUMP",		"D",		0 },
     { CMD_DL,		"DL",		0,		0 },
     { CMD_DLL,		"DLL",		0,		0 },
@@ -751,6 +756,7 @@ static const struct option OptionLong[] =
 	{ "version",		0, 0, 'V' },
 	{ "help",		0, 0, 'h' },
 	{ "xhelp",		0, 0, GO_XHELP },
+	{ "config",		1, 0, GO_CONFIG },
 	{ "allow-all",		0, 0, GO_ALLOW_ALL },
 	 { "allowall",		0, 0, GO_ALLOW_ALL },
 	{ "compatible",		1, 0, GO_COMPATIBLE },
@@ -830,12 +836,7 @@ static const struct option OptionLong[] =
 	 { "customtt",		2, 0, GO_CUSTOM_TT },
 	{ "xpflags",		2, 0, GO_XPFLAGS },
 	{ "speedometer",	2, 0, GO_SPEEDOMETER },
-	{ "reserved-1b9",	1, 0, GO_RESERVED_1B9 },
-	 { "reserved1b9",	1, 0, GO_RESERVED_1B9 },
-	{ "reserved-1ba",	1, 0, GO_RESERVED_1BA },
-	 { "reserved1ba",	1, 0, GO_RESERVED_1BA },
-	{ "reserved-1bb",	1, 0, GO_RESERVED_1BB },
-	 { "reserved1bb",	1, 0, GO_RESERVED_1BB },
+	{ "debug",		1, 0, GO_DEBUG },
 	{ "track-dir",		1, 0, GO_TRACK_DIR },
 	 { "trackdir",		1, 0, GO_TRACK_DIR },
 	{ "copy-tracks",	1, 0, GO_COPY_TRACKS },
@@ -929,61 +930,60 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x076 v */	OPT_VERBOSE,
 	/* 0x077   */	 0,0,0,0, 0,0,0,0, 0,
 	/* 0x080   */	OPT_XHELP,
-	/* 0x081   */	OPT_ALLOW_ALL,
-	/* 0x082   */	OPT_COMPATIBLE,
-	/* 0x083   */	OPT_WIDTH,
-	/* 0x084   */	OPT_MAX_WIDTH,
-	/* 0x085   */	OPT_DE,
-	/* 0x086   */	OPT_COLORS,
-	/* 0x087   */	OPT_NO_COLORS,
-	/* 0x088   */	OPT_CT_CODE,
-	/* 0x089   */	OPT_LE_CODE,
-	/* 0x08a   */	OPT_CHDIR,
-	/* 0x08b   */	OPT_ROUND,
-	/* 0x08c   */	OPT_NO_ECHO,
-	/* 0x08d   */	OPT_UTF_8,
-	/* 0x08e   */	OPT_NO_UTF_8,
-	/* 0x08f   */	OPT_LT_CLEAR,
-	/* 0x090   */	OPT_LT_ONLINE,
-	/* 0x091   */	OPT_LT_N_PLAYERS,
-	/* 0x092   */	OPT_LT_COND_BIT,
-	/* 0x093   */	OPT_LT_GAME_MODE,
-	/* 0x094   */	OPT_LT_ENGINE,
-	/* 0x095   */	OPT_LT_RANDOM,
-	/* 0x096   */	OPT_LEX_PURGE,
-	/* 0x097   */	OPT_LEX_RM_FEAT,
-	/* 0x098   */	OPT_FORCE,
-	/* 0x099   */	OPT_REPAIR_MAGICS,
-	/* 0x09a   */	OPT_OLD,
-	/* 0x09b   */	OPT_STD,
-	/* 0x09c   */	OPT_NEW,
-	/* 0x09d   */	OPT_EXTRACT,
-	/* 0x09e   */	OPT_LE_DEFINE,
-	/* 0x09f   */	OPT_LPAR,
-	/* 0x0a0   */	OPT_ALIAS,
-	/* 0x0a1   */	OPT_ENGINE,
-	/* 0x0a2   */	OPT_200CC,
-	/* 0x0a3   */	OPT_PERFMON,
-	/* 0x0a4   */	OPT_CUSTOM_TT,
-	/* 0x0a5   */	OPT_XPFLAGS,
-	/* 0x0a6   */	OPT_SPEEDOMETER,
-	/* 0x0a7   */	OPT_RESERVED_1B9,
-	/* 0x0a8   */	OPT_RESERVED_1BA,
-	/* 0x0a9   */	OPT_RESERVED_1BB,
-	/* 0x0aa   */	OPT_TRACK_DIR,
-	/* 0x0ab   */	OPT_COPY_TRACKS,
-	/* 0x0ac   */	OPT_MOVE_TRACKS,
-	/* 0x0ad   */	OPT_MOVE1_TRACKS,
-	/* 0x0ae   */	OPT_LINK_TRACKS,
-	/* 0x0af   */	OPT_LOAD_BMG,
-	/* 0x0b0   */	OPT_PATCH_BMG,
-	/* 0x0b1   */	OPT_MACRO_BMG,
-	/* 0x0b2   */	OPT_PATCH_NAMES,
-	/* 0x0b3   */	OPT_ORDER_BY,
-	/* 0x0b4   */	OPT_ORDER_ALL,
-	/* 0x0b5   */	OPT_NUMBER,
-	/* 0x0b6   */	OPT_SECTIONS,
-	/* 0x0b7   */	 0,0,0,0, 0,0,0,0, 0,
+	/* 0x081   */	OPT_CONFIG,
+	/* 0x082   */	OPT_ALLOW_ALL,
+	/* 0x083   */	OPT_COMPATIBLE,
+	/* 0x084   */	OPT_WIDTH,
+	/* 0x085   */	OPT_MAX_WIDTH,
+	/* 0x086   */	OPT_DE,
+	/* 0x087   */	OPT_COLORS,
+	/* 0x088   */	OPT_NO_COLORS,
+	/* 0x089   */	OPT_CT_CODE,
+	/* 0x08a   */	OPT_LE_CODE,
+	/* 0x08b   */	OPT_CHDIR,
+	/* 0x08c   */	OPT_ROUND,
+	/* 0x08d   */	OPT_NO_ECHO,
+	/* 0x08e   */	OPT_UTF_8,
+	/* 0x08f   */	OPT_NO_UTF_8,
+	/* 0x090   */	OPT_LT_CLEAR,
+	/* 0x091   */	OPT_LT_ONLINE,
+	/* 0x092   */	OPT_LT_N_PLAYERS,
+	/* 0x093   */	OPT_LT_COND_BIT,
+	/* 0x094   */	OPT_LT_GAME_MODE,
+	/* 0x095   */	OPT_LT_ENGINE,
+	/* 0x096   */	OPT_LT_RANDOM,
+	/* 0x097   */	OPT_LEX_PURGE,
+	/* 0x098   */	OPT_LEX_RM_FEAT,
+	/* 0x099   */	OPT_FORCE,
+	/* 0x09a   */	OPT_REPAIR_MAGICS,
+	/* 0x09b   */	OPT_OLD,
+	/* 0x09c   */	OPT_STD,
+	/* 0x09d   */	OPT_NEW,
+	/* 0x09e   */	OPT_EXTRACT,
+	/* 0x09f   */	OPT_LE_DEFINE,
+	/* 0x0a0   */	OPT_LPAR,
+	/* 0x0a1   */	OPT_ALIAS,
+	/* 0x0a2   */	OPT_ENGINE,
+	/* 0x0a3   */	OPT_200CC,
+	/* 0x0a4   */	OPT_PERFMON,
+	/* 0x0a5   */	OPT_CUSTOM_TT,
+	/* 0x0a6   */	OPT_XPFLAGS,
+	/* 0x0a7   */	OPT_SPEEDOMETER,
+	/* 0x0a8   */	OPT_DEBUG,
+	/* 0x0a9   */	OPT_TRACK_DIR,
+	/* 0x0aa   */	OPT_COPY_TRACKS,
+	/* 0x0ab   */	OPT_MOVE_TRACKS,
+	/* 0x0ac   */	OPT_MOVE1_TRACKS,
+	/* 0x0ad   */	OPT_LINK_TRACKS,
+	/* 0x0ae   */	OPT_LOAD_BMG,
+	/* 0x0af   */	OPT_PATCH_BMG,
+	/* 0x0b0   */	OPT_MACRO_BMG,
+	/* 0x0b1   */	OPT_PATCH_NAMES,
+	/* 0x0b2   */	OPT_ORDER_BY,
+	/* 0x0b3   */	OPT_ORDER_ALL,
+	/* 0x0b4   */	OPT_NUMBER,
+	/* 0x0b5   */	OPT_SECTIONS,
+	/* 0x0b6   */	 0,0,0,0, 0,0,0,0, 0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -999,142 +999,154 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[45] = // cmd #1
+static u8 option_allowed_cmd_VERSION[43] = // cmd #1
 {
     0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,1
 };
 
-static u8 option_allowed_cmd_HELP[45] = // cmd #2
+static u8 option_allowed_cmd_HELP[43] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_ARGTEST[45] = // cmd #3
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1
-};
-
-static u8 option_allowed_cmd_TEST[45] = // cmd #4
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1
-};
-
-static u8 option_allowed_cmd_COLORS[45] = // cmd #5
-{
-    0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
-};
-
-static u8 option_allowed_cmd_ERROR[45] = // cmd #6
-{
-    0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1
-};
-
-static u8 option_allowed_cmd_FILETYPE[45] = // cmd #7
+static u8 option_allowed_cmd_CONFIG[43] = // cmd #3
 {
     0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[45] = // cmd #8
+static u8 option_allowed_cmd_ARGTEST[43] = // cmd #4
 {
-    0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_SYMBOLS[45] = // cmd #9
+static u8 option_allowed_cmd_TEST[43] = // cmd #5
 {
-    0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_FUNCTIONS[45] = // cmd #10
+static u8 option_allowed_cmd_COLORS[43] = // cmd #6
+{
+    0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
+};
+
+static u8 option_allowed_cmd_ERROR[43] = // cmd #7
 {
     0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,1
 };
 
-static u8 option_allowed_cmd_CALCULATE[45] = // cmd #11
+static u8 option_allowed_cmd_FILETYPE[43] = // cmd #8
+{
+    0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0
+};
+
+static u8 option_allowed_cmd_FILEATTRIB[43] = // cmd #9
+{
+    0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
+};
+
+static u8 option_allowed_cmd_SYMBOLS[43] = // cmd #10
+{
+    0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
+};
+
+static u8 option_allowed_cmd_FUNCTIONS[43] = // cmd #11
+{
+    0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
+};
+
+static u8 option_allowed_cmd_CALCULATE[43] = // cmd #12
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_FLOAT[45] = // cmd #12
+static u8 option_allowed_cmd_FLOAT[43] = // cmd #13
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_EXPORT[45] = // cmd #13
+static u8 option_allowed_cmd_EXPORT[43] = // cmd #14
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_DUMP[45] = // cmd #14
-{
-    0,0,1,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
-};
-
-static u8 option_allowed_cmd_DL[45] = // cmd #15
-{
-    0,0,1,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
-};
-
-static u8 option_allowed_cmd_DLL[45] = // cmd #16
-{
-    0,0,1,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
-};
-
-static u8 option_allowed_cmd_BIN_DIFF[45] = // cmd #17
+static u8 option_allowed_cmd_DPAD[43] = // cmd #15
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_PATCH[45] = // cmd #18
+static u8 option_allowed_cmd_DUMP[43] = // cmd #16
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,0,0,
-    0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,0
+    0,0,1,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_LPAR[45] = // cmd #19
+static u8 option_allowed_cmd_DL[43] = // cmd #17
 {
-    0,0,0,1,1, 1,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,0
+    0,0,1,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_CREATE[45] = // cmd #20
+static u8 option_allowed_cmd_DLL[43] = // cmd #18
 {
-    0,0,0,1,1, 1,0,1,1,1,  1,0,1,0,1, 1,1,1,1,1,  1,1,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,0
+    0,0,1,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_CAT[45] = // cmd #21
+static u8 option_allowed_cmd_BIN_DIFF[43] = // cmd #19
 {
-    0,0,0,1,1, 1,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,1,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_DECODE[45] = // cmd #22
+static u8 option_allowed_cmd_PATCH[43] = // cmd #20
 {
-    0,0,0,1,1, 1,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,
-    0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,0
+    0,0,0,0,0, 0,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,0,0,0,0,
+    0,0,0,1,1, 1,1,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_ENCODE[45] = // cmd #23
+static u8 option_allowed_cmd_LPAR[43] = // cmd #21
 {
-    0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,
-    0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,0
+    0,0,0,1,1, 1,0,0,0,0,  0,1,1,1,1, 1,1,1,1,1,  1,0,0,0,0, 0,0,0,0,0,
+    0,0,0,1,1, 1,1,1,1,1,  1,1,0
+};
+
+static u8 option_allowed_cmd_CREATE[43] = // cmd #22
+{
+    0,0,0,1,1, 1,0,1,1,1,  1,0,1,0,1, 1,1,1,1,1,  1,0,0,0,0, 0,0,0,0,0,
+    0,0,0,1,1, 1,1,1,1,1,  1,1,0
+};
+
+static u8 option_allowed_cmd_CAT[43] = // cmd #23
+{
+    0,0,0,1,1, 1,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0
+};
+
+static u8 option_allowed_cmd_DECODE[43] = // cmd #24
+{
+    0,0,0,1,1, 1,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,1,1, 1,1,1,1,1,  1,1,0
+};
+
+static u8 option_allowed_cmd_ENCODE[43] = // cmd #25
+{
+    0,0,0,0,0, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,1,1, 1,1,1,1,1,  1,1,0
 };
 
 
@@ -1148,6 +1160,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_VERSION,
 	OptionInfo + OPT_HELP,
 	OptionInfo + OPT_XHELP,
+	OptionInfo + OPT_CONFIG,
 	OptionInfo + OPT_ALLOW_ALL,
 	OptionInfo + OPT_COMPATIBLE,
 	OptionInfo + OPT_WIDTH,
@@ -1194,6 +1207,14 @@ static const InfoOption_t * option_tab_cmd_HELP[] =
 {
 	OptionInfo + OPT_WIDTH,
 	OptionInfo + OPT_MAX_WIDTH,
+
+	0
+};
+
+static const InfoOption_t * option_tab_cmd_CONFIG[] =
+{
+	OptionInfo + OPT_CONFIG,
+	&option_cmd_CONFIG_LONG,
 
 	0
 };
@@ -1281,6 +1302,12 @@ static const InfoOption_t * option_tab_cmd_EXPORT[] =
 	0
 };
 
+static const InfoOption_t * option_tab_cmd_DPAD[] =
+{
+
+	0
+};
+
 static const InfoOption_t * option_tab_cmd_DUMP[] =
 {
 	OptionInfo + OPT_LE_DEFINE,
@@ -1292,6 +1319,7 @@ static const InfoOption_t * option_tab_cmd_DUMP[] =
 	OptionInfo + OPT_CUSTOM_TT,
 	OptionInfo + OPT_XPFLAGS,
 	OptionInfo + OPT_SPEEDOMETER,
+	OptionInfo + OPT_DEBUG,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1312,6 +1340,7 @@ static const InfoOption_t * option_tab_cmd_DL[] =
 	OptionInfo + OPT_CUSTOM_TT,
 	OptionInfo + OPT_XPFLAGS,
 	OptionInfo + OPT_SPEEDOMETER,
+	OptionInfo + OPT_DEBUG,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1332,6 +1361,7 @@ static const InfoOption_t * option_tab_cmd_DLL[] =
 	OptionInfo + OPT_CUSTOM_TT,
 	OptionInfo + OPT_XPFLAGS,
 	OptionInfo + OPT_SPEEDOMETER,
+	OptionInfo + OPT_DEBUG,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1360,6 +1390,7 @@ static const InfoOption_t * option_tab_cmd_PATCH[] =
 	OptionInfo + OPT_CUSTOM_TT,
 	OptionInfo + OPT_XPFLAGS,
 	OptionInfo + OPT_SPEEDOMETER,
+	OptionInfo + OPT_DEBUG,
 	OptionInfo + OPT_TRACK_DIR,
 	OptionInfo + OPT_COPY_TRACKS,
 	OptionInfo + OPT_MOVE_TRACKS,
@@ -1395,6 +1426,7 @@ static const InfoOption_t * option_tab_cmd_LPAR[] =
 	OptionInfo + OPT_CUSTOM_TT,
 	OptionInfo + OPT_XPFLAGS,
 	OptionInfo + OPT_SPEEDOMETER,
+	OptionInfo + OPT_DEBUG,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1456,6 +1488,7 @@ static const InfoOption_t * option_tab_cmd_CREATE[] =
 	OptionInfo + OPT_CUSTOM_TT,
 	OptionInfo + OPT_XPFLAGS,
 	OptionInfo + OPT_SPEEDOMETER,
+	OptionInfo + OPT_DEBUG,
 
 	0
 };
@@ -1532,7 +1565,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wlect [option]... command [option|parameter|file]...",
 	"Wiimms LE-CODE Tool : Manage the LE-CODE and LEX extensions.",
 	0,
-	26,
+	27,
 	option_tab_tool,
 	0
     },
@@ -1573,6 +1606,21 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	2,
 	option_tab_cmd_HELP,
 	option_allowed_cmd_HELP
+    },
+
+    {	CMD_CONFIG,
+	false,
+	false,
+	false,
+	"CONFIG",
+	0,
+	"wlect CONFIG [options]...",
+	"Show all information about the search for the configuration file and"
+	" its content.",
+	0,
+	2,
+	option_tab_cmd_CONFIG,
+	option_allowed_cmd_CONFIG
     },
 
     {	CMD_ARGTEST,
@@ -1750,6 +1798,20 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	option_allowed_cmd_EXPORT
     },
 
+    {	CMD_DPAD,
+	true,
+	false,
+	false,
+	"_DPAD",
+	0,
+	"wszst DPAD number_or_code...",
+	"This hidden command decodes and encodes D-Pad suquences for LE-CODE.",
+	0,
+	0,
+	option_tab_cmd_DPAD,
+	option_allowed_cmd_DPAD
+    },
+
     {	CMD_DUMP,
 	false,
 	false,
@@ -1760,7 +1822,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Print an information dump for each source file. LE-CODE binaries and"
 	" LEX binaries are accepted as input.",
 	0,
-	11,
+	12,
 	option_tab_cmd_DUMP,
 	option_allowed_cmd_DUMP
     },
@@ -1774,7 +1836,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wlect DL [source]...",
 	"Short cut for 'DUMP --long'.",
 	0,
-	11,
+	12,
 	option_tab_cmd_DL,
 	option_allowed_cmd_DL
     },
@@ -1788,7 +1850,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wlect DLL [source]...",
 	"Short cut for 'DUMP --long --long'.",
 	0,
-	11,
+	12,
 	option_tab_cmd_DLL,
 	option_allowed_cmd_DLL
     },
@@ -1825,7 +1887,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Read each LE-BIN file and patch it. Use --le-define to setup cups and"
 	" tracks.",
 	0,
-	23,
+	24,
 	option_tab_cmd_PATCH,
 	option_allowed_cmd_PATCH
     },
@@ -1841,7 +1903,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" parameters and store them as LPAR text file. Print the result to"
 	" standard output if no other destination is defined.",
 	0,
-	21,
+	22,
 	option_tab_cmd_LPAR,
 	option_allowed_cmd_LPAR
     },
@@ -1862,7 +1924,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" names) for a LEX text file with 1 section only. LPAR for an example"
 	" LE-CODE parameter file.",
 	0,
-	28,
+	29,
 	option_tab_cmd_CREATE,
 	option_allowed_cmd_CREATE
     },

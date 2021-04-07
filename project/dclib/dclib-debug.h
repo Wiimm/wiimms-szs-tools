@@ -607,6 +607,9 @@ void * dclib_xmalloc  ( size_t size );
 void * dclib_xrealloc ( void * ptr, size_t size );
 char * dclib_xstrdup  ( ccp src );
 
+// HINT: the *memdup* functions always alloc 1 additonal byte and set it to NULL.
+
+
 #if TRACE_ALLOC_MODE > 1
     void * dclib_calloc  ( ccp,ccp,uint, size_t nmemb, size_t size );
     void * dclib_malloc  ( ccp,ccp,uint, size_t size );
@@ -614,8 +617,11 @@ char * dclib_xstrdup  ( ccp src );
     char * dclib_strdup  ( ccp,ccp,uint, ccp src );
     char * dclib_strdup2 ( ccp,ccp,uint, ccp src1, ccp src2 );
     char * dclib_strdup3 ( ccp,ccp,uint, ccp src1, ccp src2, ccp src3 );
-    void * dclib_memdup  ( ccp,ccp,uint, const void * src, size_t copylen );
-    void * dclib_allocdup( ccp,ccp,uint, const void * src, size_t copylen );
+    void * dclib_memdup  ( ccp,ccp,uint, cvp src, size_t copylen );
+    void * dclib_memdup2 ( ccp,ccp,uint, cvp s1, size_t l1, cvp s2, size_t l2 );
+    void * dclib_memdup3 ( ccp,ccp,uint, cvp s1, size_t l1, cvp s2, size_t l2, cvp s3, size_t l3 );
+    void * dclib_allocdup( ccp,ccp,uint, cvp src, size_t copylen );
+    char * dclib_printdup( ccp,ccp,uint, ccp format, ... ) __attribute__ ((__format__(__printf__,4,5)));
 #else
     void * dclib_calloc  ( size_t nmemb, size_t size );
     void * dclib_malloc  ( size_t size );
@@ -623,8 +629,11 @@ char * dclib_xstrdup  ( ccp src );
     char * dclib_strdup  ( ccp src );
     char * dclib_strdup2 ( ccp src1, ccp src2 );
     char * dclib_strdup3 ( ccp src1, ccp src2, ccp src3 );
-    void * dclib_memdup  ( const void * src, size_t copylen );
-    void * dclib_allocdup( const void * src, size_t copylen );
+    void * dclib_memdup  ( cvp src, size_t copylen );
+    void * dclib_memdup2 ( cvp s1, size_t l1, cvp s2, size_t l2 );
+    void * dclib_memdup3 ( cvp s1, size_t l1, cvp s2, size_t l2, cvp s3, size_t l3 );
+    void * dclib_allocdup( cvp src, size_t copylen );
+    char * dclib_printdup( ccp format, ... ) __attribute__ ((__format__(__printf__,1,2)));
 #endif
 
 uint   trace_test_alloc	( ccp,ccp,uint, const void * ptr, bool hexdump );
@@ -635,8 +644,11 @@ void * trace_realloc	( ccp,ccp,uint, void *ptr, size_t size );
 char * trace_strdup	( ccp,ccp,uint, ccp src );
 char * trace_strdup2	( ccp,ccp,uint, ccp src1, ccp src2 );
 char * trace_strdup3	( ccp,ccp,uint, ccp src1, ccp src2, ccp src3 );
-void * trace_memdup	( ccp,ccp,uint, const void * src, size_t copylen );
-void * trace_allocdup	( ccp,ccp,uint, const void * src, size_t copylen );
+void * trace_memdup	( ccp,ccp,uint, cvp src, size_t copylen );
+void * trace_memdup2	( ccp,ccp,uint, cvp s1, size_t l1, cvp s2, size_t l2 );
+void * trace_memdup3	( ccp,ccp,uint, cvp s1, size_t l1, cvp s2, size_t l2, cvp s3, size_t l3 );
+void * trace_allocdup	( ccp,ccp,uint, cvp src, size_t copylen );
+char * trace_printdup	( ccp,ccp,uint, ccp format, ... ) __attribute__ ((__format__(__printf__,4,5)));
 
 #if TRACE_ALLOC_MODE > 2
     void InitializeTraceAlloc(void);
@@ -658,7 +670,10 @@ void * trace_allocdup	( ccp,ccp,uint, const void * src, size_t copylen );
     #define STRDUP2(src1,src2) trace_strdup2(__FUNCTION__,__FILE__,__LINE__,src1,src2)
     #define STRDUP3(src1,src2,src3) trace_strdup3(__FUNCTION__,__FILE__,__LINE__,src1,src2,src3)
     #define MEMDUP(src,size) trace_memdup(__FUNCTION__,__FILE__,__LINE__,src,size)
+    #define MEMDUP2(s1,l1,s2,l2) trace_memdup2(__FUNCTION__,__FILE__,__LINE__,s1,l1,s2,l2)
+    #define MEMDUP3(s1,l1,s2,l2,s3,l3) trace_memdup3(__FUNCTION__,__FILE__,__LINE__,s1,l1,s2,l2,s3,l3)
     #define ALLOCDUP(src,size) trace_allocdup(__FUNCTION__,__FILE__,__LINE__,src,size)
+    #define PRINTDUP(...) trace_printdup(__FUNCTION__,__FILE__,__LINE__,__VA_ARGS__)
     #define INIT_TRACE_ALLOC  InitializeTraceAlloc()
     #define CHECK_TRACE_ALLOC CheckTraceAlloc(__FUNCTION__,__FILE__,__LINE__)
     #define DUMP_TRACE_ALLOC(f)  DumpTraceAlloc(__FUNCTION__,__FILE__,__LINE__,f)
@@ -672,7 +687,10 @@ void * trace_allocdup	( ccp,ccp,uint, const void * src, size_t copylen );
     #define STRDUP2(src1,src2) dclib_strdup2(__FUNCTION__,__FILE__,__LINE__,src1,src2)
     #define STRDUP3(src1,src2,src3) dclib_strdup3(__FUNCTION__,__FILE__,__LINE__,src1,src2,src3)
     #define MEMDUP(src,size) dclib_memdup(__FUNCTION__,__FILE__,__LINE__,src,size)
+    #define MEMDUP2(s1,l1,s2,l2) dclib_memdup2(__FUNCTION__,__FILE__,__LINE__,s1,l1,s2,l2)
+    #define MEMDUP3(s1,l1,s2,l2,s3,l3) dclib_memdup3(__FUNCTION__,__FILE__,__LINE__,s1,l1,s2,l2,s3,l3)
     #define ALLOCDUP(src,size) dclib_allocdup(__FUNCTION__,__FILE__,__LINE__,src,size)
+    #define PRINTDUP(...) dclib_printdup(__FUNCTION__,__FILE__,__LINE__,__VA_ARGS__)
     #define INIT_TRACE_ALLOC
     #define CHECK_TRACE_ALLOC
     #define DUMP_TRACE_ALLOC(f)
@@ -686,7 +704,10 @@ void * trace_allocdup	( ccp,ccp,uint, const void * src, size_t copylen );
     #define STRDUP2(src1,src2) dclib_strdup2(src1,src2)
     #define STRDUP3(src1,src2,src3) dclib_strdup3(src1,src2,src3)
     #define MEMDUP(src,size) dclib_memdup(src,size)
+    #define MEMDUP2(s1,l1,s2,l2) dclib_memdup2(s1,l1,s2,l2)
+    #define MEMDUP3(s1,l1,s2,l2,s3,l3) dclib_memdup3(s1,l1,s2,l2,s3,l3)
     #define ALLOCDUP(src,size) dclib_allocdup(src,size)
+    #define PRINTDUP(...) dclib_printdup(__VA_ARGS__)
     #define INIT_TRACE_ALLOC
     #define CHECK_TRACE_ALLOC
     #define DUMP_TRACE_ALLOC(f)

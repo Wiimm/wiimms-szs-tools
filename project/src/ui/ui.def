@@ -7,8 +7,8 @@
 #:def_tool( "wszst", \
 	"wszst [option]... command [option|parameter|@file]...", \
 	"Wiimms SZS Tool : List, compare, (de-)compress, extract and create" \
-	" SZS, U8, PACK, BRRES, BREFF, BREFT and RARC archives. It is also a" \
-	" wrapper to all other tools." )
+	" SZS, U8, PACK, BRRES, BREFF and BREFT archives. Additonally, RARC" \
+	" archive can be extracted. It is also a wrapper to all other tools." )
 
 #:def_cmd( "VERSION", "VERSION", \
 	"wszst VERSION [ignored]...", \
@@ -28,6 +28,12 @@
 	" all commands. The third variant (with a valid command name) prints" \
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
+
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wszst CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content. The command can also export the settings for scripts or" \
+	" can create or update configuration files." )
 
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wszst ARGTEST ...", \
@@ -366,10 +372,9 @@
 
 #:def_cmd( "CREATE", "CREATE|C", \
 	"wszst CREATE [source_dir]...", \
-	"Create SZS, U8, PACK, BRRES, BREFF, BREFT or RARC archives by adding" \
-	" all not hidden files of the directory structure. Create and/or" \
-	" encode sub files if necessary. The default destination is" \
-	" @'%P/%N%T'@." )
+	"Create SZS, U8, PACK, BRRES, BREFF or BREFT archives by adding all" \
+	" not hidden files of the directory structure. Create and/or encode" \
+	" sub files if necessary. The default destination is @'%P/%N%T'@." )
 
 #:def_cmd( "UPDATE", "UPDATE|U", \
 	"wszst UPDATE [source]... [--source=] [--dest=]", \
@@ -465,8 +470,8 @@
 
 #:def_cmd( "YAZDUMP", "YAZDUMP|YD", \
 	"wszst YAZDUMP [szs]...", \
-	"Analyze YAZ compression print a dump to stdout. Ignore files without" \
-	" YAZ compression." )
+	"Analyze YAZ compression and print a dump to stdout. Ignore files" \
+	" without YAZ compression." )
 
 #:def_opt( "VERSION", "V|version", "G", \
 	"", \
@@ -480,6 +485,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -1379,7 +1392,7 @@
 	"directory", \
 	"Define an alternative directory as autoadd library. The default is," \
 	" that the sub-directory called './auto-add/' of all search paths are" \
-	" used. Use {wszst test -vvvv} for tests." )
+	" used. Use {wszst config -ll} for tests." )
 
 #:def_opt( "TRANSFORM", "x|transform", "CP", \
 	"list", \
@@ -1485,7 +1498,7 @@
 #:def_opt( "VAR", "var", "GP", \
 	"varname", \
 	"Use @VARNAME@ as variable name or prefix on script output. The" \
-	" default variabe name is 'res'." )
+	" default value is 'res' for variables and 'res_' as prefix." )
 
 #:def_opt( "ARRAY", "array", "G", \
 	"", \
@@ -1503,6 +1516,10 @@
 	"@CASE@ is one of @LOWER@, @AUTO@ (default) or @UPPER@.If @LOWER@ or" \
 	" @UPPER@ are set, then the lower/upper case of the variable names is" \
 	" adjusted accordingly." )
+
+#:def_opt( "INSTALL", "install", "C", \
+	"", \
+	"Manage configuration for an installation." )
 
 #:def_opt( "SOURCE", "s|source|src", "CP", \
 	"path", \
@@ -1882,6 +1899,69 @@
 #:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "INSTALL", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "AUTOADD_PATH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too. If set twice, print the auto-add" \
+	" search list too. This option is ignored, if any script output is" \
+	" enabled." )
+
+#:def_cmd_opt( "CONFIG", "SECTIONS", \
+	"", \
+	"Dump info using configuration or section syntax. Use {--var name} as" \
+	" prefix." )
+
+#:def_cmd_opt( "CONFIG", "SH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "BASH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "JSON", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "PHP", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "MAKEDOC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "VAR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "ARRAY", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "AVAR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "CASE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	"If printed as sections, exclude all comments." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -5011,6 +5091,11 @@
 	"", \
 	"Suppress logging of input and output files." )
 
+#:def_cmd_opt( "ANALYZE", "SECTIONS", \
+	"", \
+	"Dump info using configuration or section syntax. Use {--var name} as" \
+	" prefix." )
+
 #:def_cmd_opt( "ANALYZE", "SH", \
 	"", \
 	"" )
@@ -5071,6 +5156,11 @@
 #:def_cmd_opt( "FEATURES", "QUIET", \
 	"", \
 	"Suppress logging of input and output files." )
+
+#:def_cmd_opt( "FEATURES", "SECTIONS", \
+	"", \
+	"Dump info using configuration or section syntax. Use {--var name} as" \
+	" prefix." )
 
 #:def_cmd_opt( "FEATURES", "SH", \
 	"", \
@@ -10947,6 +11037,11 @@
 	"", \
 	"Suppress output of the printed filename." )
 
+#:def_cmd_opt( "GHOST", "SECTIONS", \
+	"", \
+	"Dump info using configuration or section syntax. Use {--var name} as" \
+	" prefix." )
+
 #:def_cmd_opt( "GHOST", "SH", \
 	"", \
 	"" )
@@ -11081,6 +11176,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wbmgt CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wbmgt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -11209,6 +11309,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -11590,6 +11698,14 @@
 #:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -12317,6 +12433,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wctct CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wctct ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -12435,6 +12556,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -12901,6 +13030,14 @@
 #:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -13675,6 +13812,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wimgt CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wimgt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -13762,6 +13904,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -14086,6 +14236,14 @@
 #:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -14541,6 +14699,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wkclt CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wkclt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -14727,6 +14890,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -15186,6 +15357,14 @@
 #:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -16865,6 +17044,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wkmpt CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wkmpt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -17051,6 +17235,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -17719,6 +17911,14 @@
 #:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -18951,6 +19151,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wlect CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wlect ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -19086,6 +19291,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -19341,9 +19554,15 @@
 #:def_opt( "SPEEDOMETER", "speedometer", "CO", \
 	"[=mode]", \
 	"Enable or disable the speedometer. Mode is one of @OFF@, @AUTO@" \
-	" (default, don't change setting), @ON@ (enable it for Wii and WiiU" \
-	" only; default, if option is used without parameter) or @FORCE@" \
-	" (enable it for Wii, Wii U and for Dolphin)." )
+	" (default, don't change setting), @ON@ (default, if option is used" \
+	" without parameter) or @FRACTION@ (=@1DIGIT@), @2DIGITS@ and" \
+	" @3DIGITS@." )
+
+#:def_opt( "DEBUG", "debug", "CP", \
+	"mode", \
+	"Enable or disable the debug output while racing. Mode is one of" \
+	" @OFF@, @AUTO@ (default, don't change setting), @USER@ or @100@ to" \
+	" @199@ for predefined setups." )
 
 #:def_opt( "TRACK_DIR", "track-dir|trackdir", "CP", \
 	"directory", \
@@ -19512,6 +19731,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
+
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
 	"" )
@@ -19621,6 +19848,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUMP", "DEBUG", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUMP", "LONG", \
 	"", \
 	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
@@ -19670,6 +19901,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DL", "DEBUG", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DL", "LONG", \
 	"", \
 	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
@@ -19716,6 +19951,10 @@
 	"" )
 
 #:def_cmd_opt( "DLL", "SPEEDOMETER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLL", "DEBUG", \
 	"", \
 	"" )
 
@@ -19773,6 +20012,10 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "SPEEDOMETER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "DEBUG", \
 	"", \
 	"" )
 
@@ -19865,6 +20108,10 @@
 	"" )
 
 #:def_cmd_opt( "LPAR", "SPEEDOMETER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LPAR", "DEBUG", \
 	"", \
 	"" )
 
@@ -20028,6 +20275,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "DEBUG", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CAT", "COMPLETE", \
 	"", \
 	"" )
@@ -20181,6 +20432,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wmdlt CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wmdlt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -20292,6 +20548,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -20685,6 +20949,14 @@
 #:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -21434,6 +21706,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wpatt CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wpatt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -21522,6 +21799,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -21763,6 +22048,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
+
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
 	"" )
@@ -21990,6 +22283,11 @@
 	" details about the declared command. The fourth variant prints an" \
 	" overview about all commands and all global options." )
 
+#:def_cmd( "CONFIG", "CONFIG", \
+	"wstrt CONFIG [options]...", \
+	"Show all information about the search for the configuration file and" \
+	" its content." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wstrt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -22094,6 +22392,14 @@
 	"", \
 	"Stop parsing the command line and print a help message with all" \
 	" commands included. Exit after printing." )
+
+#:def_opt( "CONFIG", "config", "GP", \
+	"file", \
+	"Define a configuration file or a directory as source. In later case," \
+	" file @'wiimms-szs-tools.conf'@ is searched.\n" \
+	"  If option is not not set, then file @'wiimms-szs-tools.conf'@ is" \
+	" searched in different directories. Use command @'wszst CONFIG'@ to" \
+	" get more details." )
 
 #:def_opt( "ALLOW_ALL", "allow-all|allowall", "G", \
 	"", \
@@ -22643,6 +22949,14 @@
 #:def_cmd_opt( "HELP", "MAX_WIDTH", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CONFIG", "CONFIG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONFIG", "LONG", \
+	"", \
+	"If set, print the search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \

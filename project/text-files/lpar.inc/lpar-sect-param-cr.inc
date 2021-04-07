@@ -47,16 +47,9 @@ CUSTOM-TT	= %u
 
 # Enable (1) or disable (0) support for Extended Presence Flags. Disable it
 # only for tests! If LIMIT-MODE==LE$PRODUCTIVE, XPFLAGS is always enabled.
-# Option --xpflags will overrides this setting.
+# Option --xpflags overrides this setting.
 
 XPFLAGS		= %u
-
-# Enable (1) or disable (0) the speedometer at Wii and Wii U. The special
-# value 2 enables it for Dolphin too, but only on LE$EXPERIMENTAL. It doesn't
-# work correctly with Dolphin. If enabled, the speedometer is displayed at the
-# bottom right. Option --speedometer will overrides this setting.
-
-SPEEDOMETER	= %u
 
 # Define the number of races that a previously used track is blocked. LE-CODE
 # will try to find another possible track among the selected tracks. Values
@@ -64,4 +57,25 @@ SPEEDOMETER	= %u
 # the track list and enable or disable this feature.
 
 BLOCK-TRACK	= %u
+
+# Enables (SPEEDO$0 .. SPPEDO$3) or disables (SPEEDO$OFF) the speedometer.
+# If enabled, the speedometer is displayed at bottom right of the screen
+# using format »123.123 km/h«. The digit behind SPEEDO$ defines the number
+# of fraction digits.
+# Option --speedometer overrides this setting.
+
+SPEEDOMETER	= SPEEDO$%s
+
+# Define a debug mode. Debug output is displayed below the speedometer. It is
+# defined by sections [DEBUG-*]. This parameter defines the general behaviour.
+# Possible values are DEBUG$OFF, DEBUG$ENABLED and DEBUG$1 to DEBUG$4.
+# DEBUG$OFF disables the debug output at all. All other values enable debug
+# output and define the start configuration.
+# Option --debug overrides this setting.
+
+DEBUG		= DEBUG$%s
+
+# Enable (1) or disable (0) built-in item cheats.
+
+ITEM-CHEATS	= %u
 

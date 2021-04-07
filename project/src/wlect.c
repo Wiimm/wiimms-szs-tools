@@ -240,6 +240,53 @@ static enumError cmd_export()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			command dpad			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_dpad()
+{
+    ParamList_t *param;
+    for ( param = first_param; param; param = param->next )
+    {
+	ccp arg = param->arg;
+	while ( *arg && (uint)*arg <= ' ' )
+	    arg++;
+	u32 num = 0;
+	if ( *arg >= '0' && *arg <= '9' || *arg >= 'a' && *arg <= 'f'  || *arg >= 'A' && *arg <= 'F' )
+	    num = str2l(arg,0,16);
+	else
+	{
+	    while (*arg)
+	    {
+		switch (*arg++)
+		{
+		    case 'U': case 'u': num = num << 2 | 0; break;
+		    case 'L': case 'l': num = num << 2 | 1; break;
+		    case 'R': case 'r': num = num << 2 | 2; break;
+		    case 'D': case 'd': num = num << 2 | 3; break;
+		}
+	    }
+	}
+
+	char buf[20], *dest = buf + sizeof(buf) -1;
+	*dest = 0;
+	for ( u32 n = num; n && dest > buf; n >>= 2 )
+	{
+	    switch (n&3)
+	    {
+		case 0: *--dest = '.'; break;
+		case 1: *--dest = 'L'; break;
+		case 2: *--dest = 'R'; break;
+		case 3: *--dest = 'D'; break;
+	    }
+	}
+	printf(" case 0x%08x: // %s\n",num,dest);
+    }
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command dump			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1053,6 +1100,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_VERSION:	version_exit();
 	case GO_HELP:		help_exit(false);
 	case GO_XHELP:		help_exit(true);
+	case GO_CONFIG:		opt_config = optarg;
 	case GO_ALLOW_ALL:	allow_all = true; break;
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
@@ -1110,9 +1158,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_CUSTOM_TT:	err += ScanOptCustomTT(optarg); break;
 	case GO_XPFLAGS:	err += ScanOptXPFlags(optarg); break;
 	case GO_SPEEDOMETER:	err += ScanOptSpeedometer(optarg); break;
-	case GO_RESERVED_1B9:	err += ScanOptReserved_1b9(optarg); break;
-	case GO_RESERVED_1BA:	err += ScanOptReserved_1ba(optarg); break;
-	case GO_RESERVED_1BB:	err += ScanOptReserved_1bb(optarg); break;
+	case GO_DEBUG:		err += ScanOptDebug(optarg); break;
 
 	case GO_TRACK_DIR:	opt_track_dest = optarg; break;
 	case GO_COPY_TRACKS:	err += ScanOptTrackSource(optarg,TFMD_COPY); break;
@@ -1217,6 +1263,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_VERSION:	version_exit();
 	case CMD_HELP:		PrintHelp(&InfoUI_wlect,stdout,0,"HELP",0,URI_HOME,
 					first_param ? first_param->arg : 0 ); break;
+	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0); break;
@@ -1224,6 +1271,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_FILETYPE:	err = cmd_filetype(); break;
 	case CMD_FILEATTRIB:	err = cmd_fileattrib(); break;
 	case CMD_EXPORT:	err = cmd_export(); break;
+	case CMD_DPAD:		err = cmd_dpad(); break;
 
 	case CMD_SYMBOLS:	err = DumpSymbols(SetupVarsLECODE()); break;
 	case CMD_FUNCTIONS:	SetupVarsLECODE(); err = ListParserFunctions(); break;

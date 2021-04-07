@@ -3316,19 +3316,29 @@ const ColorSet_t * GetColorSetAuto ( bool force_on )
 
     if ( auto_mode == COLMD_AUTO )
     {
+	char *term = getenv("TERM");
+ 
+     #ifdef __CYGWIN__
+	if (!term)
+	    term = "cygwin";
+     #else
+	if (!term)
+	    term = "vt100";
+     #endif
+
 	int error;
-	setupterm(getenv("TERM"),1,&error);
+	setupterm(term,1,&error);
 	const int ncol = tigetnum("colors");
 
 	auto_mode = ncol >= 256 ? COLMD_256_COLORS
 		  : ncol >=   8 ? COLMD_8_COLORS
 				: COLMD_OFF;
-	if ( auto_mode == COLMD_OFF && !strcmp(getenv("TERM"),"cygwin") )
+	if ( auto_mode == COLMD_OFF && !strcmp(term,"cygwin") )
 	    auto_mode = COLMD_8_COLORS;
 
      #ifdef TEST
 	fprintf(stderr,">>> GetColorSetAuto(%d) => \"%s\" n=%d => %d [%s]\n",
-		force_on, getenv("TERM"), ncol,
+		force_on, term, ncol,
 		auto_mode, GetColorModeName(auto_mode,0) );
      #endif
     }

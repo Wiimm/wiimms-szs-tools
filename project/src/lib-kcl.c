@@ -3697,7 +3697,7 @@ enumError ScanTextKCL
 				    && !k
 				    && (KCL_MODE & KCLMD_AUTO) )
 			    {
-				PRINT1("NORMAL FOUND: %u\n",idx-1);
+				PRINT("NORMAL FOUND: %u\n",idx-1);
 				norm = idx - 1;
 			    }
 			}

@@ -2466,7 +2466,7 @@ enumError DrawPosFile ( DrawKCL_t *draw, pos_file_t *pf )
 
 		bool old;
 		ParamFieldItem_t *it
-		    = FindInsertParamField(&pos_autocolor,cols[pp->autocolor],false,&old);
+		    = FindInsertParamField(&pos_autocolor,cols[pp->autocolor],false,0,&old);
 		if (it)
 		{
 		    if (!old)

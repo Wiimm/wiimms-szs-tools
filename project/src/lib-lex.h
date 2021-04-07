@@ -72,6 +72,8 @@ typedef struct features_szs_t
     u8 f_ght_kart;		// HAVESZS_GHT_KART
     u8 f_ght_kart_obj;		// HAVESZS_GHT_KART_OBJ
     u8 f_minigame;		// HAVESZS_MINIGAME
+    u8 f_aiparam_baa;		// HAVESZS_AIPARAM_BAA
+    u8 f_aiparam_bas;		// HAVESZS_AIPARAM_BAS
 
     //--- KMP features (initial list)
 
@@ -495,14 +497,16 @@ typedef struct lex_info_t
 
     bool	test_found;	// true: section TEST found
     lex_set1_t	test;		// data of section TEST
+
+
+    // data
+    float3	item_factor;	// 1.0 or copy of set1.item_factor
 }
 lex_info_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static inline void InitializeLexInfo ( lex_info_t *info )
-	{ DASSERT(info); memset(info,0,sizeof(*info)); }
-
+void InitializeLexInfo ( lex_info_t *info );
 static inline void ResetLexInfo ( lex_info_t *info )
 	{ if (info) memset(info,0,sizeof(*info)); }
 

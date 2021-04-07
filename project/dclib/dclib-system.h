@@ -35,9 +35,12 @@
 #ifndef DCLIB_SYSTEM_H
 #define DCLIB_SYSTEM_H 1
 
-#include <stdio.h>
+#ifndef PRINT_SYSTEM_SETTINGS
+  #include <stdio.h>
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
+#ifndef PRINT_SYSTEM_SETTINGS
 
 typedef enum enumSystemID
 {
@@ -46,17 +49,22 @@ typedef enum enumSystemID
 	SYSID_X86_64		= 0x02000000,
 	SYSID_CYGWIN32		= 0x03000000,
 	SYSID_CYGWIN64		= 0x04000000,
-	SYSID_APPLE		= 0x05000000,
-	SYSID_LINUX		= 0x06000000,
-	SYSID_UNIX		= 0x07000000,
+	SYSID_MAC_I386		= 0x05000000,
+	SYSID_MAC_X64		= 0x06000000,
+	SYSID_MAC_ARM		= 0x07000000,
+	SYSID_LINUX		= 0x08000000,
+	SYSID_UNIX		= 0x09000000,
 
 } enumSystemID;
+
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
 #undef SYSTEM_LINUX
 
 #ifdef __CYGWIN__
+  #define SYSTEM_LINUX 0
   #define SYSTEM "cygwin"
   #ifdef __x86_64
 	#define SYSTEM2		"cygwin64"
@@ -66,8 +74,18 @@ typedef enum enumSystemID
 	#define SYSTEMID	SYSID_CYGWIN32
   #endif
 #elif __APPLE__
+	#define SYSTEM_LINUX	0
 	#define SYSTEM		"mac"
-	#define SYSTEMID	SYSID_APPLE
+  #ifdef __aarch64__
+	#define SYSTEM2		"mac/arm"
+	#define SYSTEMID	SYSID_MAC_ARM
+  #elif __x86_64__
+	#define SYSTEM2		"mac/x64"
+	#define SYSTEMID	SYSID_MAC_X64
+  #else
+	#define SYSTEM2		"mac/i386"
+	#define SYSTEMID	SYSID_MAC_I386
+  #endif
 #elif __linux__
   #define SYSTEM_LINUX 1
   #ifdef __i386__
@@ -81,6 +99,7 @@ typedef enum enumSystemID
 	#define SYSTEMID	SYSID_LINUX
   #endif
 #elif __unix__
+	#define SYSTEM_LINUX	0
 	#define SYSTEM		"unix"
 	#define SYSTEMID	SYSID_UNIX
 #else
@@ -93,6 +112,7 @@ typedef enum enumSystemID
 #endif
 
 ///////////////////////////////////////////////////////////////////////////////
+#ifndef PRINT_SYSTEM_SETTINGS
 
 static inline void dclibPrintSystem ( FILE * f )
 {
@@ -109,7 +129,14 @@ static inline void dclibPrintSystem ( FILE * f )
 	);
 }
 
+#endif
 ///////////////////////////////////////////////////////////////////////////////
+
+#ifdef PRINT_SYSTEM_SETTINGS
+result_SYSTEM=SYSTEM
+result_SYSTEM2=SYSTEM2
+result_SYSTEM_LINUX=SYSTEM_LINUX
+#endif
 
 #endif // DCLIB_SYSTEM_H 1
 

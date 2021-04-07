@@ -921,7 +921,7 @@ static enumError ScanText_SIMPLE
 	    continue;
 
 	ParamFieldItem_t *it
-	    = FindInsertParamField( &pat->s1_str, str, true, 0 );
+	    = FindInsertParamField( &pat->s1_str, str, true, 0, 0 );
 	const uint sidx = it ? it - pat->s1_str.field : 0;
 
 	if ( elem.selem_used == elem.selem_size )

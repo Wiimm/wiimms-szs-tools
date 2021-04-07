@@ -569,10 +569,10 @@ szs v0.33a r3627 - 2012-05-02
     -> https://szs.wiimm.de/doc/kmp/syntax
    The inline documentation in decoded KMP files is now much shorter.
  - Command SYNTAX removed. Use page https://szs.wiimm.de/doc/syntax instead.
- - The backtracking algorithm for analyzing of CKPH + ENPH + ITPH pathes has
+ - The backtracking algorithm for analyzing of CKPH + ENPH + ITPH paths has
    been modified and optimized, because a test version of "Toad's Turnpike"
    has 105 ITPH groups and needs much to much steps and time to calculate
-   about 10^28 pathes total.
+   about 10^28 paths total.
 
 
 szs v0.34a r3659 - 2012-05-12

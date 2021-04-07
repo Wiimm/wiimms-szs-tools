@@ -3782,7 +3782,7 @@ static enumError test_endian ( int argc, char ** argv )
     putchar('\n');
 
     //-------------------------------------------------------------------------
-    
+
     printf("BE: h2n(1) = %x %x %llx / n2h(1) = %x %x %llx\n",
 		be_func.h2ns(1), be_func.h2nl(1), be_func.h2n64(1),
 		be_func.n2hs(1), be_func.n2hl(1), be_func.n2h64(1) );
@@ -3791,6 +3791,211 @@ static enumError test_endian ( int argc, char ** argv )
 		le_func.n2hs(1), le_func.n2hl(1), le_func.n2h64(1) );
     putchar('\n');
     return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_config()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_config ( int argc, char ** argv )
+{
+    config_t config;
+    InitializeConfig(&config);
+
+    int i;
+    for ( i = 1; i < argc; i++ )
+    {
+	ScanConfig(&config,argv[i],false);
+	printf(	"--\n> %s\n",argv[i]);
+	PrintConfig(stdout,&config,true);
+
+ #if 0
+	char buf[100];
+	NormalizeFileName(buf,sizeof(buf),config.autoadd_path,true,true,TRSL_AUTO);
+	printf(	">> |%s|\n",buf);
+ #endif
+    }
+
+    ResetConfig(&config);
+    putchar('\n');
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_search()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static void print_search ( const search_file_list_t *sfl, ccp title )
+{
+    if (title)
+	printf("> %s\n",title);
+
+    uint i;
+    search_file_t *sf = sfl->list;
+    for ( i = 1; i <= sfl->used; i++, sf++ )
+	printf("%5d. [a=%d,it=%d,h:%x] %s\n",
+		i, sf->alloced, sf->itype, sf->hint, sf->fname );
+}
+
+//-----------------------------------------------------------------------------
+
+static enumError test_search ( int argc, char ** argv )
+{
+    search_file_list_t sfl;
+    InitializeSearchFile(&sfl);
+    print_search(&sfl,"init");
+
+    int i;
+    for ( i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	CopyMode_t cm = CPM_LINK;
+	if ( *arg == '+' )
+	{
+	    arg = STRDUP(arg+1);
+	    cm = CPM_MOVE;
+	    if ( i == 1 )
+	    {
+		int res = SearchConfig1(&sfl,"wiimms-szs-tools.conf",arg,
+					".szs","/etc",std_share_path,0);
+		printf("SearchConfig1(), res=%d\n",res);
+		continue;
+	    }
+	}
+	AppendSearchFile(&sfl,arg,cm,"config0.txt");
+    }
+    print_search(&sfl,"argv[]");
+
+    ResetSearchFile(&sfl);
+    putchar('\n');
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_quote()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static void print_quote_result ( ccp str, ccp info )
+{
+    printf("[%-2.2s,EQM=%d%d%d,C=%d] |%s|\n",
+		info, str == EmptyString, str == EmptyQuote,
+		str == MinusString, IsCircBuf(str), str );
+    FreeString(str);
+}
+
+static void test_quote_helper ( ccp str )
+{
+    printf("\n--- %p\n",str);
+    print_quote_result(EscapeStringS(str,0,CHMD__MODERN),"E");
+    print_quote_result(EscapeStringCircS(str,0,CHMD__MODERN),"EC");
+    print_quote_result(QuoteStringS(str,0,CHMD__MODERN),"Q");
+    print_quote_result(QuoteStringCircS(str,0,CHMD__MODERN),"QC");
+    print_quote_result(QuoteBashS(str,0,CHMD__MODERN),"B");
+    print_quote_result(QuoteBashCircS(str,0,CHMD__MODERN),"BC");
+}
+
+static enumError test_quote ( int argc, char ** argv )
+{
+    test_quote_helper(0);
+    test_quote_helper(EmptyString);
+    test_quote_helper("ab\ec\td\n \"xyz\' ghi");
+    
+    int i;
+    for ( i = 1; i < argc; i++ )
+	test_quote_helper(argv[i]);
+    putchar('\n');
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_eml()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_eml ( int argc, char ** argv )
+{
+    exmem_list_t eml;
+    InitializeEML(&eml);
+    AddStandardSymbolsEML(&eml,false);
+   // DumpEML(stdout,3,&eml,"symbols(false)");
+
+    int i;
+    for ( i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	exmem_t res = ResolveSymbolsEML(&eml,arg);
+	printf(">ADD: %s\n",PrintExMem(&res));
+	FreeExMem(&res);
+
+	char *eq = strchr(arg,'=');
+	if (eq)
+	    *eq++ = 0;
+	exmem_t data = ExMemByString(eq?eq:arg);
+
+	if ( *arg == '-' )
+	    RemoveEML(&eml,arg+1);
+	else if ( *arg == '+' )
+	    ReplaceEML(&eml,arg+1,CPM_COPY,&data,CPM_COPY);
+	else if ( *arg == '%' )
+	    OverwriteEML(&eml,arg+1,CPM_COPY,&data,CPM_COPY);
+	else
+	    InsertEML(&eml,arg,CPM_COPY,&data,CPM_COPY);
+    }
+
+    DumpEML(stdout,3,&eml,0);
+
+ #if 0
+    AddStandardSymbolsEML(&eml,false);
+    DumpEML(stdout,3,&eml,"symbols(false)");
+    AddStandardSymbolsEML(&eml,true);
+    DumpEML(stdout,3,&eml,"symbols(true)");
+ #endif
+
+ #if 1
+    ResolveAllSymbolsEML(&eml);
+    DumpEML(stdout,3,&eml,"ResolveAllSymbolsEML()");
+ #endif
+
+    ResetEML(&eml);
+
+    putchar('\n');
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_cygpath()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_cygpath ( int argc, char ** argv )
+{
+    int i;
+    for ( i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	bool try_circ = *arg != '-';
+	if (!try_circ)
+	    arg++;
+	ccp cyg = AllocNormalizedFilenameCygwin(arg,try_circ);
+	exmem_t mem = GetNormalizeFilenameCygwin(arg,try_circ);
+	printf(	"---\n"
+		"< %s\n"
+		">[%u,%c] %s\n"
+		">%s\n"
+		,arg
+		,IsWindowsDriveSpec(arg)
+		 ,IsCircBuf(cyg) ? 'C' : '-'
+		 ,cyg
+		,PrintExMem(&mem)
+		);
+	FreeString(cyg);
+	FreeExMem(&mem);
+    }
+    putchar('\n');
+    return ERR_OK;
 }
 
 //
@@ -3822,6 +4027,45 @@ const gobj_cond_ref_t * FindConditionRef2 ( u16 ref_id )
 static enumError develop ( int argc, char ** argv )
 {
  #if 1
+    bool filter_active = false;
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	if (!strcmp(arg,"+a"))
+	    filter_active = true;
+	else if (!strcmp(arg,"-a"))
+	    filter_active = false;
+	else
+	{
+	    lecode_debug_t mode = str2l(arg,0,10) & LEDEB__ALL;
+	    printf("-----\n%02x\n",mode);
+	    lecode_debug_info_t ldi;
+	    for ( GetFirstDebugMode(&ldi,mode,filter_active);
+		  ldi.name;
+		  GetNextDebugMode(&ldi) )
+	    {
+		printf("\t%s\n",GetDebugModeSummary(&ldi));
+	    }
+	}
+    }
+ #elif 1
+    ccp test =
+	"n=123\n"
+	"s=\"ab\e[0m c\"\n"
+	"t=\"ab\ncd\"\n";
+
+    printf("%s\n",test);
+
+    PrintScript_t ps;
+    script_fform = FF_BASH;
+    SetupPrintScriptByOptions(&ps);
+    ps.f = stdout;
+    PutScriptVars(&ps,3,test);
+
+    ps.auto_quote = true;
+    PutScriptVars(&ps,3,test);
+
+ #elif 1
     static const char text[] = "abc/def/ghi\0jkl/mno/pqr";
     uint i;
     for ( i = 0; i < sizeof(text); i++ )
@@ -4028,6 +4272,11 @@ enum
     CMD_SLOT_INFO,		// test_slot_info(argc,argv)
     CMD_CLOCK,			// test_clock(argc,argv)
     CMD_ENDIAN,			// test_endian(argc,argv)
+    CMD_CONFIG,			// test_config(argc,argv)
+    CMD_SEARCH,			// test_search(argc,argv)
+    CMD_QUOTE,			// test_quote(argc,argv)
+    CMD_EML,			// test_eml(argc,argv)
+    CMD_CYGPATH,		// test_cygpath(argc,argv)
 
     CMD__N
 };
@@ -4086,6 +4335,11 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_SLOT_INFO,	"SLOT-INFO",	"SI",		0 },
 	{ CMD_CLOCK,		"CLOCK",	0,		0 },
 	{ CMD_ENDIAN,		"ENDIAN",	0,		0 },
+	{ CMD_CONFIG,		"CONFIG",	0,		0 },
+	{ CMD_SEARCH,		"SEARCH",	0,		0 },
+	{ CMD_QUOTE,		"QUOTE",	"Q",		0 },
+	{ CMD_EML,		"EML",		0,		0 },
+	{ CMD_CYGPATH,		"CYGPATH",	0,		0 },
 
 	{ CMD__N,0,0,0 }
 };
@@ -4146,7 +4400,7 @@ int main ( int argc, char ** argv )
 	float *f = f3.v;
 	printf("%zu/%zu=%zu\n",sizeof(f3.v),sizeof(*f),sizeof(f3.v)/sizeof(*f));
     }
-    
+
     if (0)
     {
 	double34 x;
@@ -4226,6 +4480,11 @@ int main ( int argc, char ** argv )
 	case CMD_SLOT_INFO:		test_slot_info(argc,argv); break;
 	case CMD_CLOCK:			test_clock(argc,argv); break;
 	case CMD_ENDIAN:		test_endian(argc,argv); break;
+	case CMD_CONFIG:		test_config(argc,argv); break;
+	case CMD_SEARCH:		test_search(argc,argv); break;
+	case CMD_QUOTE:			test_quote(argc,argv); break;
+	case CMD_EML:			test_eml(argc,argv); break;
+	case CMD_CYGPATH:		test_cygpath(argc,argv); break;
 	//case CMD_HELP:
 	default:
 	    help_exit();

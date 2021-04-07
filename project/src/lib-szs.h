@@ -258,8 +258,8 @@ CmpFuncSubFile GetCmpFunc
 
 enum szs_marker_t
 {
-  SLOT_31_71_SUNDS	= 0x01,  // bit for 'szs_file_t:slot_31_71'
-  SLOT_31_71_PYLON01	= 0x02,  // bit for 'szs_file_t:slot_31_71'
+  SLOT_31_71_SUNDS	= 0x01,  // bit for 'szs_file_t:slot_31_xx_71'
+  SLOT_31_71_PYLON01	= 0x02,  // bit for 'szs_file_t:slot_31_xx_71'
 
   SLOT_42_KART_TRUCK_U	= 0x01,  // bit for 'szs_file_t:slot_42'
   SLOT_42_CAR_BODY_U	= 0x02,  // bit for 'szs_file_t:slot_42'
@@ -288,6 +288,8 @@ typedef enum have_szs_file_t
     HAVESZS_GHT_KART_OBJ,	// common/GeoHitTableKartObj.bin
     HAVESZS_ITEM_SLOT_TABLE,	// ItemSlotTable/ItemSlotTable.slt
     HAVESZS_MINIGAME,		// common/minigame.kmg
+    HAVESZS_AIPARAM_BAA,	// AIParam/AIParam.baa
+    HAVESZS_AIPARAM_BAS,	// AIParam/AIParam.bas
     HAVESZS__N
 }
 __attribute__ ((packed)) have_szs_file_t;
@@ -391,7 +393,7 @@ typedef struct szs_file_t
     IsArena_t		is_arena;	// one of ARENA_*
 
     bool		slot_analyzed;	// true: slot values are valid
-    uint		slot_31_71;	// slot required because of objects
+    uint		slot_31_xx_71;	// slot required because of objects
     uint		slot_42;	// slot possible because of objects
     uint		slot_62;	// slot required because of objects
 
@@ -798,8 +800,8 @@ typedef struct slot_ana_t
     int  slot[MKW_N_TRACKS];	// set by FindSlotsSZS()
     int  required_slot;		// set by FindSlotsSZS()
 
-    char mandatory_slot[6];	// empty | "arena" | "31+71" | "61" | "62"
-    char slot_info[30];		// slot info text
+    char mandatory_slot[9];	// empty | "arena" | "31+71" | "31+41+71" | "61" | "62"
+    char slot_info[31];		// slot info text
 }
 slot_ana_t;
 
@@ -815,7 +817,7 @@ int FindSlotsSZS
 					//	 0: unknown
 					//	+1: slot possible
     int			*required_slot	// if not NULL: return 0|31|61|62
-					// 31 is an alias for "31+71"
+					// 31 is an alias for "31+71" or "31+41+71"
 );
 
 void AnalyzeSlot ( slot_ana_t *sa, szs_file_t *szs );

@@ -305,7 +305,7 @@ szs v1.17a r4358 - 2013-04-23
  - Option --fast overrides compression rates set by --norm or --compr=list.
  - New --kcl mode: FIX-ALL: Short cut for DROP,RM,NEW,LOG.
  - New option: --autoadd-path=dir: Define a path for the auto-add library
-   and override the default search pathes.
+   and override the default search paths.
  - New option: --mdl=list: Define a MDL patching method. VERTEX patching is
    used by default.
  - New option for wszst: --patch-file=list: Define, which kind of KMP, KCL and

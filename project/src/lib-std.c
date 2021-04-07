@@ -36,9 +36,7 @@
  ***************************************************************************/
 
 #include <sys/types.h>
-#ifndef WIN_SZS_LIB
-  #include <sys/ioctl.h>
-#endif
+#include <sys/ioctl.h>
 #include <fcntl.h>
 
 #include "lib-std.h"
@@ -66,10 +64,6 @@
 #include "crypt.h"
 #include "logo.inc"
 
-#ifdef WIN_SZS_LIB
-  #include <direct.h>
-#endif
-
 #if defined(TEST) && !defined(__APPLE__) && !defined(__CYGWIN__)
   #include <mcheck.h>
 #endif
@@ -79,10 +73,10 @@
 ///////////////			    vars			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+ccp		opt_config		= 0;
 ccp		tool_name		= "?";
+ccp		std_share_path		= 0;
 ccp		share_path		= 0;
-ccp		search_path[6]		= {0};
-ccp		auto_add_path[6]	= {0};	// same size as search path
 volatile int	SIGINT_level		= 0;
 volatile int	verbose			= 0;
 volatile int	logging			= 0;
@@ -119,12 +113,13 @@ file_format_t	opt_fform		= FF_UNKNOWN;
 file_format_t	fform_compr		= FF_YAZ0;
 file_format_t	fform_compr_force	= 0;
 file_format_t	script_fform		= FF_TXT;
-ccp		script_varname		= "res";
+ccp		script_varname		= 0;
 int		script_array		= 0;
 LowerUpper_t	opt_case		= LOUP_AUTO;
 int		opt_pmodes		= 0;
 uint		opt_fmodes_include	= 0;
 uint		opt_fmodes_exclude	= 0;
+int		opt_install		= 0;
 int		opt_pt_dir		= 0;
 bool		opt_links		= false;
 bool		opt_rm_aiparam		= false;
@@ -361,10 +356,8 @@ void SetupColors()
 // [[2do]]
 
 #if defined(TEST) || defined(DEBUG)
-  #define USE_PROGINFO 2	// 0:off, 1:both, 2:new proginfo only
   #define LOG_PROGINFO 1	// 0:off, 1:on
 #else
-  #define USE_PROGINFO 2	// 0:off, 1:both, 2:new proginfo only
   #define LOG_PROGINFO 0	// 0:off, 1:on
 #endif
 
@@ -372,12 +365,7 @@ void SetupColors()
 
 void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
 {
- #if USE_PROGINFO
     SetupProgname(argc,argv,tname,tvers,ttitle);
- #else
-    if ( tname && *tname )
-	ProgInfo.progname = tname;
- #endif
 
  #if LOG_PROGINFO
     PRINT1("PROG1: %s | %s | %s\n",ProgInfo.progname,ProgInfo.progdir,ProgInfo.progpath);
@@ -430,7 +418,6 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     TRACE_SIZEOF(size_t);
     TRACE_SIZEOF(off_t);
 
- #ifndef WIN_SZS_LIB
     TRACE_SIZEOF(int8_t);
     TRACE_SIZEOF(int16_t);
     TRACE_SIZEOF(int32_t);
@@ -439,7 +426,6 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     TRACE_SIZEOF(uint16_t);
     TRACE_SIZEOF(uint32_t);
     TRACE_SIZEOF(uint64_t);
- #endif
 
     TRACE_SIZEOF(u8);
     TRACE_SIZEOF(u16);
@@ -453,6 +439,7 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     TRACE_SIZEOF(be32_t);
     TRACE_SIZEOF(be64_t);
 
+    TRACE("- numeric vectors\n");
     TRACE_SIZEOF(float);
     TRACE_SIZEOF(float32);
     TRACE_SIZEOF(float3);
@@ -465,6 +452,12 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     TRACE_SIZEOF(float34);
     TRACE_SIZEOF(double34);
     TRACE_SIZEOF(MatrixD_t);
+
+    TRACE("- mem\n");
+    TRACE_SIZEOF(mem_t);
+    TRACE_SIZEOF(exmem_t);
+    TRACE_SIZEOF(exmem_key_t);
+    TRACE_SIZEOF(exmem_list_t);
 
     TRACE("- arch\n");
     TRACE_SIZEOF(yaz0_header_t);
@@ -714,7 +707,7 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
 
     //----- some assertion
 
-    #if HAVE_ASSERT && !defined(WIN_SZS_LIB) // ??? [[mvc]]
+    #if HAVE_ASSERT
     {
 	double3 d3;
 	ASSERT( (double*)&d3 ==  d3.v );
@@ -744,115 +737,27 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     MySeedByTime();
 
 
-    //----- setup progname
+    //----- setup std_share_path
 
- #if USE_PROGINFO < 2
-
-    tool_name = tname;
-    if ( argc > 0 && *argv && **argv )
-	tname = *argv;
-    ProgInfo.progname = strrchr(tname,'/');
-    ProgInfo.progname = ProgInfo.progname ? ProgInfo.progname+1 : tname;
-    //argv[0] = (char*)ProgInfo.progname;
-    if ( !tool_name || !*tool_name )
-	tool_name = ProgInfo.progname;
-
-    TRACE("##PROG## PROG-NAME=%s\n",ProgInfo.progname);
-
- #endif
-
-
-    //----- setup search_path
-
-    char path[PATH_MAX];
-    ccp *sp = search_path, *sp2;
-    DASSERT( sizeof(search_path)/sizeof(*search_path) > 5 );
-
- #ifndef WIN_SZS_LIB
-    // determine program path
- #if !USE_PROGINFO
-    char proc_path[30];
-    snprintf(proc_path,sizeof(proc_path),"/proc/%u/exe",getpid());
-    TRACE("PROC-PATH: %s\n",proc_path);
- #endif
-    static char share[] = "/share/szs/";
-    static char local_share[] = "/usr/local/share/szs/";
  #ifndef __CYGWIN__
-    share_path = local_share;
+    static const char share[] = "/share/szs";
+    std_share_path = "/usr/local/share/szs";
  #endif
 
- #if USE_PROGINFO
-    if (GetProgramPath(path,sizeof(path),true,argv[0]))
- #else 
-    if (readlink(proc_path,path,sizeof(path)))
- #endif
+    ccp progdir = ProgramDirectory();
+    PRINT0("progdir=%s\n",progdir);
+    if (progdir)
     {
-	// program path found!
-	TRACE("PROG-PATH: %s\n",path);
-
-	char * file_ptr = strrchr(path,'/');
-	if ( file_ptr )
-	{
-	    // seems to be a real path -> terminate string behind '/'
-	    *++file_ptr = 0;
-
-	    #ifdef TEST
-		// for development: append 'share' dir
-		StringCopyE(file_ptr,path+sizeof(path),"share/");
-		*sp = STRDUP(path);
-		TRACE("SEARCH_PATH[%zd] = %s\n",sp-search_path,*sp);
-		sp++;
-		*file_ptr = 0;
-	    #endif
-
-	    *sp = STRDUP(path);
-	    TRACE("SEARCH_PATH[%zd] = %s\n",sp-search_path,*sp);
-	 #ifdef __CYGWIN__
-	    share_path = *sp;
-	 #endif
-	    sp++;
-
-	    if ( file_ptr-5 >= path && !memcmp(file_ptr-4,"/bin/",5) )
-	    {
-		StringCopyS(file_ptr-5,sizeof(path),share);
-		*sp = STRDUP(path);
-		TRACE("SEARCH_PATH[%zd] = %s\n",sp-search_path,*sp);
-		sp++;
-	    }
-	}
+     #ifdef __CYGWIN__
+	std_share_path = progdir;
+     #else
+	uint plen = strlen(progdir);
+	if ( plen >= 4 && !strcmp(progdir+plen-4,"/bin") )
+	    std_share_path = MEMDUP2(progdir,plen-4,share,strlen(share));
+     #endif
     }
 
-    // insert 'local_share' if not already done
-
-    for ( sp2 = search_path; sp2 < sp && strcmp(*sp2,local_share); sp2++ )
-	;
-    if ( sp2 == sp )
-    {
-	*sp = STRDUP(local_share);
-	TRACE("SEARCH_PATH[%zd] = %s\n",sp-search_path,*sp);
-	sp++;
-    }
- #endif
-
-    // insert CWD if not already done
-    getcwd(path,sizeof(path)-1);
-    strcat(path,"/");
-    for ( sp2 = search_path; sp2 < sp && strcmp(*sp2,path); sp2++ )
-	;
-    if ( sp2 == sp )
-    {
-	*sp = STRDUP("./");
-	TRACE("SEARCH_PATH[%zd] = %s\n",sp-search_path,*sp);
-	sp++;
-    }
-
-    *sp = 0;
-    ASSERT( sp - search_path < sizeof(search_path)/sizeof(*search_path) );
-
- #ifdef TEST0
-    CHECK_TRACE_ALLOC;
-    MEM_CHECK_SETUP(search_path[1]-0x20,0x40);
- #endif
+    //--- misc
 
     SetupStandardSZS();
 
@@ -874,8 +779,14 @@ void NormalizeOptions
 {
     SetupColors();
 
+    //--- load configuration
 
-    //--- diff, delta and minimze
+    const config_t *config = GetConfig();
+    if (config)
+	share_path = config->share_path;
+
+
+    //--- diff, delta and minimize
 
     minimize_level = delta_count < 9 ? delta_count : 9;
     if ( diff_count > 0 )
@@ -928,21 +839,24 @@ void NormalizeOptions
 	fprintf(stdlog,"PROGRAM_NAME    = %s\n",ProgInfo.progname);
 	if ( compatible != COMPAT_CURRENT )
 	    fprintf(stdlog,"COMPATIBILITY   = %s\n",PrintOptCompatible());
+	fprintf(stdlog,"CONFIG_FILE     = %s\n",config->config_file);
 
-	if ( log_level > 2 )
 	{
-	    fprintf(stdlog,"SHARE_PATH      = %s\n",share_path);
+	    const config_t *config = GetConfig();
+	    fprintf(stdlog,"CONFIG_FILE     = %s\n",config->config_file);
+	    fprintf(stdlog,"STD_SHARE_PATH  = %s\n",std_share_path);
+	    fprintf(stdlog,"SHARE_PATH      = %s\n",config->share_path);
 
-	    ccp * sp;
-	    for ( sp = search_path; *sp; sp++ )
-		fprintf(stdlog,"SEARCH_PATH[%td]  = %s\n",sp-search_path,*sp);
+	    int i;
+	    const StringField_t *sf = GetSearchList();
+	    ccp *str = sf->field;
+	    for ( i = 0; i < sf->used; i++, str++ )
+		fprintf(stdlog,"SEARCH_PATH[%d]  = %s\n",i,*str);
 
-	    if ( log_level > 1 )
-	    {
-		SetupAutoAdd();
-		for ( sp = auto_add_path; *sp; sp++ )
-		    fprintf(stdlog,"AUTOADD_PATH[%td] = %s\n",sp-auto_add_path,*sp);
-	    }
+	    sf = GetAutoaddList();
+	    str = sf->field;
+	    for ( i = 0; i < sf->used; i++, str++ )
+		fprintf(stdlog,"AUTOADD_PATH[%d] = %s\n",i,*str);
 	}
 	fprintf(stdlog,"\n");
     }
@@ -1143,6 +1057,7 @@ const ccp warn_szs_name[WARNSZS__N] =
 {
     "itempos",		// WARNSZS_ITEMPOS
     "self-it",		// WARNSZS_SELF_ITPH
+    "no-minimap",	// WARNSZS_NO_MINIMAP
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1153,9 +1068,10 @@ ccp GetWarnSZSNames ( warn_bits_t ws, char sep )
     {
 	WARNSZS_ITEMPOS,
 	WARNSZS_SELF_ITPH,
+	WARNSZS_NO_MINIMAP,
 	-1
     };
-    
+
     char buf[100], *dest = buf;
 
     const int *op;
@@ -1859,7 +1775,7 @@ char * SubstString
 		tempbuf[count] = 0;
 	    }
 	    char * new_dest
-		= NormalizeFileName(dest,end-dest,tempbuf,ptr->allow_slash,use_utf8);
+		= NormalizeFileName(dest,end-dest,tempbuf,ptr->allow_slash,use_utf8,TRSL_NONE);
 	    if ( check_prev && *dest == '.' )
 	    {
 		int len = new_dest - dest;
@@ -1978,6 +1894,11 @@ int SubstDest
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			FormatField_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#undef FORMAT_FIELD_GROW
+#define FORMAT_FIELD_GROW(s) (s)/4+100
+
 ///////////////////////////////////////////////////////////////////////////////
 
 void InitializeFormatField ( FormatField_t * ff )
@@ -2110,7 +2031,7 @@ static FormatFieldItem_t * InsertFormatFieldHelper ( FormatField_t * ff, int idx
     noPRINT("+FF: %u/%u/%u\n",idx,ff->used,ff->size);
     if ( ff->used == ff->size )
     {
-	ff->size += 0x100;
+	ff->size += FORMAT_FIELD_GROW(ff->size);
 	ff->list = REALLOC(ff->list,ff->size*sizeof(*ff->list));
     }
     DASSERT( idx <= ff->used );
@@ -2329,7 +2250,7 @@ FormatFieldItem_t * AppendFormatField
     noPRINT(">FF: %u/%u\n",ff->used,ff->size);
     if ( ff->used == ff->size )
     {
-	ff->size += 0x100;
+	ff->size += FORMAT_FIELD_GROW(ff->size);
 	ff->list = REALLOC(ff->list,ff->size*sizeof(*ff->list));
     }
     TRACE("AppendFormatField(%s,%d) %d/%d\n",key,move_key,ff->used,ff->size);
@@ -3910,6 +3831,98 @@ void cmd_version_section
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////		    command config & support		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError cmd_config()
+{
+    uint i;
+    search_file_list_t sfl;
+    SearchConfigHelper(&sfl,0);
+
+    PrintScript_t ps;
+    SetupPrintScriptByOptions(&ps);
+    const bool print_info = ps.fform == PSFF_UNKNOWN;
+
+    if (print_info)
+	printf("\nList of %u searched configuration file%s (*=relevant, +=found):\n",
+		sfl.used, sfl.used == 1 ? "" : "s" );
+
+    search_file_t *found = 0, *sf = sfl.list;
+    for ( i = 0; i < sfl.used; i++, sf++ )
+    {
+	char ch;
+	if ( sf->itype < INTY_REG )
+	    ch = '-';
+	else if ( !found && ( !opt_config || sf->hint & CONF_HINT_OPT ))
+	{
+	    found = sf;
+	    ch = '*';
+	}
+	else
+	    ch = '+';
+
+	if (print_info)
+	    printf("  %c %s\n",ch,sf->fname);
+    }
+
+    if (print_info)
+    {
+	if (found)
+	    printf("\nRelevant configuration file: %s\n",found->fname);
+	else
+	    fputs("\nNo valid configuration file found!\n",stdout);
+    }
+
+    config_t config;
+    InitializeConfig(&config);
+    if (found)
+	ScanConfig(&config,found->fname,!opt_config);
+ #ifdef TEST
+    else if (opt_config)
+	ScanConfig(&config,opt_config,false);
+ #endif
+    else
+	ScanConfig(&config,0,true);
+
+    if (print_sections)
+	PrintConfigFile(stdout,&config);
+    else if (print_info)
+	PrintConfig( stdout, &config, verbose>0 || opt_install );
+    else
+	PrintConfigScript(stdout,&config);
+
+    ResetConfig(&config);
+    ResetSearchFile(&sfl);
+
+    if (print_info)
+    {
+	if ( long_count > 0 )
+	{
+	    const StringField_t *sf = GetSearchList();
+	    fputs("\nSearch list:\n",stdout);
+	    ccp *str = sf->field;
+	    for ( i = 0; i < sf->used; i++, str++ )
+		printf("  %s\n",*str);
+
+	    if ( long_count > 1 )
+	    {
+		const StringField_t *sf = GetAutoaddList();
+		fputs("\nAuto-add search list:\n",stdout);
+		ccp *str = sf->field;
+		for ( i = 0; i < sf->used; i++, str++ )
+		    printf("  %s\n",*str);
+	    }
+	}
+	putchar('\n');
+    }
+
+    ResetPrintScript(&ps);
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command argtest			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -5103,6 +5116,32 @@ file_format_t RepairMagicByOpt
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    misc			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void SetupPrintScriptByOptions ( PrintScript_t *ps )
+{
+    DASSERT(ps);
+
+    InitializePrintScript(ps);
+    ps->force_case	= opt_case;
+    ps->create_array	= script_array > 0;
+    ps->var_name	= script_varname ? script_varname : "res";
+    ps->var_prefix	= script_varname ? script_varname : "res_";
+    ps->eq_tabstop	= 2;
+    ps->ena_empty	= brief_count < 2;
+    ps->ena_comments	= brief_count < 1;
+
+    switch(script_fform)
+    {
+      case FF_JSON:	ps->fform = PSFF_JSON; break;
+      case FF_BASH:	ps->fform = PSFF_BASH; break;
+      case FF_SH:	ps->fform = PSFF_SH; break;
+      case FF_PHP:	ps->fform = PSFF_PHP; break;
+      case FF_MAKEDOC:	ps->fform = PSFF_MAKEDOC; break;
+      default:		ps->fform = print_sections ? PSFF_CONFIG : PSFF_UNKNOWN; break;
+    }
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 void SHA1_to_ID ( sha1_id_t id, const sha1_hash_t hash )
@@ -6453,7 +6492,7 @@ valid_t IsValidKMP
 		"KMP header declares file size as %u bytes, but it has only %u bytes: %s",
 		hi.file_size, file_size, fname );
 	hi.file_size = file_size;
-	
+
 	kmp_file_gen_t *kfile = (kmp_file_gen_t*)data;
 	write_be32(&kfile->file_size,hi.file_size);
     }

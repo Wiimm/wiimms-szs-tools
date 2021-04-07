@@ -320,10 +320,10 @@ uint CountDefObjUsage ( const kmp_t *kmp, u16 obj_id )
 
 ccp GetDefObjConditionName ( u16 cond )
 {
-    const gobj_cond_ref_t *rc;
-    for ( rc = cond_ref_tab; rc->ref_id; rc++ )
-	if ( rc->cond_mask == cond && !(rc->option & 4) )
-	    return PrintCircBuf("C$%s",rc->name);
+    const gobj_cond_ref_t *gcr;
+    for ( gcr = cond_ref_tab; gcr->ref_id; gcr++ )
+	if ( gcr->cond_mask == cond && !(gcr->option & 4) )
+	    return PrintCircBuf("C$%s",gcr->name);
 
     return PrintCircBuf("0x%04x",cond);
 }

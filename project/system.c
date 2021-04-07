@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit http://szs.wiimm.de/ for project details and sources.           *
  *                                                                         *
- *   Copyright (c) 2011-2020 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -37,9 +37,11 @@
 
 #include "dclib/dclib-system.h"
 
-int main ( int argc, char ** argv )
-{
+#ifndef PRINT_SYSTEM_SETTINGS
+ int main ( int argc, char ** argv )
+ {
     dclibPrintSystem(stdout);
     return 0;
-}
+ }
+#endif
 

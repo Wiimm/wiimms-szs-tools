@@ -125,6 +125,8 @@ static const feature_var_t szs_feature_list[] =
     DEF_VAR( 0,HAVESZS_GHT_KART,	f_ght_kart,		"File common/GeoHitTableKart.bin" ),
     DEF_VAR( 0,HAVESZS_GHT_KART_OBJ,	f_ght_kart_obj,		"File common/GeoHitTableKartObj.bin" ),
     DEF_VAR( 0,HAVESZS_MINIGAME,	f_minigame,		"File common/minigame.kmg" ),
+    DEF_VAR( 0,HAVESZS_AIPARAM_BAA,	f_aiparam_baa,		"File AIParam/AIParam.baa" ),
+    DEF_VAR( 0,HAVESZS_AIPARAM_BAS,	f_aiparam_bas,		"File AIParam/AIParam.bas" ),
 
     {0,0,0,0,0}
 };
@@ -507,6 +509,8 @@ const features_szs_t * GetFeaturesModes()
 	m.f_ght_kart		=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
 	m.f_ght_kart_obj	=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
 	m.f_minigame		=              FZM_GAMEPLAY | FZM_BATTLE | FZM_M_WHERE;
+	m.f_aiparam_baa		=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_OFFLINE;
+	m.f_aiparam_bas		=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_OFFLINE;
 
 	m.kmp_woodbox_ht	=              FZM_GAMEPLAY | FZM_M_TYPE | no_timetrial;
 	m.kmp_mushroom_car	= FZM_VISUAL | FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
@@ -1661,7 +1665,8 @@ static enumError ScanLEXElement_SET1
 
     //--- setup data
 
-    lex_set1_t set1 = {0};
+    lex_set1_t set1;
+    memset(&set1,0,sizeof(set1));
 
     const ScanParam_t ptab[] =
     {
@@ -2654,6 +2659,17 @@ int ScanOptLtRandom ( ccp arg )
 ///////////////			lex_info_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+void InitializeLexInfo ( lex_info_t *info )
+{
+    DASSERT(info);
+    memset(info,0,sizeof(*info));
+    info->item_factor.x = 1.0;
+    info->item_factor.y = 1.0;
+    info->item_factor.z = 1.0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SetupLexInfo ( lex_info_t *info, const lex_t *lex )
 {
     DASSERT(info);
@@ -2672,6 +2688,7 @@ void SetupLexInfo ( lex_info_t *info, const lex_t *lex )
 	    info->set1_found = true;
 	    memcpy(&info->set1,item->elem.data,sizeof(info->set1));
 	    bef4n(info->set1.item_factor.v,info->set1.item_factor.v,3);
+	    memcpy(&info->item_factor,&info->set1.item_factor,sizeof(info->item_factor));
 	}
 
 	item = FindElementLEX(lex,LEXS_TEST);

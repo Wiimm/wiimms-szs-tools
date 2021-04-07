@@ -95,6 +95,7 @@ typedef enum enumOptions
 	OPT_VERSION,
 	OPT_HELP,
 	OPT_XHELP,
+	OPT_CONFIG,
 	OPT_ALLOW_ALL,
 	OPT_COMPATIBLE,
 	OPT_WIDTH,
@@ -123,7 +124,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 62
+	OPT__N_TOTAL // == 63
 
 } enumOptions;
 
@@ -204,6 +205,8 @@ typedef enum enumOptions
 //				| OB_LONG,
 //
 //	OB_CMD_HELP		= ~(u64)0,
+//
+//	OB_CMD_CONFIG		= OB_LONG,
 //
 //	OB_CMD_ARGTEST		= ~(u64)0,
 //
@@ -297,6 +300,7 @@ typedef enum enumCommands
 
 	CMD_VERSION,
 	CMD_HELP,
+	CMD_CONFIG,
 	CMD_ARGTEST,
 	CMD_TEST,
 	CMD_COLORS,
@@ -320,7 +324,7 @@ typedef enum enumCommands
 	CMD_PATCH,
 
 
-	CMD__N // == 22
+	CMD__N // == 23
 
 } enumCommands;
 
@@ -361,6 +365,7 @@ typedef enum enumGetOpt
 	GO_VERBOSE		= 'v',
 
 	GO_XHELP		= 0x80,
+	GO_CONFIG,
 	GO_ALLOW_ALL,
 	GO_COMPATIBLE,
 	GO_WIDTH,

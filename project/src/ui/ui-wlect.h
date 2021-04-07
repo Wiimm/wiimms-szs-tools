@@ -75,9 +75,7 @@ typedef enum enumOptions
 	OPT_CUSTOM_TT,
 	OPT_XPFLAGS,
 	OPT_SPEEDOMETER,
-	OPT_RESERVED_1B9,
-	OPT_RESERVED_1BA,
-	OPT_RESERVED_1BB,
+	OPT_DEBUG,
 	OPT_TRACK_DIR,
 	OPT_COPY_TRACKS,
 	OPT_MOVE_TRACKS,
@@ -101,13 +99,14 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 45
+	OPT__N_SPECIFIC, // == 43
 
 	//----- global options -----
 
 	OPT_VERSION,
 	OPT_HELP,
 	OPT_XHELP,
+	OPT_CONFIG,
 	OPT_ALLOW_ALL,
 	OPT_COMPATIBLE,
 	OPT_WIDTH,
@@ -139,7 +138,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 78
+	OPT__N_TOTAL // == 77
 
 } enumOptions;
 
@@ -173,9 +172,7 @@ typedef enum enumOptions
 //	OB_CUSTOM_TT		= 1llu << OPT_CUSTOM_TT,
 //	OB_XPFLAGS		= 1llu << OPT_XPFLAGS,
 //	OB_SPEEDOMETER		= 1llu << OPT_SPEEDOMETER,
-//	OB_RESERVED_1B9		= 1llu << OPT_RESERVED_1B9,
-//	OB_RESERVED_1BA		= 1llu << OPT_RESERVED_1BA,
-//	OB_RESERVED_1BB		= 1llu << OPT_RESERVED_1BB,
+//	OB_DEBUG		= 1llu << OPT_DEBUG,
 //	OB_TRACK_DIR		= 1llu << OPT_TRACK_DIR,
 //	OB_COPY_TRACKS		= 1llu << OPT_COPY_TRACKS,
 //	OB_MOVE_TRACKS		= 1llu << OPT_MOVE_TRACKS,
@@ -216,9 +213,7 @@ typedef enum enumOptions
 //				| OB_CUSTOM_TT
 //				| OB_XPFLAGS
 //				| OB_SPEEDOMETER
-//				| OB_RESERVED_1B9
-//				| OB_RESERVED_1BA
-//				| OB_RESERVED_1BB,
+//				| OB_DEBUG,
 //
 //	OB_GRP_PATCH		= OB_LE_DEFINE
 //				| OB_LPAR
@@ -243,6 +238,8 @@ typedef enum enumOptions
 //				| OB_LONG,
 //
 //	OB_CMD_HELP		= ~(u64)0,
+//
+//	OB_CMD_CONFIG		= OB_LONG,
 //
 //	OB_CMD_ARGTEST		= ~(u64)0,
 //
@@ -272,6 +269,8 @@ typedef enum enumOptions
 //	OB_CMD_FLOAT		= OB_ROUND,
 //
 //	OB_CMD_EXPORT		= 0,
+//
+//	OB_CMD_DPAD		= 0,
 //
 //	OB_CMD_DUMP		= OB_GRP_PATCH
 //				| OB_LONG
@@ -330,6 +329,7 @@ typedef enum enumCommands
 
 	CMD_VERSION,
 	CMD_HELP,
+	CMD_CONFIG,
 	CMD_ARGTEST,
 	CMD_TEST,
 	CMD_COLORS,
@@ -341,6 +341,7 @@ typedef enum enumCommands
 	CMD_CALCULATE,
 	CMD_FLOAT,
 	CMD_EXPORT,
+	CMD_DPAD,
 
 	CMD_DUMP,
 	CMD_DL,
@@ -355,7 +356,7 @@ typedef enum enumCommands
 	CMD_ENCODE,
 
 
-	CMD__N // == 24
+	CMD__N // == 26
 
 } enumCommands;
 
@@ -393,6 +394,7 @@ typedef enum enumGetOpt
 	GO_VERBOSE		= 'v',
 
 	GO_XHELP		= 0x80,
+	GO_CONFIG,
 	GO_ALLOW_ALL,
 	GO_COMPATIBLE,
 	GO_WIDTH,
@@ -431,9 +433,7 @@ typedef enum enumGetOpt
 	GO_CUSTOM_TT,
 	GO_XPFLAGS,
 	GO_SPEEDOMETER,
-	GO_RESERVED_1B9,
-	GO_RESERVED_1BA,
-	GO_RESERVED_1BB,
+	GO_DEBUG,
 	GO_TRACK_DIR,
 	GO_COPY_TRACKS,
 	GO_MOVE_TRACKS,

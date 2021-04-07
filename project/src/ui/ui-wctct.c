@@ -413,6 +413,15 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" commands included. Exit after printing."
     },
 
+    {	OPT_CONFIG, false, false, false, false, false, 0, "config",
+	"file",
+	"Define a configuration file or a directory as source. In later case,"
+	" file 'wiimms-szs-tools.conf' is searched.\n"
+	"  If option is not not set, then file 'wiimms-szs-tools.conf' is"
+	" searched in different directories. Use command 'wszst CONFIG' to get"
+	" more details."
+    },
+
     {	OPT_ALLOW_ALL, false, false, false, false, false, 0, "allow-all",
 	0,
 	"Usually commands accept only options with impact to the command. All"
@@ -653,7 +662,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" 0x3b:0x41 and 0x44:0xfe."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 81
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 82
 
 };
 
@@ -679,6 +688,12 @@ static const InfoOption_t option_cmd_VERSION_LONG =
     {	OPT_LONG, false, false, false, false, false, 'l', "long",
 	0,
 	"Print in long format. Ignored if option --sections is set."
+    };
+
+static const InfoOption_t option_cmd_CONFIG_LONG =
+    {	OPT_LONG, false, false, false, false, false, 'l', "long",
+	0,
+	"If set, print the search list too."
     };
 
 static const InfoOption_t option_cmd_COLORS_LONG =
@@ -800,6 +815,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_VERSION,	"VERSION",	0,		0 },
     { CMD_HELP,		"HELP",		"H",		0 },
     { CMD_HELP,		"?",		0,		0 },
+    { CMD_CONFIG,	"CONFIG",	0,		0 },
     { CMD_ARGTEST,	"ARGTEST",	0,		0 },
     { CMD_TEST,		"TEST",		0,		0 },
     { CMD_COLORS,	"COLORS",	0,		0 },
@@ -835,6 +851,7 @@ static const struct option OptionLong[] =
 	{ "version",		0, 0, 'V' },
 	{ "help",		0, 0, 'h' },
 	{ "xhelp",		0, 0, GO_XHELP },
+	{ "config",		1, 0, GO_CONFIG },
 	{ "allow-all",		0, 0, GO_ALLOW_ALL },
 	 { "allowall",		0, 0, GO_ALLOW_ALL },
 	{ "compatible",		1, 0, GO_COMPATIBLE },
@@ -1018,61 +1035,62 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x076 v */	OPT_VERBOSE,
 	/* 0x077   */	 0,0,0,0, 0,0,0,0, 0,
 	/* 0x080   */	OPT_XHELP,
-	/* 0x081   */	OPT_ALLOW_ALL,
-	/* 0x082   */	OPT_COMPATIBLE,
-	/* 0x083   */	OPT_WIDTH,
-	/* 0x084   */	OPT_MAX_WIDTH,
-	/* 0x085   */	OPT_DE,
-	/* 0x086   */	OPT_COLORS,
-	/* 0x087   */	OPT_NO_COLORS,
-	/* 0x088   */	OPT_CT_CODE,
-	/* 0x089   */	OPT_LE_CODE,
-	/* 0x08a   */	OPT_OLD_SPINY,
-	/* 0x08b   */	OPT_CRS1,
-	/* 0x08c   */	OPT_CHDIR,
-	/* 0x08d   */	OPT_ROUND,
-	/* 0x08e   */	OPT_RAW,
-	/* 0x08f   */	OPT_BMG_ENDIAN,
-	/* 0x090   */	OPT_BMG_ENCODING,
-	/* 0x091   */	OPT_BMG_INF_SIZE,
-	/* 0x092   */	OPT_BMG_MID,
-	/* 0x093   */	OPT_FORCE_ATTRIB,
-	/* 0x094   */	OPT_DEF_ATTRIB,
-	/* 0x095   */	OPT_NO_ATTRIB,
-	/* 0x096   */	OPT_X_ESCAPES,
-	/* 0x097   */	OPT_OLD_ESCAPES,
-	/* 0x098   */	OPT_NO_BMG_COLORS,
-	/* 0x099   */	OPT_BMG_COLORS,
-	/* 0x09a   */	OPT_NO_BMG_INLINE,
-	/* 0x09b   */	OPT_NO_ECHO,
-	/* 0x09c   */	OPT_UTF_8,
-	/* 0x09d   */	OPT_NO_UTF_8,
-	/* 0x09e   */	OPT_FORCE,
-	/* 0x09f   */	OPT_REPAIR_MAGICS,
-	/* 0x0a0   */	OPT_OLD,
-	/* 0x0a1   */	OPT_STD,
-	/* 0x0a2   */	OPT_NEW,
-	/* 0x0a3   */	OPT_EXTRACT,
-	/* 0x0a4   */	OPT_LIST,
-	/* 0x0a5   */	OPT_REF,
-	/* 0x0a6   */	OPT_FULL,
-	/* 0x0a7   */	OPT_HEX,
-	/* 0x0a8   */	OPT_CT_DIR,
-	/* 0x0a9   */	OPT_CT_LOG,
-	/* 0x0aa   */	OPT_ALLOW_SLOTS,
-	/* 0x0ab   */	OPT_IMAGES,
-	/* 0x0ac   */	OPT_LOAD_BMG,
-	/* 0x0ad   */	OPT_PATCH_BMG,
-	/* 0x0ae   */	OPT_MACRO_BMG,
-	/* 0x0af   */	OPT_FILTER_BMG,
-	/* 0x0b0   */	OPT_PATCH_NAMES,
-	/* 0x0b1   */	OPT_ORDER_BY,
-	/* 0x0b2   */	OPT_ORDER_ALL,
-	/* 0x0b3   */	OPT_DYNAMIC,
-	/* 0x0b4   */	OPT_WRITE_TRACKS,
-	/* 0x0b5   */	OPT_NUMBER,
-	/* 0x0b6   */	OPT_SECTIONS,
-	/* 0x0b7   */	 0,0,0,0, 0,0,0,0, 0,
+	/* 0x081   */	OPT_CONFIG,
+	/* 0x082   */	OPT_ALLOW_ALL,
+	/* 0x083   */	OPT_COMPATIBLE,
+	/* 0x084   */	OPT_WIDTH,
+	/* 0x085   */	OPT_MAX_WIDTH,
+	/* 0x086   */	OPT_DE,
+	/* 0x087   */	OPT_COLORS,
+	/* 0x088   */	OPT_NO_COLORS,
+	/* 0x089   */	OPT_CT_CODE,
+	/* 0x08a   */	OPT_LE_CODE,
+	/* 0x08b   */	OPT_OLD_SPINY,
+	/* 0x08c   */	OPT_CRS1,
+	/* 0x08d   */	OPT_CHDIR,
+	/* 0x08e   */	OPT_ROUND,
+	/* 0x08f   */	OPT_RAW,
+	/* 0x090   */	OPT_BMG_ENDIAN,
+	/* 0x091   */	OPT_BMG_ENCODING,
+	/* 0x092   */	OPT_BMG_INF_SIZE,
+	/* 0x093   */	OPT_BMG_MID,
+	/* 0x094   */	OPT_FORCE_ATTRIB,
+	/* 0x095   */	OPT_DEF_ATTRIB,
+	/* 0x096   */	OPT_NO_ATTRIB,
+	/* 0x097   */	OPT_X_ESCAPES,
+	/* 0x098   */	OPT_OLD_ESCAPES,
+	/* 0x099   */	OPT_NO_BMG_COLORS,
+	/* 0x09a   */	OPT_BMG_COLORS,
+	/* 0x09b   */	OPT_NO_BMG_INLINE,
+	/* 0x09c   */	OPT_NO_ECHO,
+	/* 0x09d   */	OPT_UTF_8,
+	/* 0x09e   */	OPT_NO_UTF_8,
+	/* 0x09f   */	OPT_FORCE,
+	/* 0x0a0   */	OPT_REPAIR_MAGICS,
+	/* 0x0a1   */	OPT_OLD,
+	/* 0x0a2   */	OPT_STD,
+	/* 0x0a3   */	OPT_NEW,
+	/* 0x0a4   */	OPT_EXTRACT,
+	/* 0x0a5   */	OPT_LIST,
+	/* 0x0a6   */	OPT_REF,
+	/* 0x0a7   */	OPT_FULL,
+	/* 0x0a8   */	OPT_HEX,
+	/* 0x0a9   */	OPT_CT_DIR,
+	/* 0x0aa   */	OPT_CT_LOG,
+	/* 0x0ab   */	OPT_ALLOW_SLOTS,
+	/* 0x0ac   */	OPT_IMAGES,
+	/* 0x0ad   */	OPT_LOAD_BMG,
+	/* 0x0ae   */	OPT_PATCH_BMG,
+	/* 0x0af   */	OPT_MACRO_BMG,
+	/* 0x0b0   */	OPT_FILTER_BMG,
+	/* 0x0b1   */	OPT_PATCH_NAMES,
+	/* 0x0b2   */	OPT_ORDER_BY,
+	/* 0x0b3   */	OPT_ORDER_ALL,
+	/* 0x0b4   */	OPT_DYNAMIC,
+	/* 0x0b5   */	OPT_WRITE_TRACKS,
+	/* 0x0b6   */	OPT_NUMBER,
+	/* 0x0b7   */	OPT_SECTIONS,
+	/* 0x0b8   */	 0,0,0,0, 0,0,0,0, 
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1100,115 +1118,121 @@ static u8 option_allowed_cmd_HELP[47] = // cmd #2
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1
 };
 
-static u8 option_allowed_cmd_ARGTEST[47] = // cmd #3
+static u8 option_allowed_cmd_CONFIG[47] = // cmd #3
+{
+    0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+};
+
+static u8 option_allowed_cmd_ARGTEST[47] = // cmd #4
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1
 };
 
-static u8 option_allowed_cmd_TEST[47] = // cmd #4
+static u8 option_allowed_cmd_TEST[47] = // cmd #5
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1
 };
 
-static u8 option_allowed_cmd_COLORS[47] = // cmd #5
+static u8 option_allowed_cmd_COLORS[47] = // cmd #6
 {
     0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_ERROR[47] = // cmd #6
+static u8 option_allowed_cmd_ERROR[47] = // cmd #7
 {
     0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1
 };
 
-static u8 option_allowed_cmd_FILETYPE[47] = // cmd #7
+static u8 option_allowed_cmd_FILETYPE[47] = // cmd #8
 {
     0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[47] = // cmd #8
+static u8 option_allowed_cmd_FILEATTRIB[47] = // cmd #9
 {
     0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_SYMBOLS[47] = // cmd #9
+static u8 option_allowed_cmd_SYMBOLS[47] = // cmd #10
 {
     0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_FUNCTIONS[47] = // cmd #10
+static u8 option_allowed_cmd_FUNCTIONS[47] = // cmd #11
 {
     0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_CALCULATE[47] = // cmd #11
+static u8 option_allowed_cmd_CALCULATE[47] = // cmd #12
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_FLOAT[47] = // cmd #12
+static u8 option_allowed_cmd_FLOAT[47] = // cmd #13
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_EXPORT[47] = // cmd #13
+static u8 option_allowed_cmd_EXPORT[47] = // cmd #14
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_RAWDUMP[47] = // cmd #14
+static u8 option_allowed_cmd_RAWDUMP[47] = // cmd #15
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_DUMP[47] = // cmd #15
+static u8 option_allowed_cmd_DUMP[47] = // cmd #16
 {
     0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,1,
     1,1,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_CAT[47] = // cmd #16
+static u8 option_allowed_cmd_CAT[47] = // cmd #17
 {
     0,0,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,  0,1,1,1,1, 1,1,0,1,1,
     1,1,1,1,1, 0,1,0,0,0,  0,0,0,0,0, 1,0
 };
 
-static u8 option_allowed_cmd_BMG[47] = // cmd #17
+static u8 option_allowed_cmd_BMG[47] = // cmd #18
 {
     0,0,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,1,1,1, 1,1,0,1,1,
     1,1,1,1,1, 0,1,0,0,0,  0,0,0,0,0, 1,0
 };
 
-static u8 option_allowed_cmd_TRACKS[47] = // cmd #18
+static u8 option_allowed_cmd_TRACKS[47] = // cmd #19
 {
     0,0,1,1,1, 1,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,  0,1,1,1,1, 1,1,0,1,1,
     1,1,1,1,1, 0,1,0,0,0,  0,0,0,0,0, 1,0
 };
 
-static u8 option_allowed_cmd_DECODE[47] = // cmd #19
+static u8 option_allowed_cmd_DECODE[47] = // cmd #20
 {
     0,0,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,  0,1,1,1,1, 1,1,0,1,1,
     1,1,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_CREATE[47] = // cmd #20
+static u8 option_allowed_cmd_CREATE[47] = // cmd #21
 {
     0,0,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,1,0,0, 0,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_PATCH[47] = // cmd #21
+static u8 option_allowed_cmd_PATCH[47] = // cmd #22
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,1,0,0, 0,0,0,1,1,
     1,1,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,0
@@ -1225,6 +1249,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_VERSION,
 	OptionInfo + OPT_HELP,
 	OptionInfo + OPT_XHELP,
+	OptionInfo + OPT_CONFIG,
 	OptionInfo + OPT_ALLOW_ALL,
 	OptionInfo + OPT_COMPATIBLE,
 	OptionInfo + OPT_WIDTH,
@@ -1271,6 +1296,14 @@ static const InfoOption_t * option_tab_cmd_HELP[] =
 {
 	OptionInfo + OPT_WIDTH,
 	OptionInfo + OPT_MAX_WIDTH,
+
+	0
+};
+
+static const InfoOption_t * option_tab_cmd_CONFIG[] =
+{
+	OptionInfo + OPT_CONFIG,
+	&option_cmd_CONFIG_LONG,
 
 	0
 };
@@ -1601,7 +1634,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms CT-CODE Tool : Manage the CT-CODE extension. BRRES, TEX0,"
 	" CT-CODE, CT-TEXT and LE-BIN files are accepted as input.",
 	0,
-	26,
+	27,
 	option_tab_tool,
 	0
     },
@@ -1642,6 +1675,21 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	2,
 	option_tab_cmd_HELP,
 	option_allowed_cmd_HELP
+    },
+
+    {	CMD_CONFIG,
+	false,
+	false,
+	false,
+	"CONFIG",
+	0,
+	"wctct CONFIG [options]...",
+	"Show all information about the search for the configuration file and"
+	" its content.",
+	0,
+	2,
+	option_tab_cmd_CONFIG,
+	option_allowed_cmd_CONFIG
     },
 
     {	CMD_ARGTEST,

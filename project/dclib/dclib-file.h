@@ -519,7 +519,7 @@ uint CloseAllExcept
 ///////////////		CopyFile*(),  TransferFile()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-// compare pathes and by stat()
+// compare paths and by stat()
 bool IsSameFile ( ccp path1, ccp path2 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -845,6 +845,33 @@ uint PrintLineBuffer
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			file helpers			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[inode_type_t]]
+
+typedef enum inode_type_t
+{
+    INTY_UNKNOWN,	// never tested
+    INTY_NOTFOUND,	// file not found or error
+    INTY_AVAIL,		// file is available
+    INTY_SOCK,		// S_ISSOCK
+    INTY_LINK,		// S_ISLNK
+    INTY_FIFO,		// S_ISFIFO
+    INTY_BLOCK,		// S_ISBLK
+    INTY_CHAR,		// S_ISCHR
+    INTY_DIR,		// S_ISDIR
+    INTY_REG,		// S_ISREG
+    INTY__N
+}
+__attribute__ ((packed)) inode_type_t;
+
+extern const char inode_type_char[INTY__N+1];
+
+//-----------------------------------------------------------------------------
+
+inode_type_t GetInodeType	( int ret_status, mode_t mode );
+inode_type_t GetInodeTypeByPath	( ccp path, mode_t *mode );
+inode_type_t GetInodeTypeByFD	( int fd,   mode_t *mode );
+
+///////////////////////////////////////////////////////////////////////////////
 
 int IsDirectory
 (
@@ -935,7 +962,7 @@ enumError RemoveSource
 (
     ccp			fname,		// file to remove
     ccp			dest_fname,	// NULL or dest file name
-					//   If real pathes are same: don't remove
+					//   If real paths are same: don't remove
     bool		print_log,	// true: print a log message
     bool		testmode	// true: don't remove, log only
 );
@@ -985,6 +1012,19 @@ uint NumberedFilename
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			normalize filenames		///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[trailing_slash]] 
+
+typedef enum trailing_slash
+{
+    TRSL_NONE,		// do nothing special
+    TRSL_REMOVE,	// remove trailing slash always
+    TRSL_ADD_ALWAYS,	// add trailing slash always
+    TRSL_ADD_AUTO,	// add trailing slash if it is a directory
+    TRSL_AUTO,		// add trailing slash if it is a directory, remove otherwise
+}
+trailing_slash;
+
+///////////////////////////////////////////////////////////////////////////////
 
 char * NormalizeFileName
 (
@@ -994,36 +1034,157 @@ char * NormalizeFileName
     uint		buf_size,	// size of buf
     ccp			source,		// NULL or source
     bool		allow_slash,	// true: allow '/' in source
-    bool		is_utf8		// true: enter UTF-8 mode
+    bool		is_utf8,	// true: enter UTF-8 mode
+    trailing_slash	slash_mode	// manipulate trailing slash
 );
 
 ///////////////////////////////////////////////////////////////////////////////
-#ifdef __CYGWIN__
 
- uint IsWindowsDriveSpec
- (
+uint IsWindowsDriveSpec
+(
     // returns the length of the found windows drive specification (0|2|3)
 
-    ccp			src		// valid string
- );
+    ccp		src		// NULL or valid string
+);
 
- uint NormalizeFilenameCygwin
- (
-    // returns a pointer to the NULL terminator within 'buf'
+uint NormalizeFilenameCygwin
+(
+    // returns the used length (without 0-term) of buf.
 
-    char		* buf,		// valid destination buffer
-    uint		buf_size,	// size of buf
-    ccp			src		// NULL or source
- );
+    char	* buf,		// valid destination buffer
+    uint	buf_size,	// size of buf
+    ccp		src		// NULL or source
+);
 
- char * AllocNormalizedFilenameCygwin
- (
+exmem_t GetNormalizeFilenameCygwin
+(
+    // returns an object. Call FreeExMem(RESULT) to free possible alloced memory.
+
+    ccp		source,		// NULL or source
+    bool	try_circ	// use circ-buffer, if result is small enough
+);
+
+char * AllocNormalizedFilenameCygwin
+(
     // returns an alloced buffer with the normalized filename
+    // Call FreeString(RESULT) to free possible alloced memory.
 
-    ccp source				// NULL or string
- );
+    ccp		source,		// NULL or source
+    bool	try_circ	// use circ-buffer, if result is small enough
+);
 
-#endif // __CYGWIN__
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			search file & config		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[search_file_t]]}
+
+typedef struct search_file_t
+{
+    ccp		fname;		// filename
+    bool	alloced;	// is 'fname' alloced
+    inode_type_t itype;		// one of INTY_*
+    u16		hint;		// any hint
+}
+search_file_t;
+
+//-----------------------------------------------------------------------------
+// [[search_file_list_t]]}
+
+typedef struct search_file_list_t
+{
+    search_file_t *list;	// list of files
+    uint	used;		// number of used elements in 'list'
+    uint	size;		// number of alloced elements for 'list'
+    exmem_list_t symbols;	// list to resolve $(SYMBOL)
+}
+search_file_list_t;
+
+//-----------------------------------------------------------------------------
+
+static inline void InitializeSearchFile ( search_file_list_t *sfl )
+	{ DASSERT(sfl); memset(sfl,0,sizeof(*sfl)); }
+
+void ResetSearchFile ( search_file_list_t *sfl );
+
+search_file_t * AppendSearchFile
+(
+    search_file_list_t *sfl,	// valid search list, new files will be appended
+    ccp		fname,		// path+fname to add
+    CopyMode_t	copy_mode,	// copy mode for 'fname'
+    ccp		append_if_dir	// append this if 'fname' is a directory
+);
+
+void DumpSearchFile ( FILE *f, int indent,
+			const search_file_list_t *sfl, bool show_symbols, ccp info );
+
+///////////////////////////////////////////////////////////////////////////////
+// [[config_hint_t]]
+
+typedef enum config_hint_t
+{
+    CONF_HINT_MISC	= 0x01,
+    CONF_HINT_INST	= 0x02,
+    CONF_HINT_ETC	= 0x04,
+    CONF_HINT_HOME	= 0x08,
+    CONF_HINT_OPT	= 0x10,
+}
+config_hint_t;
+
+//-----------------------------------------------------------------------------
+
+uint SearchConfig1
+(
+    search_file_list_t *sfl,
+			// valid search list, new file will be appended
+    ccp config_fname,	// default filename (without path) of config file
+
+    ccp option,		// NULL or filename by option		=> CONF_HINT_OPT
+    ccp home_path,	// NULL or home path for config file	=> CONF_HINT_HOME
+    ccp etc_path,	// NULL or etc path for config file	=> CONF_HINT_ETC
+    ccp share_path,	// NULL or share path for config file	=> CONF_HINT_MISC
+
+    int stop_mode	// >0: stop if found, >1: stop on option
+
+    // hints (by source, values=prio): 8:option, 4:home, 2:etc, 1:prog-path
+);
+
+//-----------------------------------------------------------------------------
+
+bool SearchConfig
+(
+    // for all paths:
+    //	/...		is an absolute path
+    //  $(home)/...	path relative to getenv("HOME")
+    //  $(xdg_home)/...	path relative to first path of getenv("XDG_CONFIG_HOME")
+    //  $(xdg_etc)/...	path relative to first path of getenv("XDG_CONFIG_DIRS")
+    //  $(etc)/...	path relative to /etc directory
+    //  $(install)/...	path relative to installation directory = ProgramDirectory()
+    //  $(NAME)/...	path relative to symbol in sfl->symbols
+    //  xx		relative paths otherwise
+
+    search_file_list_t *sfl,
+			// valid search list, new paths will be appended
+			// sfl->symbols: home, etc and install are added (not replaced)
+			//	It is used to resolve all $(NAME) references.
+
+    ccp config_fname,	// default filename (without path) of config file
+
+    ccp *option,	// NULL or filenames by option		=> CONF_HINT_OPT
+     int n_option,	//  num of 'option' elements, -1:null terminated list
+    ccp *xdg_home,	// NULL or $(xdg_home) based paths	=> CONF_HINT_HOME
+     int n_xdg_home,	//  num of 'home' elements, -1:null terminated list
+    ccp *home,		// NULL or $(home) based paths		=> CONF_HINT_HOME
+     int n_home,	//  num of 'home' elements, -1:null terminated list
+    ccp *etc,		// NULL or $(etc) based paths		=> CONF_HINT_ETC
+     int n_etc,		//  num of 'etc' elements, -1:null terminated list
+    ccp *install,	// NULL or $(install) based paths 	=> CONF_HINT_INST
+     int n_install,	//  num of 'install' elements, -1:null terminated list
+    ccp *misc,		// NULL or absolute paths		=> CONF_HINT_MISC
+     int n_misc,	//  num of 'misc' elements, -1:null terminated list
+
+    int stop_mode	// >0: stop if found, >1: stop on option
+);
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1341,6 +1502,7 @@ typedef enum PrintScriptFF
 {
 	PSFF_UNKNOWN,	// always 0
 	PSFF_ASSIGN,
+	PSFF_CONFIG,
 	PSFF_JSON,
 	PSFF_BASH,
 	PSFF_SH,
@@ -1359,9 +1521,13 @@ typedef struct PrintScript_t
 {
     FILE	*f;		// valid output file
     PrintScriptFF fform;	// output: file format
-    ccp		varname;	// valid ponter to var name
+    ccp		var_name;	// NULL or variable name for result
+    ccp		var_prefix;	// NULL or prefix for member names
+    int		var_size;	// if > 0: print size of var name (some 'fform' only)
+    int		eq_tabstop;	// if > 0: indent '=' to set tabstop (some 'fform' only) 
     LowerUpper_t force_case;	// change case of var names if not LOUP_AUTO
     bool	create_array;	// true: create ar arrays
+    bool	auto_quote;	// true: detect quotes and use EscapeString()
     bool	add_index;	// true: add index to varname
     bool	ena_empty;	// true: enable empty lines
     bool	ena_comments;	// true: enable comments

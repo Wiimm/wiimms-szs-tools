@@ -968,19 +968,82 @@ ccp GetEncodingName ( EncodeMode_t em )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+uint GetEscapedSize
+(
+    // returns the needed buffer size for PrintEscapedString() 
+
+    ccp		source,		// NULL or string to print
+    int		src_len,	// length of string. if -1, str is null terminated
+    CharMode_t	char_mode,	// modes, bit field (CHMD_*)
+    char	quote		// NULL or quotation char, that must be quoted
+)
+{
+    const CharMode_t utf8	= char_mode & CHMD_UTF8;
+    const CharMode_t allow_e	= char_mode & CHMD_ESC;
+
+    if ( !source || !*source )
+	return 1;
+    ccp str = source;
+    ccp end = src_len < 0 ? 0 : str + src_len;
+
+    uint size = 4; // +4 for escapes at end; +1 for NULL terminator
+    while ( !end || str < end )
+    {
+	const u8 ch = (u8)*str++;
+	switch (ch)
+	{
+	    case 0:
+		if (!end)
+		    return size;
+		size += 4;
+		break;
+
+	    case '\\':
+	    case '\a':
+	    case '\b':
+	    case '\f':
+	    case '\n':
+	    case '\r':
+	    case '\t':
+	    case '\v':
+		size += 2;
+		break;
+
+	    case '\033':
+		size += allow_e ? 2 : 4;
+		break;
+
+	    default:
+		if ( ch == quote )
+		    size += 2;
+		else if ( ch < ' ' || !utf8 && (ch&0x7f) < ' ' || (ch&0x7f) == 0x7f )
+		    size += 4;
+		else
+		    size++;
+	}
+    }
+    return size;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 char * PrintEscapedString
 (
     // returns 'buf'
 
     char	*buf,		// valid destination buffer
     uint	buf_size,	// size of 'buf', >= 10
-    ccp		source,		// NULL string to print
+    ccp		source,		// NULL or string to print
     int		len,		// length of string. if -1, str is null terminated
     CharMode_t	char_mode,	// modes, bit field (CHMD_*)
     char	quote,		// NULL or quotation char, that must be quoted
     uint	*dest_len	// not NULL: Store length of result here
 )
 {
+    /////////////////////////////////////////////////////////
+    /////  Update GetEscapedSize() on modifications!!   /////
+    /////////////////////////////////////////////////////////
+
     DASSERT(buf);
     DASSERT(buf_size>=10);
 
@@ -1061,7 +1124,7 @@ char * PrintEscapedString
 
 uint ScanEscapedString
 (
-    // returns the number of valid bytes in 'buf' (NULL term not counted)
+    // returns the number of valid bytes in 'buf' (NULL term added but not counted)
 
     char	*buf,		// valid destination buffer, maybe source
     uint	buf_size,	// size of 'buf'
@@ -2032,6 +2095,78 @@ mem_t EncodeByModeMem
     mem.ptr = buf;
     return mem;
 }
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////		escape/quote strings, alloc space	///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+char * EscapeString
+(
+    // Returns a pointer.
+    // Use FreeString(result) to free possible alloced result.
+    // circ-buffer is ignored by FreeString().
+
+    cvp		src,			// NULL or source
+    int		src_len,		// size of 'src'. If -1: Use strlen(src)
+    cvp		return_if_null,		// return this, if 'src==NULL'
+    cvp		return_if_empty,	// return this, if src is empty (have no chars)
+    CharMode_t	char_mode,		// how to escape
+    char	quote,			// quoting character: "  or  '  or  $ (for $'...')
+    bool	try_circ,		// use circ-buffer, if result is small enough
+    uint	*dest_len		// not NULL: Store length of result here
+)
+{
+    if (!src)
+	return (char*)return_if_null;
+    if ( src_len < 0 )
+	src_len = strlen(src);
+    if (!src_len)
+	return (char*)return_if_empty;
+
+    char quote_char;
+    uint quote_mode;
+    if ( quote == '$' )
+    {
+	quote_mode = 3;
+	quote_char = '\'';
+    }
+    else if (quote)
+    {
+	quote_mode = 2;
+	quote_char = quote;
+    }
+    else
+    {
+	quote_mode = 0;
+	quote_char = '"';
+    }
+
+    uint size = GetEscapedSize(src,src_len,char_mode,quote_char) + quote_mode;
+    char *buf = try_circ && size <= CIRC_BUF_MAX_ALLOC ? GetCircBuf(size) : MALLOC(size);
+
+    uint len;
+    if ( quote_mode == 3 )
+    {
+	PrintEscapedString(buf+2,size-3,src,src_len,char_mode,quote_char,&len);
+	buf[0] = '$';
+	buf[1] = buf[len+2] = quote_char;
+	buf[len+3] = 0;
+	
+    }
+    else if ( quote_mode == 2 )
+    {
+	PrintEscapedString(buf+1,size-2,src,src_len,char_mode,quote_char,&len);
+	buf[0] = buf[len+1] = quote_char;
+	buf[len+2] = 0;
+    }
+    else
+	PrintEscapedString(buf,size,src,src_len,char_mode,quote_char,&len);
+
+    if (dest_len)
+	*dest_len = len + quote_mode;
+    return buf;
+};
 
 //
 ///////////////////////////////////////////////////////////////////////////////

@@ -629,6 +629,40 @@ uint GetTextBOMLen ( const void * data, uint data_size );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			    CopyMode_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[CopyMode_t]]
+
+typedef enum CopyMode_t
+{
+    CPM_COPY,	// make a copy of the data, alloced
+    CPM_MOVE,	// move the alloced data
+    CPM_LINK,	// link the data
+
+} CopyMode_t;
+
+///////////////////////////////////////////////////////////////////////////////
+
+void * CopyData
+(
+    const void		*data,		// data to copy/move/link
+    uint		size,		// size of 'data'
+    CopyMode_t		mode,		// copy mode
+    bool		*res_alloced	// not NULL:
+					//   store true, if data must be freed
+					//   otherwise store false
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+void FreeData
+(
+    const void		*data,		// data to free
+    CopyMode_t		mode		// copy mode
+);
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct mem_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[mem_t]]
@@ -640,8 +674,8 @@ typedef struct mem_t
 }
 mem_t;
 
-extern mem_t EmptyMem;	    // mem_t(EmptyString,0)
-extern mem_t NullMem;	    // mem_t(0,0)
+extern mem_t EmptyMem;	// mem_t(EmptyString,0)
+extern mem_t NullMem;	// mem_t(0,0)
 
 //-----------------------------------------------------------------------------
 
@@ -651,6 +685,7 @@ static inline mem_t MemByChar ( char ch )
     return mem;
 }
 
+// NULL allowed
 static inline mem_t MemByString0 ( ccp str )
 {
     if (!str)
@@ -660,18 +695,21 @@ static inline mem_t MemByString0 ( ccp str )
     return mem;
 }
 
+// NULL forbidden
 static inline mem_t MemByString ( ccp str )
 {
     mem_t mem = { str, strlen(str) };
     return mem;
 }
 
+// NULL forbidden if len<0
 static inline mem_t MemByStringS ( ccp str, int len )
 {
     mem_t mem = { str, len < 0 ? strlen(str) : len };
     return mem;
 }
 
+// NULL forbidden if end=0
 static inline mem_t MemByStringE ( ccp str, ccp end )
 {
     mem_t mem = { str, end ? end-str : strlen(str) };
@@ -792,6 +830,103 @@ static inline char * DupStrMem ( const mem_t src )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			struct exmem_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[exmem_t]]
+
+typedef struct exmem_t
+{
+    mem_t	data;		// pointer and size of data
+    u32		attrib;		// user defined attribute
+    bool	is_original;	// true: 'data' is a copy of source
+    bool	is_circ_buf;	// true: 'data' is part of circ-buf
+    bool	is_alloced;	// true: 'data' is alloced (not circ-buf)
+    bool	is_key_alloced;	// true: external key is alloced
+}
+exmem_t;
+
+extern exmem_t EmptyExMem;	// mem_t(EmptyString,0),false,false
+extern exmem_t NullExMem;	// mem_t(0,0),false,false
+
+//-----------------------------------------------------------------------------
+// constructors
+
+static inline exmem_t ExMemByChar ( char ch )
+{
+    exmem_t em = { .data={ &ch, 1 }, .is_original=true };
+    return em;
+}
+
+static inline exmem_t ExMemByString0 ( ccp str )
+{
+    if (!str)
+	return NullExMem;
+
+    exmem_t em = { .data={ str, strlen(str) }, .is_original=true };
+    return em;
+}
+
+static inline exmem_t ExMemByString ( ccp str )
+{
+    exmem_t em = { .data={ str, str ? strlen(str) : 0 }, .is_original=true };
+    return em;
+}
+
+static inline exmem_t ExMemByStringS ( ccp str, int len )
+{
+    exmem_t em = { .data={ str, !str ? 0 : len < 0 ? strlen(str) : len }, .is_original=true };
+    return em;
+}
+
+static inline exmem_t ExMemByStringE ( ccp str, ccp end )
+{
+    exmem_t em = { .data={ str, !str ? 0 : end ? end-str : strlen(str) }, .is_original=true };
+    return em;
+}
+
+static inline exmem_t ExMemByS ( ccp str, int len )
+{
+    exmem_t em = { .data={ str, len }, .is_original=true };
+    return em;
+}
+
+static inline exmem_t ExMemByE ( ccp str, ccp end )
+{
+    exmem_t em = { .data={ str, end-str }, .is_original=true };
+    return em;
+}
+
+//-----------------------------------------------------------------------------
+// interface
+
+// 'em' maybe modified ignoring 'const'
+void FreeExMem ( const exmem_t *em );
+void FreeExMemCM ( const exmem_t *em, CopyMode_t copy_mode ); // free if CPM_MOVE
+
+exmem_t AllocExMemS
+(
+    cvp		src,		// NULL or source
+    int		src_len,	// len of 'src'; if -1: use strlen(source)
+    bool	try_circ,	// use circ-buffer, if result is small enough
+    cvp		orig,		// NULL or data to compare
+    int		orig_len	// len of 'orig'; if -1: use strlen(source)
+);
+
+static inline exmem_t AllocExMemM ( mem_t src, bool try_circ, mem_t orig )
+	{ return AllocExMemS(src.ptr,src.len,try_circ,orig.ptr,orig.len); }
+
+void AssignExMem ( exmem_t *dest, const exmem_t *source, CopyMode_t copy_mode );
+static inline exmem_t CopyExMem ( const exmem_t *source, CopyMode_t copy_mode )
+	{ exmem_t em = {{0}}; AssignExMem(&em,source,copy_mode); return em; }
+
+exmem_t CopyExMemS ( ccp string, int slen, CopyMode_t copy_mode );
+static inline exmem_t CopyExMemM ( const mem_t source, CopyMode_t copy_mode )
+	{ return CopyExMemS(source.ptr,source.len,copy_mode); }
+
+ccp PrintExMem ( const exmem_t * em ); // print to circ-buf
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct mem_list_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[mem_list_t]]
@@ -825,7 +960,9 @@ mem_list_mode_t;
 
 //-----------------------------------------------------------------------------
 
-void InitializeMemList ( mem_list_t *ml );
+static inline void InitializeMemList ( mem_list_t *ml )
+	{ DASSERT(ml); memset(ml,0,sizeof(*ml)); }
+
 void ResetMemList ( mem_list_t *ml );
 void MoveMemList ( mem_list_t *dest, mem_list_t *src );
 
@@ -1037,39 +1174,6 @@ uint PurgeCircBuf  ( CircBuf_t *cb );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			    CopyMode_t			///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-typedef enum CopyMode_t
-{
-    CPM_COPY,	// make a copy of the data, alloced
-    CPM_MOVE,	// move the alloced data
-    CPM_LINK,	// link the data
-
-} CopyMode_t;
-
-///////////////////////////////////////////////////////////////////////////////
-
-void * CopyData
-(
-    const void		*data,		// data to copy/move/link
-    uint		size,		// size of 'data'
-    CopyMode_t		mode,		// copy mode
-    bool		*res_alloced	// not NULL:
-					//   store true, if data must be freed
-					//   otherwise store false
-);
-
-///////////////////////////////////////////////////////////////////////////////
-
-void FreeData
-(
-    const void		*data,		// data to free
-    CopyMode_t		mode		// copy mode
-);
-
-//
-///////////////////////////////////////////////////////////////////////////////
 ///////////////			split strings			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1192,7 +1296,7 @@ ccp ProgramDirectory(void);
 void DefineLogDirectory ( ccp path0, bool force );
 
 // get 'ProgInfo.logdir' without tailing '/' ("." as fall back)
-ccp GetLogDirectory();
+ccp GetLogDirectory(void);
 
 #ifdef __CYGWIN__
     ccp ProgramPathNoExt(void);
@@ -1264,7 +1368,7 @@ ccp PathAllocPPE    ( ccp path1, ccp path2, ccp ext );
 static inline ccp PathCatPPE ( char *buf, size_t bufsize, ccp path1, ccp path2, ccp ext )
 	{ return PathCatBufPPE(buf,bufsize,path1,path2,ext); }
 
-// Same as PathCatPP*(), but use 'base' as prefix for relative pathes.
+// Same as PathCatPP*(), but use 'base' as prefix for relative paths.
 // If 'base' is NULL (but not empty), use getcwd() instead.
 // PathCatBufBP() and PathCatBP() are special: path can be part of buf
 char *PathCatBufBP   ( char *buf, size_t bufsize, ccp base, ccp path );
@@ -1389,9 +1493,12 @@ char * PrintID
 #define CIRC_BUF_MAX_ALLOC 0x0400  // request limit
 #define CIRC_BUF_SIZE      0x4000  // internal buffer size
 
+// returns true if 'ptr' points into circ buffer => ignored by FreeString()
+bool IsCircBuf ( cvp ptr );
+
 char * GetCircBuf
 (
-    // never returns NULL, but always ALIGN(4)
+    // Never returns NULL, but always ALIGN(4)
 
     u32		buf_size	// wanted buffer size, caller must add 1 for NULL-term
 				// if buf_size > CIRC_BUF_MAX_ALLOC:
@@ -1400,7 +1507,7 @@ char * GetCircBuf
 
 char * CopyCircBuf
 (
-    // never returns NULL, but always ALIGN(4)
+    // Never returns NULL, but always ALIGN(4)
 
     cvp		data,		// source to copy
     u32		data_size	// see GetCircBuf()
@@ -1408,8 +1515,8 @@ char * CopyCircBuf
 
 char * CopyCircBuf0
 (
-    // never returns NULL, but always ALIGN(4)
-    // an additional char is alloced and set to NULL
+    // Like CopyCircBuf(), but an additional char is alloced and set to NULL
+    // Never returns NULL, but always ALIGN(4).
 
     cvp		data,		// source to copy
     u32		data_size	// see GetCircBuf()
@@ -1417,10 +1524,31 @@ char * CopyCircBuf0
 
 char * PrintCircBuf
 (
+    // returns CopyCircBuf0() or EmptyString.
+
     ccp		format,		// format string for vsnprintf()
     ...				// arguments for 'format'
 )
 __attribute__ ((__format__(__printf__,1,2)));
+
+char * AllocCircBuf
+(
+    // Never returns NULL. Call FreeString(RESULT) to free possible alloced memory.
+
+    cvp		src,		// NULL or source
+    int		src_len,	// len of 'src'; if -1: use strlen(source)
+    bool	try_circ	// use circ-buffer, if result is small enough
+);
+
+char * AllocCircBuf0
+(
+    // Never returns NULL. Call FreeString(RESULT) to free possible alloced memory.
+    // Like AllocCircBuf(), but an additional char is alloced and set to NULL
+
+    cvp		src,		// NULL or source
+    int		src_len,	// len of 'src'; if -1: use strlen(source)
+    bool	try_circ	// use circ-buffer, if result is small enough
+);
 
 void ReleaseCircBuf
 (
@@ -2171,6 +2299,7 @@ typedef enum CharMode_t // select encodig/decoding method
     CHMD_UTF8		= 0x01,  // UTF8 support enabled (compatible with legacy bool)
     CHMD_ESC		= 0x02,  // escape ESC by \e
 
+    CHMD__MODERN	= CHMD_UTF8 | CHMD_ESC,
     CHMD__ALL		= CHMD_UTF8 | CHMD_ESC,
 }
 __attribute__ ((packed)) CharMode_t;
@@ -2233,13 +2362,25 @@ extern ccp TableDecode64default, TableEncode64default;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+uint GetEscapedSize
+(
+    // returns the needed buffer size for PrintEscapedString() 
+
+    ccp		source,		// NULL or string to print
+    int		src_len,	// length of string. if -1, str is null terminated
+    CharMode_t	char_mode,	// modes, bit field (CHMD_*)
+    char	quote		// NULL or quotation char, that must be quoted
+);
+
+//-----------------------------------------------------------------------------
+
 char * PrintEscapedString
 (
     // returns 'buf'
 
     char	*buf,		// valid destination buffer
     uint	buf_size,	// size of 'buf', >= 10
-    ccp		source,		// NULL string to print
+    ccp		source,		// NULL or string to print
     int		len,		// length of string. if -1, str is null terminated
     CharMode_t	char_mode,	// modes, bit field (CHMD_*)
     char	quote,		// NULL or quotation char, that must be quoted
@@ -2250,7 +2391,7 @@ char * PrintEscapedString
 
 uint ScanEscapedString
 (
-    // returns the number of valid bytes in 'buf' (NULL term not counted)
+    // returns the number of valid bytes in 'buf' (NULL term added but not counted)
 
     char	*buf,		// valid destination buffer, maybe source
     uint	buf_size,	// size of 'buf'
@@ -2540,6 +2681,71 @@ ccp GetShiftJISStatistics(void);
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////		escape/quote strings, alloc space	///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+char * EscapeString
+(
+    // Returns a pointer.
+    // Use FreeString(result) to free possible alloced result.
+    // circ-buffer is ignored by FreeString().
+
+    cvp		src,			// NULL or source
+    int		src_len,		// size of 'src'. If -1: Use strlen(src)
+    cvp		return_if_null,		// return this, if 'src==NULL'
+    cvp		return_if_empty,	// return this, if src is empty (have no chars)
+    CharMode_t	char_mode,		// how to escape
+    char	quote,			// quoting character: "  or  '  or  $ (for $'...')
+    bool	try_circ,		// use circ-buffer, if result is small enough
+    uint	*dest_len		// not NULL: Store length of result here
+);
+
+//-----------------------------------------------------------------------------
+
+static inline char * EscapeStringM ( mem_t src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src.ptr,src.len,if_null,EmptyString,cm,0,false,0); }
+
+static char * EscapeStringS ( ccp src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src,-1,if_null,EmptyString,cm,0,false,0); }
+
+//-----------------------------------------------------------------------------
+
+static inline char * EscapeStringCircM ( mem_t src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src.ptr,src.len,if_null,EmptyString,cm,0,true,0); }
+
+static char * EscapeStringCircS ( ccp src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src,-1,if_null,EmptyString,cm,0,true,0); }
+
+//-----------------------------------------------------------------------------
+
+static inline char * QuoteStringM ( mem_t src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src.ptr,src.len,if_null,EmptyQuote,cm,true,false,0); }
+
+static char * QuoteStringS ( ccp src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src,-1,if_null,EmptyQuote,cm,'"',false,0); }
+
+static inline char * QuoteBashM ( mem_t src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src.ptr,src.len,if_null,EmptyQuote,cm,'$',false,0); }
+
+static char * QuoteBashS ( ccp src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src,-1,if_null,EmptyQuote,cm,'$',false,0); }
+
+//-----------------------------------------------------------------------------
+
+static inline char * QuoteStringCircM ( mem_t src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src.ptr,src.len,if_null,EmptyQuote,cm,'"',true,0); }
+
+static char * QuoteStringCircS ( ccp src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src,-1,if_null,EmptyQuote,cm,'"',true,0); }
+
+static inline char * QuoteBashCircM ( mem_t src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src.ptr,src.len,if_null,EmptyQuote,cm,'$',true,0); }
+
+static char * QuoteBashCircS ( ccp src, cvp if_null, CharMode_t cm )
+	{ return EscapeString(src,-1,if_null,EmptyQuote,cm,'$',true,0); }
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			scan keywords			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2748,15 +2954,19 @@ OffOn_t;
 
 extern const KeywordTab_t KeyTab_OFF_AUTO_ON[];
 
-int ScanKeywordOffAutoOn
+int ScanKeywordOffAutoOnEx
 (
     // returns one of OFFON_*
 
+    const KeywordTab_t	*keytab,	// Keyword table. If NULL, then use KeyTab_OFF_AUTO_ON[]
     ccp			arg,		// argument to scan
     int			on_empty,	// return this value on empty
     uint		max_num,	// >0: additionally accept+return number <= max_num
     ccp			object		// NULL (silent) or object for error messages
 );
+
+static inline int ScanKeywordOffAutoOn( ccp arg, int on_empty, uint max_num, ccp object )
+	{ return ScanKeywordOffAutoOnEx(0,arg,on_empty,max_num,object); }
 
 ccp GetKeywordOffAutoOn ( OffOn_t value );
 
@@ -4393,8 +4603,11 @@ uint RemoveStringFieldByIndex ( StringField_t * sf, int index, int n );
 // helper function
 ccp * InsertStringFieldHelper ( StringField_t * sf, int idx );
 
-// append at the end an do not sort
+// append at the end and do not sort
 void AppendStringField ( StringField_t * sf, ccp key, bool move_key );
+
+// append at the end if nor already exists, do not sort
+void AppendUniqueStringField ( StringField_t * sf, ccp key, bool move_key );
 
 // re-sort field using sf->func_cmp()
 void SortStringField ( StringField_t * sf );
@@ -4484,7 +4697,9 @@ typedef struct ParamField_t
 
 //-----------------------------------------------------------------------------
 
-void InitializeParamField ( ParamField_t * pf );
+static inline void InitializeParamField ( ParamField_t * pf )
+	{ DASSERT(pf); memset(pf,0,sizeof(*pf)); }
+
 void ResetParamField ( ParamField_t * pf );
 void MoveParamField ( ParamField_t * dest, ParamField_t * src );
 
@@ -4492,18 +4707,16 @@ int FindParamFieldIndex ( const ParamField_t * pf, ccp key, int not_found_value 
 ParamFieldItem_t * FindParamField ( const ParamField_t * pf, ccp key );
 ParamFieldItem_t * FindParamFieldByNum ( const ParamField_t * pf, uint num );
 ParamFieldItem_t * FindInsertParamField
-		( ParamField_t * pf, ccp key, bool move_key, bool *old_found );
-ParamFieldItem_t * CountParamField ( ParamField_t * pf, ccp key, bool move_key );
+		( ParamField_t * pf, ccp key, bool move_key, uint num, bool *old_found );
+ParamFieldItem_t * IncrementParamField ( ParamField_t * pf, ccp key, bool move_key );
 
+// Insert: Insert only if not found, Replace: Insert or replace data
 // return: true if item inserted/deleted
 bool InsertParamField ( ParamField_t * pf, ccp key, bool move_key, uint num, cvp data );
 bool ReplaceParamField( ParamField_t * pf, ccp key, bool move_key, uint num, cvp data );
 bool RemoveParamField ( ParamField_t * pf, ccp key );
 
-ParamFieldItem_t * InsertParamFieldEx
-	( ParamField_t * pf, ccp key, bool move_key, uint num, bool *found );
-
-// append at the end an do not sort
+// append at the end and do not sort
 ParamFieldItem_t * AppendParamField
 	( ParamField_t * pf, ccp key, bool move_key, uint num, cvp data );
 
@@ -4512,6 +4725,81 @@ uint FindParamFieldHelper ( const ParamField_t * pf, bool * found, ccp key );
 
 // find first pattern that matches
 ParamFieldItem_t * MatchParamField ( const ParamField_t * pf, ccp key );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			struct exmem_list_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[exmem_key_t]]
+
+typedef struct exmem_key_t
+{
+    ccp			key;		// string as main key => data.is_key_alloced
+    exmem_t		data;		// data
+}
+exmem_key_t;
+
+//-----------------------------------------------------------------------------
+// [[exmem_list_t]]
+
+typedef struct exmem_list_t
+{
+    exmem_key_t		*list;		// data list
+    uint		used;		// number of used titles in the title field
+    uint		size;		// number of allocated pointers in 'field'
+    bool		is_unsorted;	// true: list is not sorted (Append() was used)
+    int	(*func_cmp)( ccp s1, ccp s2 );	// compare function, default is strcmp()
+}
+exmem_list_t;
+
+//-----------------------------------------------------------------------------
+
+static inline void InitializeEML ( exmem_list_t * eml )
+	{ DASSERT(eml); memset(eml,0,sizeof(*eml)); }
+
+void ResetEML ( exmem_list_t * eml );
+void MoveEML ( exmem_list_t * dest, exmem_list_t * src );
+
+// return the index of the (next) item
+uint FindHelperEML ( const exmem_list_t * eml, ccp key, bool *found );
+
+int FindIndexEML ( const exmem_list_t * eml, ccp key, int not_found_value );
+exmem_key_t * FindEML ( const exmem_list_t * eml, ccp key );
+exmem_key_t * FindAttribEML ( const exmem_list_t * eml, u32 attrib );
+exmem_key_t * FindInsertEML ( exmem_list_t * eml, ccp key, CopyMode_t cm_key, bool *old_found );
+
+// Insert if not found, ignore othwerwise. Return true if item inserted
+bool InsertEML ( exmem_list_t * eml, ccp key, CopyMode_t cm_key,
+					const exmem_t *data, CopyMode_t cm_data );
+
+// Insert or replace content. Return true if item inserted
+bool ReplaceEML ( exmem_list_t * eml, ccp key, CopyMode_t cm_key,
+					const exmem_t *data, CopyMode_t cm_data );
+
+// Replace content if found. Return true if item found
+bool OverwriteEML ( exmem_list_t * eml, ccp key, CopyMode_t cm_key,
+					const exmem_t *data, CopyMode_t cm_data );
+
+// Append at the end and do not sort
+exmem_key_t * AppendEML  ( exmem_list_t * eml, ccp key, CopyMode_t cm_key,
+					const exmem_t *data, CopyMode_t cm_data );
+
+// Return true if item found and removed
+bool RemoveEML ( exmem_list_t * eml, ccp key );
+
+
+// find first pattern that matches
+exmem_key_t * MatchEML ( const exmem_list_t * eml, ccp key );
+
+void DumpEML ( FILE *f, int indent, const exmem_list_t * eml, ccp info );
+
+//-----------------------------------------------------------------------------
+
+exmem_t ResolveSymbolsEML ( const exmem_list_t * eml, ccp source );
+uint ResolveAllSymbolsEML ( exmem_list_t * eml );
+
+// add symbols 'home', 'etc', 'install' = 'prog' and 'cwd'
+void AddStandardSymbolsEML ( exmem_list_t * eml, bool overwrite );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

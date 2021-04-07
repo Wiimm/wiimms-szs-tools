@@ -1019,10 +1019,79 @@ void * dclib_memdup ( MPARAM const void * src, size_t copylen )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void * dclib_memdup2 ( MPARAM cvp src1, size_t len1, cvp src2, size_t len2 )
+{
+    char *res = dclib_malloc( MCALL len1+len2+1);
+    char *dest = res;
+    if (len1)
+    {
+	memcpy(dest,src1,len1);
+	dest += len1;
+    }
+    if (len2)
+    {
+	memcpy(dest,src2,len2);
+	dest += len2;
+    }
+    *dest = 0;
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void * dclib_memdup3
+	( MPARAM cvp src1, size_t len1, cvp src2, size_t len2, cvp src3, size_t len3  )
+{
+    char *res = dclib_malloc( MCALL len1+len2+len3+1);
+    char *dest = res;
+    if (len1)
+    {
+	memcpy(dest,src1,len1);
+	dest += len1;
+    }
+    if (len2)
+    {
+	memcpy(dest,src2,len2);
+	dest += len2;
+    }
+    if (len3)
+    {
+	memcpy(dest,src3,len3);
+	dest += len3;
+    }
+    *dest = 0;
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void * dclib_allocdup ( MPARAM const void * src, size_t copylen )
 {
     char * dest = dclib_malloc( MCALL copylen);
     memcpy(dest,src,copylen);
+    return dest;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+char * dclib_printdup ( MPARAM ccp format, ... )
+{
+    char buf[2000];
+
+    va_list arg;
+    va_start(arg,format);
+    const int stat = vsnprintf(buf,sizeof(buf),format,arg) + 1;
+    va_end(arg);
+
+    char * dest = dclib_malloc( MCALL stat );
+    if ( stat <= sizeof(buf) )
+	memcpy(dest,buf,stat);
+    else
+    {
+	va_start(arg,format);
+	vsnprintf(dest,stat,format,arg);
+	va_end(arg);
+    }
     return dest;
 }
 
@@ -1511,11 +1580,83 @@ void * trace_memdup
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void * trace_memdup2 ( ccp func, ccp file, uint line,
+	cvp src1, size_t len1, cvp src2, size_t len2  )
+{
+    char *res = trace_malloc(func,file,line,len1+len2+1);
+    char *dest = res;
+
+    if (len1)
+    {
+	memcpy(dest,src1,len1);
+	dest += len1;
+    }
+    if (len2)
+    {
+	memcpy(dest,src2,len2);
+	dest += len2;
+    }
+    *dest = 0;
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void * trace_memdup3 ( ccp func, ccp file, uint line,
+	cvp src1, size_t len1, cvp src2, size_t len2, cvp src3, size_t len3 )
+{
+    char *res = trace_malloc(func,file,line,len1+len2+len3+1);
+    char *dest = res;
+    if (len1)
+    {
+	memcpy(dest,src1,len1);
+	dest += len1;
+    }
+    if (len2)
+    {
+	memcpy(dest,src2,len2);
+	dest += len2;
+    }
+    if (len3)
+    {
+	memcpy(dest,src3,len3);
+	dest += len3;
+    }
+    *dest = 0;
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void * trace_allocdup
 	( ccp func, ccp file, uint line, const void * src, size_t copylen )
 {
     char * dest = trace_malloc(func,file,line,copylen);
     memcpy(dest,src,copylen);
+    return dest;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+char * trace_printdup
+	( ccp func, ccp file, uint line, ccp format, ... )
+{
+    char buf[2000];
+
+    va_list arg;
+    va_start(arg,format);
+    const int stat = vsnprintf(buf,sizeof(buf),format,arg) + 1;
+    va_end(arg);
+
+    char * dest = trace_malloc(func,file,line,stat);
+    if ( stat <= sizeof(buf) )
+	memcpy(dest,buf,stat);
+    else
+    {
+	va_start(arg,format);
+	vsnprintf(dest,stat,format,arg);
+	va_end(arg);
+    }
     return dest;
 }
 

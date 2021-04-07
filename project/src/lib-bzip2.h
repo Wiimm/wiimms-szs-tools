@@ -297,7 +297,7 @@ typedef struct BZ2Source_t
     //--- search files
 
     ccp		search;		// Semicolon separated list of filenames
-				// or sub-pathes to search.
+				// or sub-paths to search.
 				// NULL terminate source lists.
 
     //--- internal fall back data

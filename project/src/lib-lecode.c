@@ -61,11 +61,8 @@ OffOn_t	opt_200cc		= OFFON_AUTO;
 OffOn_t	opt_perfmon		= OFFON_AUTO;
 OffOn_t	opt_custom_tt		= OFFON_AUTO;
 OffOn_t	opt_xpflags		= OFFON_AUTO;
-OffOn_t	opt_speedo		= OFFON_AUTO;
-
-int	opt_reserved_1b9	= -1;
-int	opt_reserved_1ba	= -1;
-int	opt_reserved_1bb	= -1;
+int	opt_speedo		= OFFON_AUTO;
+int	opt_lecode_debug	= OFFON_AUTO;
 
 bool	opt_complete		= false;
 
@@ -154,11 +151,39 @@ int ScanOptXPFlags ( ccp arg )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// [[speedo_mode_t]] [[copy-lecode]] copy changes to LE-CODE
+
+typedef enum speedo_mode_t
+{
+    SPEEDO_OFF		= 0,
+    SPEEDO_ON,
+    SPEEDO_FRACTION1,
+    SPEEDO_FRACTION2,
+    SPEEDO_FRACTION3,
+    SPEEDO_MAX		= SPEEDO_FRACTION3,	// max allowed value
+}
+speedo_mode_t;
+
+//-----------------------------------------------------------------------------
 
 int ScanOptSpeedometer ( ccp arg )
 {
+    const KeywordTab_t keytab[] =
+    {
+     { OFFON_OFF,	"OFF",		"-1",	0 },
+     { OFFON_AUTO,	"AUTO",		0,	0 },
+     { SPEEDO_ON,	"ON",		0,	0 },
+     { SPEEDO_ON,	"FORCE",	0,	0 }, // legacy, [[obsolete]], remove in 2022
+     { SPEEDO_ON,	"0DIGITS",	"0",	0 },
+     { SPEEDO_FRACTION1,"FRACTION",	0,	0 },
+     { SPEEDO_FRACTION1,"1DIGITS",	"1",	0 },
+     { SPEEDO_FRACTION2,"2DIGITS",	"2",	0 },
+     { SPEEDO_FRACTION3,"3DIGITS",	"3",	0 },
+     { 0,0,0,0 }
+    };
+
     const int stat
-	= ScanKeywordOffAutoOn(arg,OFFON_ON,OFFON_ON,"Option --speedo");
+	= ScanKeywordOffAutoOnEx(keytab,arg,OFFON_ON,0,"Option --speedo");
     if ( stat == OFFON_ERROR )
 	return 1;
 
@@ -167,28 +192,94 @@ int ScanOptSpeedometer ( ccp arg )
     return 0;
 }
 
+//-----------------------------------------------------------------------------
+
+ccp GetLecodeSpeedoName ( speedo_mode_t mode )
+{
+    switch (mode)
+    {
+	case SPEEDO_OFF:	break;
+	case SPEEDO_ON:		return "0";
+	case SPEEDO_FRACTION1:	return "1";
+	case SPEEDO_FRACTION2:	return "2";
+	case SPEEDO_FRACTION3:	return "3";
+	// no default! => compiler warnings for missed values
+    }
+    return "OFF";
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
-int ScanOptReserved_1b9 ( ccp arg )
+ccp GetLecodeDebugName ( le_debug_mode_t mode )
 {
-    opt_reserved_1b9 = str2l(arg,0,10);
-    PRINT("RESERVED_1B9=%d\n",opt_reserved_1b9);
+    switch (mode)
+    {
+	case DEBUGMD_OFF:
+	case DEBUGMD__N:	break;
+	case DEBUGMD_ENABLED:	return "ENABLED";
+	case DEBUGMD_DEBUG1:
+	case DEBUGMD_DEBUG2:
+	case DEBUGMD_DEBUG3:
+	case DEBUGMD_DEBUG4:	return PrintCircBuf("%u",mode-DEBUGMD_DEBUG1+1);
+	// no default! => compiler warnings for missed values
+    }
+    return "OFF";
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetLecodeDebugInfo ( le_debug_mode_t mode )
+{
+    switch (mode)
+    {
+	case DEBUGMD_OFF:	return "disabled";
+	case DEBUGMD_ENABLED:	return "enabled but hidden";
+	case DEBUGMD_DEBUG1:
+	case DEBUGMD_DEBUG2:
+	case DEBUGMD_DEBUG3:
+	case DEBUGMD_DEBUG4:	return PrintCircBuf("view DEBUG-%u",mode-DEBUGMD_DEBUG1+1);
+	case DEBUGMD__N:	break;
+	// no default! => compiler warnings for missed values
+    }
+    return "?";
+}
+
+//-----------------------------------------------------------------------------
+
+int ScanOptDebug ( ccp arg )
+{
+    const KeywordTab_t keytab[] =
+    {
+      { OFFON_OFF,	"OFF",		"-1",	0 },
+      { OFFON_AUTO,	"AUTO",		"0",	0 },
+      { DEBUGMD_ENABLED,"USER",		"1",	0 },
+      { DEBUGMD_DEBUG1,	"DEBUG1",	"D1",	0 },
+      { DEBUGMD_DEBUG2,	"DEBUG2",	"D2",	0 },
+      { DEBUGMD_DEBUG3,	"DEBUG3",	"D3",	0 },
+      { DEBUGMD_DEBUG4,	"DEBUG4",	"D4",	0 },
+      { 0,0,0,0 }
+    };
+
+    const int stat
+	= ScanKeywordOffAutoOnEx(keytab,arg,OFFON_ON,DEBUGMD__N-1,"Option --debug");
+    if ( stat == OFFON_ERROR )
+	return 1;
+
+    opt_lecode_debug = stat;
+    PRINT("LE-DEBUG=%d (%s)\n",opt_lecode_debug,GetLecodeDebugInfo(opt_lecode_debug));
     return 0;
 }
 
-int ScanOptReserved_1ba ( ccp arg )
-{
-    opt_reserved_1ba = str2l(arg,0,10);
-    PRINT("RESERVED_1BA=%d\n",opt_reserved_1ba);
-    return 0;
-}
+///////////////////////////////////////////////////////////////////////////////
 
+#if 0
 int ScanOptReserved_1bb ( ccp arg )
 {
     opt_reserved_1bb = str2l(arg,0,10);
-    PRINT("RESERVED_1BB=%d\n",opt_reserved_1b9);
+    PRINT("RESERVED_1BB=%d\n",opt_reserved_1bb);
     return 0;
 }
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -287,8 +378,269 @@ const VarMap_t * SetupVarsLECODE()
 {
     static VarMap_t vm = {0};
     if (!vm.used)
+    {
 	DefineMkwVars(&vm);
+	//DefineParserFuncTab(lex_func_tab,FF_LPAR);
+	DefineParserVars(&vm);
+
+	//--- setup integer variables
+
+	struct inttab_t { ccp name; int val; };
+	static const struct inttab_t inttab[] =
+	{
+	    { "DEBUG$OFF",		PREDEBUG_OFF },
+	    { "DEBUG$CLEAR",		PREDEBUG_CLEAR },
+	    { "DEBUG$STANDARD",		PREDEBUG_STANDARD },
+	    { "DEBUG$OPPONENT",		PREDEBUG_OPPONENT },
+	    { "DEBUG$VERTICAL",		PREDEBUG_VERTICAL },
+
+	    { "DEBUG$ENABLED",		DEBUGMD_ENABLED },
+	    { "DEBUG$0",		DEBUGMD_ENABLED },
+	    { "DEBUG$1",		DEBUGMD_DEBUG1 },
+	    { "DEBUG$2",		DEBUGMD_DEBUG2 },
+	    { "DEBUG$3",		DEBUGMD_DEBUG3 },
+	    { "DEBUG$4",		DEBUGMD_DEBUG4 },
+
+	    { "SPEEDO$OFF",		SPEEDO_OFF },
+	    { "SPEEDO$0",		SPEEDO_ON },
+	    { "SPEEDO$1",		SPEEDO_FRACTION1 },
+	    { "SPEEDO$2",		SPEEDO_FRACTION2 },
+	    { "SPEEDO$3",		SPEEDO_FRACTION3 },
+
+	    {0,0}
+	};
+
+	const struct inttab_t * ip;
+	for ( ip = inttab; ip->name; ip++ )
+	    DefineIntVar(&vm,ip->name,ip->val);
+    }
     return &vm;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			LE-CODE Debug			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetDebugModeSummary ( const lecode_debug_info_t *ldi )
+{
+    DASSERT(ldi);
+    return PrintCircBuf("I=%d,%d, M:%02x,%02x, %s=%u",
+	ldi->index, ldi->filter_active, ldi->mode, ldi->relevant,
+	ldi->name ? ldi->name : "-", ldi->value );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool GetFirstDebugMode
+	( lecode_debug_info_t *ldi, lecode_debug_t mode, bool filter_active )
+{
+    DASSERT(ldi);
+    memset(ldi,0,sizeof(*ldi));
+    ldi->mode		= mode & LEDEB__ALL;
+    ldi->filter_active	= filter_active;
+
+    return GetNextDebugMode(ldi);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool GetNextDebugMode ( lecode_debug_info_t *ldi )
+{
+    struct tab_t
+    {
+	lecode_debug_t	mode;
+	int		shift;
+	const char	name[12];
+    };
+
+    static const struct tab_t tab[] =
+    {
+	{ LEDEB_ENABLED,	0,			"ENABLED"	},
+	{ LEDEB_OPPONENT,	0,			"OPPONENT"	},
+	{ LEDEB_SPACE,		0,			"SPACE"		},
+	{ LEDEB_POSITION,	0,			"POSITION"	},
+	{ LEDEB_CHECK_POINT,	LEDEB_S_CHECK_POINT,	"CHECK-POINT"	},
+	{ LEDEB_RESPAWN,	0,			"RESPAWN"	},
+	{ LEDEB_LAP_POS,	0,			"LAP-POS"	},
+    };
+
+    while ( ldi->index >= 0 && ldi->index < sizeof(tab)/sizeof(*tab) )
+    {
+	const struct tab_t *ptr = tab + ldi->index++;
+	if ( ldi->filter_active && !(ptr->mode&ldi->mode) )
+	    continue;
+
+	ldi->relevant	= ptr->mode;
+	ldi->name	= ptr->name;
+	ldi->value	= ldi->mode & ptr->mode;
+	if (ptr->shift)
+	    ldi->value >>= ptr->shift;
+	else
+	    ldi->value = ldi->value != 0;
+	return true;
+    }
+
+    ldi->index		= -1;
+    ldi->relevant	= 0;
+    ldi->name		= 0;
+    ldi->value		= 0;
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+lecode_debug_t DecodeLecodeDebug ( lecode_debug_ex_t *lde, lecode_debug_t mode )
+{
+    DASSERT(lde);
+    memset(lde,0,sizeof(*lde));
+
+    mode		&= LEDEB__ALL;
+    lde->mode		= mode;
+    lde->enabled	= ( mode & LEDEB_ENABLED ) > 0;
+    lde->opponent	= ( mode & LEDEB_OPPONENT ) > 0;
+    lde->space		= ( mode & LEDEB_SPACE ) > 0;
+    lde->position	= ( mode & LEDEB_POSITION ) > 0;
+    lde->check_point	= mode >> LEDEB_S_CHECK_POINT & LEDEB_M_CHECK_POINT;
+    lde->respawn	= ( mode & LEDEB_RESPAWN ) > 0;
+    lde->lap_pos	= ( mode & LEDEB_LAP_POS ) > 0;
+
+    lde->have_output	= isDebugModeOutput(mode);
+    lde->is_active	= isDebugModeActive(mode);
+
+    return mode;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+lecode_debug_t EncodeLecodeDebug ( lecode_debug_ex_t *lde )
+{
+    DASSERT(lde);
+
+    lecode_debug_t mode = ( lde->check_point & LEDEB_M_CHECK_POINT ) << LEDEB_S_CHECK_POINT;
+    if ( lde->enabled )		mode |= LEDEB_ENABLED;
+    if ( lde->opponent )	mode |= LEDEB_OPPONENT;
+    if ( lde->space )		mode |= LEDEB_SPACE;
+    if ( lde->position )	mode |= LEDEB_POSITION;
+    if ( lde->respawn )		mode |= LEDEB_RESPAWN;
+    if ( lde->lap_pos )		mode |= LEDEB_LAP_POS;
+
+    return DecodeLecodeDebug(lde,mode); // normalize all settings
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetPredefDebugName ( predef_debug_t pd_mode )
+{
+    switch ( pd_mode )
+    {
+	case PREDEBUG_OFF:	break;
+	case PREDEBUG_CLEAR:	return "CLEAR";
+	case PREDEBUG_STANDARD:	return "STANDARD";
+	case PREDEBUG_OPPONENT:	return "OPPONENT";
+	case PREDEBUG_VERTICAL:	return "VERTICAL";
+	// no default! => compiler warnings for missed values
+    }
+    return "OFF";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool SetupLecodeDebugLPAR
+(
+    le_lpar_t		*lpar,		// LE-CODE parameters
+    uint		config,		// configuration index 0..
+    uint		setup_mode,	// setup mode, one of PREDEBUG_*
+    int			*hide_speedo	// if not NULL: store new mode here
+)
+{
+    DASSERT(lpar);
+    DASSERT( config >= 0 && config < DEBUGMD__N-DEBUGMD_DEBUG1 );
+
+
+    //--- setup data table
+
+    struct setup_t
+    {
+	u16 predef;
+	s16 line;
+	u32 mode;
+    };
+
+    static const struct setup_t setup_tab[] =
+    {
+	{ PREDEBUG_CLEAR, 0, 0 },
+
+	{ PREDEBUG_STANDARD, 1, LEDEB__STD },
+
+	{ PREDEBUG_OPPONENT, 1, LEDEB__STD },
+	{ PREDEBUG_OPPONENT, 2, LEDEB__STD|LEDEB_OPPONENT },
+
+	{ PREDEBUG_VERTICAL,-1, 0 }, // hide speedo
+	{ PREDEBUG_VERTICAL, 1, LEDEB_CHECK_POINT },
+	{ PREDEBUG_VERTICAL, 2, LEDEB_RESPAWN },
+	{ PREDEBUG_VERTICAL, 3, LEDEB_LAP_POS },
+	{ PREDEBUG_VERTICAL, 4, LEDEB_POSITION },
+
+	{0,0,0}
+    };
+
+    const struct setup_t *ptr;
+    for ( ptr = setup_tab; ptr->predef; ptr++ )
+    {
+	if ( ptr->predef == setup_mode )
+	{
+	    lpar->debug_predef[config] = setup_mode;
+	    int my_hide_speedo = 0;
+
+	    u32 *debug_list = lpar->debug[config];
+	    for ( int line = 0; line < LEDEB__N_LINE; line++ )
+		debug_list[line] = LEDEB_ENABLED;
+
+	    for ( ; ptr->predef == setup_mode; ptr++ )
+	    {
+		if ( ptr->line < 0 )
+		    my_hide_speedo++;
+		else
+		    debug_list[ptr->line] = ptr->mode | LEDEB_ENABLED;
+	    }
+
+	    if (hide_speedo)
+		*hide_speedo = my_hide_speedo;
+
+	    const u8 hide_mask = 1 << config;
+	    if ( my_hide_speedo > 0 )
+		lpar->no_speedo_if_debug |= hide_mask;
+	    else
+		lpar->no_speedo_if_debug &= ~hide_mask;
+
+	    return true;
+	}
+    }
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool SetupLecodeDebugIfEmptyLPAR ( le_lpar_t *lpar )
+{
+    DASSERT(lpar);
+
+    for ( int config = 0; config < LEDEB__N_CONFIG; config++ )
+	for ( int line = 0; line < LEDEB__N_LINE; line++ )
+	    if ( isDebugModeOutput(lpar->debug[config][line]) )
+		return false;
+
+    for ( int config = 0; config < LEDEB__N_CONFIG; config++ )
+	for ( int line = 0; line < LEDEB__N_LINE; line++ )
+	    lpar->debug[config][line] = LEDEB_ENABLED;
+
+    SetupLecodeDebugLPAR(lpar,0,PREDEBUG_STANDARD,0);
+    SetupLecodeDebugLPAR(lpar,1,PREDEBUG_OPPONENT,0);
+    SetupLecodeDebugLPAR(lpar,2,PREDEBUG_VERTICAL,0);
+
+    return true;
 }
 
 //
@@ -306,11 +658,13 @@ lpar_mode_t CalcCurrentLparMode ( const le_lpar_t * lp, bool use_limit_param )
 	return temp > lp->limit_mode ? temp : lp->limit_mode;
     }
 
-    if ( lp->enable_perfmon > 1 || lp->enable_speedo > 1 )
+    if ( lp->enable_perfmon > 1  )
 	return LPM_EXPERIMENTAL;
 
-    return lp->enable_perfmon || !lp->enable_xpflags
-	? LPM_TESTING : LPM_PRODUCTIVE;
+    return lp->enable_perfmon
+	|| !lp->enable_xpflags
+	|| lp->enable_speedo > SPEEDO_FRACTION1
+		? LPM_TESTING : LPM_PRODUCTIVE;
 }
 
 //-----------------------------------------------------------------------------
@@ -343,15 +697,13 @@ bool LimitToLparMode ( le_lpar_t * lp, lpar_mode_t lpmode )
 	    { lp->enable_perfmon = 0; modified = true; }
 	if (!lp->enable_xpflags)
 	    { lp->enable_xpflags = 1; modified = true; }
-	if ( lp->enable_speedo > 1 )
-	    { lp->enable_speedo = 1; modified = true; }
+	if ( lp->enable_speedo > SPEEDO_MAX )
+	    { lp->enable_speedo = SPEEDO_MAX; modified = true; }
     }
     else if ( lpmode == LPM_TESTING )
     {
 	if ( lp->enable_perfmon > 1 )
 	    { lp->enable_perfmon  = 1; modified = true; }
-	if ( lp->enable_speedo > 1 )
-	    { lp->enable_speedo = 1; modified = true; }
     }
 
     return modified;
@@ -546,6 +898,8 @@ static void NormalizeLPAR ( le_lpar_t * lp )
 {
     DASSERT(lp);
 
+    SetupLecodeDebugIfEmptyLPAR(lp);
+
     int sum = lp->engine[0] + lp->engine[1] + lp->engine[2];
     if ( sum != 0 && sum != 100 )
     {
@@ -562,9 +916,13 @@ static void NormalizeLPAR ( le_lpar_t * lp )
     lp->enable_perfmon		= lp->enable_perfmon < 2 ? lp->enable_perfmon : 2;
     lp->enable_custom_tt	= lp->enable_custom_tt > 0;
     lp->enable_xpflags		= lp->enable_xpflags > 0;
-    lp->enable_speedo		= lp->enable_speedo < 2 ? lp->enable_speedo : 2;
+    lp->enable_speedo		= lp->enable_speedo < SPEEDO_MAX ? lp->enable_speedo : SPEEDO_MAX;
     lp->block_track		= lp->block_track < LE_MAX_BLOCK_TRACK
 				? lp->block_track : LE_MAX_BLOCK_TRACK;
+
+    for ( int c = 0; c < LEDEB__N_CONFIG; c++ )
+	for ( int l = 0; l < LEDEB__N_LINE; l++ )
+	    lp->debug[c][l] &= LEDEB__ALL;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -595,6 +953,21 @@ static void CopyLPAR2Data ( le_analyse_t * ana )
     if ( offsetof(le_binpar_v1_t,enable_speedo) < ana->param_size )
 	h->enable_speedo = lp->enable_speedo;
 
+    if ( offsetof(le_binpar_v1_t,enable_speedo) < ana->param_size )
+	h->no_speedo_if_debug = lp->no_speedo_if_debug;
+
+    if ( offsetof(le_binpar_v1_t,debug_mode) < ana->param_size )
+	h->debug_mode = lp->debug_mode;
+
+    if ( offsetof(le_binpar_v1_t,item_cheat) < ana->param_size )
+	h->item_cheat = lp->item_cheat;
+
+    if ( offsetof(le_binpar_v1_t,debug_predef[LEDEB__N_CONFIG]) <= ana->param_size )
+	memcpy( h->debug_predef,lp->debug_predef,sizeof(h->debug_predef));
+
+    if ( offsetof(le_binpar_v1_t,debug[LEDEB__N_CONFIG][0]) <= ana->param_size )
+	write_be32n( h->debug[0], lp->debug[0], LEDEB__N_CONFIG*LEDEB__N_LINE );
+
     if ( offsetof(le_binpar_v1_t,block_track) < ana->param_size )
 	h->block_track = lp->block_track;
 
@@ -603,15 +976,6 @@ static void CopyLPAR2Data ( le_analyse_t * ana )
 
     if ( offsetof(le_binpar_v1_t,chat_mode_2) + sizeof(h->chat_mode_2) <= ana->param_size )
 	write_be16n(h->chat_mode_2,lp->chat_mode_2,BMG_N_CHAT);
-
-    // reserved (for future extensions)
-
-    if ( offsetof(le_binpar_v1_t,reserved_1b9) < ana->param_size )
-	h->reserved_1b9 = lp->reserved_1b9;
-    if ( offsetof(le_binpar_v1_t,reserved_1ba) < ana->param_size )
-	h->reserved_1ba = lp->reserved_1ba;
-    if ( offsetof(le_binpar_v1_t,reserved_1bb) < ana->param_size )
-	h->reserved_1bb = lp->reserved_1bb;
 }
 
 //
@@ -620,7 +984,7 @@ static void CopyLPAR2Data ( le_analyse_t * ana )
 
 enumError SaveTextLPAR
 (
-    const le_lpar_t	*lpar,		// LE-CODE parameters
+    le_lpar_t		*lpar,		// LE-CODE parameters
     ccp			fname,		// filename of destination
     bool		set_time	// true: set time stamps
 )
@@ -648,6 +1012,7 @@ enumError SaveTextLPAR
 
     //--- print section
 
+    SetupLecodeDebugIfEmptyLPAR(lpar);
     err = WriteSectionLPAR(F.f,lpar);
 
 
@@ -703,9 +1068,6 @@ enumError WriteSectionLPAR
     fprintf(f,"\r\n#\f\r\n%.79s\r\n\r\n[LECODE-PARAMETERS]\r\n",Hash200);
 
     const bool verbose = print_header && !brief_count && !export_count;
-    const bool have_reserved = lpar->reserved_1b9
-			    || lpar->reserved_1ba
-			    || lpar->reserved_1bb;
 
     if (verbose)
     {
@@ -716,13 +1078,11 @@ enumError WriteSectionLPAR
 		,lpar->enable_perfmon
 		,lpar->enable_custom_tt
 		,lpar->enable_xpflags
-		,lpar->enable_speedo
-		,LE_MAX_BLOCK_TRACK
-		,lpar->block_track
+		,LE_MAX_BLOCK_TRACK,lpar->block_track
+		,GetLecodeSpeedoName(lpar->enable_speedo)
+		,GetLecodeDebugName(lpar->debug_mode)
+		,lpar->item_cheat
 		);
-
-	if (have_reserved)
-	    fputs(text_lpar_sect_reserved_cr,f);
     }
     else
     {
@@ -734,25 +1094,23 @@ enumError WriteSectionLPAR
 	       "PERF-MONITOR	= %u\r\n"
 	       "CUSTOM-TT	= %u\r\n"
 	       "XPFLAGS		= %u\r\n"
-	       "SPEEDOMETER	= %u\r\n"
 	       "BLOCK-TRACK	= %u\r\n"
+	       "SPEEDOMETER	= SPEEDO$%s\r\n"
+	       "DEBUG		= DEBUG$%s\r\n"
+	       "ITEM-CHEATS	= %u\r\n"
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
 		,lpar->enable_200cc
 		,lpar->enable_perfmon
 		,lpar->enable_custom_tt
 		,lpar->enable_xpflags
-		,lpar->enable_speedo
 		,lpar->block_track
+		,GetLecodeSpeedoName(lpar->enable_speedo)
+		,GetLecodeDebugName(lpar->debug_mode)
+		,lpar->item_cheat
 		);
-
-	if (have_reserved)
-	    fputs("\r\n",f);
     }
 
-    if ( lpar->reserved_1b9 > 0 ) fprintf(f,"RESERVED-1B9\t= %u\r\n",lpar->reserved_1b9);
-    if ( lpar->reserved_1ba > 0 ) fprintf(f,"RESERVED-1BA\t= %u\r\n",lpar->reserved_1ba);
-    if ( lpar->reserved_1bb > 0 ) fprintf(f,"RESERVED-1BB\t= %u\r\n",lpar->reserved_1bb);
 
     //--- chat modes
 
@@ -770,8 +1128,8 @@ enumError WriteSectionLPAR
 	    fputs(text_lpar_sect_chat_example_cr,f);
     }
 
-    int i, last_group = -1; 
-    for ( i = 0; i < BMG_N_CHAT; i++ )
+    int last_group = -1; 
+    for ( int i = 0; i < BMG_N_CHAT; i++ )
     {
 	const u16 mode1 = lpar->chat_mode_1[i];
 	const u16 mode2 = lpar->chat_mode_2[i];
@@ -786,6 +1144,65 @@ enumError WriteSectionLPAR
 	    fprintf(f,"%s\n",PrintChatMode(i,mode1,mode2,export_count));
 	}
     }
+
+
+    //--- debug modes
+
+    if (verbose)
+	fprintf(f,text_lpar_sect_debug_docu_cr,
+				LEDEB__N_LINE, LEDEB__N_LINE-1, LEDEB__N_LINE-1 );
+
+    for ( int conf = 0; conf < LEDEB__N_CONFIG; conf++ )
+    {
+	fprintf(f,"\r\n#\f\r\n%.79s\r\n\r\n[DEBUG-%u]\r\n",Hash200,conf+1);
+	if (verbose)
+	    fputs("# See section [DEBUG-DOCU] for details.\n",f);
+
+	fprintf(f,"\r\n"
+		"SETUP\t\t= DEBUG$%s\n"
+		"HIDE-SPEEDO\t= %u\n",
+		GetPredefDebugName(lpar->debug_predef[conf]),
+		( 1<<conf & lpar->no_speedo_if_debug ) != 0 );
+
+	int done = 0;
+	for ( int line = 0; line <= LEDEB__N_LINE; line++ )
+	{
+	    int idx;
+	    lecode_debug_t mode;
+
+	    if ( line < LEDEB__N_LINE )
+	    {
+		mode = lpar->debug[conf][line];
+		if (!isDebugModeOutput(mode))
+		    continue;
+		idx = line;
+	    }
+	    else
+	    {
+		if (done)
+		    break;
+		mode = 0;
+		idx = 1;
+	    }
+	    done++;
+
+	    bool line_printed = false;
+	    lecode_debug_info_t ldi;
+	    for ( GetFirstDebugMode(&ldi,mode,!verbose); ldi.name; GetNextDebugMode(&ldi) )
+	    {
+		if (!line_printed)
+		{
+		    fprintf(f,"\nLINE\t\t= %u\r\n",idx);
+		    line_printed = true;
+		}
+		fprintf(f,"%s%.*s= %u\r\n",
+			ldi.name,
+			(23-(int)strlen(ldi.name))/8, Tabs20,
+			ldi.value );
+	    }
+	}
+    }
+
     return ERR_OK;
 }
 
@@ -983,13 +1400,21 @@ enumError AnalyseLEBinary
 		    le_binpar_v1_1b8_t *p	= (le_binpar_v1_1b8_t*)(data+off_param);
 		    be16n(ana->lpar.chat_mode_2,p->chat_mode_2,BMG_N_CHAT);
 		}
+
 		if ( param_size >= sizeof(le_binpar_v1_1bc_t) )
 		{
 		    le_binpar_v1_1bc_t *p	= (le_binpar_v1_1bc_t*)(data+off_param);
 		    ana->lpar.enable_speedo	= p->enable_speedo;
-		    ana->lpar.reserved_1b9	= p->reserved_1b9;
-		    ana->lpar.reserved_1ba	= p->reserved_1ba;
-		    ana->lpar.reserved_1bb	= p->reserved_1bb;
+		    ana->lpar.no_speedo_if_debug= p->no_speedo_if_debug;
+		    ana->lpar.debug_mode	= p->debug_mode;
+		}
+
+		if ( param_size >= sizeof(le_binpar_v1_260_t) )
+		{
+		    le_binpar_v1_260_t *p	= (le_binpar_v1_260_t*)(data+off_param);
+		    memcpy(ana->lpar.debug_predef,p->debug_predef,sizeof(ana->lpar.debug_predef));
+		    be32n(ana->lpar.debug[0],p->debug[0],LEDEB__N_CONFIG*LEDEB__N_LINE);
+		    ana->lpar.item_cheat	= p->item_cheat;
 		}
 		break;
 
@@ -1834,23 +2259,42 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t)  )
 	{
+	    ccp comment;
+	    char buf[50];
+	    if ( h->enable_speedo < SPEEDO_ON )
+		comment = " = disabled";
+	    else if ( h->enable_speedo <= SPEEDO_MAX )
+	    {
+		snprintf(buf,sizeof(buf)," = format \"%.*f km/h\"",
+			h->enable_speedo - SPEEDO_ON, 123.12345 );
+		comment = buf;
+	    }
+	    else
+		comment = "";
+	    
 	    fprintf(f,
-		"%*s" "Speedometer:       %u = %s\n"
-		,indent,"", h->enable_speedo,
-			h->enable_speedo > 1 ? "Wii(U)+Dolphin"
-			: h->enable_speedo ? "Wii(U) only" :"disabled"
-		);
+		"%*s" "Speedometer:       %u%s\n",
+		indent,"", h->enable_speedo, comment );
+	}
 
-	    if (h->reserved_1b9)
-		fprintf(f,"%*s" "Reserved 1B9:      %u\n",
-			indent,"", h->reserved_1b9 );
-	    if (h->reserved_1ba)
-		fprintf(f,"%*s" "Reserved 1BA:      %u\n",
-			indent,"", h->reserved_1ba );
+	if ( ana->param_size >= sizeof(le_binpar_v1_260_t)  )
+	{
+	    fprintf(f,
+		"%*s" "Debug mode:        %u = %s\n"
+		"%*s" "Item cheat:        %u = %s\n"
+		,indent,"", h->debug_mode, GetLecodeDebugInfo(h->debug_mode)
+		,indent,"", h->item_cheat, h->item_cheat ? "enabled" : "disabled"
+		);
+	}
+
+ #if 0 // for later use
+	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t)  )
+	{
 	    if (h->reserved_1bb)
 		fprintf(f,"%*s" "Reserved 1BB:      %u\n",
 			indent,"", h->reserved_1bb );
 	}
+ #endif
 
       #if defined(DEBUG) && defined(TEST) && 0
 	const uint po = ana->param_offset;
@@ -1869,7 +2313,6 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 		,indent,"", ntohl(h->off_music), ntohl(h->off_music) + po
 		);
       #endif
-
 
 	const bool hard_coded = ana->param_size < sizeof(le_binpar_v1_f8_t);
 	const u16 *chat_mode_1 = hard_coded ? chat_mode_legacy : ana->lpar.chat_mode_1;
@@ -2328,11 +2771,11 @@ void PatchLPAR ( le_lpar_t * lp )
     if ( opt_xpflags != OFFON_AUTO )
 	lp->enable_xpflags = opt_xpflags >= OFFON_ON;
     if ( opt_speedo != OFFON_AUTO )
-	lp->enable_speedo = opt_speedo >= OFFON_FORCE ? 2 : opt_speedo >= OFFON_ON;
-
-    if ( opt_reserved_1b9 >= 0 ) lp->reserved_1b9 = opt_reserved_1b9;
-    if ( opt_reserved_1ba >= 0 ) lp->reserved_1ba = opt_reserved_1ba;
-    if ( opt_reserved_1bb >= 0 ) lp->reserved_1bb = opt_reserved_1bb;
+	lp->enable_speedo = opt_speedo >= SPEEDO_MAX ? SPEEDO_MAX
+				: opt_speedo >= SPEEDO_ON ? opt_speedo : 0;
+    if ( opt_lecode_debug != OFFON_AUTO )
+	lp->debug_mode = opt_lecode_debug >= DEBUGMD_ENABLED && opt_lecode_debug < DEBUGMD__N
+				? opt_lecode_debug : DEBUGMD_OFF;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2340,7 +2783,7 @@ void PatchLPAR ( le_lpar_t * lp )
 void PatchLECODE ( le_analyse_t * ana )
 {
     DASSERT(ana);
-    PRINT("PatchLECODE() opt_lpar=%s)\n",opt_lpar);
+    PRINT("PatchLECODE() opt_lpar=%s\n",opt_lpar);
 
     if (opt_lpar)
 	LoadLPAR(&ana->lpar,false,0,false);
@@ -2359,161 +2802,10 @@ void PatchLECODE ( le_analyse_t * ana )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			    ScanTextLPAR()		///////////////
+///////////////		    ScanTextLPAR() helpers		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError LoadLPAR
-(
-    le_lpar_t		*lpar,		// LE-CODE parameters
-    bool		init_lpar,	// true: initialize 'lpar' first
-    ccp			fname,		// filename of source, if NULL: use opt_lpar
-    bool		ignore_no_file	// ignore if file does not exists
-					// and return warning ERR_NOT_EXISTS
-)
-{
-    DASSERT(lpar);
-    if (init_lpar)
-	InitializeLPAR(lpar,false);
-
-    bool use_lpar = fname == 0;
-    if (use_lpar)
-    {
-	if ( !opt_lpar || !*opt_lpar )
-	    return ERR_OK;
-	fname = opt_lpar;
-    }
-
-    //--- load and scan data
-
-    raw_data_t raw;
-    enumError err = LoadRawData(&raw,true,fname,0,ignore_no_file,0);
-    if (!err)
-    {
-	if ( raw.fform != FF_LPAR )
-	    err = ERROR0(ERR_WRONG_FILE_TYPE,
-			"Not a LPAR file: %s:%s\n",
-			GetNameFF(raw.fform,0), raw.fname );
-	else
-	    err = ScanTextLPAR(lpar,false,fname,raw.data,raw.data_size);
-    }
-
-    if ( err && use_lpar )
-	opt_lpar = 0;
-
-    ResetRawData(&raw);
-    return err;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-enumError ScanTextLPAR
-(
-    le_lpar_t		*lpar,		// LE-CODE parameters
-    bool		init_lpar,	// true: initialize 'lpar' first
-    ccp			fname,		// NULL or filename for error messages
-    const void		* data,		// data to scan
-    uint		data_size	// size of 'data'
-)
-{
-    PRINT("ScanTextLPAR(init=%d,size=%u)\n",init_lpar,data_size);
-    DASSERT(lpar);
-    if (init_lpar)
-	InitializeLPAR(lpar,false);
-
-    enum { C_PARAM, C_CHAT, C_END };
-    static const KeywordTab_t section_name[] =
-    {
-	{ C_PARAM,	"LECODE-PARAMETERS",		0, 0 },
-	{ C_CHAT,	"CHAT-MESSAGE-MODES",		0, 0 },
-	{ C_END,	"END",				0, 0 },
-	{0,0,0,0}
-    };
-
-    ScanInfo_t si;
-    InitializeSI(&si,data,data_size,fname,0);
-    si.predef = SetupVarsLEX();
-
-    bool is_pass2 = false;
-    enumError max_err = ERR_OK;
-
-    for(;;)
-    {
-	PRINT("----- SCAN KMP SECTIONS, PASS%u ...\n",is_pass2+1);
-
-	max_err = ERR_OK;
-	si.no_warn = !is_pass2;
-	si.total_err = 0;
-	DefineIntVar(&si.gvar,"$PASS",is_pass2+1);
-
-	for(;;)
-	{
-	    char ch = NextCharSI(&si,true);
-	    if (!ch)
-		break;
-
-	    if ( ch != '[' )
-	    {
-		NextLineSI(&si,true,false);
-		continue;
-	    }
-	    ResetLocalVarsSI(&si,0);
-
-	    si.cur_file->ptr++;
-	    char name[20];
-	    ScanNameSI(&si,name,sizeof(name),true,true,0);
-	    PRINT("--> pass=%u: #%04u: %s\n",is_pass2+1,si.cur_file->line,name);
-
-	    int abbrev_count;
-	    const KeywordTab_t *cmd = ScanKeyword(&abbrev_count,name,section_name);
-	    if ( !cmd || abbrev_count )
-		continue;
-	    NextLineSI(&si,false,false);
-	    noPRINT("--> %-6s #%-4u |%.3s|\n",cmd->name1,si.cur_file->line,si.cur_file->ptr);
-
-	    enumError err = ERR_OK;
-	    switch (cmd->id)
-	    {
-		case C_PARAM:
-		    err = ScanTextLPAR_PARAM(lpar,&si,is_pass2);
-		    break;
-
-		case C_CHAT:
-		    err = ScanTextLPAR_CHAT(lpar,&si,is_pass2);
-		    break;
-
-		default:
-		    // ignore all other section without any warnings
-		    break;
-	    }
-
-	    if ( max_err < err )
-		 max_err = err;
-	}
-
-	if (is_pass2)
-	    break;
-	is_pass2 = true;
-
-	RestartSI(&si);
-    }
-
- #if HAVE_PRINT0
-    printf("VAR DUMP/GLOBAL:\n");
-    DumpVarMap(stdout,3,&si.gvar,false);
- #endif
-
-    CheckLevelSI(&si);
-    if ( max_err < ERR_WARNING && si.total_err )
-	max_err = ERR_WARNING;
-    PRINT("ERR(ScanTextKMP) = %u (errcount=%u)\n", max_err, si.total_err );
-    ResetSI(&si);
-
-    return max_err;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-enumError ScanTextLPAR_PARAM
+static enumError ScanTextLPAR_PARAM
 (
     le_lpar_t		*lpar,		// LE-CODE parameters
     ScanInfo_t		*si,		// valid data
@@ -2536,12 +2828,10 @@ enumError ScanTextLPAR_PARAM
 	{ "PERF-MONITOR",	SPM_U8,	&lpar->enable_perfmon },
 	{ "CUSTOM-TT",		SPM_S8,	&lpar->enable_custom_tt },
 	{ "XPFLAGS",		SPM_U8,	&lpar->enable_xpflags },
-	{ "SPEEDOMETER",	SPM_U8,	&lpar->enable_speedo },
 	{ "BLOCK-TRACK",	SPM_U8,	&lpar->block_track },
-
-	{ "RESERVED-1B9",	SPM_U8,	&lpar->reserved_1b9 },
-	{ "RESERVED-1BA",	SPM_U8,	&lpar->reserved_1ba },
-	{ "RESERVED-1BB",	SPM_U8,	&lpar->reserved_1bb },
+	{ "SPEEDOMETER",	SPM_U8,	&lpar->enable_speedo },
+	{ "DEBUG",		SPM_U8,	&lpar->debug_mode },
+	{ "ITEM-CHEAT",		SPM_U8,	&lpar->item_cheat },
 	{0}
     };
 
@@ -2566,7 +2856,7 @@ enumError ScanTextLPAR_PARAM
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError ScanTextLPAR_CHAT
+static enumError ScanTextLPAR_CHAT
 (
     le_lpar_t		*lpar,		// LE-CODE parameters
     ScanInfo_t		* si,		// valid data
@@ -2664,6 +2954,256 @@ enumError ScanTextLPAR_CHAT
 
     //HEXDUMP16(0,0,fb->buf,fb->ptr-fb->buf);
     return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError ScanTextLPAR_DEBUG
+(
+    le_lpar_t		*lpar,		// LE-CODE parameters
+    ScanInfo_t		*si,		// valid data
+    bool		is_pass2,	// false: pass1; true: pass2
+    uint		config		// configuration index 0..
+)
+{
+    DASSERT(lpar);
+    DASSERT(si);
+    DASSERT( config < LEDEB__N_CONFIG );
+    PRINT(">> ScanTextLPAR_PARAM(pass=%u)\n",is_pass2+1);
+    u32 *debug_list = lpar->debug[config];
+
+
+    //--- setup data
+
+    const int hide_mask = 1 << config;
+    int hide_speedo = hide_mask & lpar->no_speedo_if_debug;
+    int line = -1, next_line = -1, setup = PREDEBUG_OFF;
+    lecode_debug_ex_t debug;
+    DecodeLecodeDebug(&debug,0);
+
+    const ScanParam_t ptab[] =
+    {
+	{ "SETUP",		SPM_INT, &setup },
+	{ "HIDE-SPEEDO",	SPM_INT, &hide_speedo },
+	{ "LINE",		SPM_INT, &next_line },
+	{ "ENABLED",		SPM_U8,  &debug.enabled },
+	{ "OPPONENT",		SPM_U8,  &debug.opponent },
+	{ "SPACE",		SPM_U8,  &debug.space },
+	{ "POSITION",		SPM_U8,  &debug.position },
+	{ "CHECK-POINT",	SPM_U8,  &debug.check_point },
+	{ "RESPAWN",		SPM_U8,  &debug.respawn },
+	{ "LAP-POS",		SPM_U8,  &debug.lap_pos },
+	{0}
+    };
+
+
+    //--- main loop
+
+    for(;;)
+    {
+	char ch = NextCharSI(si,true);
+	if ( !ch || ch == '[' )
+	    break;
+
+	ScanParamSI(si,ptab);
+
+	if ( setup != PREDEBUG_OFF )
+	{
+	    if ( SetupLecodeDebugLPAR(lpar,config,setup,&hide_speedo) && line >= 0 )
+		DecodeLecodeDebug(&debug,debug_list[line]);
+	    setup = PREDEBUG_OFF;
+	}
+
+	if ( line != next_line )
+	{
+	    if ( line >= 0 )
+		debug_list[line] = EncodeLecodeDebug(&debug);
+
+	    if ( next_line < 0 || next_line >= LEDEB__N_LINE )
+		next_line = -1;
+	    else
+		DecodeLecodeDebug(&debug,debug_list[next_line]);
+	    line = next_line;
+	}
+    }
+
+    if ( line >= 0 )
+	debug_list[line] = EncodeLecodeDebug(&debug);
+
+    if ( hide_speedo > 0 )
+	lpar->no_speedo_if_debug |= hide_mask;
+    else
+	lpar->no_speedo_if_debug &= ~hide_mask;
+
+    CheckLevelSI(si);
+
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			    ScanTextLPAR()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError LoadLPAR
+(
+    le_lpar_t		*lpar,		// LE-CODE parameters
+    bool		init_lpar,	// true: initialize 'lpar' first
+    ccp			fname,		// filename of source, if NULL: use opt_lpar
+    bool		ignore_no_file	// ignore if file does not exists
+					// and return warning ERR_NOT_EXISTS
+)
+{
+    DASSERT(lpar);
+    if (init_lpar)
+	InitializeLPAR(lpar,false);
+
+    bool use_lpar = fname == 0;
+    if (use_lpar)
+    {
+	if ( !opt_lpar || !*opt_lpar )
+	    return ERR_OK;
+	fname = opt_lpar;
+    }
+
+    //--- load and scan data
+
+    raw_data_t raw;
+    enumError err = LoadRawData(&raw,true,fname,0,ignore_no_file,0);
+    if (!err)
+    {
+	if ( raw.fform != FF_LPAR )
+	    err = ERROR0(ERR_WRONG_FILE_TYPE,
+			"Not a LPAR file: %s:%s\n",
+			GetNameFF(raw.fform,0), raw.fname );
+	else
+	    err = ScanTextLPAR(lpar,false,fname,raw.data,raw.data_size);
+    }
+
+    if ( err && use_lpar )
+	opt_lpar = 0;
+
+    ResetRawData(&raw);
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanTextLPAR
+(
+    le_lpar_t		*lpar,		// LE-CODE parameters
+    bool		init_lpar,	// true: initialize 'lpar' first
+    ccp			fname,		// NULL or filename for error messages
+    const void		* data,		// data to scan
+    uint		data_size	// size of 'data'
+)
+{
+    PRINT("ScanTextLPAR(init=%d,size=%u)\n",init_lpar,data_size);
+    DASSERT(lpar);
+    if (init_lpar)
+	InitializeLPAR(lpar,false);
+
+    enum { C_PARAM, C_CHAT, C_DEBUG1, C_DEBUG2, C_DEBUG3, C_DEBUG4, C_END };
+    static const KeywordTab_t section_name[] =
+    {
+	{ C_PARAM,	"LECODE-PARAMETERS",		0, 0 },
+	{ C_CHAT,	"CHAT-MESSAGE-MODES",		0, 0 },
+	{ C_END,	"DEBUG-DOCU",			0, 0 },
+	{ C_DEBUG1,	"DEBUG-1",			0, 0 },
+	{ C_DEBUG2,	"DEBUG-2",			0, 0 },
+	{ C_DEBUG3,	"DEBUG-3",			0, 0 },
+	{ C_DEBUG4,	"DEBUG-4",			0, 0 },
+	{ C_END,	"END",				0, 0 },
+	{0,0,0,0}
+    };
+
+    ScanInfo_t si;
+    InitializeSI(&si,data,data_size,fname,0);
+    si.predef = SetupVarsLECODE();
+
+    bool is_pass2 = false;
+    enumError max_err = ERR_OK;
+
+    for(;;)
+    {
+	PRINT("----- SCAN KMP SECTIONS, PASS%u ...\n",is_pass2+1);
+
+	max_err = ERR_OK;
+	si.no_warn = !is_pass2;
+	si.total_err = 0;
+	DefineIntVar(&si.gvar,"$PASS",is_pass2+1);
+
+	for(;;)
+	{
+	    char ch = NextCharSI(&si,true);
+	    if (!ch)
+		break;
+
+	    if ( ch != '[' )
+	    {
+		NextLineSI(&si,true,false);
+		continue;
+	    }
+	    ResetLocalVarsSI(&si,0);
+
+	    si.cur_file->ptr++;
+	    char name[20];
+	    ScanNameSI(&si,name,sizeof(name),true,true,0);
+	    PRINT("--> pass=%u: #%04u: %s\n",is_pass2+1,si.cur_file->line,name);
+
+	    int abbrev_count;
+	    const KeywordTab_t *cmd = ScanKeyword(&abbrev_count,name,section_name);
+	    if ( !cmd || abbrev_count )
+		continue;
+	    NextLineSI(&si,false,false);
+	    noPRINT("--> %-6s #%-4u |%.3s|\n",cmd->name1,si.cur_file->line,si.cur_file->ptr);
+
+	    enumError err = ERR_OK;
+	    switch (cmd->id)
+	    {
+		case C_PARAM:
+		    err = ScanTextLPAR_PARAM(lpar,&si,is_pass2);
+		    break;
+
+		case C_CHAT:
+		    err = ScanTextLPAR_CHAT(lpar,&si,is_pass2);
+		    break;
+
+		case C_DEBUG1:
+		case C_DEBUG2:
+		case C_DEBUG3:
+		case C_DEBUG4:
+		    err = ScanTextLPAR_DEBUG(lpar,&si,is_pass2,cmd->id-C_DEBUG1);
+		    break;
+
+		default:
+		    // ignore all other section without any warnings
+		    break;
+	    }
+
+	    if ( max_err < err )
+		 max_err = err;
+	}
+
+	if (is_pass2)
+	    break;
+	is_pass2 = true;
+
+	RestartSI(&si);
+    }
+
+ #if HAVE_PRINT0
+    printf("VAR DUMP/GLOBAL:\n");
+    DumpVarMap(stdout,3,&si.gvar,false);
+ #endif
+
+    CheckLevelSI(&si);
+    if ( max_err < ERR_WARNING && si.total_err )
+	max_err = ERR_WARNING;
+    PRINT("ERR(ScanTextKMP) = %u (errcount=%u)\n", max_err, si.total_err );
+    ResetSI(&si);
+
+    return max_err;
 }
 
 //

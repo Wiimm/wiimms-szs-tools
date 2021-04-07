@@ -59,6 +59,10 @@
 		    "wlect HELP [--width=wd] [ignored]...",
 		0 /* copy of wszst */ },
 
+  { T_DEF_CMD,	"CONFIG",	"CONFIG",
+		    "wlect CONFIG [options]...",
+		CONFIG_CMD },
+
   { T_DEF_CMD,	"ARGTEST",	"ARGTEST",
 		    "wlect ARGTEST ...",
 		0 /* copy of wszst */ },
@@ -107,6 +111,10 @@
 		    "wszst _EXPORT key...",
 		"This hidden command exports some definitions to standard output."
 		" Use keyword @HELP@ to get a list of possible keywords." },
+
+  { H_DEF_CMD,	"DPAD",		"_DPAD",
+		    "wszst DPAD number_or_code...",
+		"This hidden command decodes and encodes D-Pad suquences for LE-CODE." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -195,6 +203,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_S,	"XHELP",	"xhelp",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GP,	"CONFIG",	"config",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_G,	"ALLOW_ALL",	"allow-all|allowall",
@@ -470,24 +481,14 @@
 		"[=mode]",
 		"Enable or disable the speedometer."
 		" Mode is one of @OFF@, @AUTO@ (default, don't change setting),"
-		" @ON@ (enable it for Wii and WiiU only;"
-		" default, if option is used without parameter)"
-		" or @FORCE@ (enable it for Wii, Wii U and for Dolphin)." },
+		" @ON@ (default, if option is used without parameter)"
+		" or @FRACTION@ (=@1DIGIT@), @2DIGITS@ and @3DIGITS@." },
 
-  { H_OPT_CP,	"RESERVED_1B9",	"reserved-1b9|reserved1b9",
-		"[=mode]",
-		"Set LPAR byte at offset 0x1b9 to this value."
-		" Value -1 disables this option." },
-
-  { H_OPT_CP,	"RESERVED_1BA",	"reserved-1ba|reserved1ba",
-		"[=mode]",
-		"Set LPAR byte at offset 0x1ba to this value."
-		" Value -1 disables this option." },
-
-  { H_OPT_CP,	"RESERVED_1BB",	"reserved-1bb|reserved1bb",
-		"[=mode]",
-		"Set LPAR byte at offset 0x1bb to this value."
-		" Value -1 disables this option." },
+  { T_OPT_CP,	"DEBUG",	"debug",
+		"mode",
+		"Enable or disable the debug output while racing."
+		" Mode is one of @OFF@, @AUTO@ (default, don't change setting),"
+		" @USER@ or @100@ to @199@ for predefined setups." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -629,9 +630,7 @@
   { T_COPT,	"CUSTOM_TT",	0,0,0 },
   { T_COPT,	"XPFLAGS",	0,0,0 },
   { T_COPT,	"SPEEDOMETER",	0,0,0 },
-  { H_COPT,	"RESERVED_1B9",	0,0,0 },
-  { H_COPT,	"RESERVED_1BA",	0,0,0 },
-  { H_COPT,	"RESERVED_1BB",	0,0,0 },
+  { T_COPT,	"DEBUG",	0,0,0 },
 
   //---------- wlect GROUP PATCH ----------
 
@@ -700,6 +699,14 @@
   { T_COPT,	"WIDTH",	0,0,0 },
   { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
+
+  //---------- COMMAND wlect CONFIG ----------
+
+  { T_CMD_BEG,	"CONFIG",	0,0,0 },
+
+  { T_COPT,	"CONFIG",	0,0,0 },
+  { T_COPT,	"LONG",		0,0,
+	"If set, print the search list too." },
 
   //---------- COMMAND wlect ARGTEST ----------
 
@@ -780,6 +787,10 @@
   //---------- COMMAND wlect _EXPORT ----------
 
   { T_CMD_BEG,	"EXPORT",	0,0,0 },
+
+  //---------- COMMAND wlect _DPAD ----------
+
+  { T_CMD_BEG,	"DPAD",		0,0,0 },
 
   //---------- COMMAND wlect DUMP ----------
 

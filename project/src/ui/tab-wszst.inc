@@ -44,7 +44,8 @@
 		"wszst [option]... command [option|parameter|@file]...",
 		WSZST_LONG " :"
 		" List, compare, (de-)compress, extract and create"
-		" " ARCHIVES_AND " archives."
+		" " CARCHIVES_AND " archives."
+		" Additonally, RARC archive can be extracted."
 		" It is also a wrapper to all other tools." },
 
   //
@@ -73,6 +74,12 @@
 		" prints details about the declared command."
 		" The fourth variant prints an overview about all commands"
 		" and all global options." },
+
+  { T_DEF_CMD,	"CONFIG",	"CONFIG",
+		    "wszst CONFIG [options]...",
+		CONFIG_CMD
+		" The command can also export the settings for scripts"
+		" or can create or update configuration files." },
 
   { T_DEF_CMD,	"ARGTEST",	"ARGTEST",
 		    "wszst ARGTEST ...",
@@ -488,7 +495,7 @@
 
   { T_DEF_CMD,	"CREATE",	"CREATE|C",
 		    "wszst CREATE [source_dir]...",
-		"Create " ARCHIVES_OR " archives by adding all not hidden files"
+		"Create " CARCHIVES_OR " archives by adding all not hidden files"
 		" of the directory structure."
 		" Create and/or encode sub files if necessary."
 		" The default destination is @'%P/%N%T'@." },
@@ -598,7 +605,7 @@
 
   { T_DEF_CMD,	"YAZDUMP",	"YAZDUMP|YD",
 		    "wszst YAZDUMP [szs]...",
-		"Analyze YAZ compression print a dump to stdout."
+		"Analyze YAZ compression and print a dump to stdout."
 		" Ignore files without YAZ compression." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
@@ -622,6 +629,15 @@
 		0,
 		"Stop parsing the command line and print a help message"
 		" with all commands included. Exit after printing." },
+
+  { T_OPT_GP,	"CONFIG",	"config",
+		"file",
+		"Define a configuration file or a directory as source."
+		" In later case, file @'" CONFIG_FILE "'@ is searched."
+		"\n "
+		" If option is not not set,"
+		" then file @'" CONFIG_FILE "'@ is searched in different directories."
+		" Use command @'wszst CONFIG'@ to get more details." },
 
   { T_OPT_G,	"ALLOW_ALL",	"allow-all|allowall",
 		0,
@@ -1696,7 +1712,7 @@
 		"Define an alternative directory as autoadd library."
 		" The default is, that the sub-directory called './auto-add/'"
 		" of all search paths are used."
-		" Use {wszst test -vvvv} for tests." },
+		" Use {wszst config -ll} for tests." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -1836,7 +1852,7 @@
   { T_OPT_GP,	"VAR",		"var",
 		"varname",
 		"Use @VARNAME@ as variable name or prefix on script output."
-		" The default variabe name is 'res'." },
+		" The default value is 'res' for variables and 'res_' as prefix." },
 
   { T_OPT_G,	"ARRAY",	"array",
 		0,
@@ -1873,6 +1889,10 @@
 		" Each keyword can also be used with a minus as prefix to define"
 		" a second condition. In this case the feature is excluded"
 		" from printing if *any* set keywords match." },
+
+  { T_OPT_C,	"INSTALL",	"install",
+		0,
+		"Manage configuration for an installation." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -2431,6 +2451,9 @@
 
   { T_GRP_BEG,	"SCRIPT",	0,0,0 },
 
+  { T_COPT,	"SECTIONS",	0,0,
+	"Dump info using configuration or section syntax."
+	" Use {--var name} as prefix." },
   { T_COPT,	"SH",		0,0,0 },
   { T_COPT,	"BASH",		0,0,0 },
   { T_COPT,	"JSON",		0,0,0 },
@@ -2576,6 +2599,22 @@
   { T_COPT,	"WIDTH",	0,0,0 },
   { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
+
+  //---------- COMMAND wszst CONFIG ----------
+
+  { T_CMD_BEG,	"CONFIG",	0,0,0 },
+
+  { T_COPT,	"CONFIG",	0,0,0 },
+  { T_COPT,	"INSTALL",	0,0,0 },
+  { T_COPT,	"AUTOADD_PATH",	0,0,0 },
+  { T_COPT,	"LONG",		0,0,
+	"If set, print the search list too."
+	" If set twice, print the auto-add search list too."
+	" This option is ignored, if any script output is enabled." },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"SCRIPT",	0,0,0 },
+  { T_COPT,	"BRIEF",	0,0,
+	"If printed as sections, exclude all comments." },
 
   //---------- COMMAND wszst ARGTEST ----------
 

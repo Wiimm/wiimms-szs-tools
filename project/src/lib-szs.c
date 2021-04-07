@@ -67,6 +67,8 @@ const ccp have_szs_name[HAVESZS__N] =
     "ght_kartobj",	// HAVESZS_GHT_KART_OBJ
     "itemslot",		// HAVESZS_ITEM_SLOT_TABLE
     "minigame",		// HAVESZS_MINIGAME
+    "aiparam_baa",	// HAVESZS_AIPARAM_BAA
+    "aiparam_bas",	// HAVESZS_AIPARAM_BAS
 };
 
 const ccp have_szs_file[HAVESZS__N] =
@@ -79,6 +81,8 @@ const ccp have_szs_file[HAVESZS__N] =
     "common/GeoHitTableKartObj.bin",	// HAVESZS_GHT_KART_OBJ
     "ItemSlotTable/ItemSlotTable.slt",	// HAVESZS_ITEM_SLOT_TABLE
     "common/minigame.kmg",		// HAVESZS_MINIGAME
+    "AIParam/AIParam.baa",		// HAVESZS_AIPARAM_BAA
+    "AIParam/AIParam.bas",		// HAVESZS_AIPARAM_BAS
 };
 
 const file_format_t have_szs_fform[HAVESZS__N] =
@@ -91,6 +95,8 @@ const file_format_t have_szs_fform[HAVESZS__N] =
     FF_GH_KOBJ,		// HAVESZS_GHT_KART_OBJ
     FF_ITEMSLT,		// HAVESZS_ITEM_SLOT_TABLE
     FF_KMG,		// HAVESZS_MINIGAME
+    FF_UNKNOWN,		// HAVESZS_AIPARAM_BAA
+    FF_UNKNOWN,		// HAVESZS_AIPARAM_BAS
 };
 
 //
@@ -1707,7 +1713,7 @@ static enumError SetupWU8Info ( wu8_info_t *wu8, szs_file_t *szs, bool encode )
 
     memset(wu8,0,sizeof(*wu8));
 
-    if (!SetupAutoAdd())
+    if (!IsAutoAddAvailable())
 	return ERROR0(ERR_CANT_OPEN,
 		"WU8-%sCODE: Can't find autoadd library.\n",
 		encode ? "EN" : "DE" );
@@ -3265,7 +3271,7 @@ static int iterate_sub_files
 	if ( it->off > it->szs->size || it->off + it->size > it->szs->size )
 	{
 	    ERROR0(ERR_WARNING,
-		"Illegal offset [%x..%x, size=%zx] for subfile.\n"
+		"Invalid offset [%x..%x, size=%zx] for subfile.\n"
 		"=> File ignored: %s%s%s\n",
 		it->off, it->off+it->size, it->szs->size,
 		it->szs->fname, *it->szs->fname ? "/" : "",
@@ -4620,7 +4626,7 @@ u32 InsertStringPool
 	if (!sp->data)
 	{
 	    ParamFieldItem_t *pi
-		= InsertParamFieldEx(&sp->pf,string,move_string,sp->pf.used+1,0);
+		= FindInsertParamField(&sp->pf,string,move_string,sp->pf.used+1,0);
 	    if (pi)
 	    {
 		if (data)

@@ -942,7 +942,7 @@ ParamFieldItem_t * StoreSZSCache
     }
 
     bool found;
-    ParamFieldItem_t *it = InsertParamFieldEx(&szs_cache,checksum,false,0,&found);
+    ParamFieldItem_t *it = FindInsertParamField(&szs_cache,checksum,false,0,&found);
     if (found)
     {
 	DASSERT(it);

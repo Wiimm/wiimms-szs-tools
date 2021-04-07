@@ -144,7 +144,7 @@ static void list_compressions_exit()
 		"This {cmd|YAZ} compression uses a back tracking"
 		" algorithm with recursion depth between {par|0 and 50} (last 2 digits)."
 		" Depths 0 and 1 are similar to mode {par|9}."
-		" Each new depth doubles the number of calculated pathes."
+		" Each new depth doubles the number of calculated paths."
 		" Because of some optimizations, a depth of +5 results"
 		" in 10 to 15 times and not in 32 (2^5) times like expected."
 		" This algorithm needs 4 times as much memory as the uncompressed file."
@@ -562,14 +562,15 @@ static enumError cmd_autoadd()
 {
     SetPatchFileModeReadonly();
 
-    char dest_path[PATH_MAX], path_buf[PATH_MAX];
-    PathCatBufPP(dest_path,sizeof(dest_path),share_path,"auto-add/");
-    CheckOptDest(dest_path,true);
+    char path_buf[PATH_MAX];
+    const config_t *config = GetConfig();
+    CheckOptDest(config->autoadd_path,true);
 
     if ( !opt_mkdir && !ExistDirectory(opt_dest,0) )
 	return ERROR0(ERR_CANT_CREATE_DIR,
 	    "Directory does not exist: %s\n",opt_dest);
     opt_mkdir = true;
+    autoadd_destination = opt_dest;
 
     if (!n_param)
 	opt_overwrite = false;
@@ -579,11 +580,11 @@ static enumError cmd_autoadd()
 
     if ( !n_param || verbose >= 1 )
     {
-	SetupAutoAdd();
-	ccp *aap;
-	for ( aap = auto_add_path; *aap; aap++ )
-	    fprintf(stdlog,"       SEARCH PATH[%td]: %s\n",
-			aap-auto_add_path,*aap);
+	const StringField_t *sf = GetAutoaddList();
+	int i;
+	ccp *str = sf->field;
+	for ( i = 0; i < sf->used; i++, str++ )
+	    fprintf(stdlog,"       SEARCH PATH[%d]: %s\n",i,*str);
     }
 
 
@@ -1885,30 +1886,6 @@ static enumError cmd_sha1()
 ///////////////			command analyze			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static void SetupPrintScript ( PrintScript_t *ps )
-{
-    DASSERT(ps);
-
-    InitializePrintScript(ps);
-    ps->varname		= script_varname;
-    ps->force_case	= opt_case;
-    ps->create_array	= script_array > 0;
-    ps->ena_empty	= brief_count < 2 ;
-    ps->ena_comments	= brief_count < 1 ;
-
-    switch(script_fform)
-    {
-      case FF_JSON:	ps->fform = PSFF_JSON; break;
-      case FF_BASH:	ps->fform = PSFF_BASH; break;
-      case FF_SH:	ps->fform = PSFF_SH; break;
-      case FF_PHP:	ps->fform = PSFF_PHP; break;
-      case FF_MAKEDOC:	ps->fform = PSFF_MAKEDOC; break;
-      default:		ps->fform = PSFF_UNKNOWN; break;
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 static enumError cmd_analyze()
 {
     static ccp def_path = "\1P/\1F\1?T";
@@ -1928,7 +1905,7 @@ static enumError cmd_analyze()
     InitializeFile(&fo);
 
     PrintScript_t ps;
-    SetupPrintScript(&ps);
+    SetupPrintScriptByOptions(&ps);
 
     ParamList_t *param;
     for ( param = first_param; param; param = param->next )
@@ -2028,6 +2005,7 @@ static enumError cmd_analyze()
 		"race_slot=\"%u %s\"\n"
 		"arena_slot=\"%u %s\"\n"
 		"music_index=\"%u %s\"\n"
+		 "itempos_factors=\"%5.3f %5.3f %5.3f\"\n"
 		 "used_x_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
 		 "used_y_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
 		 "used_z_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
@@ -2066,6 +2044,7 @@ static enumError cmd_analyze()
 		,as.slotinfo.race_slot,as.slotinfo.race_info
 		,as.slotinfo.arena_slot,as.slotinfo.arena_info
 		,as.slotinfo.music_index,as.slotinfo.music_info
+		 ,as.lexinfo.item_factor.x,as.lexinfo.item_factor.y,as.lexinfo.item_factor.z
 		 ,as.used_pos.orig.rating[0]
 			,WarnLevelNameLo[as.used_pos.orig.rating[0]]
 		 ,as.used_pos.orig.min.x,as.used_pos.orig.max.x
@@ -2158,7 +2137,8 @@ static enumError cmd_features()
     InitializeFile(&fo);
 
     PrintScript_t ps;
-    SetupPrintScript(&ps);
+    SetupPrintScriptByOptions(&ps);
+    ps.eq_tabstop = 3;
     if ( ps.fform == PSFF_UNKNOWN && comments >= 0 )
 	ps.fform = PSFF_ASSIGN;
 
@@ -4928,7 +4908,7 @@ static enumError cmd_ghost()
     InitializeFile(&fo);
 
     PrintScript_t ps;
-    SetupPrintScript(&ps);
+    SetupPrintScriptByOptions(&ps);
 
     ParamList_t *param;
     for ( param = first_param; param; param = param->next )
@@ -5101,6 +5081,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_VERSION:	version_exit();
 	case GO_HELP:		help_exit(false);
 	case GO_XHELP:		help_exit(true);
+	case GO_CONFIG:		opt_config = optarg; break;
 	case GO_ALLOW_ALL:	allow_all = true; break;
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
@@ -5243,6 +5224,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_CASE:		err += ScanOptCase(optarg); break;
 	case GO_PMODES:		opt_pmodes++; break;
 	case GO_FMODES:		err += ScanOptFModes(optarg); break;
+	case GO_INSTALL:	opt_install++; break;
 
 	case GO_PT_DIR:		err += ScanOptPtDir(optarg); break;
 	case GO_LINKS:		opt_links = true; break;
@@ -5403,6 +5385,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_VERSION:	version_exit();
 	case CMD_HELP:		PrintHelp(&InfoUI_wszst,stdout,0,"HELP",0,URI_HOME,
 					first_param ? first_param->arg : 0 ); break;
+	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0);

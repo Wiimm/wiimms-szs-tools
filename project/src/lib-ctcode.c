@@ -1745,7 +1745,9 @@ static enumError ScanRTL_Slot
 	    n1 = 0;
 	if ( ++n2 > ctcode->max_tracks )
 	    n2 = ctcode->max_tracks;
-	noPRINT("SLOT: %02lx:%02lx = %lu:%lu%s\n",n1,n2,n1,n2,force ? " /FORCE" : "");
+	PRINT0("SLOT: %02lx:%02lx = %lu:%lu%s%s\n",n1,n2,n1,n2,
+			mark_reserved ? " /X" : "",
+			force ? " /FORCE" : "");
 
 	if ( n1 >= n2 )
 	    continue;
@@ -1773,8 +1775,10 @@ static enumError ScanRTL_Slot
 	ctcode->n_next_slot = ctcode->max_tracks - idx;
 	if (ctcode->n_next_slot)
 	{
-	    memmove(ctcode->next_slot,ctcode->next_slot+idx,ctcode->n_next_slot);
-	    memmove(ctcode->force_slot,ctcode->force_slot+idx,ctcode->n_next_slot);
+	    memmove( ctcode->next_slot, ctcode->next_slot + idx,
+			ctcode->n_next_slot * sizeof(*ctcode->next_slot) );
+	    memmove( ctcode->force_slot, ctcode->force_slot + idx,
+			ctcode->n_next_slot * sizeof(*ctcode->force_slot) );
 	}
     }
 

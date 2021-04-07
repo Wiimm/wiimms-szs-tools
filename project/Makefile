@@ -30,7 +30,6 @@
 
 MYMAKE			:= $(lastword $(MAKEFILE_LIST))
 
-#SHELL			= /bin/bash
 SHELL			= /usr/bin/env bash
 
 AUTHOR			= Dirk Clemens
@@ -58,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.23a
+VERSION_NUM		= 2.24a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -106,6 +105,7 @@ VERSION_INT	:= $(shell sed 's/\.//g; s/[^0-9]/ /g; s/ .*//' <<< "$(VERSION_NUM)"
 
 DUMMY		:= $(shell $(SHELL) ./setup.sh $(VERSION) $(VERSION_NUM) $(VERSION_INT) )
 include Makefile.setup
+#DUMMY		:= $(shell echo "|$(SYSTEM)|$(SYSTEM2)|" >&2)
 
 #------------------------------------------------------------------------------
 # include source library definitions
@@ -118,7 +118,6 @@ include ./dclib/Makefile.inc
 
 PRE		?=
 CC		= $(PRE)gcc
-CPP		= $(PRE)g++
 STRIP		= $(PRE)strip
 
 #-------------------------------------------------------------------------------
@@ -145,7 +144,7 @@ DEFINES1	+= -DDEBUG_ASSERT		# enable ASSERTions in release version too
 DEFINES1	+= -DEXTENDED_ERRORS=1		# enable extended error messages (function,line,file)
 DEFINES1	+= -DUIOPT_INDEX_SIZE=310	# define max number of options (default 0x100)
 
-CFLAGS		+= -fomit-frame-pointer -fno-strict-aliasing -funroll-loops
+CFLAGS		+= -std=gnu99 -fomit-frame-pointer -fno-strict-aliasing -funroll-loops
 CFLAGS		+= -Wall -Wno-parentheses -Wno-unused-function
 CFLAGS		+= -Wno-deprecated-declarations
 CFLAGS		+= -O3 -Isrc -I$(UI) -I.
@@ -214,6 +213,8 @@ ifeq ($(STATIC),1)
 else
     OPT_STATIC	:=
 endif
+
+#DUMMY		:= $(shell echo "|$(SYSTEM)|$(SYSTEM2)|$(OPT_STATIC)" >&2)
 
 #---------------
 
@@ -746,11 +747,15 @@ doc+: doc info
 .PHONY : flags
 flags:
 	@echo  ""
+	@echo  "SYSTEM: |$(SYSTEM)|$(SYSTEM2)|"
+	@echo  ""
 	@echo  "DEFINES: $(DEFINES)"
 	@echo  ""
 	@echo  "CFLAGS:  $(CFLAGS)"
 	@echo  ""
 	@echo  "LDFLAGS: $(LDFLAGS)"
+	@echo  ""
+	@echo  "OPT_STATIC: $(OPT_STATIC)"
 	@echo  ""
 	@echo  "LIBS: $(LIBS)"
 	@echo  ""

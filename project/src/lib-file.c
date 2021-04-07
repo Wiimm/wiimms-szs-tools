@@ -44,6 +44,7 @@
 #include <time.h>
 #include <utime.h>
 #include <dirent.h>
+#include <stddef.h>
 
 #include "lib-std.h"
 #include "lib-szs.h"
@@ -63,6 +64,7 @@
 #include "lib-common.h"
 #include "lib-bzip2.h"
 #include "lib-checksum.h"
+#include "config.inc"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -75,7 +77,7 @@
  {
     if ( param->arg && *param->arg )
     {
-	char *res = AllocNormalizedFilenameCygwin(param->arg);
+	char *res = AllocNormalizedFilenameCygwin(param->arg,false);
 	FREE(param->arg);
 	param->arg = res;
     }
@@ -89,7 +91,7 @@ void SetSource ( ccp source )
 {
  #ifdef __CYGWIN__
     opt_source = IsWindowsDriveSpec(source)
-		? AllocNormalizedFilenameCygwin(source)
+		? AllocNormalizedFilenameCygwin(source,false)
 		: source;
  #else
     opt_source = source;
@@ -106,7 +108,7 @@ void SetDest ( ccp dest, bool mkdir )
 {
  #ifdef __CYGWIN__
     opt_dest = IsWindowsDriveSpec(dest)
-		? AllocNormalizedFilenameCygwin(dest)
+		? AllocNormalizedFilenameCygwin(dest,false)
 		: dest;
  #else
     opt_dest = dest;
@@ -1821,53 +1823,382 @@ bool PATCH_ACTION_LOG ( ccp action, ccp object, ccp format, ... )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			auto add support		///////////////
+///////////////			scan configuration		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-bool SetupAutoAdd()
+void ResetConfig ( config_t *config )
 {
+    DASSERT(config);
+    FreeString(config->config_file);
+    FreeString(config->base_path);
+    FreeString(config->install_path);
+    FreeString(config->install_config);
+    FreeString(config->share_path);
+    FreeString(config->autoadd_path);
+    InitializeConfig(config);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanConfig
+(
+    config_t		*config,	// store configuration here
+    ccp			path,		// NULL or path
+    bool		silent		// true: suppress printing of error messages
+)
+{
+    ASSERT(config);
+    ResetConfig(config);
+    config->config_file = path ? STRDUP(path) : 0;
+
+
+    //--- setup paths
+
+    exmem_list_t paths;
+    InitializeEML(&paths);
+
+ #ifdef __CYGWIN__
+    ccp	base_path	= "$(programfiles)";
+    ccp	install_path	= opt_install ? "$(base)/Wiimm/SZS" : ProgramDirectory();
+    ccp	share_path	= opt_install ? "$(install)" : std_share_path;
+ #else
+    ccp	base_path	= "/usr/local";
+    ccp	install_path	= opt_install ? "$(base)/bin" : ProgramDirectory();
+    ccp	share_path	= opt_install ? "$(base)/share/szs" : std_share_path;
+ #endif
+
+    ccp	install_config	= opt_install ? "" : config->config_file;
+
+    struct assign_t { ccp name; ccp init; ccp *var; };
+    const struct assign_t assign_tab[] =
+    {
+	{ "base",	base_path,		&config->base_path },
+	{ "install",	install_path,		&config->install_path },
+	{ "config",	install_config,		&config->install_config },
+	{ "share",	share_path,		&config->share_path },
+	{ "autoadd",	"$(share)/auto-add",	&config->autoadd_path },
+	{0,0,0}
+    };
+
+    const struct assign_t *assign;
+    for ( assign = assign_tab; assign->name; assign++ )
+	if (assign->init)
+	{
+	    exmem_t data = ExMemByString(assign->init);
+	    InsertEML(&paths,assign->name,CPM_LINK,&data,CPM_COPY);
+	}
+
+    AddStandardSymbolsEML(&paths,false);
+    //DumpEML(stdout,2,&paths,0);
+
+
+    //--- scan file
+
+    const ListDef_t list_def[] =
+    {
+	{ "paths",	0, 0, &paths },
+	{0,0,0,0}
+    };
+
+    const enumError err = path && *path
+		? ScanSetupFile(0,list_def,path,0,0,silent)
+		: ERR_OK;
+
+    ResolveAllSymbolsEML(&paths);
+    //DumpEML(stdout,2,&paths,0);
+
+
+    //--- assign known values
+
+    char buf[1000];
+    for ( assign = assign_tab; assign->name; assign++ )
+    {
+	if (assign->var)
+	{
+	    exmem_key_t *ref = FindEML(&paths,assign->name);
+	    if (ref)
+	    {
+		FreeString(*assign->var);
+		NormalizeFileName(buf,sizeof(buf),ref->data.data.ptr,true,true,TRSL_REMOVE);
+		*assign->var = STRDUP(buf);
+	    }
+	    else
+		*assign->var = EmptyString;
+	}
+    }
+
+    ResetEML(&paths);
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SearchConfigHelper ( search_file_list_t *sfl, int stop_mode )
+{
+    DASSERT(sfl);
+    InitializeSearchFile(sfl);
+
+    ccp opt[]	 = { opt_config, opt_install ? "$(prog)/install.conf" : 0, 0, };
+    ccp xdg_home = "szs";
+    ccp home	 = ".szs";
+    ccp etc[]	 = { "wiimm", "" };
+
+    SearchConfig(sfl,CONFIG_FILE, opt,2, &xdg_home,1, &home,1, etc,2, etc+1,1, 0,0, stop_mode );
+    if (logging>3)
+	DumpSearchFile(stdout,2,sfl,logging>4,"Config search list");
+}
+
+//-----------------------------------------------------------------------------
+
+const config_t * GetConfig()
+{
+    static config_t config;
     static bool done = false;
     if (!done)
     {
 	done = true;
 
-	ccp *spath = search_path;
-	ccp *apath = auto_add_path;
-	while (*spath)
-	{
-	    char path_buf[PATH_MAX];
-	    ccp path = PathCatPP(path_buf,sizeof(path_buf),*spath++,"auto-add");
-	    if (IsDirectory(path,0))
+	search_file_list_t sfl;
+	SearchConfigHelper(&sfl,2);
+
+	uint i;
+	ccp found = 0;
+	search_file_t *sf = sfl.list;
+	for ( i = 0; i < sfl.used; i++, sf++ )
+	    if ( sf->itype >= INTY_REG )
 	    {
-		PRINT("AUTO-PATH[%u] = %s\n",(int)(apath-auto_add_path),path);
-		*apath++ = STRDUP(path);
-		DASSERT( apath - auto_add_path
-			< sizeof(auto_add_path)/sizeof(*auto_add_path) );
+		found = sf->fname;
+		break;
 	    }
-	}
-	*apath = 0;
+
+	InitializeConfig(&config);
+	ScanConfig(&config,found,false);
+	ResetSearchFile(&sfl);
+
+	if ( verbose >= 3 )
+	    PrintConfig(stderr,&config,true);
     }
 
-    return auto_add_path[0] != 0;
+    return &config;
+}
+
+//-----------------------------------------------------------------------------
+
+void PrintConfig ( FILE *f, const config_t *config, bool verbose )
+{
+    if ( f && config )
+    {
+	fprintf(f,
+		"\nConfiguration:\n"
+		"  config file:    %s\n"
+		,config->config_file ? config->config_file : ""
+		);
+	if (verbose)
+	    fprintf(f,
+		"  base path:      %s\n"
+		"  install path:   %s\n"
+		"  install config: %s\n"
+		,config->base_path
+		,config->install_path
+		,config->install_config
+		);
+	fprintf(f,
+		"  share path:     %s\n"
+		"  auto-add path:  %s\n"
+		,config->share_path
+		,config->autoadd_path
+		);
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+struct config_offset_t { uint mode; ccp name; uint offset; };
+static const struct config_offset_t config_offset_tab[] =
+{
+	{ 0,"config",	offsetof(config_t,config_file) },
+	{ 1,"base",	offsetof(config_t,base_path) },
+	{ 1,"install",	offsetof(config_t,install_path) },
+	{ 1,"config",	offsetof(config_t,install_config) },
+	{ 1,"share",	offsetof(config_t,share_path) },
+	{ 1,"autoadd",	offsetof(config_t,autoadd_path) },
+	{0,0}
+};
+
+//-----------------------------------------------------------------------------
+
+void PrintConfigScript ( FILE *f, const config_t *config )
+{
+    if ( f && config )
+    {
+	PrintScript_t ps;
+	SetupPrintScriptByOptions(&ps);
+	ps.f		= f;
+	ps.eq_tabstop	= 1;
+	ps.auto_quote	= true;
+
+	PrintScriptVars(&ps,3,
+		"base=\"%s\"\n"
+		"install=\"%s\"\n"
+		"config=\"%s\"\n"
+		"share=\"%s\"\n"
+		"autoadd=\"%s\"\n"
+		,config->base_path
+		,config->install_path
+		,config->install_config ? config->install_config : ""
+		,config->share_path
+		,config->autoadd_path
+		);
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+void PrintConfigFile ( FILE *f, const config_t *config )
+{
+    if ( f && config )
+    {
+	config_t dest;
+	InitializeConfig(&dest);
+
+	const struct config_offset_t *ptr;
+	for ( ptr = config_offset_tab; ptr->name; ptr++ )
+	{
+	    if (!ptr->mode)
+		continue;
+
+	    ccp *destval = (ccp*)((char*)&dest + ptr->offset);
+
+	    bool done = false;
+	    ccp val = *(ccp*)((char*)config + ptr->offset);
+	    if (val)
+	    {
+		const int len = strlen(val);
+		const struct config_offset_t *ptr2;
+		for ( ptr2 = ptr-1; ptr2 >= config_offset_tab; ptr2-- )
+		{
+		    ccp val2 = *(ccp*)((char*)config + ptr2->offset);
+		    if ( ptr2->mode && val2 )
+		    {
+			const int len2 = strlen(val2);
+			if ( len2 > 1 && ( len2 == len || len2 < len && val[len2] == '/' )
+				&& !memcmp(val,val2,len2) )
+			{
+			    ccp res = PRINTDUP("$(%s)%s",ptr2->name,val+len2);
+			    *destval = QuoteStringCircS(res,EmptyQuote,CHMD__MODERN);
+			    FreeString(res);
+			    done = true;
+			    break;
+			}
+		    }
+		}
+	    }
+
+	    if (!done)
+		*destval = QuoteStringCircS(val,EmptyQuote,CHMD__MODERN);
+	}
+
+	if ( brief_count > 0 )
+	    fprintf(f,"[PATHS]\n"
+		"base\t= %s\n"
+		"install\t= %s\n"
+		"config\t= %s\n"
+		"share\t= %s\n"
+		"autoadd\t= %s\n"
+		,dest.base_path
+		,dest.install_path
+		,dest.install_config
+		,dest.share_path
+		,dest.autoadd_path
+		);
+	else
+	    fprintf(f,text_config_paths_cr
+		,dest.base_path
+		,dest.install_path
+		,dest.install_config
+		,dest.share_path
+		,dest.autoadd_path
+		);
+
+	ResetConfig(&dest);
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool DefineAutoAddPath ( ccp path )
+const StringField_t * GetSearchList()
 {
-    SetupAutoAdd();
-    if (path)
+    static StringField_t search_list = {0};
+    if (!search_list.field)
     {
-	uint i;
-	for ( i = 0; i < sizeof(auto_add_path)/sizeof(*auto_add_path); i++ )
-	{
-	    FreeString(auto_add_path[i]);
-	    auto_add_path[i] = 0;
-	}
-	auto_add_path[0] = STRDUP(path);
+	InitializeStringField(&search_list);
+	const config_t *config = GetConfig();
+	AppendUniqueStringField(&search_list,config->share_path,false);
+	AppendUniqueStringField(&search_list,std_share_path,false);
+	AppendUniqueStringField(&search_list,ProgramDirectory(),false);
     }
+    return &search_list;
+}
 
-    return auto_add_path[0] != 0;
+///////////////////////////////////////////////////////////////////////////////
+
+ccp autoadd_destination = 0;
+static StringField_t opt_autoadd = {0};
+
+//-----------------------------------------------------------------------------
+
+const StringField_t * GetAutoaddList()
+{
+    static StringField_t autoadd_list = {0};
+    if (!autoadd_list.field)
+    {
+	InitializeStringField(&autoadd_list);
+
+	if (autoadd_destination)
+	    AppendUniqueStringField(&autoadd_list,autoadd_destination,false);
+
+	int i;
+	ccp *str = opt_autoadd.field;
+	for ( i = 0; i < opt_autoadd.used; i++, str++ )
+	    AppendUniqueStringField(&autoadd_list,*str,false);
+
+	const config_t *config = GetConfig();
+	if (IsDirectory(config->autoadd_path,0))
+	    AppendUniqueStringField(&autoadd_list,config->autoadd_path,false);
+
+	if (IsDirectory("auto-add",false))
+	    AppendUniqueStringField(&autoadd_list,"auto-add",false);
+
+	char buf[PATH_MAX];
+	const StringField_t *sf = GetSearchList();
+	str = sf->field;
+	for ( i = 0; i < sf->used; i++, str++ )
+	{
+	    PathCatPP(buf,sizeof(buf),*str,"auto-add");
+	    if (IsDirectory(buf,false))
+		AppendUniqueStringField(&autoadd_list,buf,false);
+	}
+    }
+    return &autoadd_list;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			auto add support		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+bool IsAutoAddAvailable()
+{
+    const StringField_t *al = GetAutoaddList();
+    return al->used > 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void DefineAutoAddPath ( ccp path )
+{
+    if (IsDirectory(path,false))
+	AppendUniqueStringField(&opt_autoadd,path,false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1878,22 +2209,17 @@ s64 FindAutoAdd ( ccp fname, ccp ext, char *buf, uint buf_size )
     DASSERT(buf);
     DASSERT( buf_size > 100 );
 
-    if (!SetupAutoAdd())
-	return -1;
-
-    ccp *apath = auto_add_path;
-    while (*apath)
+    int i;
+    const StringField_t *al = GetAutoaddList();
+    ccp *str = al->field;
+    for ( i = 0; i < al->used; i++, str++ )
     {
-	PathCatBufPPE(buf,buf_size,*apath++,fname,ext);
+	PathCatBufPPE(buf,buf_size,*str,fname,ext);
 	struct stat st;
 	if ( !stat(buf,&st) && S_ISREG(st.st_mode) )
-	{
-	    noPRINT("FindAutoAdd(%s) -> %llu %s\n",fname,(u64)st.st_size,buf);
 	    return st.st_size;
-	}
     }
 
-    noPRINT("FindAutoAdd(%s) FAILED\n",fname);
     *buf = 0;
     return -1;
 }
@@ -2183,24 +2509,37 @@ size_t ResetSetup
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static char * trim_line ( char * ptr, char ** begin )
+static char * trim_line ( char * ptr, bool allow_quote, char ** begin )
 {
     DASSERT(ptr);
 
     while ( *ptr > 0 && *ptr <= ' ' )
 	ptr++;
 
-    char *start = ptr;
-    if (begin)
-	*begin = ptr;
+    if ( allow_quote && (*ptr == '"' || *ptr == '\'') )
+    {
+	const int slen = strlen(ptr);
+	uint scanned_len;
+	int elen = ScanEscapedString(ptr,slen,ptr,slen,true,-1,&scanned_len);
+	if (begin)
+	    *begin = ptr;
+	ptr[elen] = 0;
+	ptr += scanned_len;
+    }
+    else
+    {
+	char *start = ptr;
+	if (begin)
+	    *begin = ptr;
 
-    while (*ptr)
-	ptr++;
+	while ( *ptr)
+	    ptr++;
 
-    ptr--;
-    while ( *ptr > 0 && *ptr <= ' ' && ptr > start )
 	ptr--;
-    *++ptr = 0;
+	while ( *ptr > 0 && *ptr <= ' ' && ptr > start )
+	    ptr--;
+	*++ptr = 0;
+    }
     return ptr;
 }
 
@@ -2208,19 +2547,19 @@ static char * trim_line ( char * ptr, char ** begin )
 
 enumError ScanSetupFile
 (
-    SetupDef_t	* sdef,		// object list terminated with an element 'name=NULL'
-    ListDef_t	* ldef,		// NULL or object list terminated
-				// with an element 'name=NULL'
-    ccp		path1,		// filename of text file, part 1
-    ccp		path2,		// filename of text file, part 2
-    SubDir_t	* sdir,		// not NULL: use it and ignore 'path1'
-    bool	silent		// true: suppress error message if file not found
+    SetupDef_t		* sdef,		// object list terminated with an element 'name=NULL'
+    const ListDef_t	* ldef,		// NULL or object list terminated
+					// with an element 'name=NULL'
+    ccp			path1,		// filename of text file, part 1
+    ccp			path2,		// filename of text file, part 2
+    SubDir_t		* sdir,		// not NULL: use it and ignore 'path1'
+    bool		silent		// true: suppress error message if file not found
 )
 {
-    DASSERT(sdef);
     DASSERT(path1||path2);
 
-    ResetSetup(sdef);
+    if (sdef)
+	ResetSetup(sdef);
 
     char pathbuf[PATH_MAX];
     ccp path;
@@ -2265,7 +2604,7 @@ enumError ScanSetupFile
 
 	if ( *ptr == '[' )
 	{
-	    ptr = trim_line(ptr,0);
+	    ptr = trim_line(ptr,false,0);
 	    if ( ptr[-1] == ']' )
 	    {
 		section_found = true;
@@ -2273,6 +2612,10 @@ enumError ScanSetupFile
 	    }
 	    continue;
 	}
+
+	if (!sdef)
+	    continue;
+
 
 	//----- find end of name
 
@@ -2283,6 +2626,7 @@ enumError ScanSetupFile
 	    continue;
 
 	char * name_end = ptr;
+
 
 	//----- skip spaces and check for '='
 
@@ -2303,11 +2647,11 @@ enumError ScanSetupFile
 	if (!item->name)
 	    continue;
 
+
 	//----- trim parameter
 
-	ptr++; // skip '='
 	char * param;
-	ptr = trim_line(ptr,&param);
+	trim_line(ptr+1,true,&param);
 
 	item->param = STRDUP(param);
 	if (item->factor)
@@ -2321,7 +2665,7 @@ enumError ScanSetupFile
     while ( section_found && ldef )
     {
 	char * beg;
-	char * ptr = trim_line(iobuf,&beg) - 1;
+	char * ptr = trim_line(iobuf,false,&beg) - 1;
 	if ( *beg != '[' || *ptr != ']' )
 	    break;
 
@@ -2329,19 +2673,22 @@ enumError ScanSetupFile
 	beg++;
 	TRACE("SECTION |%s|\n",beg);
 	StringField_t *sf = 0;
+	exmem_list_t *eml = 0;
 	bool append = false;
-	ListDef_t * ld;
+	const ListDef_t * ld;
 	for ( ld = ldef; ld->name; ld++ )
-	    if (!strcmp(beg,ld->name))
+	    if (!strcasecmp(beg,ld->name))
 	    {
-		sf = ld->sf;
+		sf  = ld->sf;
+		eml = ld->eml;
 		append = ld->append;
 		break;
 	    }
 
+	int index = 0;
 	while (fgets(iobuf,sizeof(iobuf)-1,f))
 	{
-	    char * ptr = trim_line(iobuf,&beg);
+	    char * ptr = trim_line(iobuf,false,&beg);
 	    if ( *beg == '[' )
 	    {
 		if ( ptr[-1] == ']' )
@@ -2349,15 +2696,40 @@ enumError ScanSetupFile
 		continue;
 	    }
 
-	    if ( *beg == '.' && beg[1] == '/' )
-		beg += 2;
-	    if ( !sf || !*beg || *beg == '#' )
+	    if ( !*beg || *beg == '#' )
 		continue;
-	    TRACE("INSERT |%s|\n",beg);
-	    if (append)
-		AppendStringField(sf,beg,false);
-	    else
-		InsertStringField(sf,beg,false);
+
+	    if (sf)
+	    {
+		ccp path = beg;
+		if ( *path == '.' && path[1] == '/' )
+		    path += 2;
+		PRINT("INSERT SP |%s|\n",path);
+		if (append)
+		    AppendStringField(sf,path,false);
+		else
+		    InsertStringField(sf,path,false);
+	    }
+
+	    if (eml)
+	    {
+		char *eq = strchr(beg,'=');
+		if (eq)
+		{
+		    *eq++ = 0;
+		    char *name, *val;
+		    trim_line(beg,false,&name);
+		    trim_line(eq,true,&val);
+
+		    StringLowerS(pathbuf,sizeof(pathbuf),name);
+		    exmem_t data = ExMemByString(val);
+		    data.attrib = index++;
+		    if (append)
+			AppendEML(eml,pathbuf,CPM_COPY,&data,CPM_MOVE);
+		    else
+			ReplaceEML(eml,pathbuf,CPM_COPY,&data,CPM_MOVE);
+		}
+	    }
 	}
     }
 
@@ -2462,7 +2834,7 @@ enumError ScanSetupParam
 	InitializeStringField(&encode_helper);
 	InitializeStringField(&order_helper);
 
-	ListDef_t list_def[] =
+	const ListDef_t list_def[] =
 	{
 	    { "include-pattern", 0, &sp->include_pattern },
 	    { "include",	 0, &sp->include_name },
@@ -3254,13 +3626,15 @@ void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
 	    if ( src[0]=='r' && src[1]>='1' && src[1]<='8' && src[2]>='1' && src[2]<='4' )
 	    {
 		const u16 slot = strtoul(src+1,0,10);
-		if (!si->have_31_71)
+		if ( !si->have_31_71 && !si->have_31_42_71 && !si->have_31_62_71 )
 		{
 		    si->race_mode = SIT_RECOMMEND;
 		    si->race_slot = slot;
 		    StringCopySM(si->race_info,sizeof(si->race_info),src,3);
 		}
-		else if ( slot == 31 || slot == 71 )
+		else if ( slot == 31 || slot == 71
+			|| slot == 42 && si->have_31_42_71
+			|| slot == 62 && si->have_31_62_71 )
 		{
 		    si->race_mode = SIT_MANDATORY;
 		    si->race_slot = slot;
@@ -3326,6 +3700,41 @@ void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
 		StringCopySM(si->arena_info,sizeof(si->arena_info),src,5);
 	    }
 	    break;
+
+	 case 8:
+	    if (!memcmp(src,"31+42+71",8))
+	    {
+		si->have_31_42_71 = true;
+		if ( si->race_mode != SIT_MANDATORY3
+			&& (si->race_slot == 31 || si->race_slot == 42 || si->race_slot == 71 ))
+		{
+		    si->race_mode = SIT_MANDATORY;
+		    snprintf(si->race_info,sizeof(si->race_info),"%u",si->race_slot);
+		}
+		else
+		{
+		    si->race_mode = SIT_MANDATORY3;
+		    si->race_slot = 31;
+		    StringCopySM(si->race_info,sizeof(si->race_info),src,8);
+		}
+	    }
+	    else if (!memcmp(src,"31+62+71",8))
+	    {
+		si->have_31_62_71 = true;
+		if ( si->race_mode != SIT_MANDATORY3
+			&& (si->race_slot == 31 || si->race_slot == 62 || si->race_slot == 71 ))
+		{
+		    si->race_mode = SIT_MANDATORY;
+		    snprintf(si->race_info,sizeof(si->race_info),"%u",si->race_slot);
+		}
+		else
+		{
+		    si->race_mode = SIT_MANDATORY3;
+		    si->race_slot = 31;
+		    StringCopySM(si->race_info,sizeof(si->race_info),src,8);
+		}
+	    }
+	    break;
 	}
     }
 }
@@ -3386,7 +3795,7 @@ void FinalizeSlotInfo ( slot_info_t *si, bool minus_for_empty )
 
     //--- create slot info
 
-    char slot_attrib[20], *dest = slot_attrib, *end = slot_attrib + sizeof(slot_attrib);
+    char slot_attrib[24], *dest = slot_attrib, *end = slot_attrib + sizeof(slot_attrib);
     if (si->race_info[0])
 	dest = StringCat2E(dest,end,",",si->race_info);
     if (si->arena_info[0])

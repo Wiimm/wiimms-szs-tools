@@ -75,6 +75,11 @@ bool DefineIntVar ( VarMap_t * vm, ccp varname, int value ) { return false; }
 #define ARCHIVES_AND	"SZS, U8, PACK, BRRES, BREFF, BREFT and RARC"
 #define ARCHIVES_COMMA	"SZS, U8, PACK, BRRES, BREFF, BREFT, RARC"
 
+// create archives
+#define CARCHIVES_OR	"SZS, U8, PACK, BRRES, BREFF or BREFT"
+#define CARCHIVES_AND	"SZS, U8, PACK, BRRES, BREFF and BREFT"
+#define CARCHIVES_COMMA	"SZS, U8, PACK, BRRES, BREFT"
+
 #define MAX_GAMEMODES "1573"
 
 #define NO_HEAD_SYNTAX "Suppress the syntax information section in decoded text files."
@@ -144,6 +149,10 @@ bool DefineIntVar ( VarMap_t * vm, ccp varname, int value ) { return false; }
 	"BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN"
 
 #define DEPRECATED "[DEPRECATED] "
+
+#define CONFIG_CMD \
+	"Show all information about the search" \
+	" for the configuration file and its content."
 
 //
 ///////////////////////////////////////////////////////////////////////////////

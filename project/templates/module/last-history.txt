@@ -1,10 +1,30 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Buf fix for option --le-define=FILE, if FILE is a lecode binary. In this
-   case, the special functions of chat messages are copied now.
- - wszst ANALYSE: Detection of additional files (like ObjFlow.bin) that have
-   not been changed.
- - MAC support improved.
+ - The tools support a configuration file now to define different paths.
+   Therefor the file "wiimms-szs-tools.conf" is searched in different
+   directories.
+    - Option --config=file allows to define a specific config file.
+    - Command CONFIG (available for all tools) prints an information about
+      searching and the final settings.
+    - wszst CONFIG can export configuration settings for scripts.
+    - wszst CONFIG can create new or updated configuration files.
+ - wszst ANALYZE:
+    - Behavior changed for item position bug.
+    - New warning if minimap is missed.
+    - Detect AIParam.
+    - Print Item Posisiton Factors.
+ - Speedometer settings changed. It is either disabled or enabled with or
+   without fraction (up to 3 digits).
+ - wlect option --speedometer=modus accpets now parameters OFF, AUTO, ON,
+   FRACTION (=1DIGIT), 2DIGITS and 3DIGITS.
+ - LE-CODE supports debug output while racing. LPAR parameter DEBUG, LPAR
+   sections [DEBUG-*] and wlect option --debug define the output format.
+   See http://wiki.tockdom.com/wiki/LPAR#debug for details.
+ - Wiimm's Item Cheat has been integrated into LE-CODE. It is enabled by a
+   LPAR setting and supports Wiimote+Nunchuk, Classic Controller and GCN
+   Controller for all 4 regions.
+ - Bug fix for CT-CODE/LE-CODE configuration file: In v2.21a command 'S' was
+   modified to accept 16 bit slot numbers. And here a copy bug is fixed now.
 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it

@@ -2,8 +2,8 @@
 ###############################################################################
 #
 # Some general rules for the next sections:
-#   All pathes are relative to the current base directory (directory that
-#   contains the file wszst-setup.txt). Prefix at least pathes that starts
+#   All paths are relative to the current base directory (directory that
+#   contains the file wszst-setup.txt). Prefix at least paths that starts
 #   not with a letter, digit, point, star or underscore with "./".
 #
 #------------------------------------------------------------------------------
