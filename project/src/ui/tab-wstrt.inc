@@ -111,6 +111,24 @@
 		" Select parts by --vaddr, --faddr and --sname."
 		" Without selectors, the whole file is dumped." },
 
+  { T_DEF_CMD,	"PORT",		"PORT",
+		    "wstrt PORT param...",
+		"The command expects a list of keywords or hex numbers."
+		" Keywords are @PAL@ (default), @USA@, @JAP@, @KOR@, or any abbreviation of them."
+		" They select the region for the next numeric input values."
+		" The hex numbers are interpreted as addresses."
+		" If possible, they are ported to all other regions."
+		" The result is printed as colorized table."
+		"\n"
+		" This address porting is EXPERIMENTAL!" },
+
+  { T_DEF_CMD,	"WHERE",	"WHERE",
+		    "wstrt WHERE address...",
+		"A list of addresses in hex format is expected as input."
+		" The segments in which the specified addresses"
+		" are located is calculated for each region."
+		" The result is output as a human and machine readable table." },
+
   { H_DEF_CMD,	"HTTPS",	"_HTTPS",
 		    "wstrt _HTTPS file...",
 		"Collect data about https-requests and print a total summary"
@@ -627,6 +645,13 @@
   { T_OPT_C,	"SECTIONS",	"sections",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_CP,	"ORDER",	"order",
+		"pujk",
+		"The parameter is scanend for the first appearance of letters P (for PAL),"
+		" U (USA), J (JAPAN) and K (KOREA) to define the order of the output."
+		" Case is ignored. Missing letters are added automatically."
+		" The default is @'PUJK'@." },
+ 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
   { T_OPT_CP,	"VADDR",	"vaddr|va",
@@ -775,8 +800,7 @@
 		" The effective number of bytes per line is format dependent"
 		" (multiple of format size)." },
 
-
-  //
+ //
   //---------- wstrt GROUP DEST ----------
 
   { T_GRP_BEG,	"DEST",		0,0,0 },
@@ -941,6 +965,10 @@
 		" If set, a second table with the image map is printed."
 		" If set twice, a third table with delta values is printed too." },
 
+  //---------- COMMAND wstrt CDUMP ----------
+
+  { T_CMD_BEG,	"CDUMP",	0,0,0 },
+
   //---------- COMMAND wstrt HEXDUMP ----------
 
   { T_CMD_BEG,	"HEXDUMP",	0,0,0 },
@@ -951,9 +979,25 @@
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"HEXDUMP",	0,0,0 },
 
-  //---------- COMMAND wstrt CDUMP ----------
+  //---------- COMMAND wstrt PORT ----------
 
-  { T_CMD_BEG,	"CDUMP",	0,0,0 },
+  { T_CMD_BEG,	"PORT",		0,0,0 },
+  { T_COPT,	"ORDER",	0,0,0 },
+  { T_COPT,	"NO_HEADER",	0,0,
+		"Suppress the table header and footer and output exactly 1 line for"
+		" each specified address. This makes the output more machine-readable." },
+  { T_COPT,	"BRIEF",	0,0,
+		" Same as {--no-header}." },
+
+  //---------- COMMAND wstrt WHERE ----------
+
+  { T_CMD_BEG,	"WHERE",	0,0,0 },
+  { T_COPT,	"ORDER",	0,0,0 },
+  { T_COPT,	"NO_HEADER",	0,0,
+		"Suppress the table header and footer and output exactly 1 line for"
+		" each specified address. This makes the output more machine-readable." },
+  { T_COPT,	"BRIEF",	0,0,
+		" Same as {--no-header}." },
 
   //---------- COMMAND wstrt HTTPS ----------
 

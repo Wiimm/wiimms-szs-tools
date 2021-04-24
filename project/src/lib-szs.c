@@ -3429,7 +3429,6 @@ int IterateFilesParSZS
 	clean_path,recurse, cut_files, sort_mode,
 	GetNameFF(szs->fform_file,szs->fform_arch));
 
-
     szs_iterator_func ifunc = GetIteratorFunction(szs->fform_arch,cut_files>=0);
     if (!ifunc)
 	return -1;

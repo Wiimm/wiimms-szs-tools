@@ -22332,6 +22332,21 @@
 	" Select parts by --vaddr, --faddr and --sname. Without selectors, the" \
 	" whole file is dumped." )
 
+#:def_cmd( "PORT", "PORT", \
+	"wstrt PORT param...", \
+	"The command expects a list of keywords or hex numbers. Keywords are" \
+	" @PAL@ (default), @USA@, @JAP@, @KOR@, or any abbreviation of them." \
+	" They select the region for the next numeric input values. The hex" \
+	" numbers are interpreted as addresses. If possible, they are ported" \
+	" to all other regions. The result is printed as colorized table.\n" \
+	" This address porting is EXPERIMENTAL!" )
+
+#:def_cmd( "WHERE", "WHERE", \
+	"wstrt WHERE address...", \
+	"A list of addresses in hex format is expected as input. The segments" \
+	" in which the specified addresses are located is calculated for each" \
+	" region. The result is output as a human and machine readable table." )
+
 #:def_cmd( "EXTRACT", "EXTRACT|X", \
 	"wstrt EXTRACT dol...", \
 	"Extract the sections of a DOL file into a directory. StaticR.rel" \
@@ -22789,6 +22804,13 @@
 	"", \
 	"Print in machine readable sections and parameter lines." )
 
+#:def_opt( "ORDER", "order", "CP", \
+	"pujk", \
+	"The parameter is scanend for the first appearance of letters P (for" \
+	" PAL), U (USA), J (JAPAN) and K (KOREA) to define the order of the" \
+	" output. Case is ignored. Missing letters are added automatically." \
+	" The default is @'PUJK'@." )
+
 #:def_opt( "VADDR", "vaddr|va", "CP", \
 	"RANGE", \
 	"Comma separated list of virtual addresses to select the hex-dump" \
@@ -23145,6 +23167,32 @@
 #:def_cmd_opt( "HEXDUMP", "BYTES", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "PORT", "ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PORT", "NO_HEADER", \
+	"", \
+	"Suppress the table header and footer and output exactly 1 line for" \
+	" each specified address. This makes the output more machine-readable." )
+
+#:def_cmd_opt( "PORT", "BRIEF", \
+	"", \
+	" Same as {--no-header}." )
+
+#:def_cmd_opt( "WHERE", "ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "WHERE", "NO_HEADER", \
+	"", \
+	"Suppress the table header and footer and output exactly 1 line for" \
+	" each specified address. This makes the output more machine-readable." )
+
+#:def_cmd_opt( "WHERE", "BRIEF", \
+	"", \
+	" Same as {--no-header}." )
 
 #:def_cmd_opt( "HTTPS", "LONG", \
 	"", \

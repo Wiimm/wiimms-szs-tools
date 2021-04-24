@@ -3903,6 +3903,8 @@ int FindSlotsSZS
 	if (required_slot)
 	    *required_slot = 62;
     }
+    else
+	SLOT(6,2) = -1;
 
 
     //--- adjust special slots & terminate
@@ -3962,9 +3964,7 @@ void AnalyzeSlot ( slot_ana_t *sa, szs_file_t *szs )
 
     if ( sa->required_slot == 31 )
     {
-	if ( sa->slot[ISLOT(6,2)] > 0 )
-	    StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"31+62+71");
-	else if ( sa->slot[ISLOT(4,2)] > 0 )
+	if ( sa->slot[ISLOT(4,2)] > 0 )
 	    StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"31+42+71");
 	else
 	    StringCopyS(sa->mandatory_slot,sizeof(sa->mandatory_slot),"31+71");

@@ -228,6 +228,18 @@ ccp GetLecodeDebugName ( le_debug_mode_t mode )
 
 //-----------------------------------------------------------------------------
 
+ccp GetCheatModeInfo ( uint cheat_mode )
+{
+    switch (cheat_mode)
+    {
+	case 0:  return "disabled";
+	case 1:  return "debug only";
+	default: return "all";
+    }
+}
+
+//-----------------------------------------------------------------------------
+
 ccp GetLecodeDebugInfo ( le_debug_mode_t mode )
 {
     switch (mode)
@@ -463,6 +475,8 @@ bool GetNextDebugMode ( lecode_debug_info_t *ldi )
 	{ LEDEB_CHECK_POINT,	LEDEB_S_CHECK_POINT,	"CHECK-POINT"	},
 	{ LEDEB_RESPAWN,	0,			"RESPAWN"	},
 	{ LEDEB_LAP_POS,	0,			"LAP-POS"	},
+ 	{ LEDEB_XPF,		LEDEB_S_XPF,		"XPF"		},
+// [[xpf+]]
     };
 
     while ( ldi->index >= 0 && ldi->index < sizeof(tab)/sizeof(*tab) )
@@ -505,6 +519,7 @@ lecode_debug_t DecodeLecodeDebug ( lecode_debug_ex_t *lde, lecode_debug_t mode )
     lde->check_point	= mode >> LEDEB_S_CHECK_POINT & LEDEB_M_CHECK_POINT;
     lde->respawn	= ( mode & LEDEB_RESPAWN ) > 0;
     lde->lap_pos	= ( mode & LEDEB_LAP_POS ) > 0;
+    lde->xpf		= mode >> LEDEB_S_XPF & LEDEB_M_XPF;
 
     lde->have_output	= isDebugModeOutput(mode);
     lde->is_active	= isDebugModeActive(mode);
@@ -518,7 +533,9 @@ lecode_debug_t EncodeLecodeDebug ( lecode_debug_ex_t *lde )
 {
     DASSERT(lde);
 
-    lecode_debug_t mode = ( lde->check_point & LEDEB_M_CHECK_POINT ) << LEDEB_S_CHECK_POINT;
+    lecode_debug_t mode = ( lde->check_point & LEDEB_M_CHECK_POINT ) << LEDEB_S_CHECK_POINT
+			| ( lde->xpf & LEDEB_M_XPF ) << LEDEB_S_XPF;
+
     if ( lde->enabled )		mode |= LEDEB_ENABLED;
     if ( lde->opponent )	mode |= LEDEB_OPPONENT;
     if ( lde->space )		mode |= LEDEB_SPACE;
@@ -572,7 +589,7 @@ bool SetupLecodeDebugLPAR
     {
 	{ PREDEBUG_CLEAR, 0, 0 },
 
-	{ PREDEBUG_STANDARD, 1, LEDEB__STD },
+	{ PREDEBUG_STANDARD, 1, LEDEB__STD|LEDEB_SHORT_XPF },
 
 	{ PREDEBUG_OPPONENT, 1, LEDEB__STD },
 	{ PREDEBUG_OPPONENT, 2, LEDEB__STD|LEDEB_OPPONENT },
@@ -582,6 +599,8 @@ bool SetupLecodeDebugLPAR
 	{ PREDEBUG_VERTICAL, 2, LEDEB_RESPAWN },
 	{ PREDEBUG_VERTICAL, 3, LEDEB_LAP_POS },
 	{ PREDEBUG_VERTICAL, 4, LEDEB_POSITION },
+	{ PREDEBUG_VERTICAL, 5, LEDEB_LONG_XPF },
+// [[xpf+]]
 
 	{0,0,0}
     };
@@ -661,9 +680,12 @@ lpar_mode_t CalcCurrentLparMode ( const le_lpar_t * lp, bool use_limit_param )
     if ( lp->enable_perfmon > 1  )
 	return LPM_EXPERIMENTAL;
 
+    // [[new-lpar]]
+
     return lp->enable_perfmon
 	|| !lp->enable_xpflags
 	|| lp->enable_speedo > SPEEDO_FRACTION1
+	|| lp->cheat_mode > 1
 		? LPM_TESTING : LPM_PRODUCTIVE;
 }
 
@@ -699,12 +721,16 @@ bool LimitToLparMode ( le_lpar_t * lp, lpar_mode_t lpmode )
 	    { lp->enable_xpflags = 1; modified = true; }
 	if ( lp->enable_speedo > SPEEDO_MAX )
 	    { lp->enable_speedo = SPEEDO_MAX; modified = true; }
+	if ( lp->cheat_mode > 1 )
+	    { lp->cheat_mode = 1; modified = true; }
     }
     else if ( lpmode == LPM_TESTING )
     {
 	if ( lp->enable_perfmon > 1 )
 	    { lp->enable_perfmon  = 1; modified = true; }
     }
+
+    // [[new-lpar]]
 
     return modified;
 }
@@ -725,32 +751,33 @@ void ClearLparChat ( le_lpar_t * lp )
 
 const u16 chat_mode_legacy[BMG_N_CHAT] =
 {
-    0,0,0,0, 0,0,0,0,		//  1 ..  8
-    0,0,0,0, 0,0,0,0,		//  9 .. 16
-    0,0,0,0, 0,0,0,0,		// 17 .. 24
-    0,0,0,0, 0,0,0,0,		// 25 .. 32
-    0,0,0,0, 0,0,0,0,		// 33 .. 40
-    0,0,0,0, 0,0,0,0,		// 41 .. 48
-    0,0,0,0, 0,0,0,0,		// 49 .. 56
-    0,0,0,0, 0,0,0,0,		// 57 .. 64
+    0,0,0,0, 0,0,0,0,			//  1 ..  8
+    0,0,0,0, 0,0,0,0,			//  9 .. 16
+    0,0,0,0, 0,0,0,0,			// 17 .. 24
+    0,0,0,0, 0,0,0,0,			// 25 .. 32
+    0,0,0,0, 0,0,0,0,			// 33 .. 40
+    0,0,0,0, 0,0,0,0,			// 41 .. 48
+    0,0,0,0, 0,0,0,0,			// 49 .. 56
+    0,0,0,0, 0,0,0,0,			// 57 .. 64
 
-    CHATMD_ANY_VEHICLE, 0,0,0,	// 65 .. 68
-    CHATMD_KARTS_ONLY,		// 69
-    CHATMD_BIKES_ONLY,		// 70
-    CHATMD_TRACK_BY_HOST,	// 71
-    CHATMD_ANY_TRACK,		// 72
+    CHATMD_VEHICLE_BEG+CHATVEH_ANY,	// 65
+    0,0,0,				// 66 .. 68
+    CHATMD_VEHICLE_BEG+CHATVEH_KART,	// 69
+    CHATMD_VEHICLE_BEG+CHATVEH_BIKE,	// 70
+    CHATMD_TRACK_BY_HOST,		// 71
+    CHATMD_ANY_TRACK,			// 72
 
-    RACE0 +  1,			// 73
-    RACE0 +  2,			// 74
-    RACE0 +  3,			// 75
-    RACE0 +  4,			// 76
-    RACE0 +  5,			// 77
-    RACE0 +  6,			// 78
-    RACE0 +  8,			// 79
-    RACE0 + 10,			// 80
+    RACE0 +  1,				// 73
+    RACE0 +  2,				// 74
+    RACE0 +  3,				// 75
+    RACE0 +  4,				// 76
+    RACE0 +  5,				// 77
+    RACE0 +  6,				// 78
+    RACE0 +  8,				// 79
+    RACE0 + 10,				// 80
 
-    0,0,0,0, 0,0,0,0,		// 81 .. 88
-    0,0,0,0, 0,0,0,0,		// 89 .. 96
+    0,0,0,0, 0,0,0,0,			// 81 .. 88
+    0,0,0,0, 0,0,0,0,			// 89 .. 96
 };
 
 //-----------------------------------------------------------------------------
@@ -880,20 +907,20 @@ void InitializeLPAR ( le_lpar_t *lpar, bool load_lpar )
     DASSERT(lpar);
     memset(lpar,0,sizeof(*lpar));
 
-    lpar->limit_mode = LPM__DEFAULT;
-
-    lpar->engine[0]	= 10;
-    lpar->engine[1]	= 60;
-    lpar->engine[2]	= 30;
-    lpar->enable_xpflags= 1;
-    lpar->block_track	= 0;
+    lpar->limit_mode		= LPM__DEFAULT;
+    lpar->engine[0]		=  10;
+    lpar->engine[1]		=  60;
+    lpar->engine[2]		=  30;
+    lpar->enable_xpflags	=   1;
+    lpar->drag_blue_shell	=   1;
+    lpar->thcloud_frames	= 300;
 
     if ( load_lpar && opt_lpar )
 	LoadLPAR(lpar,false,0,false);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
+ 
 static void NormalizeLPAR ( le_lpar_t * lp )
 {
     DASSERT(lp);
@@ -912,6 +939,10 @@ static void NormalizeLPAR ( le_lpar_t * lp )
 	lp->engine[2] = 100 - lp->engine[0] - lp->engine[1];
     }
 
+    if ( lp->thcloud_frames < 1 || lp->thcloud_frames > 0x7fff )
+	lp->thcloud_frames = 300;
+
+    lp->cheat_mode		= lp->cheat_mode < 2 ? lp->cheat_mode : 2;
     lp->enable_200cc		= lp->enable_200cc > 0;
     lp->enable_perfmon		= lp->enable_perfmon < 2 ? lp->enable_perfmon : 2;
     lp->enable_custom_tt	= lp->enable_custom_tt > 0;
@@ -919,10 +950,15 @@ static void NormalizeLPAR ( le_lpar_t * lp )
     lp->enable_speedo		= lp->enable_speedo < SPEEDO_MAX ? lp->enable_speedo : SPEEDO_MAX;
     lp->block_track		= lp->block_track < LE_MAX_BLOCK_TRACK
 				? lp->block_track : LE_MAX_BLOCK_TRACK;
+    lp->drag_blue_shell		= lp->drag_blue_shell > 0;
 
+ #if 0
     for ( int c = 0; c < LEDEB__N_CONFIG; c++ )
 	for ( int l = 0; l < LEDEB__N_LINE; l++ )
 	    lp->debug[c][l] &= LEDEB__ALL;
+ #endif
+
+    // [[new-lpar]]
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -962,10 +998,10 @@ static void CopyLPAR2Data ( le_analyse_t * ana )
     if ( offsetof(le_binpar_v1_t,item_cheat) < ana->param_size )
 	h->item_cheat = lp->item_cheat;
 
-    if ( offsetof(le_binpar_v1_t,debug_predef[LEDEB__N_CONFIG]) <= ana->param_size )
+    if ( offsetof(le_binpar_v1_t,debug_predef[LEDEB__N_CONFIG-1]) < ana->param_size )
 	memcpy( h->debug_predef,lp->debug_predef,sizeof(h->debug_predef));
 
-    if ( offsetof(le_binpar_v1_t,debug[LEDEB__N_CONFIG][0]) <= ana->param_size )
+    if ( offsetof(le_binpar_v1_t,debug[LEDEB__N_CONFIG-1][LEDEB__N_LINE-1]) < ana->param_size )
 	write_be32n( h->debug[0], lp->debug[0], LEDEB__N_CONFIG*LEDEB__N_LINE );
 
     if ( offsetof(le_binpar_v1_t,block_track) < ana->param_size )
@@ -976,6 +1012,17 @@ static void CopyLPAR2Data ( le_analyse_t * ana )
 
     if ( offsetof(le_binpar_v1_t,chat_mode_2) + sizeof(h->chat_mode_2) <= ana->param_size )
 	write_be16n(h->chat_mode_2,lp->chat_mode_2,BMG_N_CHAT);
+
+    if ( offsetof(le_binpar_v1_t,cheat_mode) < ana->param_size )
+	h->cheat_mode = lp->cheat_mode;
+
+    if ( offsetof(le_binpar_v1_t,drag_blue_shell) < ana->param_size )
+	h->drag_blue_shell = lp->drag_blue_shell;
+
+    if ( offsetof(le_binpar_v1_t,thcloud_frames) < ana->param_size )
+	h->thcloud_frames = htons(lp->thcloud_frames);
+
+    // [[new-lpar]]
 }
 
 //
@@ -1071,8 +1118,10 @@ enumError WriteSectionLPAR
 
     if (verbose)
     {
+	// [[new-lpar]]
 	fprintf(f,text_lpar_sect_param_cr
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
+		,lpar->cheat_mode
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
 		,lpar->enable_200cc
 		,lpar->enable_perfmon
@@ -1082,13 +1131,17 @@ enumError WriteSectionLPAR
 		,GetLecodeSpeedoName(lpar->enable_speedo)
 		,GetLecodeDebugName(lpar->debug_mode)
 		,lpar->item_cheat
+		,lpar->drag_blue_shell
+		,lpar->thcloud_frames,lpar->thcloud_frames/60.0
 		);
     }
     else
     {
+	// [[new-lpar]]
 	fprintf(f,
 	       "\r\n"
 	       "LIMIT-MODE	= %s\r\n\r\n"
+	       "CHEAT-MODE	= %d\r\n"
 	       "ENGINE		= %u,%u,%u\r\n"
 	       "ENABLE-200CC	= %u\r\n"
 	       "PERF-MONITOR	= %u\r\n"
@@ -1097,8 +1150,11 @@ enumError WriteSectionLPAR
 	       "BLOCK-TRACK	= %u\r\n"
 	       "SPEEDOMETER	= SPEEDO$%s\r\n"
 	       "DEBUG		= DEBUG$%s\r\n"
-	       "ITEM-CHEATS	= %u\r\n"
+	       "ITEM-CHEAT	= %u\r\n"
+	       "DRAG-BLUE-SHELL	= %u\r\n"
+	       "THCLOUD-TIME	= %u # %.2fs\r\n"
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
+		,lpar->cheat_mode
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
 		,lpar->enable_200cc
 		,lpar->enable_perfmon
@@ -1108,6 +1164,8 @@ enumError WriteSectionLPAR
 		,GetLecodeSpeedoName(lpar->enable_speedo)
 		,GetLecodeDebugName(lpar->debug_mode)
 		,lpar->item_cheat
+		,lpar->drag_blue_shell
+		,lpar->thcloud_frames,lpar->thcloud_frames/60.0
 		);
     }
 
@@ -1416,7 +1474,21 @@ enumError AnalyseLEBinary
 		    be32n(ana->lpar.debug[0],p->debug[0],LEDEB__N_CONFIG*LEDEB__N_LINE);
 		    ana->lpar.item_cheat	= p->item_cheat;
 		}
-		break;
+
+		if ( param_size >= sizeof(le_binpar_v1_264_t) )
+		{
+		    le_binpar_v1_264_t *p	= (le_binpar_v1_264_t*)(data+off_param);
+		    ana->lpar.cheat_mode	= p->cheat_mode;
+		    ana->lpar.drag_blue_shell	= p->drag_blue_shell;
+		    ana->lpar.thcloud_frames	= ntohs(p->thcloud_frames);
+		}
+//		else
+//		{
+//		    ana->lpar.drag_blue_shell	=   1;
+//		    ana->lpar.thcloud_frames	= 300;
+//		}
+
+		break; // [[new-lpar]]
 
 	     default:
 		// at least v1
@@ -2232,6 +2304,13 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
       {
 	const le_binpar_v1_t *h = ana->param_v1;
 	DASSERT(h);
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_264_t)  )
+	    fprintf(f,
+		"%*s" "Allow cheat codes: %u = %s\n"
+		,indent,"", h->cheat_mode, GetCheatModeInfo(h->cheat_mode)
+		);
+	
 	fprintf(f,
 		"%*s" "Engine chances:    "
 			"%u + %u + %u = %u (1%s0cc+mirror=total)\n"
@@ -2286,6 +2365,19 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 		,indent,"", h->item_cheat, h->item_cheat ? "enabled" : "disabled"
 		);
 	}
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_264_t)  )
+	{
+	    const int nframes  = ntohs(h->thcloud_frames);
+	    fprintf(f,
+		"%*s" "Drag blue shells:  %u = %sabled\n"
+		"%*s" "Thundercloud time: %u frames = %.2fs\n"
+		,indent,"", h->drag_blue_shell, h->drag_blue_shell ? "en" : "dis"
+		,indent,"", nframes, nframes/60.0
+		);
+	}
+
+	// [[new-lpar]]
 
  #if 0 // for later use
 	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t)  )
@@ -2776,6 +2868,8 @@ void PatchLPAR ( le_lpar_t * lp )
     if ( opt_lecode_debug != OFFON_AUTO )
 	lp->debug_mode = opt_lecode_debug >= DEBUGMD_ENABLED && opt_lecode_debug < DEBUGMD__N
 				? opt_lecode_debug : DEBUGMD_OFF;
+
+    // [[new-lpar]]
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2823,16 +2917,20 @@ static enumError ScanTextLPAR_PARAM
     const ScanParam_t ptab[] =
     {
 	{ "LIMIT-MODE",		SPM_INT, &limit_mode },
-	{ "ENGINE",		SPM_U8,	lpar->engine, 3,3 },
-	{ "ENABLE-200CC",	SPM_U8,	&lpar->enable_200cc },
-	{ "PERF-MONITOR",	SPM_U8,	&lpar->enable_perfmon },
-	{ "CUSTOM-TT",		SPM_S8,	&lpar->enable_custom_tt },
-	{ "XPFLAGS",		SPM_U8,	&lpar->enable_xpflags },
-	{ "BLOCK-TRACK",	SPM_U8,	&lpar->block_track },
-	{ "SPEEDOMETER",	SPM_U8,	&lpar->enable_speedo },
-	{ "DEBUG",		SPM_U8,	&lpar->debug_mode },
-	{ "ITEM-CHEAT",		SPM_U8,	&lpar->item_cheat },
-	{0}
+	{ "CHEAT-MODE",		SPM_U8,  &lpar->cheat_mode },
+	{ "ENGINE",		SPM_U8,	  lpar->engine, 3,3 },
+	{ "ENABLE-200CC",	SPM_U8,	 &lpar->enable_200cc },
+	{ "PERF-MONITOR",	SPM_U8,	 &lpar->enable_perfmon },
+	{ "CUSTOM-TT",		SPM_S8,	 &lpar->enable_custom_tt },
+	{ "XPFLAGS",		SPM_U8,	 &lpar->enable_xpflags },
+	{ "BLOCK-TRACK",	SPM_U8,	 &lpar->block_track },
+	{ "SPEEDOMETER",	SPM_U8,	 &lpar->enable_speedo },
+	{ "DEBUG",		SPM_U8,	 &lpar->debug_mode },
+	{ "ITEM-CHEAT",		SPM_U8,	 &lpar->item_cheat },
+	{ "ITEM-CHEATS",	SPM_U8,	 &lpar->item_cheat }, // bug in 2021-04, [[obsolete]] in 2022
+	{ "DRAG-BLUE-SHELL",	SPM_U8,  &lpar->drag_blue_shell },
+	{ "THCLOUD-TIME",	SPM_U16, &lpar->thcloud_frames },
+	{0} // [[new-lpar]]
     };
 
 
@@ -2993,6 +3091,7 @@ static enumError ScanTextLPAR_DEBUG
 	{ "CHECK-POINT",	SPM_U8,  &debug.check_point },
 	{ "RESPAWN",		SPM_U8,  &debug.respawn },
 	{ "LAP-POS",		SPM_U8,  &debug.lap_pos },
+	{ "XPF",		SPM_U8,  &debug.xpf },
 	{0}
     };
 

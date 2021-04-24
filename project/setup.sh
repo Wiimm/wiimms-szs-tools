@@ -56,7 +56,6 @@ gcc $xflags -E -DPRINT_SYSTEM_SETTINGS system.c \
 	| awk -F= '/^result_/ {printf("%s := %s\n",substr($1,8),gensub(/"/,"","g",$2))}' \
 	> Makefile.setup
 
-#rm -f system.tmp
 SYSTEM=$(awk '$1=="SYSTEM" {print $3}' Makefile.setup)
 #echo "SYSTEM=|$SYSTEM|" >&2
 

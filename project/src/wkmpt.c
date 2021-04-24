@@ -1682,7 +1682,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
     DumpUsedOptions(&InfoUI_wkmpt,TRACE_FILE,11);
  #endif
     CloseTransformation();
-    NormalizeOptions( verbose > 3 && !is_env ? 2 : 0 );
+    NormalizeOptions( verbose > 3 && !is_env );
     SetupKCL();
     SetupKMP();
 

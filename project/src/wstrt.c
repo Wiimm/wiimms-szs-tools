@@ -401,6 +401,207 @@ static enumError cmd_hexdump()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			command port			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static void setup_order ( int index[STR_ZBI_N], int delta )
+{
+    int dest_index = 0;
+    char used[STR_ZBI_N] = {0};
+
+    if (opt_order)
+    {
+	ccp ptr = opt_order;
+	while ( *ptr && dest_index < STR_ZBI_N )
+	{
+	    int idx = -1;
+	    switch(*ptr++)
+	    {
+		case 'p': case 'P': idx = STR_M_PAL - STR_ZBI_FIRST; break;
+		case 'u': case 'U': idx = STR_M_USA - STR_ZBI_FIRST; break;
+		case 'j': case 'J': idx = STR_M_JAP - STR_ZBI_FIRST; break;
+		case 'k': case 'K': idx = STR_M_KOR - STR_ZBI_FIRST; break;
+	    }
+
+	    if ( idx >= 0 && !used[idx] )
+	    {
+		used[idx]++;
+		index[dest_index++] = idx + STR_ZBI_FIRST - delta;
+	    }
+	}
+    }
+
+    for ( int i = 0; i < STR_ZBI_N && dest_index < STR_ZBI_N; i++ )
+	if (!used[i])
+	    index[dest_index++] = i + STR_ZBI_FIRST - delta;
+
+    if ( logging >= 3 )
+	fprintf(stdlog,"# Region Order: %d:%s %d:%s %d:%s %d:%s\n",
+		index[0], GetStrModeName(index[0]+delta),
+		index[1], GetStrModeName(index[1]+delta),
+		index[2], GetStrModeName(index[2]+delta),
+		index[3], GetStrModeName(index[3]+delta) );
+}
+
+//-----------------------------------------------------------------------------
+
+static enumError cmd_port()
+{
+
+    if (brief_count)
+	print_header = false;
+
+    int index[STR_ZBI_N];
+    setup_order(index,STR_ZBI_FIRST);
+
+
+    //--- port addresses
+
+    int max_fw = 0;
+    for ( int md = 0; md <= ASM_M_MODE; md++ )
+    {
+	const int slen = strlen(addr_size_flags_info[md]);
+	if ( max_fw < slen )
+	     max_fw = slen;
+    }
+
+    const int sep_len_3 = 3*(56+max_fw);
+
+    int count = 0;    
+    str_mode_t mode = STR_M_PAL;
+    ParamList_t *param;
+    for ( param = first_param; param; param = param->next )
+    {
+	ccp arg = param->arg;
+	if ( !arg || !*arg )
+	    continue;
+
+	const KeywordTab_t *cmd = ScanKeyword(0,arg,str_mode_keyword_tab);
+	if (cmd)
+	{
+	    mode = cmd->id;
+	    continue;
+	}
+
+	if ( print_header && !count++ )
+	    printf("\n%s#%.*s\n%s#    %s        %s        %s        %s     where  status\n%s#%.*s%s\n",
+		colout->heading, sep_len_3, ThinLine300_3,
+		colout->heading, 
+		GetStrModeName(index[0]+STR_ZBI_FIRST),
+		GetStrModeName(index[1]+STR_ZBI_FIRST),
+		GetStrModeName(index[2]+STR_ZBI_FIRST),
+		GetStrModeName(index[3]+STR_ZBI_FIRST),
+		colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+
+	const u32 num		= str2ul(arg,0,16);
+	const addr_type_t atype	= GetAddressType(mode,num);
+	const ccp atname	= GetAddressTypeName(atype);
+	const u32 mirror	= IsMirroredAddress(num) ? MIRRORED_ADDRESS_DELTA : 0;
+	const u32 addr		= num - mirror;
+	const addr_port_t *ap	= GetPortingRecord(mode,addr);
+
+	if (!ap)
+	{
+	    printf("%s! Can't port %s address 0x%08x (%s)!%s\n",
+			colout->warn, GetStrModeName(mode), num, atname, colout->reset );
+	}
+	else
+	{
+	    const int idx    = mode - STR_ZBI_FIRST;
+	    const int offset = addr - ap->addr[idx];
+
+	    for ( int i = 0; i < STR_ZBI_N; i++ )
+	    {
+		const u32 val = ap->addr[index[i]] + offset + mirror;
+		if ( idx == i )
+		    printf(" %s%#8x%s",colout->value,val,colout->reset);
+		else
+		    printf(" %#8x",val);
+	    }
+
+	    const int asmode = ( offset < ap->size1 ? ap->size1 : ap->size2 ) & ASM_M_MODE;
+	    printf("  %s%-5.5s%s  %s%u: %s%s\n",
+			GetAddressTypeColor(colout,atype), atname, colout->reset,
+			GetAddressSizeColor(colout,asmode),
+			asmode, addr_size_flags_info[asmode],
+			colout->reset );
+	}
+    }
+
+    if (print_header)
+    {
+	if ( count > 0 )
+	    printf("%s#%.*s%s\n\n", colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+	else
+	    putchar('\n');
+    }
+
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			command where			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_where()
+{
+
+    if (brief_count)
+	print_header = false;
+
+    int index[STR_ZBI_N];
+    setup_order(index,0);
+
+
+    //--- port addresses
+
+    const int sep_len_3 = 3*34;
+
+    int count = 0;    
+    ParamList_t *param;
+    for ( param = first_param; param; param = param->next )
+    {
+	ccp arg = param->arg;
+	if ( !arg || !*arg )
+	    continue;
+
+	if ( print_header && !count++ )
+	    printf("\n%s#%.*s\n%s# Address   %s   %s   %s   %s\n%s#%.*s%s\n",
+		colout->heading, sep_len_3, ThinLine300_3,
+		colout->heading, 
+		GetStrModeName(index[0]),
+		GetStrModeName(index[1]),
+		GetStrModeName(index[2]),
+		GetStrModeName(index[3]),
+		colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+
+	const uint num = str2ul(arg,0,16);
+	printf(" %8x:",num);
+	for ( int i = 0; i < STR_ZBI_N; i++ )
+	{
+	    addr_type_t type = GetAddressType(index[i],num);
+	    printf("  %s%-4.4s%s",
+		GetAddressTypeColor(colout,type),
+		GetAddressTypeName(type),
+		colout->reset );
+	}
+	putchar('\n');
+    }
+
+    if (print_header)
+    {
+	if ( count > 0 )
+	    printf("%s#%.*s%s\n\n", colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+	else
+	    putchar('\n');
+    }
+
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command https			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1261,6 +1462,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_BRIEF:		brief_count++; break;
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_SECTIONS:	print_sections++; break;
+	case GO_ORDER:		opt_order = optarg; break;
 
 	case GO_VADDR:		InsertAddressMemMap(&vaddr,true,optarg,16); break;
 	case GO_FADDR:		InsertAddressMemMap(&faddr,true,optarg,16); break;
@@ -1320,7 +1522,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
  #ifdef DEBUG
     DumpUsedOptions(&InfoUI_wstrt,TRACE_FILE,11);
  #endif
-    NormalizeOptions( verbose > 3 && !is_env ? 2 : 0 );
+    NormalizeOptions( verbose > 3 && !is_env );
 
     if (!is_env)
     {
@@ -1389,6 +1591,8 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_DUMP:		err = cmd_dump(false); break;
 	case CMD_CDUMP:		err = cmd_dump(true); break;
 	case CMD_HEXDUMP:	err = cmd_hexdump(); break;
+	case CMD_PORT:		err = cmd_port(); break;
+	case CMD_WHERE:		err = cmd_where(); break;
 	case CMD_HTTPS:		err = cmd_https(); break;
 	case CMD_EXTRACT:	err = cmd_extract(); break;
 

@@ -1,30 +1,14 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - The tools support a configuration file now to define different paths.
-   Therefor the file "wiimms-szs-tools.conf" is searched in different
-   directories.
-    - Option --config=file allows to define a specific config file.
-    - Command CONFIG (available for all tools) prints an information about
-      searching and the final settings.
-    - wszst CONFIG can export configuration settings for scripts.
-    - wszst CONFIG can create new or updated configuration files.
- - wszst ANALYZE:
-    - Behavior changed for item position bug.
-    - New warning if minimap is missed.
-    - Detect AIParam.
-    - Print Item Posisiton Factors.
- - Speedometer settings changed. It is either disabled or enabled with or
-   without fraction (up to 3 digits).
- - wlect option --speedometer=modus accpets now parameters OFF, AUTO, ON,
-   FRACTION (=1DIGIT), 2DIGITS and 3DIGITS.
- - LE-CODE supports debug output while racing. LPAR parameter DEBUG, LPAR
-   sections [DEBUG-*] and wlect option --debug define the output format.
-   See http://wiki.tockdom.com/wiki/LPAR#debug for details.
- - Wiimm's Item Cheat has been integrated into LE-CODE. It is enabled by a
-   LPAR setting and supports Wiimote+Nunchuk, Classic Controller and GCN
-   Controller for all 4 regions.
- - Bug fix for CT-CODE/LE-CODE configuration file: In v2.21a command 'S' was
-   modified to accept 16 bit slot numbers. And here a copy bug is fixed now.
+ - Bug fix: If creating a LPAR file, a parameter with name ITEM-CHEATS was
+   printed. But tool wlect accepted only ITEM-CHEAT (without leading 'S').
+ - Bug fix: Since previous version the tools recomended slots 3.1 + 6.2 + 7.1
+   for some tracks.
+ - New command: wstrt WHERE address...: The segment in which the specified
+   addresses are located is calculated for each region.
+ - New command: wstrt PORT ...: Port addresses from one region to all others.
+ - Mac support improved. Universal binaries for x86_64 and arm64.
+ - Support of LE-CODE build 29.
 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it

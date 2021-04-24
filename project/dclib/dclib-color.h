@@ -386,6 +386,7 @@ typedef enum TermColorIndex_t
     TCI__N	= TCI__IGNORE,	// number of supported colors
     TCI__N_FONT	= TCI_B_RED,	// number of recommended font colors
     TCI__N_BG	= TCI__N,	// number of recommended background colors
+    TCI__N_GREY = TCI_RED,	// number of gray tones 
 
  #else // !SUPPORT_36_COLORS
 
@@ -417,6 +418,7 @@ typedef enum TermColorIndex_t
     TCI__N	= TCI__IGNORE,	// number of supported colors
     TCI__N_FONT	= TCI_B_RED,	// number of recommended font colors
     TCI__N_BG	= TCI__N,	// number of recommended background colors
+    TCI__N_GREY = TCI_RED,	// number of gray tones 
 
  #endif // !SUPPORT_36_COLORS
 }
@@ -432,6 +434,8 @@ extern const int Color18Index[18+1]; // 18 elements + -1 as terminator
 
 //-----------------------------------------------------------------------------
 // [[ColorSet_t]]
+
+#define N_COLORSET_GREY 10
 
 typedef struct ColorSet_t
 {
@@ -450,7 +454,7 @@ typedef struct ColorSet_t
     //--- data, always begins with 'reset'
     // [[new-color]]
 
-    ccp reset;
+    ccp reset;	    // always first color!!
 
     ccp setup;
     ccp run;
@@ -505,39 +509,75 @@ typedef struct ColorSet_t
     ccp	white;
     ccp	b_white;
 
+    ccp grey[N_COLORSET_GREY];
+
+    ccp	red_magenta;
     ccp	red;
     ccp	red_orange;
+    ccp	orange_red;
     ccp	orange;
     ccp	orange_yellow;
+    ccp	yellow_orange;
     ccp	yellow;
     ccp	yellow_green;
+    ccp	green_yellow;
     ccp	green;
     ccp	green_cyan;
+    ccp	cyan_green;
     ccp	cyan;
     ccp	cyan_blue;
+    ccp	blue_cyan;
     ccp	blue;
     ccp	blue_magenta;
+    ccp	magenta_blue;
     ccp	magenta;
     ccp	magenta_red;
 
+    ccp	b_red_magenta;
     ccp	b_red;
     ccp	b_red_orange;
+    ccp	b_orange_red;
     ccp	b_orange;
     ccp	b_orange_yellow;
+    ccp	b_yellow_orange;
     ccp	b_yellow;
     ccp	b_yellow_green;
+    ccp	b_green_yellow;
     ccp	b_green;
     ccp	b_green_cyan;
+    ccp	b_cyan_green;
     ccp	b_cyan;
     ccp	b_cyan_blue;
+    ccp	b_blue_cyan;
     ccp	b_blue;
     ccp	b_blue_magenta;
+    ccp	b_magenta_blue;
     ccp	b_magenta;
     ccp	b_magenta_red;
 
     ccp matrix[TCI__N_FONT][TCI__N_BG];
 }
 ColorSet_t;
+
+//-----------------------------------------------------------------------------
+// [[ColorSelect_t]]
+
+typedef enum ColorSelect_t
+{
+    COLSEL_COLOR	= 0x01,
+    COLSEL_B_COLOR	= 0x02,
+    COLSEL_GREY		= 0x04,
+    COLSEL_NAME		= 0x08,
+
+    COLSEL_F_ALT	= 0x10,
+
+    COLSEL_M_COLOR	= COLSEL_COLOR|COLSEL_B_COLOR,
+    COLSEL_M_NONAME	= COLSEL_COLOR|COLSEL_B_COLOR|COLSEL_GREY,
+    COLSEL_M_MODE	= 0x0f,
+    COLSEL_M_ALL	= 0x1f,
+    
+}
+ColorSelect_t;
 
 //-----------------------------------------------------------------------------
 
@@ -577,7 +617,6 @@ typedef void (*PrintColorFunc)
     FILE		*f,		// valid output file
     int			indent,		// normalized indention of output
     const ColorSet_t	*cs,		// valid color set, never NULL
-    uint		mode,		// output mode of PrintColorSetHelper()
     ccp			col_name,	// name of color
     ccp			col_string	// escape string for the color
 );
@@ -598,15 +637,8 @@ void PrintColorSet
 (
     FILE		*f,		// valid output file
     int			indent,		// indention of output
-    const ColorSet_t	*cs		// valid color set; if NULL: use std colors
-);
-
-void PrintColorSetEx
-(
-    FILE		*f,		// valid output file
-    int			indent,		// indention of output
     const ColorSet_t	*cs,		// valid color set; if NULL: use std colors
-    uint		mode,		// output mode => see PrintColorSetHelper()
+    ColorSelect_t	select,		// select color groups
     uint		format		// output format
 					//   0: colored list
 					//   1: shell definitions
@@ -618,12 +650,8 @@ void PrintColorSetHelper
     int			indent,		// indention of output
     const ColorSet_t	*cs,		// valid color set; if NULL: use std colors
     PrintColorFunc	func,		// output function, never NULL
-    uint		mode		// output mode (bit field, NULL=default):
-					//   1: print normal colors (e.g. RED)
-					//   2: print bold colors (e.g. B_RED)
-					//   4: print background (e.g. BLUE_RED)
-					//   8: print color names (e.g. HIGHLIGHT)
-					//  16: include alternative names too (e.g. HL)
+    ColorSelect_t	select,		// select color groups
+    int			multi_assign	// >0: Allow A=B="...";  >1: reorder records too
 );
 
 //
@@ -662,6 +690,8 @@ typedef struct ColorView_t
     int			order;		// 0|'r' | 1|'g' | 2|'b'
     GetColorOption_t	col_option;	// color option
     uint		mode;		// function specific mode (modulo 60)
+    bool		print_alt;	// print alternative names
+    bool		allow_sep;	// allow separator lines
 
     void		*user_ptr;	// any pointer
     int			user_int;	// any number or id
@@ -681,7 +711,7 @@ void ViewColorsCombi8	( ColorView_t *cv );
 void ViewColors18	( ColorView_t *cv );
 void ViewColorsDC	( ColorView_t *cv, bool optimized );
 void ViewColors256	( ColorView_t *cv );
-void ViewColorsPredef	( ColorView_t *cv, uint mode ); // mode: 1=name, 2=colors
+void ViewColorsPredef	( ColorView_t *cv, ColorSelect_t select );
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////

@@ -710,8 +710,6 @@ enumError CreateBRRES
 	    if ( f_ptr->dir_id != dir_id )
 		continue;
 
-	    noPRINT("*** %d %3u %s\n",f_ptr->is_dir,f_ptr->dir_id,f_ptr->path);
-
 	    //--- write name data
 
 	    IsolateFilename(path_buf,sizeof(path_buf),f_ptr->path,f_ptr->fform);
@@ -849,22 +847,36 @@ static int iterate_brres_group
     {
 	it->name = 0;
 	ccp name = "";
-	uint name_len = 0;
+	int name_len = 0;
 	uint new_path_len = path_len;
 	const uint name_off = it->endian->rd32(&entry->name_off);
-	if (name_off)
+
+	if ( name_off && name_off < szs->size )
 	{
 	    it->name = name = (ccp)grp + name_off;
 	    name_len = it->endian->rd32(name-4);
-	    if ( path_len + name_len < sizeof(it->path)-2 )
-	    {
-		it->trail_path = it->path+path_len;
-		memcpy(it->trail_path,name,name_len);
-		new_path_len += name_len;
-		it->path[new_path_len] = 0;
-	    }
+	    if ( name_len < 0 )
+		name_len = strlen(name);
+	    if ( name_len < 1 || name_off + name_len > szs->size )
+		name_len = 0;
 	}
 
+	char name_buf[20];
+	if ( name_len < 1 )
+	{
+	    name_len = snprintf(name_buf,sizeof(name_buf),"_file_%zu",entry-grp->entry);
+	    name = name_buf;
+	    it->name = 0;
+	}
+
+	if ( path_len + name_len < sizeof(it->path)-2 )
+	{
+	    it->trail_path = it->path+path_len;
+	    memcpy(it->trail_path,name,name_len);
+	    new_path_len += name_len;
+	    it->path[new_path_len] = 0;
+	}
+	
 	const u8 * data = (u8*)grp + it->endian->rd32(&entry->data_off);
 	it->index++;
 	if ( data < it->root_end )

@@ -86,6 +86,7 @@ typedef enum enumOptions
 	OPT_CREATE_SECT,
 	OPT_WPF,
 	OPT_SECTIONS,
+	OPT_ORDER,
 	OPT_VADDR,
 	OPT_FADDR,
 	OPT_SNAME,
@@ -118,7 +119,7 @@ typedef enum enumOptions
 	OPT_WIDE,
 	OPT_BYTES,
 
-	OPT__N_SPECIFIC, // == 62
+	OPT__N_SPECIFIC, // == 63
 
 	//----- global options -----
 
@@ -174,7 +175,7 @@ typedef enum enumOptions
 	OPT_CLEAN_DOL,
 	OPT_CT_DIR,
 
-	OPT__N_TOTAL // == 113
+	OPT__N_TOTAL // == 114
 
 } enumOptions;
 
@@ -219,6 +220,7 @@ typedef enum enumOptions
 //	OB_CREATE_SECT		= 1llu << OPT_CREATE_SECT,
 //	OB_WPF			= 1llu << OPT_WPF,
 //	OB_SECTIONS		= 1llu << OPT_SECTIONS,
+//	OB_ORDER		= 1llu << OPT_ORDER,
 //	OB_VADDR		= 1llu << OPT_VADDR,
 //	OB_FADDR		= 1llu << OPT_FADDR,
 //	OB_SNAME		= 1llu << OPT_SNAME,
@@ -323,12 +325,20 @@ typedef enum enumOptions
 //
 //	OB_CMD_DUMP		= OB_LONG,
 //
+//	OB_CMD_CDUMP		= 0,
+//
 //	OB_CMD_HEXDUMP		= OB_VADDR
 //				| OB_FADDR
 //				| OB_SNAME
 //				| OB_GRP_HEXDUMP,
 //
-//	OB_CMD_CDUMP		= 0,
+//	OB_CMD_PORT		= OB_ORDER
+//				| OB_NO_HEADER
+//				| OB_BRIEF,
+//
+//	OB_CMD_WHERE		= OB_ORDER
+//				| OB_NO_HEADER
+//				| OB_BRIEF,
 //
 //	OB_CMD_HTTPS		= OB_LONG,
 //
@@ -400,6 +410,8 @@ typedef enum enumCommands
 	CMD_DUMP,
 	CMD_CDUMP,
 	CMD_HEXDUMP,
+	CMD_PORT,
+	CMD_WHERE,
 	CMD_HTTPS,
 	CMD_EXTRACT,
 
@@ -412,7 +424,7 @@ typedef enum enumCommands
 	CMD_ANALYZE,
 	CMD_PATCH,
 
-	CMD__N // == 23
+	CMD__N // == 25
 
 } enumCommands;
 
@@ -509,6 +521,7 @@ typedef enum enumGetOpt
 	GO_CREATE_SECT,
 	GO_WPF,
 	GO_SECTIONS,
+	GO_ORDER,
 	GO_VADDR,
 	GO_FADDR,
 	GO_SNAME,

@@ -644,6 +644,7 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     TRACE_SIZEOF(ScanParamMode);
     TRACE_SIZEOF(ScanParam_t);
     TRACE_SIZEOF(SetupDef_t);
+    TRACE_SIZEOF(ListDef_t);
     TRACE_SIZEOF(SetupParam_t);
     TRACE_SIZEOF(StringField_t);
     TRACE_SIZEOF(SubstString_t);
@@ -771,10 +772,7 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
 
 void NormalizeOptions
 (
-    uint	log_level	// 0: no log
-				// 1: print PROGRAM_NAME
-				// 2:  + print SHARE_PATH + SEARCH_PATH
-				// 3:  + print AUTOADD_PATH
+    uint	log_level	// >0: print PROGRAM_NAME and pathes
 )
 {
     SetupColors();

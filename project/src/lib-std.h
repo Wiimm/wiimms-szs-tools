@@ -120,10 +120,7 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle );
 
 void NormalizeOptions
 (
-    uint	log_level	// 0: no log
-				// 1: print PROGRAM_NAME
-				// 2:  + print SHARE_PATH + SEARCH_PATH
-				// 3:  + print AUTOADD_PATH
+    uint	log_level	// >0: print PROGRAM_NAME and pathes
 );
 
 ccp GetCtLeInfo();
@@ -1286,7 +1283,7 @@ typedef enum slot_info_type_t
     SIT_NOT,		// not defined
     SIT_GENERIC,	// generic slot: "arena" or music by race/arena slot
     SIT_RECOMMEND,	// recommended slot: "r##" | "a##" | "m*"
-    SIT_MANDATORY3,	// mandatory alternative: "31+42+71" | "31+62+71"
+    SIT_MANDATORY3,	// mandatory alternative: "31+42+71"
     SIT_MANDATORY2,	// mandatory alternative: "31+71"
     SIT_MANDATORY,	// mandatory slot: "##"
 }
@@ -1309,7 +1306,6 @@ typedef struct slot_info_t
     slot_info_type_t	music_mode;	// 0:not, 1:generic, 2:"m*"
     bool		have_31_71;	// true: "31+71" found!
     bool		have_31_42_71;	// true: "31+42+71" found!
-    bool		have_31_62_71;	// true: "31+62+71" found!
 
     char		race_info[9];	// race slot as text: "##" | "r##" | "31+71" | "31+41+71"
     char		arena_info[6];	// arena slot as text: "arena" | "a##"
@@ -1687,7 +1683,7 @@ enumError ScanSetupFile
 (
     SetupDef_t		* sdef,		// object list terminated with an element 'name=NULL'
     const ListDef_t	* ldef,		// NULL or object list terminated
-					// with an element 'name=NULL'
+					//	with an element 'name=NULL'
     ccp			path1,		// filename of text file, part 1
     ccp			path2,		// filename of text file, part 2
     SubDir_t		* sdir,		// not NULL: use it and ignore 'path1'
@@ -1967,7 +1963,7 @@ valid_t IsValidCTCODE
     ccp			fname		// not NULL: print warnings with file ref
 );
 
-////
+//
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			scan configuration		///////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -2009,6 +2005,7 @@ const StringField_t * GetAutoaddList(void);
 
 extern ccp autoadd_destination;
 
+//
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    misc			///////////////
 ///////////////////////////////////////////////////////////////////////////////

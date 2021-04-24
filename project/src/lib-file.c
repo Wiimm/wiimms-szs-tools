@@ -3626,15 +3626,13 @@ void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
 	    if ( src[0]=='r' && src[1]>='1' && src[1]<='8' && src[2]>='1' && src[2]<='4' )
 	    {
 		const u16 slot = strtoul(src+1,0,10);
-		if ( !si->have_31_71 && !si->have_31_42_71 && !si->have_31_62_71 )
+		if ( !si->have_31_71 && !si->have_31_42_71 )
 		{
 		    si->race_mode = SIT_RECOMMEND;
 		    si->race_slot = slot;
 		    StringCopySM(si->race_info,sizeof(si->race_info),src,3);
 		}
-		else if ( slot == 31 || slot == 71
-			|| slot == 42 && si->have_31_42_71
-			|| slot == 62 && si->have_31_62_71 )
+		else if ( slot == 31 || slot == 71 || slot == 42 && si->have_31_42_71 )
 		{
 		    si->race_mode = SIT_MANDATORY;
 		    si->race_slot = slot;
@@ -3707,22 +3705,6 @@ void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
 		si->have_31_42_71 = true;
 		if ( si->race_mode != SIT_MANDATORY3
 			&& (si->race_slot == 31 || si->race_slot == 42 || si->race_slot == 71 ))
-		{
-		    si->race_mode = SIT_MANDATORY;
-		    snprintf(si->race_info,sizeof(si->race_info),"%u",si->race_slot);
-		}
-		else
-		{
-		    si->race_mode = SIT_MANDATORY3;
-		    si->race_slot = 31;
-		    StringCopySM(si->race_info,sizeof(si->race_info),src,8);
-		}
-	    }
-	    else if (!memcmp(src,"31+62+71",8))
-	    {
-		si->have_31_62_71 = true;
-		if ( si->race_mode != SIT_MANDATORY3
-			&& (si->race_slot == 31 || si->race_slot == 62 || si->race_slot == 71 ))
 		{
 		    si->race_mode = SIT_MANDATORY;
 		    snprintf(si->race_info,sizeof(si->race_info),"%u",si->race_slot);

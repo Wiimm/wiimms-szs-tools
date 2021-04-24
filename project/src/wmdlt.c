@@ -614,7 +614,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
     DumpUsedOptions(&InfoUI_wmdlt,TRACE_FILE,11);
  #endif
     CloseTransformation();
-    NormalizeOptions( verbose > 3 && !is_env ? 2 : 0 );
+    NormalizeOptions( verbose > 3 && !is_env );
     SetupMDL();
 
     return !err ? ERR_OK : ProgInfo.max_error ? ProgInfo.max_error : ERR_SYNTAX;

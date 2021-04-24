@@ -5325,7 +5325,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
     DumpUsedOptions(&InfoUI_wszst,TRACE_FILE,11);
  #endif
     CloseTransformation();
-    NormalizeOptions( verbose > 3 && !is_env ? 3 : 0 );
+    NormalizeOptions( verbose > 3 && !is_env );
     SetupBMG(filter_bmg);
     SetupKCL();
     SetupKMP();

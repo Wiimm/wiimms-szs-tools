@@ -20,6 +20,14 @@ LIMIT-MODE	= %s
 
 #------------------------------------------------------------------------------
 
+# LE-CODE supports cheat codes as sequence of D-Pad keys in combination with
+# ALT keys. Here you can define, which type of cheat codes are allowed:
+#  0: Almost all cheat codes are disabled.
+#  1: Only cheat codes without impact to game play are allowed.
+#  2: All cheat codes are allowed. (Not possible if LIMIT-MODE==LE$PRODUCTIVE).
+
+CHEAT-MODE	= %d
+
 # Define probabilities for engine classes. A list for »100cc,150cc,mirror« is
 # expected. If 200cc is enabled, the values are for »150cc,200cc,mirror«. Any
 # number is accepted. They are normalized to get a total of 100 percent.
@@ -75,7 +83,18 @@ SPEEDOMETER	= SPEEDO$%s
 
 DEBUG		= DEBUG$%s
 
-# Enable (1) or disable (0) built-in item cheats.
+# Enable (1) or disable (0) built-in item cheat.
 
-ITEM-CHEATS	= %u
+ITEM-CHEAT	= %u
+
+# Allow (1) or forbid (0) players to drag blue shells behind them.
+# LE-CODE default is 1.
+
+DRAG-BLUE-SHELL	= %u
+
+# Define the time in frames a player is small after being struck by a
+# thundercloud. Only values between 1 and 32767 (0x7fff) are accepted.
+# MKW uses 612 (10.2s) and LE-CODE default is 300 (5.0s).
+
+THCLOUD-TIME	= %u # %.2fs
 

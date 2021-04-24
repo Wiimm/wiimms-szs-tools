@@ -176,17 +176,16 @@ typedef enum str_mode_t
     STR_M_USA,
     STR_M_JAP,
     STR_M_KOR,
-
-    STR_M__N,
+     STR_M__N,
 
     //--- zero based index support
     STR_ZBI_FIRST	= STR_M_PAL,
     STR_ZBI_N		= STR_M__N - STR_ZBI_FIRST,
-
 }
 __attribute__ ((packed)) str_mode_t;
 
-ccp GetStrModeName ( str_mode_t );
+ccp GetStrModeName ( str_mode_t mode );
+extern const KeywordTab_t str_mode_keyword_tab[];
 
 //-----------------------------------------------------------------------------
 // [[str_flags_t]]
@@ -579,6 +578,89 @@ int PatchByWPF
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			address porting			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[addr_size_flags_t]]
+
+typedef enum addr_size_mode_t
+{
+    ASM_VERIFIED,	// addresses verified
+    ASM_EXPANDED,	// expansion of verified addresses
+    ASM_UNSURE,		// unsure (not verified)
+    ASM_SUSPECT,	// suspect!
+
+    ASM_M_MODE	= 0x00000003,
+    ASM_M_SIZE	= 0xfffffffc,
+}
+addr_size_mode_t;
+
+extern const ccp addr_size_flags_info[];
+ccp GetAddressSizeColor ( const ColorSet_t *cs, addr_size_mode_t asmode );
+
+///////////////////////////////////////////////////////////////////////////////
+// [[addr_port_t]]
+
+typedef struct addr_port_t
+{
+    u32 addr[STR_ZBI_N];    // addresses for all 4 regions (never 0)
+    u32 size1;		    // first size with flags ()
+    u32 size2;		    // second size with other flags. size2 is always ≥size1.
+}
+addr_port_t;
+
+//-----------------------------------------------------------------------------
+
+const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr );
+const addr_port_t * GetPortingRecordPAL ( u32 addr );
+
+///////////////////////////////////////////////////////////////////////////////
+// [[addr_type_t]]
+
+typedef enum addr_type_t
+{
+    ADDRT_NULL,		// address is NULL
+    ADDRT_INVALID,	// invalid address
+
+     ADDRT_MEMORY_BEGIN,
+
+    ADDRT_DOL,		// valid address of DOL
+    ADDRT_BSS = ADDRT_DOL + DOL_N_SECTIONS,
+    ADDRT_STATICR,	// valid address of STATICR
+
+    ADDRT_HEAD,		// valid address 80000000..80004000 (mirrror +0x40000000)
+    ADDRT_MEM1,		// valid address 80000000..81800000 (mirrror +0x40000000)
+    ADDRT_MEM2,		// valid address 90000000..94000000 (mirrror +0x40000000)
+
+     ADDRT_MEMORY_END,
+     ADDRT_MIRROR_BEGIN = ADDRT_MEMORY_END,
+     ADDRT_MIRROR_END = ADDRT_MIRROR_BEGIN + ADDRT_MEMORY_END - ADDRT_MEMORY_BEGIN,
+
+    ADDRT_HOLLYWOOD,	// Hollywood registers cd000000..0xcd008000
+
+    ADDRT__N,
+}
+addr_type_t;
+
+//-----------------------------------------------------------------------------
+
+#define MIRRORED_ADDRESS_DELTA 0x40000000
+
+static inline bool IsMirroredAddress ( u32 addr )
+{
+    return addr >= 0xc0000000 && addr < 0xc1800000
+        || addr >= 0xd0000000 && addr < 0xd4000000;
+}
+
+static inline bool IsMirroredAddressType ( addr_type_t type )
+	{ return type >= ADDRT_MIRROR_BEGIN && type < ADDRT_MIRROR_END; }
+
+
+addr_type_t GetAddressType ( str_mode_t mode, u32 addr );
+ccp GetAddressTypeName ( addr_type_t type );
+ccp GetAddressTypeColor ( const ColorSet_t *col, addr_type_t type );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			main.dol support		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -734,6 +816,7 @@ extern enum VsBtMode patch_vs_mode;
 extern enum VsBtMode patch_bt_mode;
 extern char patch_vs_str[2];
 extern char patch_bt_str[2];
+extern ccp opt_order;
 
 int ScanOptVS ( bool is_bt, bool allow_2, ccp arg );
 

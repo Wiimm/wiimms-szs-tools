@@ -57,6 +57,7 @@
 #include "lib-bmg.h"
 #include "lib-lecode.h"
 #include "lib-common.h"
+#include "lib-staticr.h"
 
 #define CMD1_FW 13
 
@@ -3824,57 +3825,6 @@ static enumError test_config ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			test_search()			///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-static void print_search ( const search_file_list_t *sfl, ccp title )
-{
-    if (title)
-	printf("> %s\n",title);
-
-    uint i;
-    search_file_t *sf = sfl->list;
-    for ( i = 1; i <= sfl->used; i++, sf++ )
-	printf("%5d. [a=%d,it=%d,h:%x] %s\n",
-		i, sf->alloced, sf->itype, sf->hint, sf->fname );
-}
-
-//-----------------------------------------------------------------------------
-
-static enumError test_search ( int argc, char ** argv )
-{
-    search_file_list_t sfl;
-    InitializeSearchFile(&sfl);
-    print_search(&sfl,"init");
-
-    int i;
-    for ( i = 1; i < argc; i++ )
-    {
-	ccp arg = argv[i];
-	CopyMode_t cm = CPM_LINK;
-	if ( *arg == '+' )
-	{
-	    arg = STRDUP(arg+1);
-	    cm = CPM_MOVE;
-	    if ( i == 1 )
-	    {
-		int res = SearchConfig1(&sfl,"wiimms-szs-tools.conf",arg,
-					".szs","/etc",std_share_path,0);
-		printf("SearchConfig1(), res=%d\n",res);
-		continue;
-	    }
-	}
-	AppendSearchFile(&sfl,arg,cm,"config0.txt");
-    }
-    print_search(&sfl,"argv[]");
-
-    ResetSearchFile(&sfl);
-    putchar('\n');
-    return ERR_OK;
-}
-
-//
-///////////////////////////////////////////////////////////////////////////////
 ///////////////			test_quote()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3902,7 +3852,7 @@ static enumError test_quote ( int argc, char ** argv )
     test_quote_helper(0);
     test_quote_helper(EmptyString);
     test_quote_helper("ab\ec\td\n \"xyz\' ghi");
-    
+
     int i;
     for ( i = 1; i < argc; i++ )
 	test_quote_helper(argv[i]);
@@ -3997,6 +3947,742 @@ static enumError test_cygpath ( int argc, char ** argv )
     putchar('\n');
     return ERR_OK;
 }
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////		    test_scan_port() data		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct known_addr_t
+{
+    u32 pal_addr;
+    u32 size;
+}
+known_addr_t;
+
+//-----------------------------------------------------------------------------
+
+static const known_addr_t known_addr[] =
+{   
+    { 0x803457e0, 4*0x538 },	// lecode struct wiimote_t
+    { 0x80350580, 4*    8 },	// lecode struct gcn_controller_t
+};
+
+#if 0 // DUMMY
+    { 0x, xxxx },	// lecode struct xxxx
+#endif
+
+#define N_KNOWN_ADDR (sizeof(known_addr)/sizeof(*known_addr))
+
+//-----------------------------------------------------------------------------
+
+static const known_addr_t * get_known_addr ( u32 pal_addr )
+{
+    static int done = 0;
+    if (!done++)
+    {
+	// check order and overlap
+
+	int err_count = 0;
+	const known_addr_t *ptr = known_addr;
+	for ( int i = 0; i < N_KNOWN_ADDR-1; i++, ptr++ )
+	{
+	    if ( ptr->pal_addr + ptr->size >= ptr[1].pal_addr )
+	    {
+		fprintf(stderr,"ERR/KNOWN_ADDR: %3u: %x +%x = %x : %x +%x\n",
+			i,
+			ptr->pal_addr, ptr->size, ptr->pal_addr  + ptr->size,
+			ptr[1].pal_addr, ptr[1].size );
+		err_count++;
+	    }
+	}
+	ASSERT(!err_count);
+    }
+
+    //--- search
+
+    int beg = 0;
+    int end = N_KNOWN_ADDR - 1;
+
+    while ( beg <= end )
+    {
+	const uint idx = (beg+end)/2;
+	const known_addr_t *p = known_addr + idx;
+	if ( pal_addr < p->pal_addr )
+	    end = idx - 1 ;
+//	else if ( pal_addr >= p->pal_addr + p->size )
+	else if ( pal_addr > p->pal_addr ) // only exact addrsss match
+	    beg = idx + 1;
+	else
+	    return p;
+    }
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////		    test_scan_port() helpers		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const int AUTO_EXPAND1	= 8;		// tie ranges if address delta(size1) <= #
+const int AUTO_EXPAND2	= 8;		// tie ranges if address delta(size2) <= #
+const int MAX_DELTA_P2	= 0x100000;	// max dallowed delat for prio2
+
+#undef ADDROF
+#undef ENDOF1
+#undef ENDOF2
+#undef SIZE1
+#undef SIZE2
+#undef MODE1
+#undef MODE2
+#undef SAMEDELTA
+
+#define ADDROF(p) ( (p)->addr[STR_0_PAL])
+#define ENDOF1(p) ( (p)->addr[STR_0_PAL] + ( (p)->size1 & ASM_M_SIZE ))
+#define ENDOF2(p) ( (p)->addr[STR_0_PAL] + ( (p)->size2 & ASM_M_SIZE ))
+#define SIZE1(p)  ( (p)->size1 & ASM_M_SIZE )
+#define SIZE2(p)  ( (p)->size2 & ASM_M_SIZE )
+#define MODE1(p)  ( (p)->size1 & ASM_M_MODE )
+#define MODE2(p)  ( (p)->size2 & ASM_M_MODE )
+#define SAMEDELTA(a,b) ( \
+	   (a)->addr[STR_0_USA] - (a)->addr[STR_0_PAL] == (b)->addr[STR_0_USA] - (b)->addr[STR_0_PAL] \
+	&& (a)->addr[STR_0_JAP] - (a)->addr[STR_0_PAL] == (b)->addr[STR_0_JAP] - (b)->addr[STR_0_PAL] \
+	&& (a)->addr[STR_0_KOR] - (a)->addr[STR_0_PAL] == (b)->addr[STR_0_KOR] - (b)->addr[STR_0_PAL] \
+	)
+
+//-----------------------------------------------------------------------------
+
+enum
+{
+    STR_0_PAL = STR_M_PAL - STR_ZBI_FIRST,
+    STR_0_USA = STR_M_USA - STR_ZBI_FIRST,
+    STR_0_JAP = STR_M_JAP - STR_ZBI_FIRST,
+    STR_0_KOR = STR_M_KOR - STR_ZBI_FIRST,
+};
+
+//-----------------------------------------------------------------------------
+
+typedef struct aport_t
+{
+    addr_port_t *list;
+    uint size;
+    uint used;
+
+    // stats
+    uint max_size1;
+    uint max_size2;
+    uint line_count;
+}
+aport_t;
+
+//-----------------------------------------------------------------------------
+
+#define MAX_APORT_PRIO 2
+aport_t aport_list[MAX_APORT_PRIO] = {{0}};
+
+//-----------------------------------------------------------------------------
+
+static int get_port_record ( aport_t *aport, u32 addr, bool *found )
+{
+    int beg = 0;
+    int end = (int)aport->used - 1;
+    const int region = STR_M_PAL - STR_ZBI_FIRST;
+
+    while ( beg <= end )
+    {
+	const uint idx = (beg+end)/2;
+	addr_port_t *p = aport->list + idx;
+	if ( addr < p->addr[region] )
+	    end = idx - 1 ;
+	else if ( addr >= p->addr[region] + ( p->size2 & ASM_M_SIZE ) )
+	    beg = idx + 1;
+	else
+	{
+	    *found = true;
+	    return idx;
+	}
+    }
+    *found = false;
+    return beg;
+}
+
+//-----------------------------------------------------------------------------
+
+static void remove_record ( aport_t *aport, addr_port_t *rec )
+{
+    ASSERT(aport);
+    ASSERT(rec);
+    ASSERT( rec >= aport->list );
+    ASSERT( rec <  aport->list + aport->used );
+
+    int idx = rec - aport->list;
+    if ( idx < --aport->used )
+	memmove( rec, rec+1, (aport->used - idx) * sizeof(*rec) );
+}
+//-----------------------------------------------------------------------------
+
+static addr_port_t * insert_record ( aport_t *aport, int index, const addr_port_t *src )
+{
+    ASSERT(aport);
+
+    if ( aport->used == aport->size )
+    {
+	aport->size += 1000 + aport->size/5;
+	aport->list = REALLOC(aport->list,aport->size*sizeof(*aport->list));
+	fprintf(stderr,"ALLOC: %u/%u records\n",aport->used,aport->size);
+    }
+
+    index = CheckIndex1(aport->used,index);
+    ASSERT( index >= 0 && index <= aport->used );
+    addr_port_t *cur = aport->list + index;
+
+    if ( index < aport->used )
+	memmove( cur+1, cur, (aport->used - index) * sizeof(*cur) );
+
+    aport->used++;
+    if (src)
+	memcpy(cur,src,sizeof(*cur));
+    return cur;
+}
+
+//-----------------------------------------------------------------------------
+
+static void insert_range ( aport_t *aport, u32 addr, u32 size )
+{
+    bool found;
+    const int idx = get_port_record(aport,addr,&found);
+    addr_port_t *cur = insert_record(aport_list,idx,0);
+    cur->addr[STR_0_PAL] =
+    cur->addr[STR_0_USA] =
+    cur->addr[STR_0_JAP] =
+    cur->addr[STR_0_KOR] = addr;
+    cur->size1 = cur->size2 = size;
+}
+
+//-----------------------------------------------------------------------------
+
+static int check_overlay ( aport_t *aport, addr_port_t *cur, int def_stat )
+{
+    addr_port_t *nxt = cur + 1;
+    if ( nxt - aport->list >= aport->used )
+	return def_stat;
+
+    const u32 cur_pal  = cur->addr[STR_0_PAL];
+    const u32 cur_end1 = cur_pal + ( cur->size1 & ASM_M_SIZE );
+    const u32 cur_end2 = cur_pal + ( cur->size2 & ASM_M_SIZE );
+    const u32 nxt_pal  = nxt->addr[STR_0_PAL];
+
+    if ( nxt_pal - cur_end1 <= AUTO_EXPAND1 )
+    {
+	PRINT0("OVERLAY1: %x .. %x .. %x : %x .. %x .. %x\n",
+		cur_pal, cur_pal + cur->size1, cur_pal + cur->size2,
+		nxt_pal, nxt_pal + nxt->size1, nxt_pal + nxt->size2 );
+
+	cur->size1 = nxt_pal + ( nxt->size1 & ASM_M_SIZE ) - cur_pal;
+	cur->size2 = nxt_pal + ( nxt->size2 & ASM_M_SIZE ) - cur_pal | ASM_EXPANDED;
+	remove_record(aport,nxt);
+	return 6;
+    }
+
+    if ( cur_end2 <= nxt_pal )
+	return def_stat;
+
+    cur->size2 = nxt_pal - cur_pal | (cur->size2&ASM_M_MODE);
+xBINGO;
+PRINT1("OVERLAY2: %x .. %x .. %x : %x .. %x .. %x\n",
+	cur_pal, cur_pal + cur->size1, cur_pal + cur->size2,
+	nxt_pal, nxt_pal + nxt->size1, nxt_pal + nxt->size2 );
+
+    return 5;
+}
+
+//-----------------------------------------------------------------------------
+
+static int expand_address ( aport_t *aport, addr_port_t *cur, u32 addr )
+{
+    const u32 cur_pal = cur->addr[STR_0_PAL];
+    const int size1 = ( cur->size1 & ASM_M_SIZE );
+    const int size2 = ( cur->size2 & ASM_M_SIZE );
+    ASSERT( addr >= cur_pal );
+
+    if ( addr < cur_pal + size1 )
+	return 19;
+
+    if ( addr < cur_pal + size2 )
+    {
+	const int pal_delta = addr - ( cur_pal + size1 );
+	PRINT0("delta=%d, AUTO_EXPAND1=%d => %d\n",pal_delta,AUTO_EXPAND1,pal_delta<=AUTO_EXPAND1);
+	if ( pal_delta <= AUTO_EXPAND1 )
+	{
+	    cur->size1 = addr - cur_pal + 4;
+	    ASSERT( cur->size1 <= cur->size2 );
+	    return check_overlay(aport,cur,11);
+	}
+    }
+
+    if ( addr > cur_pal + size2 + AUTO_EXPAND2 )
+	return 0;
+
+
+    //--- now we expand the current record
+
+    addr += 4;
+    cur->size2 = ( addr - cur_pal ) | ASM_EXPANDED;
+    return check_overlay(aport,cur,12);
+}
+
+//-----------------------------------------------------------------------------
+
+static void tie_records ( aport_t *aport )
+{
+    for ( int i = 0; i < aport->used-1; )
+    {
+	addr_port_t *cur = aport->list + i;
+	if (  MODE1(cur) ==  MODE2(cur) )
+	    cur->size1 = cur->size2;
+	
+	if ( ENDOF1(cur) == ADDROF(cur+1)
+	    && MODE1(cur) == MODE1(cur+1)
+	    && SAMEDELTA(cur,cur+1) )
+	{
+	    const u32 add = ADDROF(cur+1) - ADDROF(cur);
+	    cur->size1 = cur[1].size1 + add;
+	    cur->size2 = cur[1].size2 + add;
+	    remove_record(aport,cur+1);
+	}
+	else
+	    i++;
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+static ccp check_valid_record ( const aport_t *aport, const addr_port_t *cur )
+{
+    const addr_port_t *nxt = cur+1;
+    if ( nxt >= aport->list + aport->used )
+	return 0;
+
+    if ( cur->addr[STR_0_PAL] > nxt->addr[STR_0_PAL] )
+	return "WRONG ORDER";
+
+    if ( cur->addr[STR_0_PAL] == nxt->addr[STR_0_PAL] )
+	return "SAME ADDRESS";
+
+    static char buf[50];
+    const u32 size2 = cur->size2 & ASM_M_SIZE;
+    if ( cur->addr[STR_0_PAL] + size2 > nxt->addr[STR_0_PAL] )
+    {
+	snprintf(buf,sizeof(buf),"OVERLAY: %x + %x = %x > %x",
+		cur->addr[STR_0_PAL], size2, cur->addr[STR_0_PAL]+size2,
+		nxt->addr[STR_0_PAL] );
+	return buf;
+    }
+
+    const u32 size1 = cur->size1 & ASM_M_SIZE;
+    if ( (s32)size1 <= 0 || (s32)size2 <= 0 || size1 > size2 )
+    {
+	snprintf(buf,sizeof(buf),"SIZE: %x, %x",size1,size2);
+	return buf;
+    }
+
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_scan_port()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_scan_port ( int argc, char ** argv, int verbose )
+{
+    //--- well known areas
+
+    insert_range(aport_list,0x80000000,0x4000);
+
+    //--- use DOL segments
+
+#if 1
+    u32 section_max_addr[ADDRT__N] = {0};
+    u32 section_size[ADDRT__N] = {0};
+    section_size[ADDRT_DOL+0] = INT_MAX;
+    section_size[ADDRT_DOL+1] = 0xd80;
+    section_size[ADDRT_DOL+DOL_N_TEXT_SECTIONS+0] = INT_MAX;
+    section_size[ADDRT_DOL+DOL_N_TEXT_SECTIONS+1] = INT_MAX;
+    section_size[ADDRT_DOL+DOL_N_TEXT_SECTIONS+2] = INT_MAX;
+    section_size[ADDRT_DOL+DOL_N_TEXT_SECTIONS+3] = INT_MAX;
+    section_size[ADDRT_DOL+DOL_N_TEXT_SECTIONS+6] = 0xa5c;
+
+    dol_sect_info_t * GetInfoDOL ( str_mode_t mode );
+    const dol_sect_info_t *psect = GetInfoDOL(STR_M_PAL);
+    const dol_sect_info_t *usect = GetInfoDOL(STR_M_USA);
+    const dol_sect_info_t *jsect = GetInfoDOL(STR_M_JAP);
+    const dol_sect_info_t *ksect = GetInfoDOL(STR_M_KOR);
+
+    for ( int si = ADDRT_DOL; si < ADDRT__N; si++, psect++, usect++, jsect++, ksect++ )
+    {
+	if (!section_size[si])
+	    continue;
+
+	if ( section_size[si] > psect->size )
+	     section_size[si] = psect->size;
+	section_max_addr[si] = psect->addr + section_size[si];
+	PRINT1("SECTION[%2u] : %3s %x +%6x : %8x %8x %8x %8x\n",
+		si, psect->name, section_max_addr[si], section_size[si],
+		psect->addr, usect->addr, jsect->addr, ksect->addr );
+
+	bool found;
+	int idx = get_port_record(aport_list,psect->addr,&found);
+	addr_port_t *cur = insert_record(aport_list,idx,0);
+	cur->addr[STR_0_PAL] = psect->addr;
+	cur->addr[STR_0_USA] = usect->addr;
+	cur->addr[STR_0_JAP] = jsect->addr;
+	cur->addr[STR_0_KOR] = ksect->addr;
+	cur->size1 = cur->size2 = section_size[si];
+    }
+    tie_records(aport_list);
+
+#if 1
+    //--- scan stdin
+
+    uint line_count = 0;
+
+    while (fgets(iobuf,sizeof(iobuf)-1,stdin))
+    {
+	line_count++;
+
+	char *ptr = iobuf;
+	if ( *ptr == '#' )
+	    continue;
+
+	uint prio = str2ul(ptr,&ptr,10);
+	if ( prio < 1 || prio > MAX_APORT_PRIO )
+	    continue;
+	aport_t *aport = aport_list + prio - 1;
+	addr_port_t *cur = aport->used > 0 ? aport->list + aport->used - 1 : 0;
+
+	u32 pal = str2ul(ptr,&ptr,16) & ASM_M_SIZE;
+	u32 usa = str2ul(ptr,&ptr,16) & ASM_M_SIZE;
+	u32 jap = str2ul(ptr,&ptr,16) & ASM_M_SIZE;
+	u32 kor = str2ul(ptr,&ptr,16) & ASM_M_SIZE;
+	if ( !usa || !jap || !pal || !kor )
+	    continue;
+	aport->line_count++;
+
+	if ( prio > 1 && (
+		   abs( (int)usa - (int)pal ) > MAX_DELTA_P2
+		|| abs( (int)jap - (int)pal ) > MAX_DELTA_P2
+		|| abs( (int)kor - (int)pal ) > MAX_DELTA_P2
+		))
+	{
+	    continue;
+	}
+
+	const addr_type_t at_pal = GetAddressType(STR_M_PAL,pal);
+	const addr_type_t at_usa = GetAddressType(STR_M_USA,usa);
+	const addr_type_t at_jap = GetAddressType(STR_M_JAP,jap);
+	const addr_type_t at_kor = GetAddressType(STR_M_KOR,kor);
+	if ( at_pal <= ADDRT_INVALID || at_usa != at_pal || at_jap != at_pal || at_kor != at_pal )
+	{
+	    if (verbose>0)
+	    {
+		fflush(stdout);
+		fprintf(stderr,"!ADDR TYPE[%d:pujk]: %8x/%-3s  %8x/%-3s  %8x/%-3s  %8x/%-3s\n",
+			prio,
+			pal, GetAddressTypeName(at_pal),
+			usa, GetAddressTypeName(at_usa),
+			jap, GetAddressTypeName(at_jap),
+			kor, GetAddressTypeName(at_kor) );
+		fflush(stderr);
+	    }
+	    continue;
+	}   
+
+	const u32 max_addr = section_max_addr[at_pal];
+	if ( pal < max_addr )
+	    continue;
+
+	if ( prio > 1 )
+	{
+	    bool found;
+	    int ridx = get_port_record(aport_list,pal,&found);
+	    addr_port_t *prod = 0;
+	    if (found)
+		prod = aport_list->list + ridx;
+	    else if ( ridx > 0 )
+		prod = aport_list->list + ridx-1;
+
+	    const bool same_delta
+		    =  prod
+		    && usa - pal == prod->addr[STR_0_USA] - prod->addr[STR_0_PAL]
+		    && jap - pal == prod->addr[STR_0_JAP] - prod->addr[STR_0_PAL]
+		    && kor - pal == prod->addr[STR_0_KOR] - prod->addr[STR_0_PAL];
+	    if (same_delta)
+	    {
+		const int stat = expand_address(aport_list,prod,pal);
+		if ( stat && stat < -10 )
+		    fprintf(stderr,"ADD[%u>%d]: %8x +%6x +%6x: %8x +%6x\n",
+			found, stat,
+			prod->addr[STR_0_PAL], prod->size1, prod->size2,
+			pal, pal - prod->addr[STR_0_PAL] );
+		if (stat)
+		    continue;
+	    }
+	}
+
+	const known_addr_t *known_addr = get_known_addr(pal);
+	const uint add_size = known_addr ? known_addr->size : 4;
+
+	const bool same_delta
+		    =  cur
+		    && usa - pal == cur->addr[STR_0_USA] - cur->addr[STR_0_PAL]
+		    && jap - pal == cur->addr[STR_0_JAP] - cur->addr[STR_0_PAL]
+		    && kor - pal == cur->addr[STR_0_KOR] - cur->addr[STR_0_PAL];
+
+	if (same_delta)
+	{
+	    const int offset = pal - ADDROF(cur);
+	    if ( offset <= cur->size1 + AUTO_EXPAND1 )
+	    {
+		cur->size1 = cur->size2 = offset + add_size;
+		continue;
+	    }
+	    cur->size2 = offset | ASM_EXPANDED;
+	}
+
+	bool found;
+	int ridx = get_port_record(aport,pal,&found);
+	cur = insert_record(aport,ridx,0);
+	cur->addr[STR_0_PAL] = pal;
+	cur->addr[STR_0_USA] = usa;
+	cur->addr[STR_0_JAP] = jap;
+	cur->addr[STR_0_KOR] = kor;
+	cur->size1 = add_size;
+	cur->size2 = add_size;
+    }
+
+    fputc('\n',stderr);
+    for ( int pr = 0; pr < MAX_APORT_PRIO; pr++ )
+    {
+	aport_t *aport = aport_list + pr;
+	uint max_size1 = 0;
+	uint max_size2 = 0;
+	const addr_port_t *p = aport->list;
+	for ( int i = 0; i < aport->used; i++, p++ )
+	{
+	    if ( max_size1 < p->size1 )
+		 max_size1 = p->size1 & ASM_M_SIZE;
+	    if ( max_size2 < p->size2 )
+		 max_size2 = p->size2 & ASM_M_SIZE;
+	}
+	aport->max_size1 = max_size1;
+	aport->max_size2 = max_size2;
+
+	fprintf(stderr,"PRIO-%d: %7u/%u lines scanned, %6u/%u records, max-size:%7x,%7x\n",
+		pr+1, aport->line_count, line_count,
+		aport->used, aport->size, max_size1, max_size2 );
+    }
+    fflush(stderr);
+
+
+    //--- mix tables
+
+    int index1 = 0;
+    const addr_port_t *ptr2 = aport_list[1].list;
+    const addr_port_t *end2 = ptr2 + aport_list[1].used;
+
+    while ( ptr2 < end2 && index1 < aport_list[0].used )
+    {
+	addr_port_t *ptr1 = aport_list[0].list + index1;
+	addr_port_t *end1 = ptr1 + aport_list[0].used;
+	while ( ptr1 < end1 && ENDOF2(ptr1) <= ADDROF(ptr2) )
+	    ptr1++;
+
+	if ( ptr1 == end1 )
+	    break;
+
+	index1 = ptr1 - aport_list[0].list;
+	int delta = (int)ADDROF(ptr1) - (int)ADDROF(ptr2);
+	PRINT0("INS: %3d/%d/%d : %p %x..%x : %p %x..%x : %d\n",
+			index1, aport_list->used, aport_list->size,
+			ptr1, ADDROF(ptr1), ENDOF2(ptr1),
+			ptr2, ADDROF(ptr2), ENDOF2(ptr2),
+			delta );
+
+	if ( delta > 0 )
+	{
+	    ptr1 = insert_record(aport_list,index1,ptr2);
+	    if ( ptr1->size1 > delta )
+		 ptr1->size1 = delta;
+	    if ( ptr1->size2 > delta )
+		 ptr1->size2 = delta;
+
+	    u32 mode1, mode2;
+	    if ( ptr1->size2 == delta && SAMEDELTA(ptr1,ptr1+1) )
+		mode1 = mode2 = ptr1[1].size2 & ASM_M_MODE;
+	    else if ( index1 && ENDOF2(ptr1-1) == ADDROF(ptr1) && SAMEDELTA(ptr1,ptr1-1) )
+		mode1 = mode2 = ptr1[-1].size2 & ASM_M_MODE;
+	    else
+	    {
+		mode1 = ptr1->size1 < 8 ? ASM_SUSPECT : ASM_UNSURE;
+		mode2 = ASM_SUSPECT;
+	    }
+
+	    ptr1->size1 = ptr1->size1 & ASM_M_SIZE | mode1;
+	    ptr1->size2 = ptr1->size2 & ASM_M_SIZE | mode2;
+	}
+	else if ( ENDOF2(ptr2) > ENDOF2(ptr1) )
+	{
+xBINGO;
+//	    ptr1 = insert_record(aport_list,index1+1,ptr2);
+	}
+
+	ptr2++;
+    }
+
+    // add final records
+    while ( ptr2 < end2 )
+	insert_record(aport_list,INT_MAX,ptr2);
+
+#endif
+
+    //--- add finaly hollywood registers
+
+    insert_range(aport_list,0xcd000000,0x8000);
+    tie_records(aport_list);
+
+
+    //--- scan args
+
+    uint prio = 1;
+    const aport_t *aport = aport_list;
+
+    int i;
+    for ( i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	if (!strcmp(arg,"l"))
+	{
+	    const addr_port_t *p = aport->list;
+	    for ( int i = 0; i < aport->used; i++, p++ )
+		fprintf(stderr,"%8x %8x %8x %8x : %6x|%u %6x|%u\n",
+			p->addr[STR_0_PAL],
+			p->addr[STR_0_USA],
+			p->addr[STR_0_JAP],
+			p->addr[STR_0_KOR],
+			p->size1 & ASM_M_SIZE, p->size1 & ASM_M_MODE,
+			p->size2 & ASM_M_SIZE, p->size2 & ASM_M_MODE );
+	    continue;
+	}
+
+	if ( arg[0] == 'p' && arg[1] && !arg[2] )
+	{
+	    uint p = arg[1] - '0';
+	    if ( p >= 1 &&  p <= MAX_APORT_PRIO )
+	    {
+		prio = p;
+		aport = aport_list + prio - 1;
+	    }
+	    continue;
+	}
+
+	if (!strcmp(arg,"c"))
+	{
+	    printf("\nconst static addr_port_t addr_port[%u] =\n{\n",aport->used);
+	    const addr_port_t *p = aport->list;
+	    for ( int i = 0; i < aport->used; i++, p++ )
+	    {
+		ccp valid = check_valid_record(aport,p);
+		if (valid)
+		{
+		    fflush(stdout);
+		    fprintf(stderr,"INVALID[%d] %8x: %s\n",i,p->addr[STR_0_PAL],valid);
+		    fflush(stderr);
+		}
+
+		printf("\t{{ 0x%08x, 0x%08x, 0x%08x, 0x%08x }, %#8x|%u, %#8x|%u },%s%s\n",
+			p->addr[0], p->addr[1], p->addr[2], p->addr[3],
+			p->size1 & ASM_M_SIZE, p->size1 & ASM_M_MODE,
+			p->size2 & ASM_M_SIZE, p->size2 & ASM_M_MODE,
+			valid ? " // " : "", valid ? valid : "" );
+	    }
+	    printf("}; // %u records\n\n",aport->used);
+	    continue;
+	}
+
+	if (!strcmp(arg,"cc"))
+	{
+	    ParamField_t pf;
+	    InitializeParamField(&pf);
+
+	    printf("\nconst static addr_port_t addr_port[%u] =\n{\n"
+		   " //%8s%12s%12s%12s%17s%12s    //    >end   : %24s%22s%11s     N\n\n",
+			aport->used,
+			"PAL", "USA", "JAP", "KOR", "size1|f", "size2|f",
+			"USA/JAP/KOR - PAL", "JAP/KOR - USA", "KOR-JAP" );
+	    const addr_port_t *p = aport->list;
+	    char prev_delta[80] = {0};
+	    for ( int i = 0; i < aport->used; i++, p++ )
+	    {
+		ccp valid = check_valid_record(aport,p);
+		if (valid)
+		{
+		    fflush(stdout);
+		    fprintf(stderr,"INVALID[%d] %8x: %s\n",i,p->addr[STR_0_PAL],valid);
+		    fflush(stderr);
+		}
+
+		char delta[80], count[10];
+		snprintf(delta,sizeof(delta),"%8d %8d %8d : %8d %8d : %8d",
+			p->addr[1]-p->addr[0], p->addr[2]-p->addr[0], p->addr[3]-p->addr[0],
+			p->addr[2]-p->addr[1], p->addr[3]-p->addr[1],
+			p->addr[3]-p->addr[2] );
+		const ParamFieldItem_t *it = IncrementParamField(&pf,delta,false);
+		if (strcmp(prev_delta,delta))
+		    StringCopyS(prev_delta,sizeof(prev_delta),delta);
+		else
+		    StringCopyS(delta,sizeof(delta),
+			"       .        .        . :        .        . :        .");
+
+		if ( it && it->num > 1 )
+		    snprintf(count,sizeof(count),"*%u",it->num);
+		else
+		{
+		    count[0] = '-';
+		    count[1] = 0;
+		}
+
+		printf(" {{ 0x%08x, 0x%08x, 0x%08x, 0x%08x }, %#8x|%u, %#8x|%u }, // >%08x : %s %5s%s%s\n",
+			p->addr[0], p->addr[1], p->addr[2], p->addr[3],
+			p->size1 & ASM_M_SIZE, p->size1 & ASM_M_MODE,
+			p->size2 & ASM_M_SIZE, p->size2 & ASM_M_MODE,
+			ENDOF2(p), delta, count,
+			valid ? " ! " : "", valid ? valid : "" );
+	    }
+	    printf("}; // %u records\n\n",aport->used);
+	    continue;
+	}
+
+	if (!strcmp(arg,"raw"))
+	{
+	    fwrite(aport->list,sizeof(*aport->list),aport->used,stdout);
+	    continue;
+	}
+    }
+#endif
+    return ERR_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+#undef ADDROF
+#undef ENDOF1
+#undef ENDOF2
+#undef SIZE1
+#undef SIZE2
+#undef MODE1
+#undef MODE2
+#undef SAMEDELTA
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -4273,15 +4959,19 @@ enum
     CMD_CLOCK,			// test_clock(argc,argv)
     CMD_ENDIAN,			// test_endian(argc,argv)
     CMD_CONFIG,			// test_config(argc,argv)
-    CMD_SEARCH,			// test_search(argc,argv)
     CMD_QUOTE,			// test_quote(argc,argv)
     CMD_EML,			// test_eml(argc,argv)
     CMD_CYGPATH,		// test_cygpath(argc,argv)
+    CMD_SCAN_PORT,		// test_scan_port(argc,argv,0)
+    CMD_SCAN_PORT_V,		// test_scan_port(argc,argv,1)
 
     CMD__N
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// Options:
+//  1: suppress title output
 
 static const KeywordTab_t CommandTab[] =
 {
@@ -4336,10 +5026,11 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_CLOCK,		"CLOCK",	0,		0 },
 	{ CMD_ENDIAN,		"ENDIAN",	0,		0 },
 	{ CMD_CONFIG,		"CONFIG",	0,		0 },
-	{ CMD_SEARCH,		"SEARCH",	0,		0 },
 	{ CMD_QUOTE,		"QUOTE",	"Q",		0 },
 	{ CMD_EML,		"EML",		0,		0 },
 	{ CMD_CYGPATH,		"CYGPATH",	0,		0 },
+	{ CMD_SCAN_PORT,	"SCAN-PORT",	"SP",		1 },
+	{ CMD_SCAN_PORT_V,	"SCAN-PORT-V",	"SPV",		1 },
 
 	{ CMD__N,0,0,0 }
 };
@@ -4383,12 +5074,8 @@ void AddOne ( double m[3][4] )
 
 int main ( int argc, char ** argv )
 {
-    printf("*****  %s  *****\n",TITLE);
     print_title_func = print_title;
     SetupLib(argc,argv,NAME,VERSION,TITLE);
-    fflush(stdout);
-
-    //printf(" |" MM1(XXX) "|" MM2(XXX) "\n");
 
     if (0)
     {
@@ -4412,7 +5099,6 @@ int main ( int argc, char ** argv )
 	printf(" %6.2f %6.2f %6.2f\n",x.m[0][0],x.m[1][1],x.m[2][2]);
     }
 
-    printf("term width = %d\n",GetTermWidth(80,0));
 
     if ( argc < 2 )
 	help_exit();
@@ -4421,9 +5107,17 @@ int main ( int argc, char ** argv )
     const KeywordTab_t * cmd_ct = ScanKeyword(&cmd_stat,argv[1],CommandTab);
     if (!cmd_ct)
     {
+	printf("*****  %s  *****\n",TITLE);
 	PrintKeywordError(CommandTab,argv[1],cmd_stat,0,0);
 	help_exit();
     }
+
+    if (!cmd_ct->opt&1)
+    {
+	printf("*****  %s  *****\n",TITLE);
+	printf("term width = %d\n",GetTermWidth(80,0));
+    }
+    fflush(stdout);
 
     argv[1] = argv[0];
     argv++;
@@ -4481,10 +5175,11 @@ int main ( int argc, char ** argv )
 	case CMD_CLOCK:			test_clock(argc,argv); break;
 	case CMD_ENDIAN:		test_endian(argc,argv); break;
 	case CMD_CONFIG:		test_config(argc,argv); break;
-	case CMD_SEARCH:		test_search(argc,argv); break;
 	case CMD_QUOTE:			test_quote(argc,argv); break;
 	case CMD_EML:			test_eml(argc,argv); break;
 	case CMD_CYGPATH:		test_cygpath(argc,argv); break;
+	case CMD_SCAN_PORT:		test_scan_port(argc,argv,0); break;
+	case CMD_SCAN_PORT_V:		test_scan_port(argc,argv,1); break;
 	//case CMD_HELP:
 	default:
 	    help_exit();

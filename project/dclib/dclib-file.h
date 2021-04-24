@@ -1133,24 +1133,6 @@ config_hint_t;
 
 //-----------------------------------------------------------------------------
 
-uint SearchConfig1
-(
-    search_file_list_t *sfl,
-			// valid search list, new file will be appended
-    ccp config_fname,	// default filename (without path) of config file
-
-    ccp option,		// NULL or filename by option		=> CONF_HINT_OPT
-    ccp home_path,	// NULL or home path for config file	=> CONF_HINT_HOME
-    ccp etc_path,	// NULL or etc path for config file	=> CONF_HINT_ETC
-    ccp share_path,	// NULL or share path for config file	=> CONF_HINT_MISC
-
-    int stop_mode	// >0: stop if found, >1: stop on option
-
-    // hints (by source, values=prio): 8:option, 4:home, 2:etc, 1:prog-path
-);
-
-//-----------------------------------------------------------------------------
-
 bool SearchConfig
 (
     // for all paths:

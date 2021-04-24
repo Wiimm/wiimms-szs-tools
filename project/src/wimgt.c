@@ -648,7 +648,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
  #ifdef DEBUG
     DumpUsedOptions(&InfoUI_wimgt,TRACE_FILE,11);
  #endif
-    NormalizeOptions( verbose > 3 && !is_env ? 2 : 0 );
+    NormalizeOptions( verbose > 3 && !is_env );
 
     return !err ? ERR_OK : ProgInfo.max_error ? ProgInfo.max_error : ERR_SYNTAX;
 }

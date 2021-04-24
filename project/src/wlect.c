@@ -252,7 +252,7 @@ static enumError cmd_dpad()
 	while ( *arg && (uint)*arg <= ' ' )
 	    arg++;
 	u32 num = 0;
-	if ( *arg >= '0' && *arg <= '9' || *arg >= 'a' && *arg <= 'f'  || *arg >= 'A' && *arg <= 'F' )
+	if ( *arg >= '0' && *arg <= '9' || *arg >= 'a' && *arg <= 'f' || *arg >= 'A' && *arg <= 'F' )
 	    num = str2l(arg,0,16);
 	else
 	{
@@ -274,7 +274,16 @@ static enumError cmd_dpad()
 	{
 	    switch (n&3)
 	    {
-		case 0: *--dest = '.'; break;
+		case 0:
+		    if ( *dest == 'U' || *dest == '.' )
+		    {
+			*dest = '.';
+			*--dest = '.';
+		    }
+		    else
+			*--dest = 'U';
+		    break;
+
 		case 1: *--dest = 'L'; break;
 		case 2: *--dest = 'R'; break;
 		case 3: *--dest = 'D'; break;
@@ -1215,7 +1224,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
  #ifdef DEBUG
     DumpUsedOptions(&InfoUI_wlect,TRACE_FILE,11);
  #endif
-    NormalizeOptions( verbose > 3 && !is_env ? 2 : 0 );
+    NormalizeOptions( verbose > 3 && !is_env );
     SetupBMG(0);
     UsePatchingListBMG(&opt_load_bmg);
 

@@ -300,14 +300,14 @@ enumError Command_ARGTEST ( int argc, char ** argv )
 
 enumError Command_COLORS
 (
-    int		level,		// only used, if mode==NULL
-				//  <  0: status message (ignore mode)
+    int		level,		// only used, if select==0
+				//  <  0: status message (ignore select)
 				//  >= 1: include names
 				//  >= 2: include alt names
 				//  >= 3: include color names incl bold
 				//  >= 4: include background color names
-    uint	mode,		// output mode => see PrintColorSetHelper()
-    uint	format		// output format => see PrintColorSetEx()
+    ColorSelect_t select,	// select color groups; if 0: use level
+    uint	format		// output format => see PrintColorSet()
 )
 {
     if (!colout)
@@ -330,13 +330,13 @@ enumError Command_COLORS
 	return ERR_OK;
     }
 
-    if ( !mode && level > 0 )
+    if ( !select && level > 0 )
 	switch (level)
 	{
-	    case 1:  mode = 0x08; break;
-	    case 2:  mode = 0x18; break;
-	    case 3:  mode = 0x1b; break;
-	    default: mode = 0x1f; break;
+	    case 1:  select = COLSEL_NAME; break;
+	    case 2:  select = COLSEL_NAME|COLSEL_F_ALT; break;
+	    case 3:  select = COLSEL_M_NONAME; break;
+	    default: select = COLSEL_M_ALL; break;
 	}
 
     if (!format)
@@ -348,8 +348,9 @@ enumError Command_COLORS
 	PrintColorModes( stdout, 4, col_mode, GCM_ALT|GCM_SHORT );
      #endif
     }
-    if ( mode || format )
-	PrintColorSetEx(stdout,4,colout,mode,format);
+
+    if ( select || format )
+	PrintColorSet(stdout,4,colout,select,format);
     return ERR_OK;
 }
 

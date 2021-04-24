@@ -728,7 +728,27 @@ const str_server_patch_t ServerPatch[217+1] =
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			data: porting			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#include "addr_port.inc"
+
+#define N_ADDR_PORT (sizeof(addr_port)/sizeof(*addr_port))
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			  data access			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const KeywordTab_t str_mode_keyword_tab[] =
+{
+	{ STR_M_PAL,	"PAL",		0, 0 },
+	{ STR_M_USA,	"USA",		0, 0 },
+	{ STR_M_JAP,	"JAP", "JAPAN",	   0 },
+	{ STR_M_KOR,	"KOR", "KOREAN",   0 },
+	{0,0,0,0},
+};
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ccp GetStrModeName ( str_mode_t mode )
@@ -894,7 +914,7 @@ const u32 * GetMenuOffsetTab ( str_mode_t mode )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-#define ORIG_VBI_VALUE 0x4e800020
+#define ORIG_VBI_VALUE 0x4e800020 // blr
 
 static u32 GetVbiAddress ( const staticr_t * str )
 {
@@ -2312,6 +2332,274 @@ static uint PatchHTTPS
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			address porting			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const ccp addr_size_flags_info[] =
+{
+    "verified",			// ASM_VERIFIED
+    "extension from verified",	// ASM_EXPANDED
+    "not sure",			// ASM_UNSURE
+    "suspect to be wrong",	// ASM_SUSPECT
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetAddressSizeColor ( const ColorSet_t *cs, addr_size_mode_t asmode )
+{
+    if (cs)
+    {
+	switch ( asmode & ASM_M_MODE )
+	{
+	    case 0: return cs->green;
+	    case 1: return cs->cyan;
+	    case 2: return cs->yellow;
+	    case 3: return cs->red;
+	}
+    }
+    return EmptyString;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const addr_port_t * GetPortingRecordPAL ( u32 addr )
+{
+    int beg = 0;
+    int end = N_ADDR_PORT - 1;
+    const int region = STR_M_PAL - STR_ZBI_FIRST;
+
+    while ( beg <= end )
+    {
+	const uint idx = (beg+end)/2;
+	const addr_port_t *p = addr_port + idx;
+	if ( addr < p->addr[region] )
+	    end = idx - 1 ;
+	else if ( addr >= p->addr[region] + ( p->size2 & ASM_M_SIZE ) )
+	    beg = idx + 1;
+	else
+	    return p;
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static int sort_addr_port_usa ( const addr_port_t **a, const addr_port_t **b )
+{
+    return (int)(*a)->addr[STR_M_USA-STR_ZBI_FIRST]
+	 - (int)(*b)->addr[STR_M_USA-STR_ZBI_FIRST];
+}
+
+static int sort_addr_port_jap ( const addr_port_t **a, const addr_port_t **b )
+{
+    return (int)(*a)->addr[STR_M_JAP-STR_ZBI_FIRST]
+	 - (int)(*b)->addr[STR_M_JAP-STR_ZBI_FIRST];
+}
+
+static int sort_addr_port_kor ( const addr_port_t **a, const addr_port_t **b )
+{
+    return (int)(*a)->addr[STR_M_KOR-STR_ZBI_FIRST]
+	 - (int)(*b)->addr[STR_M_KOR-STR_ZBI_FIRST];
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr )
+{
+    static const addr_port_t **usa = 0;
+    static const addr_port_t **jap = 0;
+    static const addr_port_t **kor = 0;
+
+    const addr_port_t ***list_ptr = 0;
+    qsort_func func = 0;
+
+    switch (mode)
+    {
+	case STR_M_PAL:  return GetPortingRecordPAL(addr);
+	case STR_M_USA:  list_ptr = &usa; func = (qsort_func)sort_addr_port_usa; break;
+	case STR_M_JAP:  list_ptr = &jap; func = (qsort_func)sort_addr_port_jap; break;
+	case STR_M_KOR:  list_ptr = &kor; func = (qsort_func)sort_addr_port_kor; break;
+	default:         return 0;
+    }
+
+    if (!*list_ptr)
+    {
+	u_nsec_t start = GetTimerNSec();
+	*list_ptr = MALLOC(sizeof(**list_ptr)*N_ADDR_PORT);
+	const addr_port_t *src = addr_port;
+	const addr_port_t **dest = *list_ptr;
+	for ( int i = 0; i < N_ADDR_PORT; i++ )
+	    *dest++ = src++;
+	qsort( *list_ptr, N_ADDR_PORT, sizeof(**list_ptr), func );
+	if ( logging >= 3 )
+	    fprintf(stdlog,"# Porting list for %s in %.1f µsec calculated.\n",
+			GetStrModeName(mode), (GetTimerNSec()-start)*1e-3 );
+
+     #if 0
+	const addr_port_t **base = *list_ptr;
+	for ( int i = 0; i < 4; i++ )
+	{
+	    const addr_port_t *p = base[i];
+	    printf (">>> %8x %8x %8x %8x : %6x %6x\n",
+		p->addr[0], p->addr[1], p->addr[2], p->addr[3], p->size1, p->size2 );
+	}
+     #endif
+    }
+
+    int beg = 0;
+    int end = N_ADDR_PORT - 1;
+    const int region = mode - STR_ZBI_FIRST;
+    const addr_port_t **base = *list_ptr;
+
+    while ( beg <= end )
+    {
+	const uint idx		= (beg+end)/2;
+	const addr_port_t *p	= base[idx];
+	const u32 raddr		= p->addr[region];
+
+	if ( addr < raddr )
+	    end = idx - 1 ;
+	else if ( addr >= raddr + ( p->size2 & ASM_M_SIZE ) )
+	    beg = idx + 1;
+	else
+	    return p;
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+addr_type_t GetAddressType ( str_mode_t mode, u32 addr )
+{
+    if (!addr)
+	return ADDRT_NULL;
+ 
+    if (IsMirroredAddress(addr))
+	return GetAddressType(mode,addr-MIRRORED_ADDRESS_DELTA)
+		+ (ADDRT_MIRROR_BEGIN-ADDRT_MEMORY_BEGIN);
+
+    const dol_sect_info_t *dsi = GetInfoDOL(mode);
+    if (dsi)
+    {
+	for ( int sect = 0; sect <= DOL_IDX_BSS; sect++, dsi++ )
+	    if ( addr >= dsi->addr && addr < dsi->addr + dsi->size )
+		return sect + ADDRT_DOL;
+    }
+
+    struct data_t
+    {
+	u32 rel1;	// first REL address
+	u32 rel2;	// last REL address+1
+    };
+
+//     mountpoint  file size  fix size  end of rel end of fixed
+// PAL	805102E0   0x4ad3c4   0x3cd104   809BD6A4   808DD3E4
+// USA	8050BF60   0x4acf94   0x3ccd2c   809B8EF4   808D8C8C
+// JAP	8050FC60   0x4acabc   0x3cc8d4   809BC71C   808DC534
+// KOR	804FE300   0x4ad9fc   0x3cd57c   809ABCFC   808CB87C
+
+    static const struct data_t pal = { 0x805102e0,0x808dd3e4 };
+    static const struct data_t usa = { 0x8050bf60,0x808d8c8c };
+    static const struct data_t jap = { 0x8050fc60,0x808dc534 };
+    static const struct data_t kor = { 0x804fe300,0x808cb87c };
+
+    const struct data_t *data;
+    switch (mode)
+    {
+	case STR_M_PAL:	data = &pal; break;
+	case STR_M_USA:	data = &usa; break;
+	case STR_M_JAP:	data = &jap; break;
+	case STR_M_KOR:	data = &kor; break;
+	default: return ADDRT_INVALID;
+    }
+
+    if ( addr >= data->rel1 && addr < data->rel2 )
+	return ADDRT_STATICR;
+
+    struct mem_layout_t
+    {
+	u32 begin;
+	u32 end;
+	u32 mode;
+    };
+    
+    static const struct mem_layout_t tab[] =
+    {
+	{ 0x80000000, 0x80004000, ADDRT_HEAD },
+	{ 0x80000000, 0x81800000, ADDRT_MEM1 },
+	{ 0x90000000, 0x94000000, ADDRT_MEM2 },
+	{ 0xcd000000, 0xcd008000, ADDRT_HOLLYWOOD },
+	{0,0,0}
+    };
+
+    for ( const struct mem_layout_t *ptr = tab; ptr->end; ptr++ )
+	if ( addr >= ptr->begin && addr < ptr->end )
+	    return ptr->mode;
+
+    return ADDRT_INVALID;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetAddressTypeName ( addr_type_t type )
+{
+    if (IsMirroredAddressType(type))
+    {
+	ccp res = GetAddressTypeName(type-(ADDRT_MIRROR_BEGIN-ADDRT_MEMORY_BEGIN));
+	const uint size = strlen(res)+1;
+	char *buf = GetCircBuf(size);
+	StringLowerS(buf,size,res);
+	return buf;
+    }
+
+    if ( type >= ADDRT_DOL && type <= ADDRT_BSS )
+	return dol_section_name[ type - ADDRT_DOL ];
+
+    switch (type)
+    {
+	case ADDRT_NULL:	return "null";
+	case ADDRT_INVALID:	return "invalid";
+	case ADDRT_STATICR:	return "REL";
+	case ADDRT_HEAD:	return "HEAD";
+	case ADDRT_MEM1:	return "MEM1";
+	case ADDRT_MEM2:	return "MEM2";
+	case ADDRT_HOLLYWOOD:	return "HLWD";
+	default:		return PrintCircBuf("?%02u?",type);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetAddressTypeColor ( const ColorSet_t *col, addr_type_t type )
+{
+    if ( !col || !col->colorize )
+	return EmptyString;
+
+    if (IsMirroredAddressType(type))
+	type -= ADDRT_MIRROR_BEGIN - ADDRT_MEMORY_BEGIN;
+
+    if ( type >= ADDRT_DOL && type < ADDRT_BSS )
+	return type < ADDRT_DOL + DOL_N_TEXT_SECTIONS ? col->b_green : col->b_yellow;
+
+    switch (type)
+    {
+	case ADDRT_BSS:		return col->b_magenta_blue;
+	case ADDRT_NULL:	return EmptyString;
+	case ADDRT_INVALID:	return col->b_orange;
+	case ADDRT_STATICR:	return col->b_cyan;
+
+	case ADDRT_HEAD:
+	case ADDRT_MEM1:	return col->b_blue_cyan;
+	case ADDRT_MEM2:	return col->b_blue;
+	case ADDRT_HOLLYWOOD:	return col->yellow;
+
+	default:		return col->error;
+    }
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			main.dol support		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2398,11 +2686,11 @@ void AnalyzeDOL
 		    write_be32(str->data+offset,ORIG_VBI_VALUE);
 		str->dol_status = str->dol_status & ~DOL_S_ORIG | DOL_S_VBI;
 
-		if ( ( cur_value & 0xff000000 ) == 0x4b000000 )
+		if ( ( cur_value & 0xfc000000 ) == 0x48000000 )
 		{
-		    str->vbi_address = cur_value & 0x00ffffff;
-		    if ( str->vbi_address & 0x00800000 )
-			str->vbi_address |= 0xff000000;
+		    str->vbi_address = cur_value & 0x03ffffff;
+		    if ( str->vbi_address & 0x02000000 )
+			str->vbi_address |= 0xfc000000;
 		    str->vbi_address += vbi_addr;
 		}
 	    }
@@ -2469,6 +2757,20 @@ void AnalyzeDOL
 	if ( str->dol_status & DOL_S_ORIG )
 	    str->dol_info_flags |= DIF_ORIG;
     }
+
+ #if defined(TEST) && 0 || 1
+    if (vbi_addr)
+    {
+	dol_header_t *dh = (dol_header_t*)str->data;
+	const u32 offset = GetDolOffsetByAddr(dh,vbi_addr,4,0);
+	if (offset)
+	    fprintf(stderr,"#VBI: %08x: %08x %08x %08x\n",
+			vbi_addr - 0x18,
+			be32(str->data+offset-24),
+			be32(str->data+offset-4),
+			be32(str->data+offset));
+    }
+ #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4302,8 +4604,8 @@ static enumError AddSectionHelper2
 		    memcpy(str->data+store,str->data+offset,sizeof(u32));
 	    }
 
-	    const u32 code = ( seg->vbi_entry - patch_addr ) & 0xffffff | 0x4b000000;
-	    PRINT("PATCH addr %08x off %08x from %08x to %08x\n",
+	    const u32 code = ( seg->vbi_entry - patch_addr ) & 0x3ffffff | 0x48000000;
+	    PRINT("PATCH addr %08x (off %08x, VBI) from %08x to %08x\n",
 		patch_addr, offset, be32(str->data+offset), code );
 	    if ( verbose > 0 )
 		fprintf(stdlog,
@@ -6190,6 +6492,7 @@ char mkw_domain[100] = "mariokartwii.gs.wiimmfi.de";
 ccp  wifi_domain = mkw_domain + 16;
 bool wifi_domain_is_wiimmfi = false;
 wcode_t opt_wcode = WCODE_AUTO;
+ccp opt_order = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 

@@ -2932,8 +2932,8 @@ enumError Command_COLORS
 				//  >= 2: include alt names
 				//  >= 3: include color names incl bold
 				//  >= 4: include background color names
-    uint	mode,		// output mode => see PrintColorSetHelper()
-    uint	format		// output format => see PrintColorSetEx()
+    ColorSelect_t select,	// select color groups; if 0: use level
+    uint	format		// output format => see PrintColorSet()
 );
 
 //
