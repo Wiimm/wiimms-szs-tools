@@ -1457,11 +1457,11 @@ void PrintV
     switch(v->mode)
     {
 	case VAR_UNSET:
-	    fputs("$NONE",f);
+	    fputs("          $NONE",f);
 	    break;
 
 	case VAR_INT:
-	    fprintf(f,"%19lld = %#16llx", v->i, v->i );
+	    fprintf(f,"%15lld = %#14llx", v->i, v->i & 0xffffffff );
 	    if (v->int_mode)
 		fprintf(f," [%s]",GetIntModeName(v->int_mode));
 	    break;
@@ -1541,7 +1541,7 @@ void DumpVarMap
     char last_name1 = 0;
     if (print_header)
     {
-	fprintf(f,"%*s%-*s =       value     =       value\n"
+	fprintf(f,"%*s%-*s =           value =          value\n"
 		  "%*s%.*s\n",
 		  indent,"", maxlen, "name",
 		  indent,"", maxlen+36, Minus300 );

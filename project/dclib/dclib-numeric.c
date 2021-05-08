@@ -679,6 +679,16 @@ void le16n ( u16 * dest, const u16 * src, int n )
 	*dest++ = le16(src++);
 }
 
+void le32n ( u32 * dest, const u32 * src, int n )
+{
+    DASSERT( dest );
+    DASSERT( n >= 0 );
+    DASSERT( src || !n );
+
+    while ( n-- > 0 )
+	*dest++ = le32(src++);
+}
+
 void lef4n ( float32 * dest, const float32 * src, int n )
 {
     DASSERT( dest );
@@ -697,6 +707,16 @@ void write_le16n ( u16 * dest, const u16 * src, int n )
 
     while ( n-- > 0 )
 	write_le16(dest++,*src++);
+}
+
+void write_le32n ( u32 * dest, const u32 * src, int n )
+{
+    DASSERT( dest );
+    DASSERT( n >= 0 );
+    DASSERT( src || !n );
+
+    while ( n-- > 0 )
+	write_le32(dest++,*src++);
 }
 
 void write_lef4n ( float32 * dest, const float32 * src, int n )

@@ -168,16 +168,17 @@ typedef enum file_format_t
 	FF_DISTRIB,	// 80
 
 	FF_PNG,		// 81
+	FF_PORTDB,	// 82
 
-	FF_TXT,		// 82
-	FF_SCRIPT,	// 83
-	FF_JSON,	// 84
-	FF_SH,		// 85
-	FF_BASH,	// 86
-	FF_PHP,		// 87
-	FF_MAKEDOC,	// 88
+	FF_TXT,		// 83
+	FF_SCRIPT,	// 84
+	FF_JSON,	// 85
+	FF_SH,		// 86
+	FF_BASH,	// 87
+	FF_PHP,		// 88
+	FF_MAKEDOC,	// 89
 
-	FF_DIRECTORY,	// 89
+	FF_DIRECTORY,	// 90
 
 	//--- number of elements
 

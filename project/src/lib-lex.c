@@ -168,7 +168,7 @@ static const feature_var_t lex_section_list[] =
 
 static const feature_var_t lex_feature_list[] =
 {
-    DEF_VAR( 0,HAVELEXF_TEST_ACTIVE,	lex_test_active,	"LEX: Active test scenario" ),
+    DEF_VAR( 0,HAVELEXF_TEST_ACTIVE,	lex_test_active,"LEX: Active test scenario" ),
     DEF_VAR( 0,HAVELEXF_ITEM_RANGE,	lex_item_range,	"LEX: Expand the range of item positions" ),
     DEF_VAR( 0,HAVELEXF_CANNON,		lex_cannon,	"LEX: Alternative cannon settings" ),
     DEF_VAR( 0,HAVELEXF_HIDE_POS,	lex_hide_pos,	"LEX: Hide position tracker conditionally" ),

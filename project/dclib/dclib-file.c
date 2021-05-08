@@ -1584,8 +1584,8 @@ enumError LoadFileAlloc
     if ( size == -1 )
     {
 	if ( silent < 2 )
-	    ERROR0(ERR_SYNTAX,"File not found: %s\n",path);
-	return ERR_SYNTAX;
+	    ERROR0(ERR_CANT_OPEN,"File not found: %s\n",path);
+	return ERR_CANT_OPEN;
     }
 
     if ( max_size && size > max_size )

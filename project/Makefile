@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.25a
+VERSION_NUM		= 2.26a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -940,6 +940,8 @@ templates.sed: Makefile
 		's|@@@@-@@-@@|$(DATE)|g;' \
 		's|@@:@@:@@|$(TIME)|g;' \
 		's|@@AUTHOR@@|$(AUTHOR)|g;' \
+		's|@@SYSTEM@@|$(SYSTEM)|g;' \
+		's|@@SYSTEM2@@|$(SYSTEM2)|g;' \
 		's|@@TOOLSET-SHORT@@|$(TOOLSET_SHORT)|g;' \
 		's|@@TOOLSET-LONG@@|$(TOOLSET_LONG)|g;' \
 		's|@@WSZST-SHORT@@|$(WSZST_SHORT)|g;' \

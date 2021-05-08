@@ -81,6 +81,11 @@
 		" The command can also export the settings for scripts"
 		" or can create or update configuration files." },
 
+  { T_DEF_CMD,	"INSTALL",	"INSTALL",
+		    "wszst INSTALL [file]...",
+		"Install files to the shared directory."
+		" Use {wszst CONFIG} to list related pathes." },
+
   { T_DEF_CMD,	"ARGTEST",	"ARGTEST",
 		    "wszst ARGTEST ...",
 		"This debug command accepts all kinds of parameters"
@@ -2607,14 +2612,18 @@
   { T_COPT,	"CONFIG",	0,0,0 },
   { T_COPT,	"INSTALL",	0,0,0 },
   { T_COPT,	"AUTOADD_PATH",	0,0,0 },
-  { T_COPT,	"LONG",		0,0,
-	"If set, print the search list too."
-	" If set twice, print the auto-add search list too."
+  { T_COPT,	"BRIEF",	0,0,
+	"If printed as sections, exclude all comments."
+	" Otherwise suppress configuration search list." },
+  { T_COPT,	"LONG",		0,0, 
+	CONFIG_LONG
 	" This option is ignored, if any script output is enabled." },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"SCRIPT",	0,0,0 },
-  { T_COPT,	"BRIEF",	0,0,
-	"If printed as sections, exclude all comments." },
+
+  //---------- COMMAND wszst INSTALL ----------
+
+  { T_CMD_BEG,	"INSTALL",	0,0,0 },
 
   //---------- COMMAND wszst ARGTEST ----------
 

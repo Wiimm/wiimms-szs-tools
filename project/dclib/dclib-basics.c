@@ -697,7 +697,7 @@ ccp PathCatPP ( char * buf, size_t bufsize, ccp path1, ccp path2 )
     // concatenate path + path; returns path1 | path2 | buf
 
     if ( !path1 || !*path1 )
-	return path2 ? path2 : "";
+	return path2 ? path2 : EmptyString;
 
     if ( !path2 || !*path2 )
 	return path1;
@@ -710,6 +710,21 @@ ccp PathCatPP ( char * buf, size_t bufsize, ccp path1, ccp path2 )
 	path2++;
     StringCopyE(ptr,buf+bufsize,path2);
     return buf;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PathCatDirP ( char * buf, size_t bufsize, ccp path1, ccp path2 )
+{
+    // concatenate path + path; returns path1 | path2 | buf
+
+    if ( !path1 || !*path1 )
+	return path2 ? path2 : EmptyString;
+
+    if ( !path2 || !*path2 || !IsDirectory(path1,0) )
+	return path1;
+
+    return PathCatPP(buf,bufsize,path1,path2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

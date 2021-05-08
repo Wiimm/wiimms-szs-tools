@@ -288,6 +288,7 @@ static enumError cmd_dump ( bool use_c )
 	     max_err = err;
 	ResetSTR(&str);
     }
+    putchar('\n');
 
     return max_err;
 }
@@ -401,7 +402,7 @@ static enumError cmd_hexdump()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			command port			///////////////
+///////////////		helpers for PORT and WHERE		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 static void setup_order ( int index[STR_ZBI_N], int delta )
@@ -443,16 +444,128 @@ static void setup_order ( int index[STR_ZBI_N], int delta )
 		index[3], GetStrModeName(index[3]+delta) );
 }
 
-//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct hex_in_t
+{
+    u32 scanned;	// scanned number
+    u32 num;		// modified number
+    u32 cheat;		// if is_cheat: highest 7 bits
+    bool is_dol_offset;	// true: prefix 'M' used
+    bool is_rel_offset;	// true: prefix 'S' used
+    bool is_cheat;	// if a cheat code, where only lowest 25 bits are relevant
+    bool is_6hex;	// hex number with exact 6 hex digits
+}
+hex_in_t;
+
+//---------------
+
+static hex_in_t scan_hex ( str_mode_t mode, ccp arg )
+{
+    hex_in_t hex = {0};
+
+    hex.is_dol_offset	= *arg == 'm' || *arg == 'M';
+    hex.is_rel_offset	= *arg == 's' || *arg == 'S';
+    hex.is_cheat	= *arg == '.';
+    if  ( hex.is_dol_offset || hex.is_rel_offset || hex.is_cheat )
+	arg++;
+
+    char *end;
+    hex.scanned = hex.num = str2ul(arg,&end,16);
+
+    if ( hex.is_dol_offset )
+	hex.num = GetDolAddrByOffsetM(mode,hex.num,0,0);
+    else if ( hex.is_rel_offset )
+	hex.num = GetRelAddrByOffsetM(mode,hex.num,0,0);
+    else if ( hex.is_cheat )
+    {
+	hex.cheat = hex.num & 0xfe000000;
+	hex.num   = hex.num & 0x01ffffff | 0x80000000;
+    }
+    else if ( end - arg == 6 && arg[1] != 'x' && arg[1] != 'X' )
+    {
+	hex.is_6hex = true;
+	hex.num |= 0x80000000;
+    }
+
+    return hex;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void print_address ( u32 addr, bool highlight, u32 cheat_code )
+{
+    if (cheat_code)
+	addr = addr & 0x01ffffff | cheat_code;
+
+    if (highlight)
+    {
+	if (opt_no_0x)
+	    printf(" %s%08x%s",colout->value,addr,colout->reset);
+	else
+	    printf(" %s%#010x%s",colout->value,addr,colout->reset);
+    }
+    else if (opt_no_0x)
+	printf(" %08x",addr);
+    else
+	printf(" %#010x",addr);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void print_offset ( str_mode_t mode, u32 addr, bool highlight )
+{
+    const int aoff = GetOffsetByAddrM(mode,0,addr);
+
+    if ( aoff < 0 )
+	printf("      %s-", opt_no_0x ? "": "  " );
+    else if ( highlight )
+    {
+	if (opt_no_0x)
+	    printf(" %s%6x%s",colout->value,aoff,colout->reset);
+	else
+	    printf(" %s%#8x%s",colout->value,aoff,colout->reset);
+    }
+    else if (opt_no_0x)
+	printf(" %6x",aoff);
+    else
+	printf(" %#8x",aoff);
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			command port			///////////////
+///////////////////////////////////////////////////////////////////////////////
 
 static enumError cmd_port()
 {
-
     if (brief_count)
 	print_header = false;
 
+    if ( verbose > 1 )
+    {
+	SetupAddrPortDB();
+	const addr_port_version_t *vers = GetAddrPortVersion();
+	printf("\nAddress Porting Database:\n"
+		"  Time stamp: %s\n"
+		"  DB version: %5u\n"
+		"  Revision:   %5u\n"
+		"  N(records): %5u\n"
+		"  Size:       %5s\n"
+		,PrintTimeByFormat("%F %T",vers->timestamp)
+		,vers->db_version
+		,vers->revision
+		,vers->n_records
+		,PrintSize1000(0,0,vers->n_records*sizeof(addr_port_t),0)
+		);
+    }
+
     int index[STR_ZBI_N];
     setup_order(index,STR_ZBI_FIRST);
+
+    if (print_header)
+	putchar('\n');
+    SetupAddrPortDB();
 
 
     //--- port addresses
@@ -465,7 +578,13 @@ static enumError cmd_port()
 	     max_fw = slen;
     }
 
-    const int sep_len_3 = 3*(56+max_fw);
+    int sep_len_3 = 3*(56+max_fw);
+    if (opt_no_0x)
+	sep_len_3 -= 3*4*2; 
+    if (long_count)
+	sep_len_3 += 3*28 + ( opt_no_0x ? 0 : 3*8 ); 
+
+    ccp extra = opt_no_0x ? "" : "  ";
 
     int count = 0;    
     str_mode_t mode = STR_M_PAL;
@@ -484,26 +603,44 @@ static enumError cmd_port()
 	}
 
 	if ( print_header && !count++ )
-	    printf("\n%s#%.*s\n%s#    %s        %s        %s        %s     where  status\n%s#%.*s%s\n",
+	{
+	    printf("%s#%.*s\n%s#  %s%s      %s%s      %s%s      %s%s     where",
 		colout->heading, sep_len_3, ThinLine300_3,
 		colout->heading, 
-		GetStrModeName(index[0]+STR_ZBI_FIRST),
-		GetStrModeName(index[1]+STR_ZBI_FIRST),
-		GetStrModeName(index[2]+STR_ZBI_FIRST),
-		GetStrModeName(index[3]+STR_ZBI_FIRST),
-		colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+		extra, GetStrModeName(index[0]+STR_ZBI_FIRST),
+		extra, GetStrModeName(index[1]+STR_ZBI_FIRST),
+		extra, GetStrModeName(index[2]+STR_ZBI_FIRST),
+		extra, GetStrModeName(index[3]+STR_ZBI_FIRST) );
 
-	const u32 num		= str2ul(arg,0,16);
-	const addr_type_t atype	= GetAddressType(mode,num);
+	    if (long_count)
+		printf("%s off(%.1s)%s off(%.1s)%s off(%.1s)%s off(%.1s)",
+			extra, GetStrModeName(index[0]+STR_ZBI_FIRST),
+			extra, GetStrModeName(index[1]+STR_ZBI_FIRST),
+			extra, GetStrModeName(index[2]+STR_ZBI_FIRST),
+			extra, GetStrModeName(index[3]+STR_ZBI_FIRST) );
+
+	    printf("  status\n%s#%.*s%s\n",
+		colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+	}
+
+	if (!strcmp(arg,"-"))
+	{
+	    if (print_header)
+		printf("%s#%.*s%s\n", colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+	    continue;
+	}
+
+	const hex_in_t hex	= scan_hex(mode,arg);
+	const addr_type_t atype	= GetAddressType(mode,hex.num);
 	const ccp atname	= GetAddressTypeName(atype);
-	const u32 mirror	= IsMirroredAddress(num) ? MIRRORED_ADDRESS_DELTA : 0;
-	const u32 addr		= num - mirror;
+	const u32 mirror	= IsMirroredAddress(hex.num) ? MIRRORED_ADDRESS_DELTA : 0;
+	const u32 addr		= hex.num - mirror;
 	const addr_port_t *ap	= GetPortingRecord(mode,addr);
 
 	if (!ap)
 	{
 	    printf("%s! Can't port %s address 0x%08x (%s)!%s\n",
-			colout->warn, GetStrModeName(mode), num, atname, colout->reset );
+			colout->warn, GetStrModeName(mode), hex.num, atname, colout->reset );
 	}
 	else
 	{
@@ -513,15 +650,22 @@ static enumError cmd_port()
 	    for ( int i = 0; i < STR_ZBI_N; i++ )
 	    {
 		const u32 val = ap->addr[index[i]] + offset + mirror;
-		if ( idx == i )
-		    printf(" %s%#8x%s",colout->value,val,colout->reset);
-		else
-		    printf(" %#8x",val);
+		print_address(val,idx==index[i],hex.cheat);
 	    }
 
+	    printf("  %s%-5.5s%s",
+			GetAddressTypeColor(colout,atype), atname, colout->reset );
+
+	    if (long_count)
+		for ( int i = 0; i < STR_ZBI_N; i++ )
+		{
+		    const int md = index[i];
+		    const u32 addr = ap->addr[md] + offset + mirror;
+		    print_offset( md+STR_ZBI_FIRST, addr, idx == md );
+		}
+
 	    const int asmode = ( offset < ap->size1 ? ap->size1 : ap->size2 ) & ASM_M_MODE;
-	    printf("  %s%-5.5s%s  %s%u: %s%s\n",
-			GetAddressTypeColor(colout,atype), atname, colout->reset,
+	    printf("  %s%u: %s%s\n",
 			GetAddressSizeColor(colout,asmode),
 			asmode, addr_size_flags_info[asmode],
 			colout->reset );
@@ -556,9 +700,14 @@ static enumError cmd_where()
 
     //--- port addresses
 
-    const int sep_len_3 = 3*34;
+    int sep_len_3 = 3*36;
+    if (opt_no_0x)
+	sep_len_3 -= 3*2; 
+    if (long_count)
+	sep_len_3 += 3*31 + ( opt_no_0x ? 0 : 3*8 ); 
 
     int count = 0;    
+    str_mode_t mode = STR_M_PAL;
     ParamList_t *param;
     for ( param = first_param; param; param = param->next )
     {
@@ -566,25 +715,52 @@ static enumError cmd_where()
 	if ( !arg || !*arg )
 	    continue;
 
+	const KeywordTab_t *cmd = ScanKeyword(0,arg,str_mode_keyword_tab);
+	if (cmd)
+	{
+	    mode = cmd->id;
+	    continue;
+	}
+
 	if ( print_header && !count++ )
-	    printf("\n%s#%.*s\n%s# Address   %s   %s   %s   %s\n%s#%.*s%s\n",
+	{
+	    ccp offset = long_count ? ( opt_no_0x ? " offset :" : "   offset :" ) : " ";
+	    printf("\n%s#%.*s\n%s#%s Address   %s %s %s %s %s %s %s %.*s\n%s#%.*s%s\n",
 		colout->heading, sep_len_3, ThinLine300_3,
 		colout->heading, 
-		GetStrModeName(index[0]),
-		GetStrModeName(index[1]),
-		GetStrModeName(index[2]),
-		GetStrModeName(index[3]),
+		opt_no_0x ? "" : "  ",
+		GetStrModeName(index[0]), offset,
+		GetStrModeName(index[1]), offset,
+		GetStrModeName(index[2]), offset,
+		GetStrModeName(index[3]), opt_no_0x ? 7 : 9, offset,
 		colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+	}
 
-	const uint num = str2ul(arg,0,16);
-	printf(" %8x:",num);
+	if (!strcmp(arg,"-"))
+	{
+	    if (print_header)
+		printf("%s#%.*s%s\n", colout->heading, sep_len_3, ThinLine300_3, colout->reset );
+	    continue;
+	}
+
+	const hex_in_t hex = scan_hex(mode,arg);
+	if (opt_no_0x)
+	    printf(" %8x:",hex.num);
+	else
+	    printf(" %#10x:",hex.num);
+
 	for ( int i = 0; i < STR_ZBI_N; i++ )
 	{
-	    addr_type_t type = GetAddressType(index[i],num);
-	    printf("  %s%-4.4s%s",
-		GetAddressTypeColor(colout,type),
-		GetAddressTypeName(type),
+	    const int md = index[i];
+	    addr_type_t atype = GetAddressType(md,hex.num);
+	    printf(" %s %s%-4.4s%s",
+		long_count && i > 0 ? ":" : "",
+		GetAddressTypeColor(colout,atype),
+		GetAddressTypeName(atype),
 		colout->reset );
+
+	    if (long_count)
+		print_offset( md, hex.num, false );
 	}
 	putchar('\n');
     }
@@ -904,7 +1080,7 @@ static enumError cmd_tracks()
 	    continue;
 	}
 
-	const u32 * offtab = GetTrackOffsetTab(&str);
+	const u32 * offtab = GetTrackOffsetTab(str.mode);
 	if (offtab)
 	{
 	    PatchSTR(&str);
@@ -955,7 +1131,7 @@ static enumError cmd_arenas()
 	    continue;
 	}
 
-	const u32 * offtab = GetArenaOffsetTab(&str);
+	const u32 * offtab = GetArenaOffsetTab(str.mode);
 	if (offtab)
 	{
 	    PatchSTR(&str);
@@ -1005,8 +1181,8 @@ static enumError cmd_files()
 	    continue;
 	}
 
-	const u32 * track_off_tab = GetTrackOffsetTab(&str);
-	const u32 * arena_off_tab = GetArenaOffsetTab(&str);
+	const u32 * track_off_tab = GetTrackOffsetTab(str.mode);
+	const u32 * arena_off_tab = GetArenaOffsetTab(str.mode);
 	if ( track_off_tab && arena_off_tab )
 	{
 	    PatchSTR(&str);
@@ -1462,7 +1638,9 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_BRIEF:		brief_count++; break;
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_SECTIONS:	print_sections++; break;
+	case GO_PORT_DB:	opt_port_db = optarg; break;
 	case GO_ORDER:		opt_order = optarg; break;
+	case GO_NO_0X:		opt_no_0x = true; break;
 
 	case GO_VADDR:		InsertAddressMemMap(&vaddr,true,optarg,16); break;
 	case GO_FADDR:		InsertAddressMemMap(&faddr,true,optarg,16); break;

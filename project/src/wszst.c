@@ -5386,6 +5386,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_HELP:		PrintHelp(&InfoUI_wszst,stdout,0,"HELP",0,URI_HOME,
 					first_param ? first_param->arg : 0 ); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
+	case CMD_INSTALL:	err = cmd_install(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0);

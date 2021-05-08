@@ -3834,6 +3834,9 @@ void cmd_version_section
 
 enumError cmd_config()
 {
+    if (n_param)
+	return ERROR0(ERR_SYNTAX,"CONFIG: Parameters not allowed!");
+
     uint i;
     search_file_list_t sfl;
     SearchConfigHelper(&sfl,0);
@@ -3842,9 +3845,15 @@ enumError cmd_config()
     SetupPrintScriptByOptions(&ps);
     const bool print_info = ps.fform == PSFF_UNKNOWN;
 
-    if (print_info)
-	printf("\nList of %u searched configuration file%s (*=relevant, +=found):\n",
-		sfl.used, sfl.used == 1 ? "" : "s" );
+    if ( print_info && !brief_count )
+    {
+	static char comment[] = "(*:relevant, +:found, -:ignored)";
+	if ( sfl.used == 1 )
+	    printf("\nOne searched configuration directory or file %s:\n",comment);
+	else
+	    printf("\nList of %u searched configuration directories and files %s:\n",
+			sfl.used, comment );
+    }
 
     search_file_t *found = 0, *sf = sfl.list;
     for ( i = 0; i < sfl.used; i++, sf++ )
@@ -3860,7 +3869,7 @@ enumError cmd_config()
 	else
 	    ch = '+';
 
-	if (print_info)
+	if ( print_info && !brief_count )
 	    printf("  %c %s\n",ch,sf->fname);
     }
 
@@ -3917,6 +3926,44 @@ enumError cmd_config()
 
     ResetPrintScript(&ps);
     return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////		    command config & support		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError cmd_install()
+{
+    printf("\nInstall files to the share directory: %s\n",share_path);
+    if ( !share_path || !*share_path )
+	return ERR_ERROR; // should never happen
+    
+    char destbuf[PATH_MAX];
+    enumError max_err = ERR_OK;
+
+    for ( ParamList_t *param = first_param; param; param = param->next )
+    {
+	NORMALIZE_FILENAME_PARAM(param);
+	mode_t mode;
+	const inode_type_t itype =  GetInodeTypeByPath(param->arg,&mode);
+	if ( itype == INTY_NOTFOUND )
+	    max_err = ERROR0(ERR_WARNING,"File not found: %s\n",param->arg);
+	else
+	{
+	    ccp dest = PathCatPP(destbuf,sizeof(destbuf),share_path,param->arg);
+	    printf("> Install %s\n",dest);
+	    enumError err = CopyFileTemp(param->arg,dest,0);
+	    if (err)
+	    {
+		if ( max_err < err )
+		    max_err = err;
+		break;
+	    }
+	}
+    }
+    putchar('\n');
+    return max_err;
 }
 
 //
@@ -4048,12 +4095,12 @@ enumError cmd_filetype()
 
 	if ( long_count > 1 )
 	    printf("\n"
-		   "type   decomp  vers valid file name\n"
-		   "%.*s\n", max_len + 25, Minus300 );
+		   "type   decomp   vers  valid file name\n"
+		   "%.*s\n", max_len + 29, Minus300 );
 	else if ( long_count )
 	    printf("\n"
-		   "type   decomp  vers file name\n"
-		   "%.*s\n", max_len + 20, Minus300 );
+		   "type   decomp   vers  file name\n"
+		   "%.*s\n", max_len + 23, Minus300 );
 	else
 	    printf("\n"
 		   "type   file name\n"
@@ -4086,8 +4133,11 @@ enumError cmd_filetype()
 		file_format_t fform2 = fform1;
 		ccp stat2 = "-";
 		int version = -1;
+		char vbuf[20] = "- ";
 		char suffix = 0;
 		bool load_full = false;
+		valid_t valid = VALID_UNKNOWN_FF;
+
 		if (IsYazFF(fform1))
 		{
 		    if ( fform1 == FF_XYZ )
@@ -4110,8 +4160,8 @@ enumError cmd_filetype()
 		{
 		    load_full = true;
 		    wbz_header_t *wh = (wbz_header_t*)buf1;
-		    const file_format_t ff_temp
 // [[analyse-magic]]
+		    const file_format_t ff_temp
 			= GetByMagicFF(wh->first_8,sizeof(wh->first_8),be32(wh->bz_data));
 		    stat2 = GetNameFF(0,ff_temp);
 		    version = GetVersionFF(ff_temp,wh->first_8,sizeof(wh->first_8),&suffix);
@@ -4136,31 +4186,38 @@ enumError cmd_filetype()
 		    fform2 = GetByMagicFF(buf2,wr,wr);
 		    stat2 = GetNameFF(0,fform2);
 		}
+		else if ( fform1 == FF_PORTDB )
+		{
+		    const addr_port_version_t *update = (addr_port_version_t*)buf1;
+		    snprintf(vbuf,sizeof(vbuf),"r%u ",ntohl(update->revision));
+		    valid = VALID_UNKNOWN; // no further tests
+		}
 		else
 		    version = GetVersionFF(fform1,(u8*)buf1,sizeof(buf1),&suffix);
 
-		char vbuf[20] = "   -";
 		if ( version >= 0 )
-		    snprintf(vbuf,sizeof(vbuf),"%4u%c", version, suffix ? suffix : ' ' );
+		    snprintf(vbuf,sizeof(vbuf),"%6u%c", version, suffix ? suffix : ' ' );
 
 		if ( long_count > 1 )
 		{
-		    valid_t valid = VALID_UNKNOWN_FF;
-		    if (load_full)
+		    if ( valid != VALID_UNKNOWN )
 		    {
-			szs_file_t szs;
-			InitializeSZS(&szs);
-			if (!LoadSZS(&szs,param->arg,true,true,true))
-			    valid = IsValidSZS(&szs,false);
-			ResetSZS(&szs);
+			if (load_full)
+			{
+			    szs_file_t szs;
+			    InitializeSZS(&szs);
+			    if (!LoadSZS(&szs,param->arg,true,true,true))
+				valid = IsValidSZS(&szs,false);
+			    ResetSZS(&szs);
+			}
+			else
+			    valid = IsValid(buf,written,fatt.size,0,fform2,param->arg);
 		    }
-		    else
-			valid = IsValid(buf,written,fatt.size,0,fform2,param->arg);
-		    printf("%-6s %-6s %s %-5s %s\n",
+		    printf("%-6s %-6s %7s %-5s %s\n",
 				stat1, stat2, vbuf, valid_text[valid], param->arg );
 		}
 		else
-		    printf("%-6s %-6s %s %s\n",stat1,stat2,vbuf,param->arg);
+		    printf("%-6s %-6s %7s %s\n",stat1,stat2,vbuf,param->arg);
 	    }
 	    else
 		printf("%-6s %s\n",stat1,param->arg);
@@ -5973,6 +6030,7 @@ ccp valid_text[VALID__N] =
     "fail",	// VALID_ERROR
     "type",	// VALID_WRONG_FF
     "-",	// VALID_UNKNOWN_FF
+    "-",	// VALID_UNKNOWN
 };
 
 ///////////////////////////////////////////////////////////////////////////////

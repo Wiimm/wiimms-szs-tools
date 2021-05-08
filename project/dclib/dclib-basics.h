@@ -565,12 +565,14 @@ void be16n ( u16     * dest, const u16     * src, int n );
 void be32n ( u32     * dest, const u32     * src, int n );
 void bef4n ( float32 * dest, const float32 * src, int n );
 void le16n ( u16     * dest, const u16     * src, int n );
+void le32n ( u32     * dest, const u32     * src, int n );
 void lef4n ( float32 * dest, const float32 * src, int n );
 
 void write_be16n ( u16     * dest, const u16     * src, int n );
 void write_be32n ( u32     * dest, const u32     * src, int n );
 void write_bef4n ( float32 * dest, const float32 * src, int n );
 void write_le16n ( u16     * dest, const u16     * src, int n );
+void write_le32n ( u32     * dest, const u32     * src, int n );
 void write_lef4n ( float32 * dest, const float32 * src, int n );
 
 //-----------------------------------------------------------------------------
@@ -1367,6 +1369,9 @@ ccp PathAllocPPE    ( ccp path1, ccp path2, ccp ext );
 // inline wrapper
 static inline ccp PathCatPPE ( char *buf, size_t bufsize, ccp path1, ccp path2, ccp ext )
 	{ return PathCatBufPPE(buf,bufsize,path1,path2,ext); }
+
+// like PathCatPP(), but ignores path2, if path1 is not empty and not a directory
+ccp PathCatDirP ( char * buf, size_t bufsize, ccp path1, ccp path2 );
 
 // Same as PathCatPP*(), but use 'base' as prefix for relative paths.
 // If 'base' is NULL (but not empty), use getcwd() instead.

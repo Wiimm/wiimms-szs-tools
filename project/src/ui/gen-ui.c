@@ -154,6 +154,13 @@ bool DefineIntVar ( VarMap_t * vm, ccp varname, int value ) { return false; }
 	"Show all information about the search" \
 	" for the configuration file and its content."
 
+#define CONFIG_BRIEF \
+	" Suppress configuration search list."
+
+#define CONFIG_LONG \
+	"If set, print the global search list too." \
+	" If set twice, print the auto-add search list too."
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			the info table			///////////////

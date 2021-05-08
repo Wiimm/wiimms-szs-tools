@@ -47,123 +47,6 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			    rel file format		///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct rel_header_t
-{
-  /*00*/  u32	id;		// Arbitrary identification number for game use.
-  /*04*/  u32	unknown_04;	// padding? ignored by MKW
-  /*08*/  u32	unknown_08;	// padding? ignored by MKW
-  /*0c*/  u32	n_section;	// Number of sections in the file.
-  /*10*/  u32	section_off;	// Offset to the start of the section table.
-  /*14*/  u32	mod_name;	// NULL or Offset to ASCII string containing name of module.
-  /*18*/  u32	mod_name_len;	// Length of 'mod_name' name in bytes.
-  /*1c*/  u32	version;	// Version number of the REL file format.
-  /*20*/  u32	bss_size;	// Size of the 'bss' section.
-  /*24*/  u32	reloc_off;	// Offset to the relocation table.
-  /*28*/  u32	imp_off;	// Offset to imp(?).
-  /*2c*/  u32	imp_size;	// Size of imp(?).
-  /*30*/  u32	flags;		// flags of some sort? ignored by MKW
-  /*34*/  u32	prolog;		// ?
-  /*38*/  u32	epilog;		// ?
-  /*3c*/  u32	unknown_3c;	// unresolved: ?
-  /*40*/  u32	align_all;	// Version e 2: Alignment constraint on all sections.
-  /*44*/  u32	align_bss;	// Version e 2: Alignment constraint on all 'bss' sections.
-  /*48*/  u32	fix_size;	// Version e 3: fixSize
-
-}
-__attribute__ ((packed)) rel_header_t;
-
-
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct rel_sect_info_t
-{
-    u32		offset;		// Location in file of the section information.
-				//   The last bit determines if this section is
-				//   executable or not. If offset is zero,
-				//   the section is an uninitialized section.
-    u32		size;		// size of of the section
-}
-__attribute__ ((packed)) rel_sect_info_t;
-
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct rel_imp_t
-{
-    u32		type;		// Type of the relocation entries:
-				//   1 for internal, 0 for external.
-    u32		offset;		// Offset from the beginning of the REL
-				//   to the relocatino data.
-}
-__attribute__ ((packed)) rel_imp_t;
-
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct rel_data_t
-{
-    u16		skip;		// Number of bytes to skip before this relocation.
-    u8		type;		// The relocation type => enum rel_type_t
-    u8		section;	// The section of the symbol to locate.
-    u32		address;	// Address of the symbol in the section.
-}
-__attribute__ ((packed)) rel_data_t;
-
-///////////////////////////////////////////////////////////////////////////////
-
-typedef enum rel_type_t
-{
-    RELT_NONE		=   0,	// Do nothing. Skip this entry.
-
-    RELT_ADDR32		=   1, 	// Write the 32 bit address of the symbol.
-
-    RELT_ADDR24		=   2,	// Write the 24 bit address of the symbol divided by
-				// four shifted up 2 bits to the 32 bit value
-				// (for relocating branch instructions).
-				// Fail if address won't fit.
-
-    RELT_ADDR16		=   3, 	// Write the 16 bit address of the symbol.
-				// Fail if address more than 16 bits.
-
-    RELT_ADDR16_LO	=   4, 	// Write the low 16 bits of the address of the symbol.
-
-    RELT_ADDR16_HI	=   5, 	// Write the high 16 bits of the address of the symbol.
-
-    RELT_ADDR16_HA	=   6, 	// Write the high 16 bits of the address of the symbol
-				// plus 0x8000.
-
-    RELT_ADDR14a	=   7, 	// Write the 14 bits of the address of the symbol
-    RELT_ADDR14b,		// divided by four shifted up 2 bits to the 32
-    RELT_ADDR14c,		// bit value (for relocating conditional branch
-				// instructions). Fail if address won't fit.
-
-
-
-    RELT_REL24		=  10, 	// Write the 24 bit address of the symbol minus the
-				// address of the relocation divided by four shifted
-				// up 2 bits to the 32 bit value (for relocating relative
-				// branch instructions). Fail if address won't fit.
-
-    RELT_REL14a		=  11,	// Write the 14 bit address of the symbol minus the
-    RELT_REL14b,		// address of the relocation divided by four shifted
-    RELT_REL14c,		// up 2 bits to the 32 bit value (for relocating
-				// conditional relative branch instructions).
-				// Fail if address won't fit.
-
-    RELT__NONE		= 200, 	// Do nothing. Skip this entry.
-				// Carry the address of the symbol to the next entry.
-
-    RELT__SECT		= 201, 	// Change which section relocations are being applied
-				// to. Set the offset into the section to 0.
-
-    RELT__STOP		= 202, 	// Stop parsing the relocation table.
-
-}
-__attribute__ ((packed)) rel_type_t;
-
-//
-///////////////////////////////////////////////////////////////////////////////
 ///////////////			    enums			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[str_mode_t]]
@@ -474,9 +357,8 @@ enumError ExtractSTR
 
 ///////////////////////////////////////////////////////////////////////////////
 
-const u32 * GetTrackOffsetTab  ( const staticr_t * str );
-const u32 * GetArenaOffsetTab  ( const staticr_t * str );
-const u32 * GetRegionOffsetTab ( const staticr_t * str );
+const u32 * GetTrackOffsetTab  ( str_mode_t mode );
+const u32 * GetArenaOffsetTab  ( str_mode_t mode );
 
 ///////////////////////////////////////////////////////////////////////////////
 // [[VersusPointsInfo_t]]
@@ -498,6 +380,181 @@ static inline const VersusPointsInfo_t * GetVersusPointsInfo ( str_mode_t mode )
 
 uint GetVersusPointsOffset ( str_mode_t mode );
 int ScanOptCheatRegion ( ccp arg );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			    rel file format		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[rel_header_t]]
+
+typedef struct rel_header_t
+{
+  /*00*/  u32	id;		// Arbitrary identification number for game use.
+  /*04*/  u32	unknown_04;	// padding? ignored by MKW
+  /*08*/  u32	unknown_08;	// padding? ignored by MKW
+  /*0c*/  u32	n_section;	// Number of sections in the file.
+  /*10*/  u32	section_off;	// Offset to the start of the section table.
+  /*14*/  u32	mod_name;	// NULL or Offset to ASCII string containing name of module.
+  /*18*/  u32	mod_name_len;	// Length of 'mod_name' name in bytes.
+  /*1c*/  u32	version;	// Version number of the REL file format.
+  /*20*/  u32	bss_size;	// Size of the 'bss' section.
+  /*24*/  u32	reloc_off;	// Offset to the relocation table.
+  /*28*/  u32	imp_off;	// Offset to imp(?).
+  /*2c*/  u32	imp_size;	// Size of imp(?).
+  /*30*/  u32	flags;		// flags of some sort? ignored by MKW
+  /*34*/  u32	prolog;		// ?
+  /*38*/  u32	epilog;		// ?
+  /*3c*/  u32	unknown_3c;	// unresolved: ?
+  /*40*/  u32	align_all;	// Version e 2: Alignment constraint on all sections.
+  /*44*/  u32	align_bss;	// Version e 2: Alignment constraint on all 'bss' sections.
+  /*48*/  u32	fix_size;	// Version e 3: fixSize
+
+}
+__attribute__ ((packed)) rel_header_t;
+
+
+///////////////////////////////////////////////////////////////////////////////
+// [[rel_sect_info_t]]
+
+typedef struct rel_sect_info_t
+{
+    u32		offset;		// Location in file of the section information.
+				//   The last bit determines if this section is
+				//   executable or not. If offset is zero,
+				//   the section is an uninitialized section.
+    u32		size;		// size of of the section
+}
+__attribute__ ((packed)) rel_sect_info_t;
+
+///////////////////////////////////////////////////////////////////////////////
+// [[rel_imp_t]]
+
+typedef struct rel_imp_t
+{
+    u32		type;		// Type of the relocation entries:
+				//   1 for internal, 0 for external.
+    u32		offset;		// Offset from the beginning of the REL
+				//   to the relocatino data.
+}
+__attribute__ ((packed)) rel_imp_t;
+
+///////////////////////////////////////////////////////////////////////////////
+// [[rel_data_t]]
+
+typedef struct rel_data_t
+{
+    u16		skip;		// Number of bytes to skip before this relocation.
+    u8		type;		// The relocation type => enum rel_type_t
+    u8		section;	// The section of the symbol to locate.
+    u32		address;	// Address of the symbol in the section.
+}
+__attribute__ ((packed)) rel_data_t;
+
+///////////////////////////////////////////////////////////////////////////////
+// [[rel_type_t]]
+
+typedef enum rel_type_t
+{
+    RELT_NONE		=   0,	// Do nothing. Skip this entry.
+
+    RELT_ADDR32		=   1, 	// Write the 32 bit address of the symbol.
+
+    RELT_ADDR24		=   2,	// Write the 24 bit address of the symbol divided by
+				// four shifted up 2 bits to the 32 bit value
+				// (for relocating branch instructions).
+				// Fail if address won't fit.
+
+    RELT_ADDR16		=   3, 	// Write the 16 bit address of the symbol.
+				// Fail if address more than 16 bits.
+
+    RELT_ADDR16_LO	=   4, 	// Write the low 16 bits of the address of the symbol.
+
+    RELT_ADDR16_HI	=   5, 	// Write the high 16 bits of the address of the symbol.
+
+    RELT_ADDR16_HA	=   6, 	// Write the high 16 bits of the address of the symbol
+				// plus 0x8000.
+
+    RELT_ADDR14a	=   7, 	// Write the 14 bits of the address of the symbol
+    RELT_ADDR14b,		// divided by four shifted up 2 bits to the 32
+    RELT_ADDR14c,		// bit value (for relocating conditional branch
+				// instructions). Fail if address won't fit.
+
+
+
+    RELT_REL24		=  10, 	// Write the 24 bit address of the symbol minus the
+				// address of the relocation divided by four shifted
+				// up 2 bits to the 32 bit value (for relocating relative
+				// branch instructions). Fail if address won't fit.
+
+    RELT_REL14a		=  11,	// Write the 14 bit address of the symbol minus the
+    RELT_REL14b,		// address of the relocation divided by four shifted
+    RELT_REL14c,		// up 2 bits to the 32 bit value (for relocating
+				// conditional relative branch instructions).
+				// Fail if address won't fit.
+
+    RELT__NONE		= 200, 	// Do nothing. Skip this entry.
+				// Carry the address of the symbol to the next entry.
+
+    RELT__SECT		= 201, 	// Change which section relocations are being applied
+				// to. Set the offset into the section to 0.
+
+    RELT__STOP		= 202, 	// Stop parsing the relocation table.
+
+}
+__attribute__ ((packed)) rel_type_t;
+
+///////////////////////////////////////////////////////////////////////////////
+// [[rel_section_t]]
+
+typedef enum rel_section_t
+{
+    REL_SECT_HEAD,
+    REL_SECT_T1,
+    REL_SECT_D2,
+    REL_SECT_D3,
+    REL_SECT_D4,
+    REL_SECT_D5,
+    REL_SECT_EXT,
+    REL_SECT__N
+}
+rel_section_t;
+
+extern const char rel_section_name[REL_SECT__N+1][5];
+
+///////////////////////////////////////////////////////////////////////////////
+// [[rel_info_t]]
+
+typedef struct rel_info_t
+{
+    u32 offset_sect;		// offset of section data, always 0xd4
+    u32 fix_size;		// OSLinkFixed (and of reserved mem) 
+    u32 bss_size;		// size of BSS, always 0x78b0
+    u32 load_addr;		// address, at which file is loaded
+
+    dol_sect_info_t sect[REL_SECT__N+1];
+				// section info, terminated with sect.section == -1
+}
+rel_info_t;
+
+//-----------------------------------------------------------------------------
+
+const rel_info_t * GetInfoREL ( str_mode_t mode );
+
+int GetRelOffsetByAddrM
+(
+    str_mode_t		mode,		// region mode
+    u32			addr,		// address to search
+    u32			size,		// >0: wanted size
+    u32			*valid_size	// not NULL: return valid size
+);
+
+u32 GetRelAddrByOffsetM
+(
+    str_mode_t		mode,		// region mode
+    u32			off,		// offset to search
+    u32			size,		// >0: wanted size
+    u32			*valid_size	// not NULL: return valid size
+);
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -603,12 +660,32 @@ ccp GetAddressSizeColor ( const ColorSet_t *cs, addr_size_mode_t asmode );
 typedef struct addr_port_t
 {
     u32 addr[STR_ZBI_N];    // addresses for all 4 regions (never 0)
-    u32 size1;		    // first size with flags ()
+    u32 size1;		    // first size with flags (addr_size_mode_t).
     u32 size2;		    // second size with other flags. size2 is always ≥size1.
 }
-addr_port_t;
+__attribute__ ((packed)) addr_port_t;
 
 //-----------------------------------------------------------------------------
+// [[addr_port_version_t]]
+
+#define ADDR_PORT_DB_VERSION	1
+#define ADDR_PORT_MAGIC		"PORT-DB"
+#define ADDR_PORT_MAGIC_NUM	0x504f52542d444200ull
+
+typedef struct addr_port_version_t
+{
+    char	magic[8];	// ADDR_PORT_MAGIC 
+    u32		db_version;	// ADDR_PORT_DB_VERSION 
+    u32		revision;	// REVISION_NUM
+    u32		timestamp;	// time(0)
+    u32		n_records;	// number of records
+}
+__attribute__ ((packed)) addr_port_version_t;
+
+//-----------------------------------------------------------------------------
+
+void SetupAddrPortDB();
+const addr_port_version_t * GetAddrPortVersion();
 
 const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr );
 const addr_port_t * GetPortingRecordPAL ( u32 addr );
@@ -624,22 +701,40 @@ typedef enum addr_type_t
      ADDRT_MEMORY_BEGIN,
 
     ADDRT_DOL,		// valid address of DOL
-    ADDRT_BSS = ADDRT_DOL + DOL_N_SECTIONS,
-    ADDRT_STATICR,	// valid address of STATICR
+    ADDRT_BSS		= ADDRT_DOL + DOL_N_SECTIONS,
+
+    ADDRT_REL_SECT,	// valid address of STATICR
+    ADDRT_REL		= ADDRT_REL_SECT + REL_SECT__N,
 
     ADDRT_HEAD,		// valid address 80000000..80004000 (mirrror +0x40000000)
     ADDRT_MEM1,		// valid address 80000000..81800000 (mirrror +0x40000000)
     ADDRT_MEM2,		// valid address 90000000..94000000 (mirrror +0x40000000)
 
      ADDRT_MEMORY_END,
-     ADDRT_MIRROR_BEGIN = ADDRT_MEMORY_END,
-     ADDRT_MIRROR_END = ADDRT_MIRROR_BEGIN + ADDRT_MEMORY_END - ADDRT_MEMORY_BEGIN,
 
-    ADDRT_HOLLYWOOD,	// Hollywood registers cd000000..0xcd008000
+    ADDRT_GPU,		// Hollywood (GPU and more) registers cd000000..0xcd008000
 
     ADDRT__N,
+
+
+    //--- mirror support
+
+    ADDRT_F_MIRROR	= 0x40,
+    ADDRT_MIRROR_BEGIN	= ADDRT_MEMORY_BEGIN | ADDRT_F_MIRROR,
+    ADDRT_MIRROR_END	= ADDRT_MEMORY_END   | ADDRT_F_MIRROR,
+
+    ADDRT__NN,
 }
 addr_type_t;
+
+static inline bool IsAddrTypeDOL ( addr_type_t atype )
+	{ atype &= ~ADDRT_F_MIRROR; return atype >= ADDRT_DOL && atype <= ADDRT_BSS; }
+
+static inline bool IsAddrTypeREL ( addr_type_t atype )
+	{ atype &= ~ADDRT_F_MIRROR; return atype >= ADDRT_REL_SECT && atype <= ADDRT_REL; }
+
+static inline bool IsAddrTypeRELSect ( addr_type_t atype )
+	{ atype &= ~ADDRT_F_MIRROR; return atype >= ADDRT_REL_SECT && atype < ADDRT_REL; }
 
 //-----------------------------------------------------------------------------
 
@@ -648,16 +743,22 @@ addr_type_t;
 static inline bool IsMirroredAddress ( u32 addr )
 {
     return addr >= 0xc0000000 && addr < 0xc1800000
-        || addr >= 0xd0000000 && addr < 0xd4000000;
+	|| addr >= 0xd0000000 && addr < 0xd4000000;
 }
 
-static inline bool IsMirroredAddressType ( addr_type_t type )
-	{ return type >= ADDRT_MIRROR_BEGIN && type < ADDRT_MIRROR_END; }
+static inline bool IsMirroredAddressType ( addr_type_t atype )
+	{ return atype >= ADDRT_MIRROR_BEGIN && atype < ADDRT_MIRROR_END; }
 
 
 addr_type_t GetAddressType ( str_mode_t mode, u32 addr );
-ccp GetAddressTypeName ( addr_type_t type );
-ccp GetAddressTypeColor ( const ColorSet_t *col, addr_type_t type );
+ccp GetAddressTypeName ( addr_type_t atype );
+ccp GetAddressTypeColor ( const ColorSet_t *col, addr_type_t atype );
+
+const dol_sect_info_t * GetAddressTypeSection ( str_mode_t mode, addr_type_t atype );
+
+// if !atype: Calculate it by 'addr'
+// return -1 if invalid
+int GetOffsetByAddrM ( str_mode_t mode, addr_type_t atype, u32 addr );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -696,6 +797,26 @@ enumError ExtractDOL
 (
     staticr_t		* str,		// valid pointer
     ccp			dest_dir	// valid destination directory
+);
+
+//-----------------------------------------------------------------------------
+
+const dol_header_t * GetDolHeader ( str_mode_t mode );
+
+u32 GetDolOffsetByAddrM
+(
+    str_mode_t		mode,		// region mode
+    u32			addr,		// address to search
+    u32			size,		// >0: wanted size
+    u32			*valid_size	// not NULL: return valid size
+);
+
+u32 GetDolAddrByOffsetM
+(
+    str_mode_t		mode,		// region mode
+    u32			off,		// offset to search
+    u32			size,		// >0: wanted size
+    u32			*valid_size	// not NULL: return valid size
 );
 
 //
@@ -816,7 +937,9 @@ extern enum VsBtMode patch_vs_mode;
 extern enum VsBtMode patch_bt_mode;
 extern char patch_vs_str[2];
 extern char patch_bt_str[2];
+extern ccp opt_port_db;
 extern ccp opt_order;
+extern bool opt_no_0x;
 
 int ScanOptVS ( bool is_bt, bool allow_2, ccp arg );
 

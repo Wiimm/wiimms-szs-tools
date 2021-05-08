@@ -548,6 +548,8 @@ u32 GetDolOffsetByAddr
 {
     DASSERT(dol_head);
 
+    addr &= ~0x40000000; // remove mirror bit
+
     int sect;
     for ( sect = 0; sect < DOL_N_SECTIONS; sect++ )
     {
@@ -585,7 +587,7 @@ u32 GetDolOffsetByAddr
 u32 GetDolAddrByOffset
 (
     const dol_header_t	*dol_head,	// valid DOL header
-    u32			off,		// address to search
+    u32			off,		// offset to search
     u32			size,		// >0: wanted size
     u32			*valid_size	// not NULL: return valid size
 )
@@ -632,7 +634,7 @@ uint AddDolAddrByOffset
     const dol_header_t	*dol_head,	// valid DOL header
     MemMap_t		*mm,		// valid destination mem map, not cleared
     bool		use_tie,	// TRUE: use InsertMemMapTie()
-    u32			off,		// address to search
+    u32			off,		// offset to search
     u32			size		// size, may overlay multiple sections
 )
 {
@@ -1196,11 +1198,6 @@ void ResetWCH ( wch_control_t * wc )
 	wc->temp_size = 0;
     }
 }
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			virtual dumps			///////////////
-///////////////////////////////////////////////////////////////////////////////
 
 //
 ///////////////////////////////////////////////////////////////////////////////

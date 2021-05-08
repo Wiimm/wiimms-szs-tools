@@ -494,6 +494,19 @@ szs v2.24a r8414 - 2021-04-07
  - Mac: Universal binaries for i386, x86_64 and arm64.
 
 
+szs v2.25a r8443 - 2021-04-24
+
+ - Bug fix: If creating a LPAR file, a parameter with name ITEM-CHEATS was
+   printed. But tool wlect accepted only ITEM-CHEAT (without leading 'S').
+ - Bug fix: Since previous version the tools recomended slots 3.1 + 6.2 + 7.1
+   for some tracks.
+ - New command: wstrt WHERE address...: The segment in which the specified
+   addresses are located is calculated for each region.
+ - New command: wstrt PORT ...: Port addresses from one region to all others.
+ - Mac support improved. Universal binaries for x86_64 and arm64.
+ - Support of LE-CODE build 29.
+
+
 @@MODULE(last-history.txt)@@
 
 

@@ -1002,7 +1002,19 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"A public image format"
     },
 
- // FF_TXT = 82
+ // FF_PORTDB = 82
+    {
+	FF_PORTDB, 0, 0, "PORTDB",
+	".bin", ".szs", ".bin",
+	FFT_VALID | FFT_EXTERNAL,
+	0, {0}, // no magic
+	0,
+	filetype_info_unknown,
+	filetype_info_unknown,
+	EmptyString
+    },
+
+ // FF_TXT = 83
     {
 	FF_TXT, 0, 0, "TXT",
 	".txt", ".szs", ".txt",
@@ -1014,7 +1026,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_SCRIPT = 83
+ // FF_SCRIPT = 84
     {
 	FF_SCRIPT, 0, 0, "SCRIPT",
 	".script", ".szs", ".script",
@@ -1026,7 +1038,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_JSON = 84
+ // FF_JSON = 85
     {
 	FF_JSON, 0, 0, "JSON",
 	".json", ".szs", ".json",
@@ -1038,7 +1050,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_SH = 85
+ // FF_SH = 86
     {
 	FF_SH, 0, 0, "SH",
 	".sh", ".szs", ".sh",
@@ -1050,7 +1062,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_BASH = 86
+ // FF_BASH = 87
     {
 	FF_BASH, 0, 0, "BASH",
 	".sh", ".szs", ".sh",
@@ -1062,7 +1074,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_PHP = 87
+ // FF_PHP = 88
     {
 	FF_PHP, 0, 0, "PHP",
 	".php", ".szs", ".php",
@@ -1074,7 +1086,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_MAKEDOC = 88
+ // FF_MAKEDOC = 89
     {
 	FF_MAKEDOC, 0, 0, "MKDOC",
 	".md", ".szs", ".md",
@@ -1086,7 +1098,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_DIRECTORY = 89
+ // FF_DIRECTORY = 90
     {
 	FF_DIRECTORY, 0, 0, "DIR",
 	".d", ".d", ".d",
@@ -1206,6 +1218,7 @@ const KeywordTab_t cmdtab_FileType[] =
     { FF_XPF,		"XPF",		0,		    0x1 },
     { FF_DISTRIB,	"DISTRIB",	0,		   0x11 },
     { FF_PNG,		"PNG",		0,		 0x1889 },
+    { FF_PORTDB,	"PORTDB",	0,		   0x81 },
     { FF_SCRIPT,	"SCRIPT",	0,		   0x91 },
     { FF_JSON,		"JSON",		0,		   0x91 },
     { FF_SH,		"SH",		0,		   0x91 },

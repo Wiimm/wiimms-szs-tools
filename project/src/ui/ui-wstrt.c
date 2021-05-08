@@ -289,12 +289,24 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Print in machine readable sections and parameter lines."
     },
 
+    {	OPT_PORT_DB, false, false, false, false, false, 0, "port-db",
+	"file",
+	"Load the specified update file and replace the internal porting"
+	" database. If not set, then file port-db.bin is searched in the share"
+	" path."
+    },
+
     {	OPT_ORDER, false, false, false, false, false, 0, "order",
 	"pujk",
-	"The parameter is scanend for the first appearance of letters P (for"
+	"The parameter is scanned for the first appearance of letters P (for"
 	" PAL), U (USA), J (JAPAN) and K (KOREA) to define the order of the"
 	" output. Case is ignored. Missing letters are added automatically."
 	" The default is 'PUJK'."
+    },
+
+    {	OPT_NO_0X, false, false, false, false, false, '0', "no-0x",
+	0,
+	"Suppress 0x prefix of hex numbers."
     },
 
     {	OPT_VADDR, false, false, false, false, true, 0, "vaddr",
@@ -467,7 +479,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" dependent (multiple of format size)."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 63
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 65
 
     //----- global options -----
 
@@ -857,7 +869,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" directory."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 114
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 116
 
 };
 
@@ -879,10 +891,17 @@ static const InfoOption_t option_cmd_VERSION_LONG =
 	"Print in long format. Ignored if option --sections is set."
     };
 
+static const InfoOption_t option_cmd_CONFIG_BRIEF =
+    {	OPT_BRIEF, false, false, false, false, false, 'B', "brief",
+	0,
+	" Suppress configuration search list."
+    };
+
 static const InfoOption_t option_cmd_CONFIG_LONG =
     {	OPT_LONG, false, false, false, false, false, 'l', "long",
 	0,
-	"If set, print the search list too."
+	"If set, print the global search list too. If set twice, print the"
+	" auto-add search list too."
     };
 
 static const InfoOption_t option_cmd_COLORS_LONG =
@@ -938,6 +957,12 @@ static const InfoOption_t option_cmd_PORT_BRIEF =
 	" Same as --no-header."
     };
 
+static const InfoOption_t option_cmd_PORT_LONG =
+    {	OPT_LONG, false, false, false, false, false, 'l', "long",
+	0,
+	"Print file offsets too."
+    };
+
 static const InfoOption_t option_cmd_WHERE_NO_HEADER =
     {	OPT_NO_HEADER, false, false, false, false, false, 'H', "no-header",
 	0,
@@ -949,6 +974,12 @@ static const InfoOption_t option_cmd_WHERE_BRIEF =
     {	OPT_BRIEF, false, false, false, false, false, 'B', "brief",
 	0,
 	" Same as --no-header."
+    };
+
+static const InfoOption_t option_cmd_WHERE_LONG =
+    {	OPT_LONG, false, false, false, false, false, 'l', "long",
+	0,
+	"Print file offsets too."
     };
 
 static const InfoOption_t option_cmd_HTTPS_LONG =
@@ -1048,7 +1079,7 @@ static const KeywordTab_t CommandTab[] =
 ///////////////            OptionShort & OptionLong             ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static const char OptionShort[] = "Vh@qvLc:lBHT:A:R:td:D:E:orupi";
+static const char OptionShort[] = "Vh@qvLc:lBHT:A:R:td:D:E:orupi0";
 
 static const struct option OptionLong[] =
 {
@@ -1174,7 +1205,11 @@ static const struct option OptionLong[] =
 	 { "cs",		1, 0, GO_CREATE_SECT },
 	{ "wpf",		1, 0, GO_WPF },
 	{ "sections",		0, 0, GO_SECTIONS },
+	{ "port-db",		1, 0, GO_PORT_DB },
+	 { "portdb",		1, 0, GO_PORT_DB },
 	{ "order",		1, 0, GO_ORDER },
+	{ "no-0x",		0, 0, '0' },
+	 { "no0x",		0, 0, '0' },
 	{ "vaddr",		1, 0, GO_VADDR },
 	 { "va",		1, 0, GO_VADDR },
 	{ "faddr",		1, 0, GO_FADDR },
@@ -1230,7 +1265,8 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x000   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x010   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x020   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	/* 0x030   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x030 0 */	OPT_NO_0X,
+	/* 0x031   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,
 	/* 0x040 @ */	OPT_AT_DUMMY,
 	/* 0x041 A */	OPT_ARENAS,
 	/* 0x042 B */	OPT_BRIEF,
@@ -1324,39 +1360,40 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x0b8   */	OPT_CREATE_SECT,
 	/* 0x0b9   */	OPT_WPF,
 	/* 0x0ba   */	OPT_SECTIONS,
-	/* 0x0bb   */	OPT_ORDER,
-	/* 0x0bc   */	OPT_VADDR,
-	/* 0x0bd   */	OPT_FADDR,
-	/* 0x0be   */	OPT_SNAME,
-	/* 0x0bf   */	OPT_INT1,
-	/* 0x0c0   */	OPT_INT2,
-	/* 0x0c1   */	OPT_INT3,
-	/* 0x0c2   */	OPT_INT4,
-	/* 0x0c3   */	OPT_INT5,
-	/* 0x0c4   */	OPT_INT6,
-	/* 0x0c5   */	OPT_INT7,
-	/* 0x0c6   */	OPT_INT8,
-	/* 0x0c7   */	OPT_FLOAT,
-	/* 0x0c8   */	OPT_DOUBLE,
-	/* 0x0c9   */	OPT_LE,
-	/* 0x0ca   */	OPT_BE,
-	/* 0x0cb   */	OPT_ZEROS,
-	/* 0x0cc   */	OPT_HEX,
-	/* 0x0cd   */	OPT_DEC,
-	/* 0x0ce   */	OPT_C_SYNTAX,
-	/* 0x0cf   */	OPT_ADDR,
-	/* 0x0d0   */	OPT_ALIGN,
-	/* 0x0d1   */	OPT_TRIGGER,
-	/* 0x0d2   */	OPT_NO_ADDR,
-	/* 0x0d3   */	OPT_NO_NUMBERS,
-	/* 0x0d4   */	OPT_NO_TEXT,
-	/* 0x0d5   */	OPT_FORMAT,
-	/* 0x0d6   */	OPT_NO_NULL,
-	/* 0x0d7   */	OPT_NARROW,
-	/* 0x0d8   */	OPT_SMALL,
-	/* 0x0d9   */	OPT_WIDE,
-	/* 0x0da   */	OPT_BYTES,
-	/* 0x0db   */	 0,0,0,0, 0,
+	/* 0x0bb   */	OPT_PORT_DB,
+	/* 0x0bc   */	OPT_ORDER,
+	/* 0x0bd   */	OPT_VADDR,
+	/* 0x0be   */	OPT_FADDR,
+	/* 0x0bf   */	OPT_SNAME,
+	/* 0x0c0   */	OPT_INT1,
+	/* 0x0c1   */	OPT_INT2,
+	/* 0x0c2   */	OPT_INT3,
+	/* 0x0c3   */	OPT_INT4,
+	/* 0x0c4   */	OPT_INT5,
+	/* 0x0c5   */	OPT_INT6,
+	/* 0x0c6   */	OPT_INT7,
+	/* 0x0c7   */	OPT_INT8,
+	/* 0x0c8   */	OPT_FLOAT,
+	/* 0x0c9   */	OPT_DOUBLE,
+	/* 0x0ca   */	OPT_LE,
+	/* 0x0cb   */	OPT_BE,
+	/* 0x0cc   */	OPT_ZEROS,
+	/* 0x0cd   */	OPT_HEX,
+	/* 0x0ce   */	OPT_DEC,
+	/* 0x0cf   */	OPT_C_SYNTAX,
+	/* 0x0d0   */	OPT_ADDR,
+	/* 0x0d1   */	OPT_ALIGN,
+	/* 0x0d2   */	OPT_TRIGGER,
+	/* 0x0d3   */	OPT_NO_ADDR,
+	/* 0x0d4   */	OPT_NO_NUMBERS,
+	/* 0x0d5   */	OPT_NO_TEXT,
+	/* 0x0d6   */	OPT_FORMAT,
+	/* 0x0d7   */	OPT_NO_NULL,
+	/* 0x0d8   */	OPT_NARROW,
+	/* 0x0d9   */	OPT_SMALL,
+	/* 0x0da   */	OPT_WIDE,
+	/* 0x0db   */	OPT_BYTES,
+	/* 0x0dc   */	 0,0,0,0, 
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0f0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x100   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1370,172 +1407,172 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[63] = // cmd #1
+static u8 option_allowed_cmd_VERSION[65] = // cmd #1
 {
     0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_HELP[63] = // cmd #2
+static u8 option_allowed_cmd_HELP[65] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1
+    1,1,1,1,1
 };
 
-static u8 option_allowed_cmd_CONFIG[63] = // cmd #3
-{
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
-};
-
-static u8 option_allowed_cmd_ARGTEST[63] = // cmd #4
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1
-};
-
-static u8 option_allowed_cmd_TEST[63] = // cmd #5
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1
-};
-
-static u8 option_allowed_cmd_COLORS[63] = // cmd #6
+static u8 option_allowed_cmd_CONFIG[65] = // cmd #3
 {
     0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_ERROR[63] = // cmd #7
+static u8 option_allowed_cmd_ARGTEST[65] = // cmd #4
+{
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1
+};
+
+static u8 option_allowed_cmd_TEST[65] = // cmd #5
+{
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1
+};
+
+static u8 option_allowed_cmd_COLORS[65] = // cmd #6
+{
+    0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0
+};
+
+static u8 option_allowed_cmd_ERROR[65] = // cmd #7
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_FILETYPE[63] = // cmd #8
+static u8 option_allowed_cmd_FILETYPE[65] = // cmd #8
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[63] = // cmd #9
+static u8 option_allowed_cmd_FILEATTRIB[65] = // cmd #9
 {
     0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_RAWDUMP[63] = // cmd #10
+static u8 option_allowed_cmd_RAWDUMP[65] = // cmd #10
 {
     0,0,0,0,0, 0,1,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_DUMP[63] = // cmd #11
+static u8 option_allowed_cmd_DUMP[65] = // cmd #11
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_CDUMP[63] = // cmd #12
+static u8 option_allowed_cmd_CDUMP[65] = // cmd #12
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_HEXDUMP[63] = // cmd #13
+static u8 option_allowed_cmd_HEXDUMP[65] = // cmd #13
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1
+    0,0,0,0,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1
 };
 
-static u8 option_allowed_cmd_PORT[63] = // cmd #14
+static u8 option_allowed_cmd_PORT[65] = // cmd #14
 {
+    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0
+};
+
+static u8 option_allowed_cmd_WHERE[65] = // cmd #15
+{
+    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_WHERE[63] = // cmd #15
-{
-    0,0,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
-};
-
-static u8 option_allowed_cmd_HTTPS[63] = // cmd #16
+static u8 option_allowed_cmd_HTTPS[65] = // cmd #16
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_EXTRACT[63] = // cmd #17
+static u8 option_allowed_cmd_EXTRACT[65] = // cmd #17
 {
     0,0,0,0,0, 0,1,1,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_TRACKS[63] = // cmd #18
+static u8 option_allowed_cmd_TRACKS[65] = // cmd #18
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_ARENAS[63] = // cmd #19
+static u8 option_allowed_cmd_ARENAS[65] = // cmd #19
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_FILES[63] = // cmd #20
+static u8 option_allowed_cmd_FILES[65] = // cmd #20
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_FIND[63] = // cmd #21
+static u8 option_allowed_cmd_FIND[65] = // cmd #21
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_POINTS[63] = // cmd #22
+static u8 option_allowed_cmd_POINTS[65] = // cmd #22
 {
     0,1,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_ANALYZE[63] = // cmd #23
+static u8 option_allowed_cmd_ANALYZE[65] = // cmd #23
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
-static u8 option_allowed_cmd_PATCH[63] = // cmd #24
+static u8 option_allowed_cmd_PATCH[65] = // cmd #24
 {
     0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0
+    0,0,0,0,0
 };
 
 
@@ -1615,6 +1652,7 @@ static const InfoOption_t * option_tab_cmd_HELP[] =
 static const InfoOption_t * option_tab_cmd_CONFIG[] =
 {
 	OptionInfo + OPT_CONFIG,
+	&option_cmd_CONFIG_BRIEF,
 	&option_cmd_CONFIG_LONG,
 
 	0
@@ -1731,9 +1769,12 @@ static const InfoOption_t * option_tab_cmd_HEXDUMP[] =
 
 static const InfoOption_t * option_tab_cmd_PORT[] =
 {
+	OptionInfo + OPT_PORT_DB,
 	OptionInfo + OPT_ORDER,
+	OptionInfo + OPT_NO_0X,
 	&option_cmd_PORT_NO_HEADER,
 	&option_cmd_PORT_BRIEF,
+	&option_cmd_PORT_LONG,
 
 	0
 };
@@ -1741,8 +1782,10 @@ static const InfoOption_t * option_tab_cmd_PORT[] =
 static const InfoOption_t * option_tab_cmd_WHERE[] =
 {
 	OptionInfo + OPT_ORDER,
+	OptionInfo + OPT_NO_0X,
 	&option_cmd_WHERE_NO_HEADER,
 	&option_cmd_WHERE_BRIEF,
+	&option_cmd_WHERE_LONG,
 
 	0
 };
@@ -2007,7 +2050,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Show all information about the search for the configuration file and"
 	" its content.",
 	0,
-	2,
+	3,
 	option_tab_cmd_CONFIG,
 	option_allowed_cmd_CONFIG
     },
@@ -2127,8 +2170,8 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"DUMP",
 	0,
 	"wstrt DUMP file...",
-	"Dump the structure of 'StaticR.rel' (in development) and of DOL files"
-	" as text.",
+	"Dump the structure of REL files (e.g. StaticR.rel) and of DOL files"
+	" (e.g. main.dol) as text.",
 	0,
 	1,
 	option_tab_cmd_DUMP,
@@ -2142,8 +2185,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"_CDUMP",
 	0,
 	"wstrt _CDUMP file...",
-	"Dump the structure of 'StaticR.rel' (in development) and of DOL files"
-	" as C source fragments.",
+	"Dump the structure of of DOL files as C source fragments.",
 	0,
 	0,
 	option_tab_cmd_CDUMP,
@@ -2174,13 +2216,14 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wstrt PORT param...",
 	"The command expects a list of keywords or hex numbers. Keywords are"
-	" PAL (default), USA, JAP, KOR, or any abbreviation of them. They"
-	" select the region for the next numeric input values. The hex numbers"
-	" are interpreted as addresses. If possible, they are ported to all"
-	" other regions. The result is printed as colorized table.\n"
+	" PAL (default), USA, JAPAN, KOREA, or any abbreviation of them. They"
+	" select the region for the following addresses. The hex numbers (with"
+	" or without 0x prefix) are interpreted as addresses. If possible,"
+	" they are ported to all other regions. The result is printed as"
+	" colorized table.\n"
 	" This address porting is EXPERIMENTAL!",
 	0,
-	3,
+	6,
 	option_tab_cmd_PORT,
 	option_allowed_cmd_PORT
     },
@@ -2194,9 +2237,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wstrt WHERE address...",
 	"A list of addresses in hex format is expected as input. The segments"
 	" in which the specified addresses are located is calculated for each"
-	" region. The result is output as a human and machine readable table.",
+	" region. The result is output as a human and machine readable table.\n"
+	"  This command is well suited to converting addresses into file"
+	" offsets and vice versa.",
 	0,
-	3,
+	5,
 	option_tab_cmd_WHERE,
 	option_allowed_cmd_WHERE
     },
@@ -2223,8 +2268,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"EXTRACT",
 	"X",
 	"wstrt EXTRACT dol...",
-	"Extract the sections of a DOL file into a directory. StaticR.rel"
-	" files are ignored.",
+	"Extract the sections of a DOL or a REL file into a directory.",
 	0,
 	3,
 	option_tab_cmd_EXTRACT,

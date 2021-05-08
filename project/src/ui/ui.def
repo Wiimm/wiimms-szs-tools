@@ -35,6 +35,11 @@
 	" its content. The command can also export the settings for scripts or" \
 	" can create or update configuration files." )
 
+#:def_cmd( "INSTALL", "INSTALL", \
+	"wszst INSTALL [file]...", \
+	"Install files to the shared directory. Use {wszst CONFIG} to list" \
+	" related pathes." )
+
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wszst ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
@@ -1912,11 +1917,16 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	"If printed as sections, exclude all comments. Otherwise suppress" \
+	" configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too. If set twice, print the auto-add" \
-	" search list too. This option is ignored, if any script output is" \
-	" enabled." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too. This option is ignored, if any script" \
+	" output is enabled." )
 
 #:def_cmd_opt( "CONFIG", "SECTIONS", \
 	"", \
@@ -1958,10 +1968,6 @@
 #:def_cmd_opt( "CONFIG", "CASE", \
 	"", \
 	"" )
-
-#:def_cmd_opt( "CONFIG", "BRIEF", \
-	"", \
-	"If printed as sections, exclude all comments." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -11703,9 +11709,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -13035,9 +13046,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -14241,9 +14257,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -15362,9 +15383,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -17916,9 +17942,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -19735,9 +19766,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -20954,9 +20990,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -22052,9 +22093,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -22323,8 +22369,8 @@
 
 #:def_cmd( "DUMP", "DUMP", \
 	"wstrt DUMP file...", \
-	"Dump the structure of 'StaticR.rel' (in development) and of DOL files" \
-	" as text." )
+	"Dump the structure of REL files (e.g. @StaticR.rel@) and of DOL files" \
+	" (e.g. @main.dol@) as text." )
 
 #:def_cmd( "HEXDUMP", "HEXDUMP|XDUMP", \
 	"wstrt HEXDUMP file...", \
@@ -22335,22 +22381,24 @@
 #:def_cmd( "PORT", "PORT", \
 	"wstrt PORT param...", \
 	"The command expects a list of keywords or hex numbers. Keywords are" \
-	" @PAL@ (default), @USA@, @JAP@, @KOR@, or any abbreviation of them." \
-	" They select the region for the next numeric input values. The hex" \
-	" numbers are interpreted as addresses. If possible, they are ported" \
-	" to all other regions. The result is printed as colorized table.\n" \
+	" @PAL@ (default), @USA@, @JAPAN@, @KOREA@, or any abbreviation of" \
+	" them. They select the region for the following addresses. The hex" \
+	" numbers (with or without @0x@ prefix) are interpreted as addresses." \
+	" If possible, they are ported to all other regions. The result is" \
+	" printed as colorized table.\n" \
 	" This address porting is EXPERIMENTAL!" )
 
 #:def_cmd( "WHERE", "WHERE", \
 	"wstrt WHERE address...", \
 	"A list of addresses in hex format is expected as input. The segments" \
 	" in which the specified addresses are located is calculated for each" \
-	" region. The result is output as a human and machine readable table." )
+	" region. The result is output as a human and machine readable table.\n" \
+	"  This command is well suited to converting addresses into file" \
+	" offsets and vice versa." )
 
 #:def_cmd( "EXTRACT", "EXTRACT|X", \
 	"wstrt EXTRACT dol...", \
-	"Extract the sections of a DOL file into a directory. StaticR.rel" \
-	" files are ignored." )
+	"Extract the sections of a DOL or a REL file into a directory." )
 
 #:def_cmd( "TRACKS", "TRACKS", \
 	"wstrt TRACKS [file]...", \
@@ -22804,12 +22852,22 @@
 	"", \
 	"Print in machine readable sections and parameter lines." )
 
+#:def_opt( "PORT_DB", "port-db|portdb", "CP", \
+	"file", \
+	"Load the specified update file and replace the internal porting" \
+	" database. If not set, then file @port-db.bin@ is searched in the" \
+	" share path." )
+
 #:def_opt( "ORDER", "order", "CP", \
 	"pujk", \
-	"The parameter is scanend for the first appearance of letters P (for" \
+	"The parameter is scanned for the first appearance of letters P (for" \
 	" PAL), U (USA), J (JAPAN) and K (KOREA) to define the order of the" \
 	" output. Case is ignored. Missing letters are added automatically." \
 	" The default is @'PUJK'@." )
+
+#:def_opt( "NO_0X", "0|no-0x|no0x", "C", \
+	"", \
+	"Suppress 0x prefix of hex numbers." )
 
 #:def_opt( "VADDR", "vaddr|va", "CP", \
 	"RANGE", \
@@ -22976,9 +23034,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONFIG", "BRIEF", \
+	"", \
+	" Suppress configuration search list." )
+
 #:def_cmd_opt( "CONFIG", "LONG", \
 	"", \
-	"If set, print the search list too." )
+	"If set, print the global search list too. If set twice, print the" \
+	" auto-add search list too." )
 
 #:def_cmd_opt( "COLORS", "COLORS", \
 	"", \
@@ -23168,7 +23231,15 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PORT", "PORT_DB", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PORT", "ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PORT", "NO_0X", \
 	"", \
 	"" )
 
@@ -23181,7 +23252,15 @@
 	"", \
 	" Same as {--no-header}." )
 
+#:def_cmd_opt( "PORT", "LONG", \
+	"", \
+	"Print file offsets too." )
+
 #:def_cmd_opt( "WHERE", "ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "WHERE", "NO_0X", \
 	"", \
 	"" )
 
@@ -23193,6 +23272,10 @@
 #:def_cmd_opt( "WHERE", "BRIEF", \
 	"", \
 	" Same as {--no-header}." )
+
+#:def_cmd_opt( "WHERE", "LONG", \
+	"", \
+	"Print file offsets too." )
 
 #:def_cmd_opt( "HTTPS", "LONG", \
 	"", \

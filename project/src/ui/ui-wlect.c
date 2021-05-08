@@ -623,10 +623,17 @@ static const InfoOption_t option_cmd_VERSION_LONG =
 	"Print in long format. Ignored if option --sections is set."
     };
 
+static const InfoOption_t option_cmd_CONFIG_BRIEF =
+    {	OPT_BRIEF, false, false, false, false, false, 'B', "brief",
+	0,
+	" Suppress configuration search list."
+    };
+
 static const InfoOption_t option_cmd_CONFIG_LONG =
     {	OPT_LONG, false, false, false, false, false, 'l', "long",
 	0,
-	"If set, print the search list too."
+	"If set, print the global search list too. If set twice, print the"
+	" auto-add search list too."
     };
 
 static const InfoOption_t option_cmd_COLORS_LONG =
@@ -1013,7 +1020,7 @@ static u8 option_allowed_cmd_HELP[43] = // cmd #2
 
 static u8 option_allowed_cmd_CONFIG[43] = // cmd #3
 {
-    0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
@@ -1214,6 +1221,7 @@ static const InfoOption_t * option_tab_cmd_HELP[] =
 static const InfoOption_t * option_tab_cmd_CONFIG[] =
 {
 	OptionInfo + OPT_CONFIG,
+	&option_cmd_CONFIG_BRIEF,
 	&option_cmd_CONFIG_LONG,
 
 	0
@@ -1618,7 +1626,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Show all information about the search for the configuration file and"
 	" its content.",
 	0,
-	2,
+	3,
 	option_tab_cmd_CONFIG,
 	option_allowed_cmd_CONFIG
     },

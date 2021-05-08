@@ -346,8 +346,8 @@
   { T_CMD_BEG,	"CONFIG",	0,0,0 },
 
   { T_COPT,	"CONFIG",	0,0,0 },
-  { T_COPT,	"LONG",		0,0,
-	"If set, print the search list too." },
+  { T_COPT,	"BRIEF",	0,0, CONFIG_BRIEF },
+  { T_COPT,	"LONG",		0,0, CONFIG_LONG },
 
   //---------- COMMAND wpatt ARGTEST ----------
 

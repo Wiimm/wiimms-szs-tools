@@ -35,6 +35,8 @@
  *                                                                         *
  ***************************************************************************/
 
+#include <time.h>
+
 #include "lib-staticr.h"
 #include "crypt.h"
 #include "db-dol.h"
@@ -53,7 +55,6 @@
 static const u32 pal_track_offset[] =
 {
 	0x37fcd0,
-    //	0x380ee0,   // original has an alternative order here
 	0x384f58,
 	0x397da8,
 	0x398130,
@@ -75,7 +76,6 @@ static const u32 pal_arena_offset[] =
 static const u32 usa_track_offset[] =
 {
 	0x37fbe0,
-    //	0x380b70,   // original has an alternative order here
 	0x3839e0,
 	0x397450,
 	0x3977d8,
@@ -97,7 +97,6 @@ static const u32 usa_arena_offset[] =
 static const u32 jap_track_offset[] =
 {
 	0x37f9a0,
-    //	0x380bb0,   // original has an alternative order here
 	0x384c28,
 	0x397588,
 	0x397910,
@@ -119,7 +118,6 @@ static const u32 jap_arena_offset[] =
 static const u32 kor_track_offset[] =
 {
 	0x3800b0,
-   // 	0x3812c8,   // original has an alternative order here
 	0x385348,
 	0x3981e8,
 	0x398570,
@@ -733,7 +731,127 @@ const str_server_patch_t ServerPatch[217+1] =
 
 #include "addr_port.inc"
 
-#define N_ADDR_PORT (sizeof(addr_port)/sizeof(*addr_port))
+static const addr_port_t *addr_port = addr_port_0;
+static int addr_port_records = sizeof(addr_port_0)/sizeof(*addr_port_0);
+
+//-----------------------------------------------------------------------------
+
+enumError LoadAddrPortDB ( ccp path1, int silent )
+{
+    if ( !path1 || !*path1 )
+	return ERR_NOTHING_TO_DO;
+
+    char pathbuf[PATH_MAX];
+    ccp path = PathCatDirP(pathbuf,sizeof(pathbuf),path1,"port-db.bin");
+    BZ2Manager_t mgr = {0};
+
+    u8 *data = 0;
+    size_t size;
+    enumError err = LoadFileAlloc(path,0,0,&data,&size,1000000,silent,0,false);
+    if (err)
+	goto error;
+    if ( size < 100 )
+	goto invalid;
+
+    const addr_port_version_t *version = (addr_port_version_t*)data;
+    if  (memcmp(version->magic,ADDR_PORT_MAGIC,sizeof(version->magic)))
+	goto invalid;
+ #if IS_LITTLE_ENDIAN
+    be32n((u32*)version,(u32*)version,sizeof(*version)/sizeof(u32));
+ #endif
+
+    mgr.src_data = data + sizeof(addr_port_version_t);
+    mgr.src_size = size - sizeof(addr_port_version_t);
+    err = DecodeBZIP2Manager(&mgr);
+    if (err)
+	goto error;
+
+    if ( mgr.size % sizeof(addr_port_t) )
+	goto invalid;
+
+    const int n_records = mgr.size / sizeof(addr_port_t);
+    if ( version->n_records != n_records || mgr.size != n_records * sizeof(addr_port_t) )
+	goto invalid;
+
+ #if IS_LITTLE_ENDIAN
+    be32n((u32*)mgr.data,(u32*)mgr.data,mgr.size/sizeof(u32));
+ #endif
+
+    const addr_port_t *ptr = (addr_port_t*)mgr.data;
+    for ( int n = n_records-1; n-- > 0; ptr++ )
+    {
+	const u32 size1 = ptr[0].size1 & ASM_M_SIZE;
+	const u32 size2 = ptr[0].size2 & ASM_M_SIZE;
+	if ( ptr[0].addr[0] >= ptr[1].addr[0] || !size1 || size1 > size2 )
+	    goto invalid;
+    }
+
+    if ( version->db_version != ADDR_PORT_DB_VERSION )
+    {
+	if ( !silent || verbose > 0 )
+	    ERROR0(ERR_WARNING,"Porting DB is not compatible (have v%u, need v%u): %s\n",
+			version->db_version, ADDR_PORT_DB_VERSION, path );
+	goto abort;
+    }
+
+    if ( version->timestamp < BINTIME || version->revision < REVISION_NUM )
+    {
+	if ( !silent || verbose > 0 )
+	    ERROR0(ERR_WARNING,"Porting DB is outdated and ignored: %s (%s, rev %u)\n",
+			path,
+			PrintTimeByFormat("%F",version->timestamp),
+			version->revision );
+	goto abort;
+    }
+
+    if ( verbose > 0 )
+	fprintf(stdlog,"# Porting DB updated: %s (%s, rev %u)\n",
+		    path,
+		    PrintTimeByFormat("%F",version->timestamp),
+		    version->revision );
+
+    addr_port_records = n_records;
+    addr_port = (addr_port_t*)mgr.data;
+    memcpy(&addr_port_version,version,sizeof(addr_port_version));
+    FREE(data);
+    return ERR_OK;
+
+ invalid:;
+    err = ERR_INVALID_DATA;
+ error:;
+    if (!silent)
+	ERROR0(err,"Porting DB invalid: %s\n",opt_port_db);
+ abort:;
+    FREE(data);
+    FREE(mgr.data);
+    return err;
+}
+
+//-----------------------------------------------------------------------------
+
+void SetupAddrPortDB()
+{
+    static bool done = false;
+    if (!done)
+    {
+	addr_port_version.revision  = REVISION_NUM;
+	if ( addr_port_version.timestamp < BINTIME )
+	    addr_port_version.timestamp = BINTIME;
+
+	done = true;
+	if (opt_port_db)
+	    LoadAddrPortDB(opt_port_db,0);
+	else
+	    LoadAddrPortDB(share_path,2);
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+const addr_port_version_t * GetAddrPortVersion()
+{
+    return &addr_port_version;
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -814,38 +932,30 @@ static char * GetIdPointer ( const staticr_t * str )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-const u32 * GetTrackOffsetTab ( const staticr_t * str )
+const u32 * GetTrackOffsetTab ( str_mode_t mode )
 {
-    if (str)
+    switch (mode)
     {
-	switch (str->mode)
-	{
-	    case STR_M_PAL:	return pal_track_offset;
-	    case STR_M_USA:	return usa_track_offset;
-	    case STR_M_JAP:	return jap_track_offset;
-	    case STR_M_KOR:	return kor_track_offset;
-	    default:		return 0;
-	}
+	case STR_M_PAL:	return pal_track_offset;
+	case STR_M_USA:	return usa_track_offset;
+	case STR_M_JAP:	return jap_track_offset;
+	case STR_M_KOR:	return kor_track_offset;
+	default:		return 0;
     }
-    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-const u32 * GetArenaOffsetTab ( const staticr_t * str )
+const u32 * GetArenaOffsetTab ( str_mode_t mode )
 {
-    if (str)
+    switch (mode)
     {
-	switch (str->mode)
-	{
-	    case STR_M_PAL:	return pal_arena_offset;
-	    case STR_M_USA:	return usa_arena_offset;
-	    case STR_M_JAP:	return jap_arena_offset;
-	    case STR_M_KOR:	return kor_arena_offset;
-	    default:		return 0;
-	}
+	case STR_M_PAL:	return pal_arena_offset;
+	case STR_M_USA:	return usa_arena_offset;
+	case STR_M_JAP:	return jap_arena_offset;
+	case STR_M_KOR:	return kor_arena_offset;
+	default:		return 0;
     }
-    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1695,6 +1805,234 @@ static BZ2Manager_t codehandler_mgr
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			struct rel_info_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const char rel_section_name[REL_SECT__N+1][5] =
+{
+    "RELH",
+    "REL1",
+    "REL2",
+    "REL3",
+    "REL4",
+    "REL5",
+    "RELX",
+    "REL",
+};
+
+//-----------------------------------------------------------------------------
+
+static rel_info_t rel_info_pal =
+{
+	  0xd4,	// offset_sect
+      0x3cd104,	// fix_size
+	0x78b0,	// bss_size
+    0x805102e0,	// load_addr
+
+    {
+    // sect { index, name, off,addr,size, 3*valid, data, hash }
+    {  0, "RH",        0,0,0, 1 },
+    {  1, "R1",     0xd4,0,0, 1 },
+    {  2, "R2", 0x37f120,0,0, 1 },
+    {  3, "R3", 0x37f424,0,0, 1 },
+    {  4, "R4", 0x37f440,0,0, 1 },
+    {  5, "R5", 0x3a28f0,0,0, 1 },
+    {  6, "RX", 0x3cd0f4,0,0, 0 },
+    { -1, "--", 0x4ad3c4,0,0, 0 },
+    }
+};
+
+//-----------------------------------------------------------------------------
+
+static rel_info_t rel_info_usa =
+{
+	  0xd4,	// offset_sect
+      0x3ccd2c,	// fix_size
+	0x78b0,	// bss_size
+    0x8050bf60,	// load_addr
+
+    {
+    // sect { index, name, off, addr, size, 3*valid, data, hash }
+    {  0, "RH",        0,0,0, 1 },
+    {  1, "R1",     0xd4,0,0, 1 },
+    {  2, "R2", 0x37f070,0,0, 1 },
+    {  3, "R3", 0x37f374,0,0, 1 },
+    {  4, "R4", 0x37f380,0,0, 1 },
+    {  5, "R5", 0x3a25c0,0,0, 1 },
+    {  6, "RX", 0x3ccd1c,0,0, 1 },
+    { -1, "--", 0x4acf94,0,0, 0 },
+    }
+};
+
+//-----------------------------------------------------------------------------
+
+static rel_info_t rel_info_jap =
+{
+	  0xd4,	// offset_sect
+      0x3cc8d4,	// fix_size
+	0x78b0,	// bss_size
+    0x8050fc60,	// load_addr
+
+    {
+    // sect { index, name, off, addr, size, 3*valid, data, hash }
+    {  0, "RH",        0,0,0, 1 },
+    {  1, "R1",     0xd4,0,0, 1 },
+    {  2, "R2", 0x37ee0c,0,0, 1 },
+    {  3, "R3", 0x37f110,0,0, 1 },
+    {  4, "R4", 0x37f120,0,0, 1 },
+    {  5, "R5", 0x3a20d0,0,0, 1 },
+    {  6, "RX", 0x3cc8c4,0,0, 1 },
+    { -1, "--", 0x4acabc,0,0, 0 },
+    }
+};
+
+//-----------------------------------------------------------------------------
+
+static rel_info_t rel_info_kor =
+{
+	  0xd4,	// offset_sect
+      0x3cd57c,	// fix_size
+	0x78b0,	// bss_size
+    0x804fe300,	// load_addr
+
+    {
+    // sect { index, name, off, addr, size, 3*valid, data, hash }
+    {  0, "RH",        0,0,0, 1 },
+    {  1, "R1",     0xd4,0,0, 1 },
+    {  2, "R2", 0x37f4c0,0,0, 1 },
+    {  3, "R3", 0x37f7c4,0,0, 1 },
+    {  4, "R4", 0x37f7e0,0,0, 1 },
+    {  5, "R5", 0x3a2d30,0,0, 1 },
+    {  6, "RX", 0x3cd0f4,0,0, 1 },
+    { -1, "--", 0x4ad9fc,0,0, 0 },
+    }
+};
+
+//-----------------------------------------------------------------------------
+
+const rel_info_t * GetInfoREL ( str_mode_t mode )
+{
+    rel_info_t *ri;
+    switch (mode)
+    {
+	case STR_M_PAL:	ri = &rel_info_pal; break;
+	case STR_M_USA:	ri = &rel_info_usa; break;
+	case STR_M_JAP:	ri = &rel_info_jap; break;
+	case STR_M_KOR:	ri = &rel_info_kor; break;
+	default:	return 0;
+    }
+
+    DASSERT(ri)
+    if (!ri->sect[0].addr)
+    {
+	for ( dol_sect_info_t *ptr = ri->sect; ptr->section >= 0; ptr++ )
+	{
+	    ptr->size = ptr[1].off - ptr->off;
+	    ptr->addr = ri->load_addr + ptr->off;
+	}
+    }
+    return ri;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int GetRelOffsetByAddrM
+(
+    str_mode_t		mode,		// region mode
+    u32			addr,		// address to search
+    u32			size,		// >0: wanted size
+    u32			*valid_size	// not NULL: return valid size
+)
+{
+    const rel_info_t *ri = GetInfoREL(mode);
+    if (ri)
+    {
+	addr &= ~0x40000000; // remove mirror bit
+
+	if ( addr >= ri->load_addr &&  addr < ri->load_addr + ri->offset_sect )
+	    return addr - ri->load_addr;
+
+	const dol_sect_info_t *sect;
+	for ( sect = ri->sect; sect->section >= 0; sect++ )
+	{
+	    if ( addr >= sect->addr && addr < sect->addr + sect->size )
+	    {
+		u32 max_size = sect->addr + sect->size - addr;
+		if (!size)
+		{
+		    if (valid_size)
+			*valid_size = max_size;
+		}
+		else if ( size <= max_size )
+		{
+		    if (valid_size)
+			*valid_size = size;
+		}
+		else if (valid_size)
+		    *valid_size = max_size;
+		else
+		    return 0;
+
+		return sect->off + addr - sect->addr;
+	    }
+	}
+    }
+
+    if (valid_size)
+	*valid_size = 0;
+    return ~0;
+}
+
+//-----------------------------------------------------------------------------
+
+u32 GetRelAddrByOffsetM
+(
+    str_mode_t		mode,		// region mode
+    u32			off,		// offset to search
+    u32			size,		// >0: wanted size
+    u32			*valid_size	// not NULL: return valid size
+)
+{
+    const rel_info_t *ri = GetInfoREL(mode);
+    if (ri)
+    {
+	if ( off < ri->sect[0].off )
+	    return ri->load_addr + off;
+
+	const dol_sect_info_t *sect;
+	for ( sect = ri->sect; sect->section >= 0; sect++ )
+	{
+	    if ( off >= sect->off && off < sect->off + sect->size )
+	    {
+		u32 max_size = sect->off + sect->size - off;
+		if (!size)
+		{
+		    if (valid_size)
+			*valid_size = max_size;
+		}
+		else if ( size <= max_size )
+		{
+		    if (valid_size)
+			*valid_size = size;
+		}
+		else if (valid_size)
+		    *valid_size = max_size;
+		else
+		    return 0;
+
+		return sect->addr + off - sect->off;
+	    }
+	}
+
+    }
+
+    if (valid_size)
+	*valid_size = 0;
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct staticr_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2089,6 +2427,85 @@ const DolSectionMap_t * FindSectionDOL ( uint size, u8 *hash )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			    dol header			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static const u8 dol_header_bz2[] =
+{
+  // decompressed size: 0x400 = 1024 bytes
+  0x00,0x00,0x04,0x00,
+
+  // bzipped data
+  0x42,0x5a,0x68,0x39, 0x31,0x41,0x59,0x26, 0x53,0x59,0x84,0xf7, 0x10,0x70,0x00,0x00,
+  0x22,0xff,0xff,0xef, 0x71,0xfa,0x54,0x6e, 0x74,0x25,0xd0,0x4f, 0x07,0xf0,0x00,0x44,
+  0x30,0x90,0x10,0xda, 0x00,0x00,0x02,0x44, 0x00,0x00,0x12,0x40, 0x00,0x20,0x19,0x60,
+  0x00,0x02,0x16,0xb0, 0x01,0x3b,0x16,0x02, 0x54,0xd5,0x34,0xda, 0x1a,0xa3,0xd4,0xf4,
+  0xd0,0x8d,0x32,0x30, 0xd0,0x46,0x41,0x8d, 0x4f,0x53,0x4c,0x46, 0x02,0x33,0xd4,0x6a,
+  0x09,0x12,0xa9,0xfe, 0xa9,0xe9,0x26,0x9a, 0x19,0x00,0xd0,0x06, 0x80,0xd0,0x19,0x31,
+  0x00,0x00,0x00,0x25, 0x4d,0x28,0xf5,0x1a, 0x68,0x00,0x1a,0x00, 0x00,0x03,0x40,0x00,
+  0x00,0x01,0xab,0x7c, 0xb4,0x09,0x0b,0x17, 0xcd,0x46,0x50,0x5d, 0xb7,0xcc,0xe2,0x0d,
+  0x00,0xae,0x28,0x0d, 0x03,0x60,0xd0,0x39, 0x61,0x8a,0x53,0x01, 0x11,0xfb,0x7a,0x01,
+  0x52,0x48,0x41,0xf3, 0x0a,0xde,0x9e,0xa5, 0x60,0xb4,0xd1,0x9a, 0x0d,0x94,0x84,0x05,
+  0xa6,0xd8,0x25,0x6c, 0x2c,0x58,0x99,0x99, 0x8a,0xa8,0xe2,0x93, 0x35,0xaa,0x97,0x49,
+  0xa0,0x42,0x98,0xaa, 0x66,0x01,0x1b,0x90, 0x17,0xf0,0x1c,0x58, 0x2b,0x85,0xd1,0xb6,
+  0x17,0x9d,0x76,0x99, 0x74,0x1c,0x25,0xcc, 0xd1,0x0c,0x18,0xc2, 0x61,0x28,0x04,0xd3,
+  0x08,0x61,0x8b,0xde, 0xc6,0xfc,0xb0,0x1d, 0xa1,0x79,0xc7,0x77, 0x06,0xde,0x4d,0x01,
+  0x88,0x10,0x01,0xc0, 0x56,0x10,0x58,0x0b, 0x04,0x11,0x14,0x88, 0xa4,0x3e,0x6a,0xe0,
+  0x07,0x00,0xab,0xc6, 0x6f,0x7b,0xf1,0xe7, 0x6e,0x86,0x42,0x0c, 0x92,0x4a,0x9c,0x21,
+  0x29,0x22,0x5b,0x50, 0x53,0x88,0x28,0x2a, 0x88,0x20,0x4b,0x26, 0xc0,0xbb,0xc2,0x20,
+  0x18,0x80,0x88,0x1e, 0xd0,0x32,0xb7,0x9f, 0xa2,0xf5,0xe6,0x3e, 0x93,0x47,0x45,0x69,
+  0x09,0x41,0xe0,0x7c, 0x44,0x83,0x2b,0x92, 0xfc,0x3a,0xb4,0xa2, 0xb1,0x6c,0x0a,0x0e,
+  0x3b,0x7d,0x68,0x38, 0xef,0xf6,0xda,0x6a, 0xfc,0x6e,0xb0,0xfd, 0xe6,0xf8,0x72,0x9e,
+  0xe4,0xde,0x51,0x85, 0x92,0x6e,0x2d,0x0a, 0x80,0xf8,0x73,0x25, 0x53,0x6f,0x49,0x0c,
+  0xf8,0xe2,0x85,0xa1, 0x04,0x70,0x13,0xbd, 0xd0,0x7a,0x75,0x23, 0xe7,0xf8,0xbb,0x92,
+  0x29,0xc2,0x84,0x84, 0x27,0xb8,0x83,0x80,
+  // 0x168 = 360 data bytes (36%)
+};
+
+static BZ2Manager_t dol_header_mgr
+	= { dol_header_bz2, sizeof(dol_header_bz2), 0, 0 };
+
+//-----------------------------------------------------------------------------
+
+const dol_header_t * GetDolHeader ( str_mode_t mode )
+{
+    if ( mode < STR_M_PAL || mode >= STR_M__N )
+	return 0;
+
+    DecodeBZIP2Manager(&dol_header_mgr);
+    return (dol_header_t*)dol_header_mgr.data + ( mode - STR_M_PAL );
+}
+
+//-----------------------------------------------------------------------------
+
+u32 GetDolOffsetByAddrM
+(
+    str_mode_t		mode,		// region mode
+    u32			addr,		// address to search
+    u32			size,		// >0: wanted size
+    u32			*valid_size	// not NULL: return valid size
+)
+{
+    const dol_header_t *dh = GetDolHeader(mode);
+    return dh ? GetDolOffsetByAddr(dh,addr,size,valid_size) : 0;
+}
+
+//-----------------------------------------------------------------------------
+
+u32 GetDolAddrByOffsetM
+(
+    str_mode_t		mode,		// region mode
+    u32			off,		// offset to search
+    u32			size,		// >0: wanted size
+    u32			*valid_size	// not NULL: return valid size
+)
+{
+    const dol_header_t *dh = GetDolHeader(mode);
+    return dh ? GetDolAddrByOffset(dh,off,size,valid_size) : 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			ct-code dol extensions		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[ct_dol_ext_t]]
@@ -2364,8 +2781,10 @@ ccp GetAddressSizeColor ( const ColorSet_t *cs, addr_size_mode_t asmode )
 
 const addr_port_t * GetPortingRecordPAL ( u32 addr )
 {
+    SetupAddrPortDB();
+
     int beg = 0;
-    int end = N_ADDR_PORT - 1;
+    int end = addr_port_records - 1;
     const int region = STR_M_PAL - STR_ZBI_FIRST;
 
     while ( beg <= end )
@@ -2406,6 +2825,8 @@ static int sort_addr_port_kor ( const addr_port_t **a, const addr_port_t **b )
 
 const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr )
 {
+    SetupAddrPortDB();
+
     static const addr_port_t **usa = 0;
     static const addr_port_t **jap = 0;
     static const addr_port_t **kor = 0;
@@ -2425,12 +2846,12 @@ const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr )
     if (!*list_ptr)
     {
 	u_nsec_t start = GetTimerNSec();
-	*list_ptr = MALLOC(sizeof(**list_ptr)*N_ADDR_PORT);
+	*list_ptr = MALLOC(sizeof(**list_ptr)*addr_port_records);
 	const addr_port_t *src = addr_port;
 	const addr_port_t **dest = *list_ptr;
-	for ( int i = 0; i < N_ADDR_PORT; i++ )
+	for ( int i = 0; i < addr_port_records; i++ )
 	    *dest++ = src++;
-	qsort( *list_ptr, N_ADDR_PORT, sizeof(**list_ptr), func );
+	qsort( *list_ptr, addr_port_records, sizeof(**list_ptr), func );
 	if ( logging >= 3 )
 	    fprintf(stdlog,"# Porting list for %s in %.1f µsec calculated.\n",
 			GetStrModeName(mode), (GetTimerNSec()-start)*1e-3 );
@@ -2447,7 +2868,7 @@ const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr )
     }
 
     int beg = 0;
-    int end = N_ADDR_PORT - 1;
+    int end = addr_port_records - 1;
     const int region = mode - STR_ZBI_FIRST;
     const addr_port_t **base = *list_ptr;
 
@@ -2474,7 +2895,7 @@ addr_type_t GetAddressType ( str_mode_t mode, u32 addr )
 {
     if (!addr)
 	return ADDRT_NULL;
- 
+
     if (IsMirroredAddress(addr))
 	return GetAddressType(mode,addr-MIRRORED_ADDRESS_DELTA)
 		+ (ADDRT_MIRROR_BEGIN-ADDRT_MEMORY_BEGIN);
@@ -2487,17 +2908,29 @@ addr_type_t GetAddressType ( str_mode_t mode, u32 addr )
 		return sect + ADDRT_DOL;
     }
 
+    const rel_info_t *ri = GetInfoREL(mode);
+    if (ri)
+    {
+	const dol_sect_info_t *dsi = ri->sect;
+	for ( int sect = 0; sect < REL_SECT__N; sect++, dsi++ )
+	    if ( addr >= dsi->addr && addr < dsi->addr + dsi->size )
+		return sect + ADDRT_REL_SECT;
+    }
+
+//----------------------------------------------------------------
+//      mountpoint  file size  fix size  end of rel  end of fixed
+//----------------------------------------------------------------
+// PAL	0x805102e0  0x4ad3c4   0x3cd104  0x809bd6a4  0x808dd3e4
+// USA	0x8050bf60  0x4acf94   0x3ccd2c  0x809b8ef4  0x808d8c8c
+// JAP	0x8050fc60  0x4acabc   0x3cc8d4  0x809bc71c  0x808dc534
+// KOR	0x804fe300  0x4ad9fc   0x3cd57c  0x809abcfc  0x808cb87c
+//----------------------------------------------------------------
+
     struct data_t
     {
 	u32 rel1;	// first REL address
 	u32 rel2;	// last REL address+1
     };
-
-//     mountpoint  file size  fix size  end of rel end of fixed
-// PAL	805102E0   0x4ad3c4   0x3cd104   809BD6A4   808DD3E4
-// USA	8050BF60   0x4acf94   0x3ccd2c   809B8EF4   808D8C8C
-// JAP	8050FC60   0x4acabc   0x3cc8d4   809BC71C   808DC534
-// KOR	804FE300   0x4ad9fc   0x3cd57c   809ABCFC   808CB87C
 
     static const struct data_t pal = { 0x805102e0,0x808dd3e4 };
     static const struct data_t usa = { 0x8050bf60,0x808d8c8c };
@@ -2515,7 +2948,7 @@ addr_type_t GetAddressType ( str_mode_t mode, u32 addr )
     }
 
     if ( addr >= data->rel1 && addr < data->rel2 )
-	return ADDRT_STATICR;
+	return ADDRT_REL;
 
     struct mem_layout_t
     {
@@ -2523,13 +2956,13 @@ addr_type_t GetAddressType ( str_mode_t mode, u32 addr )
 	u32 end;
 	u32 mode;
     };
-    
+
     static const struct mem_layout_t tab[] =
     {
 	{ 0x80000000, 0x80004000, ADDRT_HEAD },
 	{ 0x80000000, 0x81800000, ADDRT_MEM1 },
 	{ 0x90000000, 0x94000000, ADDRT_MEM2 },
-	{ 0xcd000000, 0xcd008000, ADDRT_HOLLYWOOD },
+	{ 0xcd000000, 0xcd008000, ADDRT_GPU },
 	{0,0,0}
     };
 
@@ -2542,60 +2975,108 @@ addr_type_t GetAddressType ( str_mode_t mode, u32 addr )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp GetAddressTypeName ( addr_type_t type )
+ccp GetAddressTypeName ( addr_type_t atype )
 {
-    if (IsMirroredAddressType(type))
+    if (IsMirroredAddressType(atype))
     {
-	ccp res = GetAddressTypeName(type-(ADDRT_MIRROR_BEGIN-ADDRT_MEMORY_BEGIN));
+	ccp res = GetAddressTypeName(atype-(ADDRT_MIRROR_BEGIN-ADDRT_MEMORY_BEGIN));
 	const uint size = strlen(res)+1;
 	char *buf = GetCircBuf(size);
 	StringLowerS(buf,size,res);
 	return buf;
     }
 
-    if ( type >= ADDRT_DOL && type <= ADDRT_BSS )
-	return dol_section_name[ type - ADDRT_DOL ];
+    if (IsAddrTypeDOL(atype))
+	return dol_section_name[ atype - ADDRT_DOL ];
 
-    switch (type)
+    if (IsAddrTypeREL(atype))
+	return rel_section_name[ atype - ADDRT_REL_SECT ];
+
+    switch (atype)
     {
 	case ADDRT_NULL:	return "null";
 	case ADDRT_INVALID:	return "invalid";
-	case ADDRT_STATICR:	return "REL";
 	case ADDRT_HEAD:	return "HEAD";
 	case ADDRT_MEM1:	return "MEM1";
 	case ADDRT_MEM2:	return "MEM2";
-	case ADDRT_HOLLYWOOD:	return "HLWD";
-	default:		return PrintCircBuf("?%02u?",type);
+	case ADDRT_GPU:		return "GPU";
+	default:		return PrintCircBuf("?%02u?",atype);
     }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp GetAddressTypeColor ( const ColorSet_t *col, addr_type_t type )
+ccp GetAddressTypeColor ( const ColorSet_t *col, addr_type_t atype )
 {
     if ( !col || !col->colorize )
 	return EmptyString;
 
-    if (IsMirroredAddressType(type))
-	type -= ADDRT_MIRROR_BEGIN - ADDRT_MEMORY_BEGIN;
+    if (IsMirroredAddressType(atype))
+	atype -= ADDRT_MIRROR_BEGIN - ADDRT_MEMORY_BEGIN;
 
-    if ( type >= ADDRT_DOL && type < ADDRT_BSS )
-	return type < ADDRT_DOL + DOL_N_TEXT_SECTIONS ? col->b_green : col->b_yellow;
+    if (IsAddrTypeDOL(atype))
+	return atype < ADDRT_DOL + DOL_N_TEXT_SECTIONS ? col->b_green : col->b_yellow;
 
-    switch (type)
+    if (IsAddrTypeREL(atype))
+	return col->b_cyan;
+
+    switch (atype)
     {
 	case ADDRT_BSS:		return col->b_magenta_blue;
 	case ADDRT_NULL:	return EmptyString;
 	case ADDRT_INVALID:	return col->b_orange;
-	case ADDRT_STATICR:	return col->b_cyan;
 
 	case ADDRT_HEAD:
 	case ADDRT_MEM1:	return col->b_blue_cyan;
 	case ADDRT_MEM2:	return col->b_blue;
-	case ADDRT_HOLLYWOOD:	return col->yellow;
+	case ADDRT_GPU:		return col->yellow;
 
 	default:		return col->error;
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const dol_sect_info_t * GetAddressTypeSection ( str_mode_t mode, addr_type_t atype )
+{
+    if (IsMirroredAddressType(atype))
+	atype -= ADDRT_MIRROR_BEGIN - ADDRT_MEMORY_BEGIN;
+
+    if (IsAddrTypeDOL(atype))
+    {
+	const dol_sect_info_t *di = GetInfoDOL(mode);
+	return di ? di + (atype-ADDRT_DOL) : 0;
+    }
+
+    if (IsAddrTypeRELSect(atype))
+    {
+	const rel_info_t *ri = GetInfoREL(mode);
+	return ri ? ri->sect + (atype-ADDRT_REL_SECT) : 0;
+    }
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int GetOffsetByAddrM ( str_mode_t mode, addr_type_t atype, u32 addr )
+{
+    // if !atype: Calculate it by 'addr'
+    // return -1 if invalid
+
+    if (!atype)
+	atype = GetAddressType(mode,addr);
+
+    if (IsAddrTypeDOL(atype))
+    {
+	const u32 aoff = GetDolOffsetByAddrM(mode,addr,0,0);
+	return aoff ? aoff : -1;
+    }
+
+    if (IsAddrTypeREL(atype))
+	return GetRelOffsetByAddrM(mode,addr,0,0);
+
+    return -1;
 }
 
 //
@@ -2758,7 +3239,7 @@ void AnalyzeDOL
 	    str->dol_info_flags |= DIF_ORIG;
     }
 
- #if defined(TEST) && 0 || 1
+ #if defined(TEST) && 0
     if (vbi_addr)
     {
 	dol_header_t *dh = (dol_header_t*)str->data;
@@ -3785,7 +4266,7 @@ void PrintStatusSTR
     if ( long_mode > 1 || long_mode > 0 && st & STR_S_TRACK_ORDER__FAIL )
     {
 	fprintf(f,"%*s- Track assigning tables:\n", indent,"" );
-	const u32 *tab = GetTrackOffsetTab(str);
+	const u32 *tab = GetTrackOffsetTab(str->mode);
 	DASSERT(tab);
 	for(;;)
 	{
@@ -3816,7 +4297,7 @@ void PrintStatusSTR
     if ( long_mode > 1 || long_mode > 0 && st & STR_S_ARENA_ORDER__FAIL )
     {
 	fprintf(f,"%*s- Arena assigning tables:\n", indent,"" );
-	const u32 *tab = GetArenaOffsetTab(str);
+	const u32 *tab = GetArenaOffsetTab(str->mode);
 	DASSERT(tab);
 	for(;;)
 	{
@@ -4165,14 +4646,14 @@ uint PatchSTR
 
     if (opt_tracks)
     {
-	const u32 *tab = GetTrackOffsetTab(str);
+	const u32 *tab = GetTrackOffsetTab(str->mode);
 	if (tab)
 	    count += PatchTracks( str, tab, track_pos, MKW_TRACK_BEG, MKW_N_TRACKS );
     }
 
     if (opt_arenas)
     {
-	const u32 *tab = GetArenaOffsetTab(str);
+	const u32 *tab = GetArenaOffsetTab(str->mode);
 	if (tab)
 	    count += PatchTracks( str, tab, arena_pos, MKW_ARENA_BEG, MKW_N_ARENAS );
     }
@@ -6492,7 +6973,9 @@ char mkw_domain[100] = "mariokartwii.gs.wiimmfi.de";
 ccp  wifi_domain = mkw_domain + 16;
 bool wifi_domain_is_wiimmfi = false;
 wcode_t opt_wcode = WCODE_AUTO;
+ccp opt_port_db = 0;
 ccp opt_order = 0;
+bool opt_no_0x = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -6918,6 +7401,8 @@ enumError DumpSTR
     DASSERT( str->data_size >= sizeof(rel_header_t) );
 
     indent = NormalizeIndent(indent);
+    const rel_info_t *rinfo = GetInfoREL(str->mode);
+    const u32 load_off = rinfo ? rinfo->load_addr : 0;
 
 
     //----- dump header
@@ -6929,13 +7414,14 @@ enumError DumpSTR
     if ( hd.mod_name && hd.mod_name + hd.mod_name_len < str->data_size )
 	mod_name = (ccp)str->data + hd.mod_name;
 
+    fprintf(f,"%*sId:           %8u = 0x%x\n",	indent,"", hd.id, hd.id );
+    fprintf(f,"%*sN(sections):  %8u\n",		indent,"", hd.n_section );
+    fprintf(f,"%*sModule Name:  %8s\n",		indent,"", mod_name );
+    fprintf(f,"%*sReloc Offset: %8x\n",		indent,"", hd.reloc_off );
+    if (rinfo)
+	fprintf(f,"%*sLoad Address: %8x\n", indent,"", rinfo->load_addr );
 
-    fprintf(f,"%*sId:           %6u = 0x%x\n",	indent,"", hd.id, hd.id );
-    fprintf(f,"%*sN(sections):  %6u\n",		indent,"", hd.n_section );
-    fprintf(f,"%*sModule Name:  %6s\n",		indent,"", mod_name );
-    fprintf(f,"%*sReloc Offset: %6x\n",		indent,"", hd.reloc_off );
-
-    fprintf(f,"\n%*sSection (0..%u):\n", indent,"", hd.n_section-1 );
+    fprintf(f,"\n%*sSections (0..%u) [size:offset:address]:\n", indent,"", hd.n_section-1 );
     rel_sect_info_t *si = (rel_sect_info_t*)( str->data + hd.section_off );
     uint s;
     for ( s = 0; s < hd.n_section; s++, si++ )
@@ -6945,13 +7431,18 @@ enumError DumpSTR
 	{
 	    u32 offset = be32(&si->offset);
 	    if (!offset)
-		fprintf(f,"%*s%4u. BSS  %7x\n", indent,"", s, size );
+		fprintf(f,"%*s%4u. BSS  %#9x\n", indent,"", s, size );
 	    else
 	    {
 		ccp type = offset & 1 ? "TEXT" : "DATA";
 		offset &= ~1;
-		fprintf(f,"%*s%4u. %s %7x : %6x .. %6x\n",
-			indent,"", s, type, size, offset, offset + size - 1 );
+		fprintf(f,"%*s%4u. %s %#9x : %#8x .. %#8x",
+			indent,"", s, type, size, offset, offset + size );
+		if (rinfo)
+		    fprintf(f," : %#10x .. %#10x\n",
+			load_off + offset, load_off + offset + size );
+		else
+		    fputc('\n',f);
 	    }
 	}
     }
@@ -7059,8 +7550,74 @@ enumError ExtractSTR
     if (str->is_dol)
 	return ExtractDOL(str,dest_dir);
 
-    return ERROR0(ERR_WARNING,
-	"Extraction of StaticR.rel files is not implemented yet!\n");
+
+    //--- setup
+
+    const rel_info_t *ri = GetInfoREL(str->mode);
+    if (!ri)
+	return ERROR0(ERR_INTERNAL,0);
+
+    CreatePath(dest_dir,true);
+
+
+    //--- open log file
+
+    char path_buf[PATH_MAX];
+    ccp path = PathCatPP(path_buf,sizeof(path_buf),dest_dir,"rel-setup.txt");
+    FILE *log = fopen(path,"wb");
+    if (!log)
+	return ERROR0(ERR_CANT_CREATE,
+	    "Can't create setup file: %s\n",path);
+
+    static ccp sep = "#---------------------------------------------------------------------\n";
+    fprintf(log,"\n%s#sect offset  address  size  sha1 checksum\n%s",sep,sep);
+
+
+    //--- extract sections
+
+    uint sect;
+    for ( sect = 0; sect < REL_SECT__N; sect++ )
+    {
+	dol_sect_info_t info = ri->sect[sect];
+	fprintf(log,"%-4s= %06x %08x %06x",info.name,info.off,info.addr,info.size);
+
+	info.hash_valid = false;
+	info.data_valid = str->data && info.off + info.size <= str->data_size;
+	if (info.data_valid)
+	{
+	    const u8 *data = str->data + info.off;
+	    info.hash_valid = true;
+	    SHA1( data, info.size, info.hash );
+
+	    if (info.hash_valid)
+	    {
+		fputc(' ',log);
+		uint i;
+		for ( i = 0; i < sizeof(info.hash); i++ )
+		    fprintf(log,"%02x",info.hash[i]);
+	    }
+
+	    path = PathCatPPE(path_buf,sizeof(path_buf),dest_dir,info.name,".bin");
+	    FILE *f = fopen(path,"wb");
+	    if (!f)
+	    {
+		fclose(log);
+		return ERROR0(ERR_CANT_CREATE,
+		    "Can't create data file: %s\n",path);
+	    }
+	    fwrite(data,1,info.size,f);
+	    fclose(f);
+	}
+	fputc('\n',log);
+    }
+    fputs(sep,log);
+
+
+    //--- close log and return
+
+    fprintf(log,"\n");
+    fclose(log);
+    return ERR_OK;
 }
 
 //

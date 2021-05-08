@@ -1816,6 +1816,7 @@ typedef enum valid_t
     VALID_ERROR,	// error in data structures
     VALID_WRONG_FF,	// wrong file type
     VALID_UNKNOWN_FF,	// unknown file type
+    VALID_UNKNOWN,	// unknown status
 
     VALID__N		// number of status modes
 
@@ -2046,6 +2047,7 @@ void cmd_version_section
 	( bool sect_header, ccp name_short, ccp name_long, int verbose );
 
 enumError cmd_config();
+enumError cmd_install();
 enumError cmd_argtest ( int argc, char ** argv );
 enumError cmd_error();
 enumError cmd_filetype();

@@ -562,9 +562,11 @@ typedef enum enumOptions
 //	OB_CMD_HELP		= ~(u64)0,
 //
 //	OB_CMD_CONFIG		= OB_INSTALL
+//				| OB_BRIEF
 //				| OB_LONG
-//				| OB_GRP_SCRIPT
-//				| OB_BRIEF,
+//				| OB_GRP_SCRIPT,
+//
+//	OB_CMD_INSTALL		= 0,
 //
 //	OB_CMD_ARGTEST		= ~(u64)0,
 //
@@ -934,6 +936,7 @@ typedef enum enumCommands
 	CMD_VERSION,
 	CMD_HELP,
 	CMD_CONFIG,
+	CMD_INSTALL,
 	CMD_ARGTEST,
 	CMD_TEST,
 	CMD_COLORS,
@@ -1015,7 +1018,7 @@ typedef enum enumCommands
 
 	CMD_VEHICLE,
 
-	CMD__N // == 76
+	CMD__N // == 77
 
 } enumCommands;
 

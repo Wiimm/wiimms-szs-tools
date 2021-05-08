@@ -45,6 +45,9 @@ fi
 #------------------------------------------------------------------------------
 # settings
 
+SYSTEM="@@SYSTEM@@"
+SYSTEM2="@@SYSTEM2@@"
+
 BASE_PATH="@@INSTALL-PATH@@"
 BIN_PATH="$BASE_PATH/bin"
 SHARE_PATH="$BASE_PATH/share/szs"
@@ -53,6 +56,20 @@ BIN_FILES="@@BIN-FILES@@"
 SHARE_FILES="@@SHARE-FILES@@"
 
 INST_FLAGS="-p"
+
+#------------------------------------------------------------------------------
+# scan config
+
+if [[ -f install-config.txt ]]
+then
+    res_install=
+    res_config=
+    res_share=
+    . <( ./wszst config --bash --install --config install-config.txt )
+    echo "res_install=$res_install"
+    echo "res_config=$res_config"
+    echo "res_share=$res_share"
+fi
 
 #------------------------------------------------------------------------------
 # make?
@@ -74,6 +91,8 @@ do
     mkdir -p "$BIN_PATH"
     install $INST_FLAGS "bin/$f" "$BIN_PATH/$f"
 done
+
+[[ $SYSTEM = mac ]] && xattr -dr com.apple.quarantine "$BIN_PATH" || true
 
 #------------------------------------------------------------------------------
 echo "*** install share files to $SHARE_PATH"

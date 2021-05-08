@@ -743,6 +743,7 @@ file_format_t GetByMagicFF
 	    case PNG_MAGIC8_NUM:		return FF_PNG;
 	    case GCT_MAGIC8_NUM:		return FF_GCT;
 	    case LE_LPAR_MAGIC_NUM:		return FF_LPAR;
+	    case ADDR_PORT_MAGIC_NUM:		return FF_PORTDB;
 
 	    //--- see below for BOM support
 	    case CT_TEXT_MAGIC8_NUM:		return FF_CT_TEXT;
@@ -1889,14 +1890,13 @@ enumError ScanConfig
 	}
 
     AddStandardSymbolsEML(&paths,false);
-    //DumpEML(stdout,2,&paths,0);
-
+    //DumpEML(stderr,2,&paths,0);
 
     //--- scan file
 
     const ListDef_t list_def[] =
     {
-	{ "paths",	0, 0, &paths },
+	{ "PATHS",	0, 0, &paths },
 	{0,0,0,0}
     };
 
@@ -1905,7 +1905,7 @@ enumError ScanConfig
 		: ERR_OK;
 
     ResolveAllSymbolsEML(&paths);
-    //DumpEML(stdout,2,&paths,0);
+    //DumpEML(stderr,2,&paths,0);
 
 
     //--- assign known values
@@ -1919,7 +1919,8 @@ enumError ScanConfig
 	    if (ref)
 	    {
 		FreeString(*assign->var);
-		NormalizeFileName(buf,sizeof(buf),ref->data.data.ptr,true,true,TRSL_REMOVE);
+		NormalizeFileName(buf,sizeof(buf),ref->data.data.ptr,true,true,TRSL_ADD_AUTO);
+
 		*assign->var = STRDUP(buf);
 	    }
 	    else
@@ -2518,13 +2519,31 @@ static char * trim_line ( char * ptr, bool allow_quote, char ** begin )
 
     if ( allow_quote && (*ptr == '"' || *ptr == '\'') )
     {
+	char buf[1000], *buf_ptr;
+	int buf_size;
 	const int slen = strlen(ptr);
+	const int need = slen + 10;
+	if ( need <= sizeof(buf) )
+	{
+	    buf_ptr = buf;
+	    buf_size = sizeof(buf);
+	}
+	else
+	{
+	    buf_ptr = MALLOC(need);
+	    buf_size = need;
+	}
+	
 	uint scanned_len;
-	int elen = ScanEscapedString(ptr,slen,ptr,slen,true,-1,&scanned_len);
+	int elen = ScanEscapedString(buf_ptr,buf_size,ptr,slen,true,-1,&scanned_len);
+	if ( elen > slen )
+	     elen = slen;
+	memcpy(ptr,buf_ptr,elen+1);
 	if (begin)
 	    *begin = ptr;
-	ptr[elen] = 0;
 	ptr += scanned_len;
+	if ( buf_ptr != buf )
+	    FREE(buf_ptr);
     }
     else
     {
@@ -2532,7 +2551,7 @@ static char * trim_line ( char * ptr, bool allow_quote, char ** begin )
 	if (begin)
 	    *begin = ptr;
 
-	while ( *ptr)
+	while (*ptr)
 	    ptr++;
 
 	ptr--;
@@ -2725,9 +2744,9 @@ enumError ScanSetupFile
 		    exmem_t data = ExMemByString(val);
 		    data.attrib = index++;
 		    if (append)
-			AppendEML(eml,pathbuf,CPM_COPY,&data,CPM_MOVE);
+			AppendEML(eml,pathbuf,CPM_COPY,&data,CPM_COPY);
 		    else
-			ReplaceEML(eml,pathbuf,CPM_COPY,&data,CPM_MOVE);
+			ReplaceEML(eml,pathbuf,CPM_COPY,&data,CPM_COPY);
 		}
 	    }
 	}

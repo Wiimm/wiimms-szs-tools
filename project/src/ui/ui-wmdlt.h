@@ -211,7 +211,8 @@ typedef enum enumOptions
 //
 //	OB_CMD_HELP		= ~(u64)0,
 //
-//	OB_CMD_CONFIG		= OB_LONG,
+//	OB_CMD_CONFIG		= OB_BRIEF
+//				| OB_LONG,
 //
 //	OB_CMD_ARGTEST		= ~(u64)0,
 //
