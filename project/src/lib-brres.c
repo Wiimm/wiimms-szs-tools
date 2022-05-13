@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -2098,6 +2098,7 @@ void ListNameRef ( FILE *f, int indent, name_ref_t *nr, SortMode_t sort )
 	    break;
 
 	case SORT_OFFSET:
+	case SORT_SIZE:
 	    sort_func = sort_nr_by_offset;
 	    sort_info = "sorted by offset";
 	    break;

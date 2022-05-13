@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -207,7 +207,11 @@ static void print_ph
 	    else
 		printf("%4u",*d1);
 	}
-	putchar('\n');
+
+	printf(" : %s0x%02x %s0x%02x%s\n",
+		p1->setting[0] == p2->setting[0] ? ok : warn, p1->setting[0],
+		p1->setting[1] == p2->setting[1] ? ok : warn, p1->setting[1],
+		colout->reset );
     }
     else
     {
@@ -225,7 +229,8 @@ static void print_ph
 	    else
 		printf("%4u",*d1);
 	}
-	putchar('\n');
+
+	printf(" : 0x%02x 0x%02x\n", p1->setting[0], p1->setting[1] );
     }
 }
 
@@ -254,7 +259,10 @@ static sort_ph_t * print_ph_single ( const section_info_t *si,
 
 static int diff_ph ( const sort_ph_t *e1, const sort_ph_t *e2 )
 {
-    if (!memcmp(&e1->data,&e2->data,sizeof(e1->data)))
+    uint size = sizeof(e1->data);
+    if ( opt_battle_mode <= OFFON_OFF )
+	size -= sizeof(e1->data.setting);
+    if (!memcmp(&e1->data,&e2->data,size))
 	return 0;
 
     uint count	= ( e1->data.pt_start != e2->data.pt_start )
@@ -947,7 +955,7 @@ static void print_area
 	printf(	"%c %5u %5u  %11.3f %11.3f %11.3f  %#6x %#6x\n"
 		"%c %5u %5u  %11.3f %11.3f %11.3f  %6s %6s %#6x\n"
 		"%c %24.3f %11.3f %11.3f\n",
-		mode, 
+		mode,
 		 e1->mode, e1->type,
 		 e1->position[0], e1->position[1], e1->position[2],
 		 e1->setting[0], e1->setting[1],

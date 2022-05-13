@@ -5,7 +5,6 @@
 # values can still change. Therefore, they should not be used, or at most
 # experimentally.
 
-@TEST1 = %d
-@TEST2 = %d
-@TEST3 = %d
-@TEST4 = %d
+@TEST_0D = %d
+@TEST_0E = %d
+@TEST_0F = %d

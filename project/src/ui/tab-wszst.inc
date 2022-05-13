@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -226,6 +226,11 @@
 		"This hidden command exports some definitions to standard output."
 		" Use keyword @HELP@ to get a list of possible keywords." },
 
+  { H_DEF_CMD,	"SIZEOF",	"SIZEOF",
+		    "wszst SIZEOF key...",
+		"This hidden command prints a list with the size of"
+		" data structures and variables." },
+
   { H_DEF_CMD,	"CODE",		"_CODE",
 		    "wszst _CODE [files]",
 		"All bytes of all input files are xor'ed with 0xDC and copied to stdout."
@@ -340,15 +345,28 @@
   { T_DEF_CMD,	"SHA1",		"SHA1",
 		    "wszst SHA1 [source]...",
 		"Print a SHA1 checksum for each source."
-		" The checksum is calculated by using the uncompressed data." },
+		" The checksum is calculated by using the uncompressed data"
+		" and after patching." },
 
   { T_DEF_CMD,	"ANALYZE",	"ANALYZE|ANA|ANALYSE",
 		    "wszst ANALYZE [source]...",
 		"Analyse track files and print results in machine readable format." },
 
+  { T_DEF_CMD,	"IS_TEXTURE",	"IS-TEXTURE|ISTEXTURE",
+		    "wszst IS-TEXTURE --reference reference [source]...",
+		"Test each source to see if it's a texture hack versus a reference file."
+		" For each source, one human and machine readable status line is printed."
+		" It is either »-1=err« on error, »1=yes« for a texture hack,"
+		" or »0=no LIST« with a comma separated list of reasons."
+		"\n "
+		" At the moment KCL, KMP (see notes) and LEX are checked."
+		" KMP section CAME has been intentionally left out."
+		" Section ENPT is only checked if KCL contains a least one face"
+		" of type force-recalculation." },
+
   { H_DEF_CMD,	"FEATURES",	"FEATURES",
 		    "wszst FEATURES [source]...",
-		"Analyse track files and a feature list in machine readable format." },
+		"Analyse track files and create a feature list in machine readable format." },
 
   { T_DEF_CMD,	"DISTRIBUTION",	"DISTRIBUTION|DIST",
 		    "wszst DISTRIBUTION result source...\n"
@@ -673,9 +691,8 @@
 		"MAX_WIDTH",	"max-width|maxwidth",
 		"maxwidth",
 		"Define the maximum terminal width (number of columns)"
-		" for help and some other messages"
-		" and disable the automatic detection of the terminal width."
-		" This option is ignored if {--width} is set." },
+		" for help and some other messages."
+		" The default is 120. This option is ignored if --width is set." },
 
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0,
@@ -694,6 +711,20 @@
   { T_OPT_GM,	"LOGGING",	"L|logging",
 		0,
 		"This debug option enables the logging of internal lists and maps." },
+
+  { T_OPT_GP,	"WARN",		"W|warn",
+		"list",
+		"Enable or disable warnings."
+		" Parameter @'list'@ is a comma separated list of keywords."
+		" A minus sign before a keyword disables a warning."
+		" Each occurrence of the option will only change entered warning"
+		" and all other warnings are untouched."
+		"\n "
+		" Keyword @DEFAULT@ resets the default settings, @OFF@ disables and @ALL@ enables all."
+		" The other allowed keywords are:"
+		" @INVALID-OFFSET@."
+	//	"\1 See https://szs.wiimm.de/opt/warn for details."
+		},
 
   { T_OPT_G,	"DE",		"de",
 		0,
@@ -1017,7 +1048,7 @@
 		"@MODE@ is either @OFF@, @AUTO@ (default) or @ON@."
 		" Without value, @ON@ is used."
 		"\n "
-		" If mode is @ON@, assume a battle arena and enable a spüecial battle support."
+		" If mode is @ON@, assume a battle arena and enable a special battle support."
 		" If mode is @OFF@, disable special battle arena support."
 		" If mode is @AUTO@, analyse the KMP and estimate, if it is a battle areana."
 		" Modes @ON@ and @OFF@ override KMP parameter @BATTLE-MODE@." },
@@ -1519,7 +1550,7 @@
   { T_OPT_CP,	"CODING",	"coding",
 		"mode",
 		"Define the coding of the non alphanumeric characters for BASE64:"
-		" STANDART (+/=, default), URL (-_=), STAR (-_*) or XML (.-*)." },
+		" STANDARD (+/=, default), URL (-_=), STAR (-_*) or XML (.-*)." },
 
   { T_OPT_C,	"VERIFY",	"verify",
 		0,
@@ -1954,6 +1985,10 @@
 		" avoid that the same extension is used twice in row."
 		"\1 Read https://szs.wiimm.de/opt/source for more details." },
 
+
+  { T_OPT_CP,	"REFERENCE",	"ref|reference",
+		"path",
+		"Define a reference SZS." },
 
   { T_OPT_CP,   "DEST",		"d|dest",
 		"path",
@@ -2796,6 +2831,16 @@
 
   { T_CMD_BEG,	"EXPORT",	0,0,0 },
 
+  //---------- COMMAND wszst _SIZEOF ----------
+
+  { T_CMD_BEG,	"SIZEOF",	0,0,0 },
+  { T_COPT,	"SORT",		0,0,
+		"Define a sort mode. Keywords are:"
+		" @NONE@ (default), @NAME@ end @SIZE@." },
+  { T_COPT,	"BRIEF",	0,0,
+		"Limit output to SZS specific data." },
+  { T_COPT,	"LOGGING",	0,0,0 },
+
   //---------- COMMAND wszst _CODE ----------
 
   { T_CMD_BEG,	"CODE",	0,0,0 },
@@ -2981,8 +3026,18 @@
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"SCRIPT",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"REFERENCE",	0,0,0 },
   { T_COPT,	"DEST",		0,0,0 },
   { T_COPT,	"DEST2",	0,0,0 },
+
+  //---------- COMMAND wszst IS_TEXTURE ----------
+
+  { T_CMD_BEG,	"IS_TEXTURE",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_COPT,	"REFERENCE",	0,0,0 },
+  { T_COPT,	"BATTLE",	0,0,0 },
+  { T_COPT,	"LONG",		0,0,
+	"Append a colon and the filename after each status." },
 
   //---------- COMMAND wszst FEATURES ----------
 
@@ -2992,7 +3047,7 @@
 	" If set twice, suppress empty lines (for grouping) too."
 	" If set three times, omit inactive features (=0) too." },
   { T_COPT,	"LONG",		0,0,
-	"Print additnal comments." },
+	"Print additional comments." },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"QUIET",	0,0,
 	"Suppress logging of input and output files." },

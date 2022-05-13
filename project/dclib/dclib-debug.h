@@ -14,16 +14,16 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
+ *   This library is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
+ *   This library is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
  *   GNU General Public License for more details.                          *
@@ -171,6 +171,20 @@ void HexDiff ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
 void HexDiff16 ( FILE * f, int indent, u64 addr,
 		 const void * data1, size_t count1,
 		 const void * data2, size_t count2 );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			    debug helpers		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[PrintDebugFunc]
+
+typedef int (*PrintDebugFunc)
+(
+    ccp  format,	// format string
+    ...			// parameters for 'format'
+)
+__attribute__ ((__format__(__printf__,1,2)));
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			DEBUG and TRACING		///////////////
@@ -415,6 +429,12 @@ void WAIT_ARG_FUNC ( ccp format, va_list arg );
 #undef PRINT_SIZEOF1
 #undef BINGO1
 
+#undef PRINTD
+#undef PRINT_IFD
+#undef PRINT_SIZEOFD
+#undef BINGOD
+#undef HAVE_PRINTD
+
 #undef xBINGO
 #undef HAVE_PRINT
 #undef PRINT_TIME
@@ -437,24 +457,38 @@ void WAIT_ARG_FUNC ( ccp format, va_list arg );
 #if defined(DEBUG) && defined(TEST)
 
     #define HAVE_PRINT 1
-
     #define PRINT		PRINT1
     #define PRINT_IF		PRINT_IF1
     #define PRINT_SIZEOF	PRINT_SIZEOF1
     #define BINGO		BINGO_FUNC(__FUNCTION__,__LINE__,__FILE__)
-
     void PRINT_TIME ( time_t time, ccp title );
 
 #else
 
     #define HAVE_PRINT		HAVE_TRACE
-
     #define PRINT		TRACE
     #define PRINT_IF		TRACE_IF
     #define PRINT_SIZEOF	TRACE_SIZEOF
     #define BINGO		TRACELINE
-
     #define PRINT_TIME(...)
+
+#endif
+
+#if IS_DEVELOP
+
+    #define HAVE_PRINTD		1
+    #define PRINTD		PRINT1
+    #define PRINT_IFD		PRINT_IF1
+    #define PRINT_SIZEOFD	PRINT_SIZEOF1
+    #define BINGOD		BINGO_FUNC(__FUNCTION__,__LINE__,__FILE__)
+
+#else
+
+    #define HAVE_PRINTD		0
+    #define PRINTD(...)
+    #define PRINT_IFD(cond,...)
+    #define PRINT_SIZEOFD(t)
+    #define BINGOD
 
 #endif
 

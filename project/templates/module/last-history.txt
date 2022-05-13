@@ -1,20 +1,24 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - wstrt PORT & wstrt WHERE:
-    - Address scanning: If an address starts with letter 'm' or 'M' (main.dol)
-      or 's' or 'S' (staticr.rel), then it is interpreted as file offset.
-      If an address without prefix is exact 6 characters long, then value
-      0x80000000 is added. This makes cut+paste from cheat codes easier.
-    - New option: --no-0x (short: -0): Suppress 0x prefix for hex numbers.
-    - New option: --long (short: -l): Print file offsets too.
- - wstrt PORT:
-    - Bug fix: Wrong column was highlighted when region order was changed by
-      option --order.
-    - Internal porting database updated.
-    - New option: --port-db=file: Load the specified update file and replace
-      the internal porting database.
- - wstrt DUMP: More details for StaticR.rel files.
- - New command: wszst INSTALL: Install files to the shared directory.
+ - New parameter for LEX section SET1: START-ITEM: Declare that a player can
+   get an item through an item box before race start.
+ - wszst ANALYSE: LEX:SET1:START-ITEM is recognized and evaluated.
+ - wstrt PORT+WHERE: Use new option --upper (-U) to force upper case digits in
+   hex numbers.
+ - wstrt PORT: Ported cheat codes are always printed with upper case digits
+   and without 0x prefix.
+ - wstrt PORT: Porting database updated. Many false records removed by
+   updated generator script.
+ - Fewer program crashes when reading faulty SZS files.
+ - New section [SETUP-ARENA] for LE-CODE definition files: Define music and
+   property slots for battle arenas.
+ - New global option: --warn=LIST (short -W LIST): Enable or disable warnings.
+ - New command: wkclt SHA1: Print a SHA1 checksum of the KCL for each source.
+   The checksum is calculated after patching.
+ - New command: wkclt TYPES: Scan KCL types from command line in different
+   variants and print the result as flag, type, value and groups W, X, Y & Z.
+ - New command: wszst IS-TEXTURE: Test tracks to see if it's a texture hack.
+ - wszst ANALYZE: Detect goombas with scale other than 1.00.
 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it

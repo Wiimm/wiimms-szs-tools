@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -527,7 +527,7 @@ extern const char rel_section_name[REL_SECT__N+1][5];
 typedef struct rel_info_t
 {
     u32 offset_sect;		// offset of section data, always 0xd4
-    u32 fix_size;		// OSLinkFixed (and of reserved mem) 
+    u32 fix_size;		// OSLinkFixed (and of reserved mem)
     u32 bss_size;		// size of BSS, always 0x78b0
     u32 load_addr;		// address, at which file is loaded
 
@@ -674,8 +674,8 @@ __attribute__ ((packed)) addr_port_t;
 
 typedef struct addr_port_version_t
 {
-    char	magic[8];	// ADDR_PORT_MAGIC 
-    u32		db_version;	// ADDR_PORT_DB_VERSION 
+    char	magic[8];	// ADDR_PORT_MAGIC
+    u32		db_version;	// ADDR_PORT_DB_VERSION
     u32		revision;	// REVISION_NUM
     u32		timestamp;	// time(0)
     u32		n_records;	// number of records
@@ -686,6 +686,7 @@ __attribute__ ((packed)) addr_port_version_t;
 
 void SetupAddrPortDB();
 const addr_port_version_t * GetAddrPortVersion();
+extern ccp addr_port_file;
 
 const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr );
 const addr_port_t * GetPortingRecordPAL ( u32 addr );
@@ -940,6 +941,7 @@ extern char patch_bt_str[2];
 extern ccp opt_port_db;
 extern ccp opt_order;
 extern bool opt_no_0x;
+extern bool opt_upper;
 
 int ScanOptVS ( bool is_bt, bool allow_2, ccp arg );
 

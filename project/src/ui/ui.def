@@ -246,11 +246,21 @@
 #:def_cmd( "SHA1", "SHA1", \
 	"wszst SHA1 [source]...", \
 	"Print a SHA1 checksum for each source. The checksum is calculated by" \
-	" using the uncompressed data." )
+	" using the uncompressed data and after patching." )
 
 #:def_cmd( "ANALYZE", "ANALYZE|ANA|ANALYSE", \
 	"wszst ANALYZE [source]...", \
 	"Analyse track files and print results in machine readable format." )
+
+#:def_cmd( "IS_TEXTURE", "IS-TEXTURE|ISTEXTURE", \
+	"wszst IS-TEXTURE --reference reference [source]...", \
+	"Test each source to see if it's a texture hack versus a reference" \
+	" file. For each source, one human and machine readable status line is" \
+	" printed. It is either »-1=err« on error, »1=yes« for a texture" \
+	" hack, or »0=no LIST« with a comma separated list of reasons.\n" \
+	"  At the moment KCL, KMP (see notes) and LEX are checked. KMP section" \
+	" CAME has been intentionally left out. Section ENPT is only checked" \
+	" if KCL contains a least one face of type force-recalculation." )
 
 #:def_cmd( "DISTRIBUTION", "DISTRIBUTION|DIST", \
 	"wszst DISTRIBUTION result source...\n" \
@@ -524,8 +534,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -541,6 +551,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -825,11 +844,10 @@
 	"[=mode]", \
 	"@MODE@ is either @OFF@, @AUTO@ (default) or @ON@. Without value, @ON@" \
 	" is used.\n" \
-	"  If mode is @ON@, assume a battle arena and enable a spüecial" \
-	" battle support. If mode is @OFF@, disable special battle arena" \
-	" support. If mode is @AUTO@, analyse the KMP and estimate, if it is a" \
-	" battle areana. Modes @ON@ and @OFF@ override KMP parameter" \
-	" @BATTLE-MODE@." )
+	"  If mode is @ON@, assume a battle arena and enable a special battle" \
+	" support. If mode is @OFF@, disable special battle arena support. If" \
+	" mode is @AUTO@, analyse the KMP and estimate, if it is a battle" \
+	" areana. Modes @ON@ and @OFF@ override KMP parameter @BATTLE-MODE@." )
 
 #:def_opt( "EXPORT_FLAGS", "export-flags|exportflags|exflags", "GO", \
 	"[=mode]", \
@@ -1224,7 +1242,7 @@
 #:def_opt( "CODING", "coding", "CP", \
 	"mode", \
 	"Define the coding of the non alphanumeric characters for BASE64:" \
-	" STANDART (+/=, default), URL (-_=), STAR (-_*) or XML (.-*)." )
+	" STANDARD (+/=, default), URL (-_=), STAR (-_*) or XML (.-*)." )
 
 #:def_opt( "VERIFY", "verify", "C", \
 	"", \
@@ -1537,6 +1555,10 @@
 	" of a virtual destination format.\n" \
 	"  A @'?'@ direct behind @'%'@ in @%E@ and @%T@ conversions avoid that" \
 	" the same extension is used twice in row." )
+
+#:def_opt( "REFERENCE", "ref|reference", "CP", \
+	"path", \
+	"Define a reference SZS." )
 
 #:def_opt( "DEST", "d|dest", "CP", \
 	"path", \
@@ -2226,6 +2248,19 @@
 	"" )
 
 #:def_cmd_opt( "SCANCACHE", "PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SIZEOF", "SORT", \
+	"", \
+	"Define a sort mode. Keywords are: @NONE@ (default), @NAME@ end" \
+	" @SIZE@." )
+
+#:def_cmd_opt( "SIZEOF", "BRIEF", \
+	"", \
+	"Limit output to SZS specific data." )
+
+#:def_cmd_opt( "SIZEOF", "LOGGING", \
 	"", \
 	"" )
 
@@ -5138,6 +5173,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ANALYZE", "REFERENCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ANALYZE", "DEST", \
 	"", \
 	"" )
@@ -5146,6 +5185,22 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "IS_TEXTURE", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "IS_TEXTURE", "REFERENCE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "IS_TEXTURE", "BATTLE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "IS_TEXTURE", "LONG", \
+	"", \
+	"Append a colon and the filename after each status." )
+
 #:def_cmd_opt( "FEATURES", "BRIEF", \
 	"", \
 	"Suppres any comments at all. If set twice, suppress empty lines (for" \
@@ -5153,7 +5208,7 @@
 
 #:def_cmd_opt( "FEATURES", "LONG", \
 	"", \
-	"Print additnal comments." )
+	"Print additional comments." )
 
 #:def_cmd_opt( "FEATURES", "IGNORE", \
 	"", \
@@ -11349,8 +11404,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -11366,6 +11421,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -12601,8 +12665,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -12618,6 +12682,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -13954,8 +14027,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -13971,6 +14044,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -14894,6 +14976,11 @@
 	" output. The exit status is @'DIFFER'@ if at least one KMP warning" \
 	" found." )
 
+#:def_cmd( "SHA1", "SHA1", \
+	"wszst SHA1 [source]...", \
+	"Print a SHA1 checksum of the KCL for each source. The checksum is" \
+	" calculated after patching." )
+
 #:def_cmd( "BLOW", "BLOW", \
 	"wkclt BLOW source...", \
 	"Try to calculate the used blow size (KCL_BLOW) of a KCL. Print one" \
@@ -14945,8 +15032,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -14962,6 +15049,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -15236,6 +15332,30 @@
 	" Slot numbers (except '42' and '4.2') and different other track names" \
 	" are also accepted. For some conversions, the auto-add library is" \
 	" needed." )
+
+#:def_opt( "ID", "id", "C", \
+	"", \
+	"Print an ID with 8 characters instead of a SHA-1 sum with 40" \
+	" characters. The SHA-1 sum is used to calculate the ID. The ID" \
+	" consists of '0'-'9' and 'a'-'w' (32 characters)." )
+
+#:def_opt( "BASE64", "base64", "CO", \
+	"[=mode]", \
+	"Encode the the checksum string as BASE64 with 27 characters instead" \
+	" of hex. If a parameter is set, it acts like {--coding=mode}." )
+
+#:def_opt( "DB64", "db64", "CO", \
+	"[=mode]", \
+	"Encode the the checksum string and some length as BASE64 with 32" \
+	" characters instead of hex for database searches. This options" \
+	" implies {--coding=URL} if no other coding is defined. If a parameter" \
+	" is set, it acts like {--coding=mode}. Option {--db64} has priority" \
+	" over {--base64}." )
+
+#:def_opt( "CODING", "coding", "CP", \
+	"mode", \
+	"Define the coding of the non alphanumeric characters for BASE64:" \
+	" STANDARD (+/=, default), URL (-_=), STAR (-_*) or XML (.-*)." )
 
 #:def_opt( "ROUND", "round", "C", \
 	"", \
@@ -16152,6 +16272,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "TYPES", "NO_HEADER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TYPES", "BRIEF", \
+	"", \
+	"Print only the resulting flag." )
+
 #:def_cmd_opt( "FLAGS", "NO_HEADER", \
 	"", \
 	"" )
@@ -16940,6 +17068,122 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SHA1", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "ID", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "BASE64", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "DB64", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "CODING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "BRIEF", \
+	"", \
+	"Suppress output of the filename." )
+
+#:def_cmd_opt( "SHA1", "CONST", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "SCALE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "SHIFT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "XSS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "YSS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "ZSS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "ROT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "XROT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "YROT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "ZROT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "TRANSLATE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "NULL", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "NEXT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "ASCALE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "AROT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "TFORM_SCRIPT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "KCL", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "KCL_FLAG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "KCL_SCRIPT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "TRI_AREA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "TRI_HEIGHT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "FLAG_FILE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "SLOT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ANALYZE", "IGNORE", \
 	"", \
 	"" )
@@ -17295,8 +17539,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -17312,6 +17556,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -17524,11 +17777,10 @@
 	"[=mode]", \
 	"@MODE@ is either @OFF@, @AUTO@ (default) or @ON@. Without value, @ON@" \
 	" is used.\n" \
-	"  If mode is @ON@, assume a battle arena and enable a spüecial" \
-	" battle support. If mode is @OFF@, disable special battle arena" \
-	" support. If mode is @AUTO@, analyse the KMP and estimate, if it is a" \
-	" battle areana. Modes @ON@ and @OFF@ override KMP parameter" \
-	" @BATTLE-MODE@." )
+	"  If mode is @ON@, assume a battle arena and enable a special battle" \
+	" support. If mode is @OFF@, disable special battle arena support. If" \
+	" mode is @AUTO@, analyse the KMP and estimate, if it is a battle" \
+	" areana. Modes @ON@ and @OFF@ override KMP parameter @BATTLE-MODE@." )
 
 #:def_opt( "EXPORT_FLAGS", "export-flags|exportflags|exflags", "GO", \
 	"[=mode]", \
@@ -19356,8 +19608,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -19373,6 +19625,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -20618,8 +20879,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -20635,6 +20896,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -21874,8 +22144,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -21891,6 +22161,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -22384,9 +22663,10 @@
 	" @PAL@ (default), @USA@, @JAPAN@, @KOREA@, or any abbreviation of" \
 	" them. They select the region for the following addresses. The hex" \
 	" numbers (with or without @0x@ prefix) are interpreted as addresses." \
-	" If possible, they are ported to all other regions. The result is" \
-	" printed as colorized table.\n" \
-	" This address porting is EXPERIMENTAL!" )
+	" If an address begins with @m@ or @s@, then it is interpreted as a" \
+	" file offset for @main.dol@ or @staticr.rel@. All addresses are" \
+	" ported to all other regions. The result is printed as colorized" \
+	" table." )
 
 #:def_cmd( "WHERE", "WHERE", \
 	"wstrt WHERE address...", \
@@ -22489,8 +22769,8 @@
 #:def_opt( "MAX_WIDTH", "max-width|maxwidth", "GP", \
 	"maxwidth", \
 	"Define the maximum terminal width (number of columns) for help and" \
-	" some other messages and disable the automatic detection of the" \
-	" terminal width. This option is ignored if {--width} is set." )
+	" some other messages. The default is 120. This option is ignored if" \
+	" --width is set." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -22506,6 +22786,15 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps." )
+
+#:def_opt( "WARN", "W|warn", "GP", \
+	"list", \
+	"Enable or disable warnings. Parameter @'list'@ is a comma separated" \
+	" list of keywords. A minus sign before a keyword disables a warning." \
+	" Each occurrence of the option will only change entered warning and" \
+	" all other warnings are untouched.\n" \
+	"  Keyword @DEFAULT@ resets the default settings, @OFF@ disables and" \
+	" @ALL@ enables all. The other allowed keywords are: @INVALID-OFFSET@." )
 
 #:def_opt( "DE", "de", "G", \
 	"", \
@@ -22867,7 +23156,13 @@
 
 #:def_opt( "NO_0X", "0|no-0x|no0x", "C", \
 	"", \
-	"Suppress 0x prefix of hex numbers." )
+	"Suppress 0x prefix of hex numbers. This is the default for cheat" \
+	" codes." )
+
+#:def_opt( "UPPER", "U|upper", "C", \
+	"", \
+	"Print digits A-F of hex numbers in upper case. This is the default" \
+	" for cheat codes." )
 
 #:def_opt( "VADDR", "vaddr|va", "CP", \
 	"RANGE", \
@@ -23243,6 +23538,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PORT", "UPPER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PORT", "NO_HEADER", \
 	"", \
 	"Suppress the table header and footer and output exactly 1 line for" \
@@ -23261,6 +23560,10 @@
 	"" )
 
 #:def_cmd_opt( "WHERE", "NO_0X", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "WHERE", "UPPER", \
 	"", \
 	"" )
 

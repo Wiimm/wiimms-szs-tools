@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -276,7 +276,8 @@ enum szs_marker_t
 ///////////////			have_szs_file_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[have_szs_file_t]]
-// order is important, compare have_szs_name[], have_szs_file[] and ct.wiimm.de
+// order is important,
+// compare have_szs_name[], have_szs_file[], have_szs_fform[] and ct.wiimm.de
 
 typedef enum have_szs_file_t
 {
@@ -311,6 +312,24 @@ __attribute__ ((packed)) have_file_mode_t;
 
 typedef have_file_mode_t szs_special_t[HAVESZS__N];
 
+///////////////////////////////////////////////////////////////////////////////
+// [[have_attrib_t]]
+// order is important, compare have_attrib_name[] and ct.wiimm.de
+
+typedef enum have_attrib_t
+{
+    HAVEATT_CHEAT,		// attribut "cheat" found
+    HAVEATT_EDIT,		// attribut "edit" found
+    HAVEATT_REVERSE,		// attribut "reverse" found
+    HAVEATT__N
+}
+__attribute__ ((packed)) have_attrib_t;
+
+extern const ccp have_attrib_name[HAVEATT__N];
+
+ccp CreateSpecialInfoAttrib
+	( have_attrib_t attrib, bool add_value, ccp return_if_empty );
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			szs_have_t			///////////////
@@ -319,11 +338,12 @@ typedef have_file_mode_t szs_special_t[HAVESZS__N];
 
 typedef struct szs_have_t
 {
-    bool	valid;		// TRUE: SZS analyzed
-    szs_special_t szs;		// u8-list: one of have_file_mode_t (H_*)
-    kmp_special_t kmp;		// u8-list: elem>0: number of special KMP objects found
-    uint	lex_sect;	// bit field for found lex sections
-    uint	lex_feat;	// bit field for found lex features
+    bool		valid;		// TRUE: SZS analyzed
+    szs_special_t	szs;		// u8-list: one of have_file_mode_t (H_*)
+    kmp_special_t	kmp;		// u8-list: elem>0: number of special KMP objects found
+    uint		lex_sect;	// bit field for found lex sections
+    uint		lex_feat;	// bit field for found lex features
+    have_attrib_t	attrib;		// bit field for special attributes
 }
 szs_have_t;
 
@@ -446,6 +466,11 @@ typedef struct szs_file_t
 
     ParamField_t *special_file;		// list with files of directory /common/
 
+
+    //--- options set by PrepareCheckTextureSZS()
+
+    bool	check_enpt;		// true: check ENPT too
+
 } szs_file_t;
 
 //-----------------------------------------------------------------------------
@@ -496,7 +521,7 @@ typedef struct szs_norm_t
 
     //--- for output via PrintNorm()
 
-    FILE *f;				// NULL or output file    
+    FILE *f;				// NULL or output file
     int  indent;			// indention
     char modified[SZI__N+1];		// info vector about modification -> szs_norm_info_t
 }
@@ -745,10 +770,28 @@ bool IsFileOptionalSZS
 enumError DiffSZS
 (
     szs_file_t	* szs1,		// first szs to compare
-    szs_file_t	* szs2,		// second szs tp compare
+    szs_file_t	* szs2,		// second szs to compare
     int		recurse,	// 0:off, <0:unlimited, >0:max depth
     int		cut_files,	// <0:never, =0:auto, >0:always
     bool	quiet		// true: be quiet
+);
+
+void PrepareCheckTextureSZS ( szs_file_t * szs );
+
+enumError CheckTextureRefSZS
+(
+    // returns ERR_OK | ERR_DIFFER | ERR_NOTHING_TO_DO | ERR_NO_SOURCE_FOUND | >=ERR_ERROR
+    szs_file_t	* szs2,		// NULL or second szs to compare
+    ccp		*status		// not NULL: store status info here -> FreeString()
+				// if !opt_reference: *status=NULL
+);
+
+enumError CheckTextureSZS
+(
+    // returns ERR_OK | ERR_DIFFER | ERR_ERROR
+    szs_file_t	* szs1,		// first szs to compare
+    szs_file_t	* szs2,		// second szs to compare
+    ccp		*status		// not NULL: store status info here -> FreeString()
 );
 
 bool SortSubFilesSZS
@@ -845,6 +888,7 @@ ccp CreateSpecialFileInfo
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			szs file iterator		///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[szs_iterator_func]]
 
 struct szs_iterator_t;
 typedef int (*szs_iterator_func)
@@ -947,11 +991,24 @@ extern szs_iterator_func cut_iter_func[FF_N];
 
 //-----------------------------------------------------------------------------
 
+int FindFileSZS
+(
+    // -1: error, 0: not found + result cleared, 1: found + result set
+    szs_file_t		*szs,		// valid szs
+    ccp			path,		// path to find
+    const iterator_param_t
+			*p_itpar,	// NULL or iteration parameters
+    int			recurse,	// 0:off, <0:unlimited, >0:max depth
+    szs_iterator_t	*result		// not NULL: store result here
+);
+
+//-----------------------------------------------------------------------------
+
 int IterateFilesSZS
 (
-    szs_file_t		* szs,		// valid szs
+    szs_file_t		*szs,		// valid szs
     szs_iterator_func	func,		// call back function
-    void		* param,	// user defined parameter
+    void		*param,		// user defined parameter
     const iterator_param_t
 			*p_itpar,	// NULL or iteration parameters
     int			recurse		// 0:off, <0:unlimited, >0:max depth
@@ -959,9 +1016,9 @@ int IterateFilesSZS
 
 int IterateFilesParSZS
 (
-    szs_file_t		* szs,		// valid szs
+    szs_file_t		*szs,		// valid szs
     szs_iterator_func	func,		// call back function
-    void		* param,	// user defined parameter
+    void		*param,		// user defined parameter
     bool		clean_path,	// true: clean path from ../ and more
     bool		show_root_node,	// true: include root node in iteration
     int			recurse,	// 0:off, <0:unlimited, >0:max depth
@@ -1404,6 +1461,12 @@ typedef struct analyse_szs_t
     sha1_hex_t	sha1_vrcorn;		// SHA1 of vrcorn
     sha1_hex_t	sha1_minimap;		// SHA1 of minimap
 
+    //--- slots of orgiginal tarcks: 0:none, 11.84:track 111..125:arena
+
+    u8		sha1_kmp_slot;
+    u8		sha1_kmp_norm_slot;
+    u8		sha1_kcl_slot;
+    u8		sha1_minimap_slot;
 
     //--- sub files
 

@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -175,13 +175,6 @@ enum
     KMP_AM_SHORT,	// define modes to get a very short race
     KMP_AM_UNLIMIT,	// remove lap counter for unlimited race
 
-    //----- sort modes
-
-    KMP_SORT_OFF = 0,	// sort is off
-    KMP_SORT_GROUPING,	// grouping only
-    KMP_SORT_ANGLE,	// grouping and sorting by angle
-    KMP_SORT_TINY,	// grouping and sorting optimized for TINY
-
     //----- definition-object (DOB) sort modes
 
     KMP_DOB_OFF = 0,	// sort if off
@@ -221,16 +214,18 @@ typedef enum kmp_ac_mode
     //--- modes
 
     KMP_AC_OFF		= 0,		// don't auto connect, always 0
-    KMP_AC_PREV,			// auto connect PREV by NEXT
+    KMP_AC_PREV,			// auto connect PREV by NEXT always
+    KMP_AC_AUTO_PREV,			// auto connect PREV by NEXT if $PREV not used
     KMP_AC_DISPATCH,			// auto connect for arenas, mode DISPATCH
      KMP_AC_MASK	= 0x0f,		// mask for modes
 
     //--- flags/options
 
-    KMP_ACF_FIX_PREV	= 0x10,		// flags/options
-    KMP_ACF_FIX_NEXT	= 0x20,		// flags/options
+    KMP_ACF_FIX_PREV	= 0x10,		// fix prev links
+    KMP_ACF_FIX_NEXT	= 0x20,		// fix next links
     KMP_ACF_FIX		= KMP_ACF_FIX_PREV | KMP_ACF_FIX_NEXT,
-     KMP_ACF_MASK	= KMP_ACF_FIX,	// mask for flags
+    KMP_ACF_PR_PREV	= 0x40,		// print $PREV:...
+     KMP_ACF_MASK	= 0x70,		// mask for flags
 }
 __attribute__ ((packed)) kmp_ac_mode;
 
@@ -369,7 +364,6 @@ typedef struct kmp_head_info_t
     uint		max_off;	// max usable offset (end-4)
     int			n_sect;		// number of section, 0 on error
     u32			*sect_off;	// list mit section offsets
-    
 }
 kmp_head_info_t;
 
@@ -425,7 +419,7 @@ __attribute__ ((packed)) kmp_enpt_entry_t;
 typedef kmp_enpt_entry_t kmp_itpt_entry_t;
 
 ///////////////////////////////////////////////////////////////////////////////
-// [[kmp_enph_entry_t]] 
+// [[kmp_enph_entry_t]]
 
 typedef struct kmp_enph_entry_t
 {
@@ -599,6 +593,22 @@ typedef struct kmp_stgi_entry_t
   /*0x0c*/
 }
 __attribute__ ((packed)) kmp_stgi_entry_t;
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			KMP sort modes			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[kmp_sort_t]]
+
+typedef enum kmp_sort_t
+{
+    KSORT_OFF,		// don't sort
+    KSORT_GROUP,	// sort by groups
+    KSORT_ANGLE,	// sort by groups and angles
+    KSORT_XYZ,		// sort by groups and coordonates in xyz order
+    KSORT_TINY,		// sort for TINY
+}
+kmp_sort_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -806,6 +816,7 @@ typedef struct kmp_gopt2_t
     kmp_rtype_mode	rtype_active;	// active route type
     kmp_oneway_mode	ac_oneway;	// oneway mode for auto-connect
     u8			setting[2];	// values of bytes at offeset 0x0e and 0x0f
+//    u8			have_prev_cmd;	// >0: $PREV command used
 
     kmp_gopt_t		prev;		// values for first point (prev link)
     kmp_gopt_t		next;		// values for last point (next link)
@@ -817,7 +828,7 @@ kmp_gopt2_t;
 
 typedef struct kmp_group_elem_t
 {
-    kmp_group_name_t	name;		// name of eleemns
+    kmp_group_name_t	name;		// name of element
     kmp_oneway_mode	oneway;		// oneway mode
 
 } kmp_group_elem_t;
@@ -830,6 +841,7 @@ typedef struct kmp_group_t
     int			first_index;		// index of first point
     int			last_index;		// index of last point
     bool		no_rotate;		// true: do not rotate links
+    bool		have_prev_cmd;		// >0: $PREV command scannend
 
     kmp_group_name_t	name;			// name of group
     kmp_group_elem_t	prev[KMP_MAX_PH_LINK];	// prev-link names and status
@@ -848,7 +860,7 @@ typedef struct kmp_group_list_t
     uint		used;			// used groups
     kmp_group_t		group[KMP_MAX_GROUP];	// list with groups
     char		selector;		// '!' selector
-    bool		have_options;		// >0 at least one option detected
+    bool		have_options;		// >0_ at least one option detected
     Line_t		line;			// '$LINE' settings
 
 } kmp_group_list_t;
@@ -982,12 +994,20 @@ typedef enum kmp_mode_t
     KMPMD_RM_EMPTY	= KMPMD_TINY_1 << 3,	// skip empty KMP sections
     KMPMD_MINIMIZE	= KMPMD_RM_EMPTY << 1,	// minimize KMP by reordering [[obsolete]] not used
 
+
+    //--- misc
+
+    KMPMD_PR_PREV	= KMPMD_MINIMIZE << 1,	// print $PREV: ... (CKPT,ENPT,ITPT)
+     KMPMD_M_MISC	 = KMPMD_PR_PREV,
+
+
     //--- tests
 
-    KMPMD_TEST1		= KMPMD_MINIMIZE << 1,	// reserved for testing
+    KMPMD_TEST1		= KMPMD_PR_PREV << 1,	// reserved for testing
     KMPMD_TEST2		= KMPMD_TEST1 << 1,	// reserved for testing
      KMPMD_M_TEST	 = KMPMD_TEST1
 			 | KMPMD_TEST2,
+
 
     //--- summaries
 
@@ -1003,6 +1023,7 @@ typedef enum kmp_mode_t
 			| KMPMD_M_TINY
 			| KMPMD_RM_EMPTY
 			| KMPMD_MINIMIZE
+			| KMPMD_M_MISC
 			| KMPMD_M_TEST,
 
     KMPMD_M_ALL		= KMPMD_M_GENERAL	// all relevant bits
@@ -1465,9 +1486,8 @@ enumError SaveTextKMP
 bool SortGOBJ
 (
     kmp_t		* kmp,		// pointer to valid KMP
-    int			sort_mode	// <=0: dont sort
-					//   1: group only
-					//   2: secondary sort by angle
+    kmp_sort_t		sort_mode	// one of KSORT_OFF, KSORT_GROUP,
+					//   KSORT_ANGLE, KSORT_XYZ or KSORT_TINY
 );
 
 //-----------------------------------------------------------------------------
@@ -1795,7 +1815,7 @@ void AddRoutes2KCL
 (
     DrawKCL_t		* dk,		// pointer to initalized object
     uint		sect_pt,	// KMP section
-    uint		color_std	// standart color index
+    uint		color_std	// standard color index
 );
 
 //-----------------------------------------------------------------------------
@@ -2186,7 +2206,7 @@ uint CountPresenceFlags ( const kmp_t *kmp, kmp_pflags_t *pf );
 // 13 0x2000 Online race with 19 or more players total and 2 humans at Wii.
 //--------------------------------------------------------------------------
 // 14 0x4000 RESERVED1. In Versus (setting #3) it is used for Time Trial.
-// 15 0x8000 RESERVED2. 
+// 15 0x8000 RESERVED2.
 //--------------------------------------------------------------------------
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2766,7 +2786,7 @@ typedef enum xpf_mode1_t
     XMODE1_CONDREF,	// MODE==1 && conditiopn reference
     XMODE1_OBJREF,	// MODE==1 && object reference
     XMODE1__N
-    
+
 }
 xpf_mode1_t;
 

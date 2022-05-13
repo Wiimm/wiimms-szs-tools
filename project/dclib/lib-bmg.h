@@ -14,16 +14,16 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
+ *   This library is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
+ *   This library is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
  *   GNU General Public License for more details.                          *
@@ -69,7 +69,6 @@
 typedef u16 bmg_slot_t;			// type of slot
 
 typedef struct bmg_t bmg_t;
-
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -258,6 +257,8 @@ extern u8		bmg_def_attrib[BMG_ATTRIB_SIZE];
 //	1: file param
 //	2: string param
 extern const KeywordTab_t PatchKeysBMG[];
+
+extern const sizeof_info_t sizeof_info_bmg[];
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -920,7 +921,7 @@ typedef struct bmg_create_t
     bmg_t	*bmg;			// current bmg
     const endian_func_t			// endian functions, never NULL
 		*endian;		// init by bmg->endian, overridden by opt_bmg_endian
-			
+
 
     FastBuf_t	inf;			// INF1 data
     FastBuf_t	dat;			// DAT1 data

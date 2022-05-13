@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -733,6 +733,7 @@ const str_server_patch_t ServerPatch[217+1] =
 
 static const addr_port_t *addr_port = addr_port_0;
 static int addr_port_records = sizeof(addr_port_0)/sizeof(*addr_port_0);
+ccp addr_port_file = "<intern>";
 
 //-----------------------------------------------------------------------------
 
@@ -810,6 +811,7 @@ enumError LoadAddrPortDB ( ccp path1, int silent )
 		    PrintTimeByFormat("%F",version->timestamp),
 		    version->revision );
 
+    addr_port_file = STRDUP(path);
     addr_port_records = n_records;
     addr_port = (addr_port_t*)mgr.data;
     memcpy(&addr_port_version,version,sizeof(addr_port_version));
@@ -834,7 +836,7 @@ void SetupAddrPortDB()
     static bool done = false;
     if (!done)
     {
-	addr_port_version.revision  = REVISION_NUM;
+	addr_port_version.revision = REVISION_NUM;
 	if ( addr_port_version.timestamp < BINTIME )
 	    addr_port_version.timestamp = BINTIME;
 
@@ -1922,7 +1924,7 @@ const rel_info_t * GetInfoREL ( str_mode_t mode )
 	default:	return 0;
     }
 
-    DASSERT(ri)
+    DASSERT(ri);
     if (!ri->sect[0].addr)
     {
 	for ( dol_sect_info_t *ptr = ri->sect; ptr->section >= 0; ptr++ )
@@ -2872,6 +2874,7 @@ const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr )
     const int region = mode - STR_ZBI_FIRST;
     const addr_port_t **base = *list_ptr;
 
+ #if 1
     while ( beg <= end )
     {
 	const uint idx		= (beg+end)/2;
@@ -2885,6 +2888,28 @@ const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr )
 	else
 	    return p;
     }
+ #else
+    while ( beg <= end )
+    {
+	const uint idx		= (beg+end)/2;
+	const addr_port_t *p	= base[idx];
+	const u32 raddr		= p->addr[region];
+
+	if ( addr < raddr )
+	    end = idx - 1 ;
+	else if ( addr > raddr )
+	    beg = idx + 1;
+	else
+	    break;
+    }
+
+    const addr_port_t *p = base[beg];
+    PRINT1("%u/%u: %08x + %06x + %06x, %08x\n",
+		beg, addr_port_records,
+		p->addr[region], p->size1, p->size2,
+		(p[1]).addr[region] );
+    return p;
+ #endif
     return 0;
 }
 
@@ -6976,6 +7001,7 @@ wcode_t opt_wcode = WCODE_AUTO;
 ccp opt_port_db = 0;
 ccp opt_order = 0;
 bool opt_no_0x = false;
+bool opt_upper = false;
 
 ///////////////////////////////////////////////////////////////////////////////
 

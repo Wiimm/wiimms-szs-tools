@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -2012,6 +2012,25 @@ enumError ScanUValueSI
     long		* num,		// return value
     int			force_hex	// >0: force hex for non prefixed integers
 );
+
+//-----------------------------------------------------------------------------
+
+enumError ScanIntValueSI
+(
+    ScanInfo_t		* si,		// valid data
+    int			* num		// return value
+);
+
+//-----------------------------------------------------------------------------
+
+static inline enumError ScanUIntValueSI
+(
+    ScanInfo_t		* si,		// valid data
+    uint		* num		// return value
+)
+{
+    return ScanIntValueSI(si,(int*)num);
+}
 
 //-----------------------------------------------------------------------------
 

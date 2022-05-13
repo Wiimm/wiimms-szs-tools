@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -37,6 +37,8 @@
 
 #include "lib-kcl.h"
 #include "lib-szs.h"
+#include "crypt.h"
+#include "lib-checksum.h"
 #include "ui.h" // [[dclib]] wrapper
 #include "ui-wkclt.c"
 #include <math.h>
@@ -58,6 +60,7 @@ extern const char text_kcl_flag_template_cr[];
 
 static void help_exit ( bool xmode )
 {
+    SetupPager();
     fputs( TITLE "\n", stdout );
 
     if (xmode)
@@ -69,6 +72,7 @@ static void help_exit ( bool xmode )
     else
 	PrintHelpCmd(&InfoUI_wkclt,stdout,0,0,"HELP",0,URI_HOME);
 
+    ClosePager();
     exit(ERR_OK);
 }
 
@@ -655,6 +659,80 @@ static enumError cmd_cff()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			command types			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_types()
+{
+    stdlog = stderr;
+
+    if (print_header)
+    {
+	if (brief_count)
+	    printf("\n flag\n"
+		     "-------\n");
+	else
+	    printf("\n  flag  = type | variant    : W X Y Z Ty\n"
+		     "-----------------------------------------\n");
+    }
+
+    enumError cmd_err = ERR_OK;
+    ParamList_t *param;
+    for ( param = first_param; param; param = param->next )
+    {
+	char *arg = param->arg;
+	u16 value = str2ul(arg,&arg,16);
+	for(;;)
+	{
+	    while ( *arg > 0 && *arg <= ' ' || *arg == ',' )
+		arg++;
+	    if (!*arg)
+		break;
+	    char ch = tolower((int)*arg++);
+	    if ( *arg == '=' )
+		arg++;
+	    u16 mask = 0, par = str2ul(arg,&arg,10);
+	    int shift = 0;
+	    switch (ch)
+	    {
+		case 't': mask = 0x001f; break;
+		case 'v': mask = 0xffe0; shift =  5; break;
+		case 'w': mask = 0xe000; shift = 13; break;
+		case 'x': mask = 0x1800; shift = 11; break;
+		case 'y': mask = 0x0700; shift =  8; break;
+		case 'z': mask = 0x00e0; shift =  5; break;
+	    }
+	    if (!mask)
+		break;
+	    value = value & ~mask | (par<<shift) & mask;
+	}
+	
+	if (brief_count)
+	    printf("0x%04x\n",value);
+	else
+	{
+	    const int w = value >> 13 & 7;
+	    const int x = value >> 11 & 3;
+	    const int y = value >>  8 & 7;
+	    const int z = value >>  5 & 7;
+
+	    printf(
+		" 0x%04x = 0x%02x | 0x%03x << 5 : %c %c %c %c %2d\n",
+		value, value & 0x1f, value >> 5,
+		w ? '0'+w : '-',
+		x ? '0'+x : '-',
+		y ? '0'+y : '-',
+		z ? '0'+z : '-',
+		value & 0x1f );
+	}
+    }
+    if (print_header)
+	putchar('\n');
+    return cmd_err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command flags			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -695,8 +773,8 @@ static enumError cmd_flags()
 	    memset(tcount,0,sizeof(tcount));
 
 	    if ( print_header && !brief_count )
-		printf("\n  flag    type  variant        triangle count\n"
-			 "-----------------------------------------------\n");
+		printf("\n  flag  = type | variant    : W X Y Z Ty :  triangle count\n"
+			 "------------------------------------------------------------\n");
 
 	    uint i, j;
 	    for ( i = 0; i < N_KCL_TYPE; i++ )
@@ -709,8 +787,21 @@ static enumError cmd_flags()
 			if (!brief_count)
 			{
 			    done++;
-			    printf(" 0x%04x = 0x%02x | 0x%03x << 5 :%7u = %6.2f%%\n",
+			    const int w = j >> 13 & 7;
+			    const int x = j >> 11 & 3;
+			    const int y = j >>  8 & 7;
+			    const int z = j >>  5 & 7;
+
+			    printf(
+				" 0x%04x = 0x%02x | 0x%03x << 5"
+				" : %c %c %c %c %2d"
+				" :%7u = %6.2f%%\n",
 				j, j & 0x1f, j >> 5,
+				w ? '0'+w : '-',
+				x ? '0'+x : '-',
+				y ? '0'+y : '-',
+				z ? '0'+z : '-',
+				j & 0x1f,
 				count[j], 100.0 * count[j] / n );
 			}
 		    }
@@ -720,12 +811,12 @@ static enumError cmd_flags()
 
 	    if (print_header)
 		printf( "\n"
-			"   type    triangle count   type description\n"
-			"--------------------------------------------------\n");
+			"   type :  triangle count  : type description\n"
+			"---------------------------------------------------\n");
 
 	    for ( i = 0; i < N_KCL_TYPE; i++ )
 		if (tcount[i])
-		    printf(" T 0x%02x :%7u = %6.2f%%  %s\n",
+		    printf(" T 0x%02x :%7u = %6.2f%% : %s\n",
 			i, tcount[i], 100.0 * tcount[i] / n,
 			kcl_type[i].info );
 	    putchar('\n');
@@ -946,6 +1037,74 @@ static enumError cmd_check()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			command sha1			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_sha1()
+{
+    stdlog = stderr;
+    enumError max_err = ERR_OK;
+    SetPatchFileModeReadonly();
+    SetupCoding64( opt_coding64, opt_db64 ? ENCODE_BASE64URL : ENCODE_BASE64 );
+
+    raw_data_t raw;
+    InitializeRawData(&raw);
+
+    ParamList_t *param;
+    for ( param = first_param; param; param = param->next )
+    {
+	NORMALIZE_FILENAME_PARAM(param);
+	enumError err = LoadRawData(&raw,false,param->arg,autoname,opt_ignore>0,FF_KCL);
+
+	if ( max_err < err )
+	    max_err = err;
+
+	if ( err > ERR_WARNING || err == ERR_NOT_EXISTS )
+	{
+	    if ( opt_db64 )
+	    {
+		putchar('-');
+		if (long_count)
+		    fputs("  -1 -1 0.000  -",stdout);
+		if (brief_count)
+		    putchar('\n');
+		else
+		    printf("  %s\n",param->arg);
+	    }
+
+	    if ( err == ERR_NOT_EXISTS || opt_ignore )
+		continue;
+	    return err;
+	}
+
+	kcl_t kcl;
+	err = ScanRawDataKCL(&kcl,true,&raw,true,0);
+	if ( err > ERR_WARNING )
+	    return err;
+
+	err = CreateRawKCL(&kcl,false);
+	if ( err > ERR_WARNING )
+	    return err;
+
+	sha1_size_t info;
+	SHA1(kcl.raw_data,kcl.raw_data_size,info.hash);
+	info.size = htonl(kcl.raw_data_size);
+	char checksum[100];
+	CreateSSChecksum(checksum,sizeof(checksum),&info);
+
+	if (brief_count)
+	    printf("%s\n",checksum);
+	else
+	    printf("%s  %s\n",checksum,kcl.fname);
+	ResetKCL(&kcl);
+    }
+
+    ResetRawData(&raw);
+    return max_err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command analyze			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1022,6 +1181,7 @@ static void analyze_kcl ( kcl_t *kcl )
 static enumError cmd_analyze()
 {
     stdlog = stderr;
+    patch_action_log_disabled++;
 
     raw_data_t raw;
     InitializeRawData(&raw);
@@ -1125,6 +1285,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break;
@@ -1185,6 +1346,11 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_MAX_FILE_SIZE:	err += ScanOptMaxFileSize(optarg); break;
 	case GO_TRACKS:		err += ScanOptTracks(optarg); break;
 	case GO_ARENAS:		err += ScanOptArenas(optarg); break;
+
+	case GO_ID:		opt_id = true; break;
+	case GO_BASE64:		opt_base64 = true; err += ScanOptCoding64(optarg); break;
+	case GO_DB64:		opt_db64 = true; err += ScanOptCoding64(optarg); break;
+	case GO_CODING:		err += ScanOptCoding64(optarg); break;
 
 	case GO_ROUND:		opt_round = true; break;
 	case GO_LONG:		long_count++; break;
@@ -1249,8 +1415,7 @@ static enumError CheckCommand ( int argc, char ** argv )
     switch ((enumCommands)cmd_ct->id)
     {
 	case CMD_VERSION:	version_exit();
-	case CMD_HELP:		PrintHelp(&InfoUI_wkclt,stdout,0,"HELP",0,URI_HOME,
-					first_param ? first_param->arg : 0 ); break;
+	case CMD_HELP:		PrintHelpColor(&InfoUI_wkclt); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
@@ -1271,6 +1436,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_ENCODE:	err = cmd_convert(cmd_ct->id,"ENCODE","\1P/\1N\1?T"); break;
 	case CMD_COPY:		err = cmd_copy(); break;
 	case CMD_CFF:		err = cmd_cff(); break;
+	case CMD_TYPES:		err = cmd_types(); break;
 	case CMD_FLAGS:		err = cmd_flags(); break;
 	case CMD_DUMP:		err = cmd_dump(0,CMD_DUMP); break;
 	case CMD_DBRIEF:	err = cmd_dump(1,CMD_DUMP); break;
@@ -1279,6 +1445,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_TRAVERSE:	err = cmd_traverse(false); break;
 	case CMD_FALL:		err = cmd_traverse(true); break;
 	case CMD_CHECK:		err = cmd_check(); break;
+	case CMD_SHA1:		err = cmd_sha1(); break;
 	case CMD_ANALYZE:	err = cmd_analyze(); break;
 	case CMD_BLOW:		err = cmd_blow(); break;
 

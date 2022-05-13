@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -100,6 +100,19 @@ void SetSource ( ccp source )
     //if ( source && *source )
 	AppendStringField(&source_list,source,false);
     noPRINT("SetSource(%s) N=%u/%u\n",source,source_list.used,source_list.size);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SetReference ( ccp source )
+{
+ #ifdef __CYGWIN__
+    opt_reference = IsWindowsDriveSpec(source)
+		? AllocNormalizedFilenameCygwin(source,false)
+		: source;
+ #else
+    opt_reference = source;
+ #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -742,7 +755,6 @@ file_format_t GetByMagicFF
 	    case BMG_MAGIC8_NUM:		return FF_BMG;
 	    case PNG_MAGIC8_NUM:		return FF_PNG;
 	    case GCT_MAGIC8_NUM:		return FF_GCT;
-	    case LE_LPAR_MAGIC_NUM:		return FF_LPAR;
 	    case ADDR_PORT_MAGIC_NUM:		return FF_PORTDB;
 
 	    //--- see below for BOM support
@@ -754,6 +766,7 @@ file_format_t GetByMagicFF
 	    case GH_IOBJ_TEXT_MAGIC8_NUM:	return FF_GH_IOBJ_TXT;
 	    case GH_KART_TEXT_MAGIC8_NUM:	return FF_GH_KART_TXT;
 	    case GH_KOBJ_TEXT_MAGIC8_NUM:	return FF_GH_KOBJ_TXT;
+	    case LE_LPAR_MAGIC_NUM:		return FF_LPAR;
 	}
     }
 
@@ -785,10 +798,6 @@ file_format_t GetByMagicFF
 	    case KMG_MAGIC_NUM:		return FF_KMG;
 	    case KRT_MAGIC_NUM:		return FF_KRT;
 	    case KRM_MAGIC_NUM:		return FF_KRM;
-// [[obj-type+]] 3x
-//	    case OBJFLOW_MAGIC_NUM:	return FF_OBJFLOW;
-//	    case GH_ITEM_MAGIC_NUM:	return FF_GH_ITEM;
-//	    case GH_KART_MAGIC_NUM:	return FF_GH_KART;
 
 	    case U8_MAGIC_NUM:		return FF_U8;
 	    case WU8_MAGIC_NUM:		return FF_WU8;
@@ -860,12 +869,13 @@ file_format_t GetByMagicFF
 	    {
 		case CT_TEXT_MAGIC8_NUM:	return FF_CT_TEXT;
 		case DISTRIB_MAGIC8_NUM:	return FF_DISTRIB;
+		case ITEMSLT_TEXT_MAGIC_NUM:	return FF_ITEMSLT_TXT;
 		case OBJFLOW_TEXT_MAGIC8_NUM:	return FF_OBJFLOW_TXT;
-// [[obj-type+]]
 		case GH_ITEM_TEXT_MAGIC8_NUM:	return FF_GH_ITEM_TXT;
 		case GH_IOBJ_TEXT_MAGIC8_NUM:	return FF_GH_IOBJ_TXT;
 		case GH_KART_TEXT_MAGIC8_NUM:	return FF_GH_KART_TXT;
 		case GH_KOBJ_TEXT_MAGIC8_NUM:	return FF_GH_KOBJ_TXT;
+		case LE_LPAR_MAGIC_NUM:		return FF_LPAR;
 	    }
 	}
 

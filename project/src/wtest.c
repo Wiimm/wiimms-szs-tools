@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -41,10 +41,13 @@
 #include <dirent.h>
 #include <stddef.h>
 #include <time.h>
+#include <locale.h>
 //#include <sys/stat.h>
 //#include <fcntl.h>
 
+#include "dclib-utf8.h"
 #include "dclib-debug.h"
+
 #include "version.h"
 #include "lib-std.h"
 #include "lib-image.h"
@@ -3886,7 +3889,7 @@ static enumError test_eml ( int argc, char ** argv )
 	exmem_t data = ExMemByString(eq?eq:arg);
 
 	if ( *arg == '-' )
-	    RemoveEML(&eml,arg+1);
+	    RemoveByKeyEML(&eml,arg+1);
 	else if ( *arg == '+' )
 	    ReplaceEML(&eml,arg+1,CPM_COPY,&data,CPM_COPY);
 	else if ( *arg == '%' )
@@ -3922,8 +3925,7 @@ static enumError test_eml ( int argc, char ** argv )
 
 static enumError test_cygpath ( int argc, char ** argv )
 {
-    int i;
-    for ( i = 1; i < argc; i++ )
+    for ( int i = 1; i < argc; i++ )
     {
 	ccp arg = argv[i];
 	bool try_circ = *arg != '-';
@@ -3950,6 +3952,104 @@ static enumError test_cygpath ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_utf8()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_utf8 ( int argc, char ** argv )
+{
+    setlocale(LC_ALL,"C.utf8");
+    printf("|%6s|\n|%6ls|\n","abc",L"äöü");
+
+    static ccp text[] = { "aousA", "äöüßÄ", "├─┼─┤","12345", 0 };
+    for ( ccp *ptr = text; *ptr; ptr++ )
+    {
+	mem_t src = MemByString(*ptr);
+	mem_t mid = MidMem8(src,1,2);
+	mem_t left = LeftMem8(src,-3);
+	mem_t right = RightMem8(src,-3);
+
+	printf(" | %.*s | %.*s | %.*s |  ~~  |%s|%s|%s|%s|\n",
+		mid.len, mid.ptr,
+		left.len, left.ptr,
+		right.len, right.ptr,
+		AlignUTF8ToCircBuf(*ptr,10,-1),
+		AlignUTF8ToCircBuf(*ptr,-10,-1),
+		AlignUTF8ToCircBuf(*ptr,-10,2),
+		*ptr );
+    }
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_nice()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_nice ( int argc, char ** argv )
+{
+    putchar('\n');
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i], end;
+	int nice4, nice5, nice6;
+
+	if (!strcmp(arg,"-"))
+	{
+	    putchar('\n');
+	    continue;
+	}
+
+	end = ScanNiceID4(&nice4,arg);
+	if ( !*end && nice4 >= 0 )
+	    printf("%20s => %8d : %s\n",arg,nice4,PrintNiceID4(nice4));
+
+	end = ScanNiceID5(&nice5,arg);
+	if ( !*end && nice5 >= 0 )
+	    printf("%20s => %8d : %s\n",arg,nice5,PrintNiceID5(nice5));
+
+	end = ScanNiceID6(&nice6,arg);
+	if ( !*end && nice6 >= 0 )
+	    printf("%20s => %8d : %s\n",arg,nice6,PrintNiceID6(nice6));
+
+	uint num = str2ul(arg,0,10);
+	if ( num > 0 || *arg == '0' )
+	    printf("%20s => %8d : %s %s %s\n",
+			arg, num,
+			PrintNiceID4(num),
+			PrintNiceID5(num),
+			PrintNiceID6(num));
+    }
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_arg_manager()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_arg_manager ( int argc, char ** argv )
+{
+    putchar('\n');
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	printf("\n|%s|\n",arg);
+	ArgManager_t am = {0};
+	ScanSimpleArgManager(&am,arg);
+	AppendArgManager(&am,"----------",0,false);
+	ScanQuotedArgManager(&am,arg,true);
+
+	for ( int i = 0; i < am.argc; i++ )
+	    printf(" [%02u] |%s|\n",i,am.argv[i]);
+	ResetArgManager(&am);
+    }
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3972,6 +4072,7 @@ const gobj_cond_ref_t * FindConditionRef2 ( u16 ref_id )
     return 0;
 }
 
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 static enumError develop ( int argc, char ** argv )
@@ -4225,6 +4326,9 @@ enum
     CMD_QUOTE,			// test_quote(argc,argv)
     CMD_EML,			// test_eml(argc,argv)
     CMD_CYGPATH,		// test_cygpath(argc,argv)
+    CMD_UTF8,			// test_utf8(argc,argv)
+    CMD_NICE,			// test_nice(argc,argv)
+    CMD_ARG_MANAGER,		// test_arg_manager(argc,argv)
 
  #ifdef HAVE_WIIMM_EXT
     CMD_WIIMM,			// test_wiimm(argc,argv)
@@ -4294,6 +4398,9 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_QUOTE,		"QUOTE",	"Q",		0 },
 	{ CMD_EML,		"EML",		0,		0 },
 	{ CMD_CYGPATH,		"CYGPATH",	0,		0 },
+	{ CMD_UTF8,		"UTF8",		0,		0 },
+	{ CMD_NICE,		"NICE",		0,		0 },
+	{ CMD_ARG_MANAGER,	"ARG-MANAGER",	"AM",		0 },
 
  #ifdef HAVE_WIIMM_EXT
 	{ CMD_WIIMM,		"WIIMM",	"W",		0 },
@@ -4313,6 +4420,8 @@ static const KeywordTab_t CommandTab[] =
 
 void help_exit()
 {
+    SetupPager();
+
     printf("\nCommands:\n\n");
     const KeywordTab_t * cmd;
     for ( cmd = CommandTab; cmd->name1; cmd++ )
@@ -4324,6 +4433,8 @@ void help_exit()
  #ifdef HAVE_WIIMM_EXT
     wiimm_help_exit(false);
  #endif
+
+    ClosePager();
     exit(ERR_SYNTAX);
 };
 
@@ -4348,8 +4459,7 @@ int main ( int argc, char ** argv )
     print_title_func = print_title;
     SetupLib(argc,argv,NAME,VERSION,TITLE);
 
-    if (1)
-	printf("ADDRT_*: mem-beg:%x, mem-end:%x, mir-beg:%x, mir-end:%x, N:%x,%x\n",
+    PRINT0("ADDRT_*: mem-beg:%x, mem-end:%x, mir-beg:%x, mir-end:%x, N:%x,%x\n",
 		ADDRT_MEMORY_BEGIN, ADDRT_MEMORY_END,
 		ADDRT_MIRROR_BEGIN, ADDRT_MIRROR_END,
 		ADDRT__N, ADDRT__NN );
@@ -4451,6 +4561,9 @@ int main ( int argc, char ** argv )
 	case CMD_QUOTE:			test_quote(argc,argv); break;
 	case CMD_EML:			test_eml(argc,argv); break;
 	case CMD_CYGPATH:		test_cygpath(argc,argv); break;
+	case CMD_UTF8:			test_utf8(argc,argv); break;
+	case CMD_NICE:			test_nice(argc,argv); break;
+	case CMD_ARG_MANAGER:		test_arg_manager(argc,argv); break;
 
  #ifdef HAVE_WIIMM_EXT
 	case CMD_WIIMM:			test_wiimm(argc,argv); break;

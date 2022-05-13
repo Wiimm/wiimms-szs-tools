@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -231,6 +231,9 @@
   { T_OPT_GM,	"LOGGING",	"L|logging",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_GP,	"WARN",		"W|warn",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_G,	"DE",		"de",
 		0, 0 /* copy of wszst */ },
 
@@ -425,6 +428,12 @@
 		"Use this file as definition file to patch LE-CODE."
 		" The file format can be LE-BIN or any supported CT-CODE file"
 		" (BRRES, TEX0, CT-CODE or CT-TEXT)." },
+
+  { H_OPT_CP,	"LE_ARENA",	"le-arena|learena",
+		"file",
+		"Use this file to define property and music defaults for arenas."
+		" The file format can be an text file."
+		" Option {--le-define} may override these defaults." },
 
   { T_OPT_CP,	"LPAR",		"lpar",
 		"file",
@@ -637,6 +646,7 @@
   { T_GRP_BEG,	"PATCH",	0,0,0 },
 
   { T_COPT,	"LE_DEFINE",	0,0,0 },
+  { H_COPT,	"LE_ARENA",	0,0,0 },
   { T_COPT,	"LPAR",		0,0,0 },
   { T_COPT,	"ALIAS",	0,0,0 },
   { T_COPY_GRP,	"PARAM",	0,0,0 },

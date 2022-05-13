@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -863,9 +863,9 @@ void AnalyseGobj ( kmp_ana_gobj_t *ag, const kmp_t *kmp )
 		continue;
 
 	    ag->n_object++;
-	    info->obj_id	= relevant_id;
-	    info->type	= KGTY_OBJECT;
-	    info->status	|= KGST_USED;
+	    info->obj_id  = relevant_id;
+	    info->type    = KGTY_OBJECT;
+	    info->status |= KGST_USED;
 
 	    if ( gobj->obj_id < GOBJ_M_OBJECT )
 	    {
@@ -1844,7 +1844,7 @@ static uint DiffXPF ( xpf_mode1_info_t *l1, xpf_mode1_info_t *l2, int loop )
 		}
 	    }
 
-	    eval += 999 - 3*abs( e1->index - e2->index ); 
+	    eval += 999 - 3*abs( e1->index - e2->index );
 
 	    if ( e1->eval < eval || e1->eval == eval && e1->diff_sum > diff_sum )
 	    {

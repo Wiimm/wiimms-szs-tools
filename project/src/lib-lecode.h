@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -119,12 +119,14 @@ typedef enum lecode_debug_t
     LEDEB_XPF		= 0x0300, // 2 bits!
      LEDEB_SHORT_XPF	= 0x0100,
      LEDEB_LONG_XPF	= 0x0200,
+    LEDEB_ITEM_POINT	= 0x0400,
+    LEDEB_KCL_TYPE	= 0x0800,
 
     //--- derived values
 
-    LEDEB__STD		= 0x00f9,   // standard output
-    LEDEB__OUTPUT	= 0x03f8,   // flags that produce output
-    LEDEB__ALL		= 0x03ff,   // all flags
+    LEDEB__STD		= 0x0ff9,   // standard output
+    LEDEB__OUTPUT	= 0x0ff8,   // flags that produce output
+    LEDEB__ALL		= 0x0fff,   // all flags
 
     LEDEB_S_CHECK_POINT	= 4,	// shift for LEDEB_CHECK_POINT
     LEDEB_M_CHECK_POINT	= 3,	// mask after shift
@@ -184,6 +186,8 @@ typedef struct lecode_debug_ex_t
     u8 position;
     u8 check_point;
     u8 respawn;
+    u8 item_point;
+    u8 kcl_type;
     u8 lap_pos;
     u8 xpf;
 
@@ -400,7 +404,7 @@ typedef struct le_binpar_v1_35_t
  /*20*/  u32  off_course_par;	// offset of course param
  /*24*/  u32  off_property;	// offset of property list
  /*28*/  u32  off_music;	// offset of music list
- /*2c*/  u32  off_flags;	// offset of music list
+ /*2c*/  u32  off_flags;	// offset of flags
 
  /*30*/  u8   engine[3];	// 100cc, 150cc, mirror (sum always 100)
  /*33*/	 u8   enable_200cc;	// TRUE: 200C enabled => 150cc, 200cc, mirror
@@ -427,7 +431,7 @@ typedef struct le_binpar_v1_37_t
  /*20*/  u32  off_course_par;	// offset of course param
  /*24*/  u32  off_property;	// offset of property list
  /*28*/  u32  off_music;	// offset of music list
- /*2c*/  u32  off_flags;	// offset of music list
+ /*2c*/  u32  off_flags;	// offset of flags
 
  /*30*/  u8   engine[3];	// 100cc, 150cc, mirror (sum always 100)
  /*33*/	 u8   enable_200cc;	// TRUE: 200C enabled => 150cc, 200cc, mirror
@@ -456,7 +460,7 @@ typedef struct le_binpar_v1_f8_t
  /*20*/  u32  off_course_par;	// offset of course param
  /*24*/  u32  off_property;	// offset of property list
  /*28*/  u32  off_music;	// offset of music list
- /*2c*/  u32  off_flags;	// offset of music list
+ /*2c*/  u32  off_flags;	// offset of flags
 
  /*30*/  u8   engine[3];	// 100cc, 150cc, mirror (sum always 100)
  /*33*/	 u8   enable_200cc;	// TRUE: 200C enabled => 150cc, 200cc, mirror
@@ -487,7 +491,7 @@ typedef struct le_binpar_v1_1b8_t
  /*020*/ u32  off_course_par;	// offset of course param
  /*024*/ u32  off_property;	// offset of property list
  /*028*/ u32  off_music;	// offset of music list
- /*02c*/ u32  off_flags;	// offset of music list
+ /*02c*/ u32  off_flags;	// offset of flags
 
  /*030*/ u8   engine[3];	// 100cc, 150cc, mirror (sum always 100)
  /*033*/ u8   enable_200cc;	// TRUE: 200C enabled => 150cc, 200cc, mirror
@@ -519,7 +523,7 @@ typedef struct le_binpar_v1_1bc_t
  /*020*/ u32  off_course_par;		// offset of course param
  /*024*/ u32  off_property;		// offset of property list
  /*028*/ u32  off_music;		// offset of music list
- /*02c*/ u32  off_flags;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of flags
 
  /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
  /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
@@ -558,7 +562,7 @@ typedef struct le_binpar_v1_260_t
  /*020*/ u32  off_course_par;		// offset of course param
  /*024*/ u32  off_property;		// offset of property list
  /*028*/ u32  off_music;		// offset of music list
- /*02c*/ u32  off_flags;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of flags
 
  /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
  /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
@@ -599,7 +603,7 @@ typedef struct le_binpar_v1_264_t
  /*020*/ u32  off_course_par;		// offset of course param
  /*024*/ u32  off_property;		// offset of property list
  /*028*/ u32  off_music;		// offset of music list
- /*02c*/ u32  off_flags;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of flags
 
  /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
  /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
@@ -708,6 +712,9 @@ typedef struct le_analyse_t
     le_usage_t	*usage;		// NULL or alloced list[n_slot], setup by GetLEUsage()
     uint	usage_size;	// number of alloed 'usage' elements
 
+    bool	arena_setup;	// set by SetupArenasLEAnalyse()
+    bool	arena_applied;	// set by ApplyArena()
+
 
     //--- binary data
 
@@ -746,6 +753,7 @@ le_analyse_t;
 
 void ResetLEAnalyse ( le_analyse_t *ana );
 void ResetLEAnalyseUsage ( le_analyse_t *ana );
+void SetupArenasLEAnalyse ( le_analyse_t *ana, bool force );
 
 enumError AnalyseLEBinary
 (
@@ -791,6 +799,7 @@ uint GetNextRacingTrackLE ( uint tid );
 ///////////////////////////////////////////////////////////////////////////////
 
 extern ccp	opt_le_define;
+extern ccp	opt_le_arena;
 extern ccp	opt_lpar;
 extern ccp	opt_track_dest;
 extern ParamField_t opt_track_source;

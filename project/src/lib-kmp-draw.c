@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -699,7 +699,7 @@ void AddRoutes2KCL
 (
     DrawKCL_t		* dk,		// pointer to initalized object
     uint		sect_pt,	// KMP section
-    uint		color_std	// standart color index
+    uint		color_std	// standard color index
 )
 {
     DASSERT(dk);

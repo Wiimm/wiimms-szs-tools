@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -89,6 +89,7 @@ typedef enum enumOptions
 	OPT_PORT_DB,
 	OPT_ORDER,
 	OPT_NO_0X,
+	OPT_UPPER,
 	OPT_VADDR,
 	OPT_FADDR,
 	OPT_SNAME,
@@ -121,7 +122,7 @@ typedef enum enumOptions
 	OPT_WIDE,
 	OPT_BYTES,
 
-	OPT__N_SPECIFIC, // == 65
+	OPT__N_SPECIFIC, // == 66
 
 	//----- global options -----
 
@@ -137,6 +138,7 @@ typedef enum enumOptions
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_WARN,
 	OPT_DE,
 	OPT_COLORS,
 	OPT_NO_COLORS,
@@ -177,7 +179,7 @@ typedef enum enumOptions
 	OPT_CLEAN_DOL,
 	OPT_CT_DIR,
 
-	OPT__N_TOTAL // == 116
+	OPT__N_TOTAL // == 118
 
 } enumOptions;
 
@@ -225,6 +227,7 @@ typedef enum enumOptions
 //	OB_PORT_DB		= 1llu << OPT_PORT_DB,
 //	OB_ORDER		= 1llu << OPT_ORDER,
 //	OB_NO_0X		= 1llu << OPT_NO_0X,
+//	OB_UPPER		= 1llu << OPT_UPPER,
 //	OB_VADDR		= 1llu << OPT_VADDR,
 //	OB_FADDR		= 1llu << OPT_FADDR,
 //	OB_SNAME		= 1llu << OPT_SNAME,
@@ -340,12 +343,14 @@ typedef enum enumOptions
 //	OB_CMD_PORT		= OB_PORT_DB
 //				| OB_ORDER
 //				| OB_NO_0X
+//				| OB_UPPER
 //				| OB_NO_HEADER
 //				| OB_BRIEF
 //				| OB_LONG,
 //
 //	OB_CMD_WHERE		= OB_ORDER
 //				| OB_NO_0X
+//				| OB_UPPER
 //				| OB_NO_HEADER
 //				| OB_BRIEF
 //				| OB_LONG,
@@ -459,7 +464,9 @@ typedef enum enumGetOpt
 	GO_LOGGING		= 'L',
 	GO_REGION		= 'R',
 	GO_TRACKS		= 'T',
+	GO_UPPER		= 'U',
 	GO_VERSION		= 'V',
+	GO_WARN			= 'W',
 
 	GO_CONST		= 'c',
 	GO_DEST			= 'd',

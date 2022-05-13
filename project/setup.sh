@@ -51,10 +51,16 @@ fi
 	&& grep -qw posix_fallocate /usr/include/fcntl.h \
 	&& defines="$defines -DHAVE_POSIX_FALLOCATE=1"
 
-#gcc $xflags system.c -o system.tmp && ./system.tmp >Makefile.setup
+#--------------------------------------------------
+
+GCC_VERSION="$( gcc --version | head -n1 | sed 's/([^)]*)//'|awk '{print $2}' )"
+[[ $GCC_VERSION > 7 ]] && xflags+=" -fdiagnostics-color=always"
+
 gcc $xflags -E -DPRINT_SYSTEM_SETTINGS system.c \
 	| awk -F= '/^result_/ {printf("%s := %s\n",substr($1,8),gensub(/"/,"","g",$2))}' \
 	> Makefile.setup
+
+#--------------------------------------------------
 
 SYSTEM=$(awk '$1=="SYSTEM" {print $3}' Makefile.setup)
 #echo "SYSTEM=|$SYSTEM|" >&2
@@ -163,7 +169,7 @@ fi
 
 #--------------------------------------------------
 
-cat <<- ---EOT--- >>Makefile.setup
+cat <<- __EOT__ >> Makefile.setup
 	
 	REVISION	:= $revision
 	REVISION_NUM	:= $revision_num
@@ -173,6 +179,7 @@ cat <<- ---EOT--- >>Makefile.setup
 	TIME		:= ${tim[2]}
 	YEAR		:= ${tim[3]}
 
+	GCC_VERSION	:= $GCC_VERSION
 	FORCE_M32	:= $force_m32
 	HAVE_MD5	:= $have_md5
 	HAVE_SHA	:= $have_sha
@@ -197,5 +204,5 @@ cat <<- ---EOT--- >>Makefile.setup
 	HAVE_WORK_SRC	:= $HAVE_WORK_SRC
 	HAVE_XSRC	:= $HAVE_XSRC
 
-	---EOT---
+	__EOT__
 

@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -63,6 +63,7 @@
 #include "db-mkw.h"
 #include "crypt.h"
 #include "logo.inc"
+#include "sha1-db.inc"
 
 #if defined(TEST) && !defined(__APPLE__) && !defined(__CYGWIN__)
   #include <mcheck.h>
@@ -77,7 +78,6 @@ ccp		opt_config		= 0;
 ccp		tool_name		= "?";
 ccp		std_share_path		= 0;
 ccp		share_path		= 0;
-volatile int	SIGINT_level		= 0;
 volatile int	verbose			= 0;
 volatile int	logging			= 0;
 bool		allow_all		= false;
@@ -91,12 +91,14 @@ int		testmode		= 0;
 int		force_count		= 0;
 uint		opt_tiny		= 0;
 bool		force_kmp		= false;
+int		disable_checks		= 0;
 OffOn_t		opt_battle_mode		= OFFON_AUTO;
 OffOn_t		opt_export_flags	= OFFON_AUTO;
 int		opt_route_options	= 0;
 OffOn_t		opt_wim0		= OFFON_AUTO;
 ccp		opt_source		= 0;
 StringField_t	source_list		= {0};
+ccp		opt_reference		= 0;
 ccp		opt_dest		= 0;
 bool		opt_mkdir		= false;
 bool		opt_overwrite		= false;
@@ -376,6 +378,9 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     GetTimerMSec();
     SetupColors();
 
+    AddDefaultToSizeofInfoMgr();
+    //AddListToSizeofInfoMgr(si_list);
+
  #if defined(TEST) && !defined(__APPLE__) && !defined(__CYGWIN__)
     mtrace();
  #endif
@@ -458,6 +463,12 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     TRACE_SIZEOF(exmem_t);
     TRACE_SIZEOF(exmem_key_t);
     TRACE_SIZEOF(exmem_list_t);
+
+    TRACE("- sha1\n");
+    TRACE_SIZEOF(sha1_hash_t);
+    TRACE_SIZEOF(sha1_hex_t);
+    TRACE_SIZEOF(sha1_type_t);
+    TRACE_SIZEOF(sha1_db_t);
 
     TRACE("- arch\n");
     TRACE_SIZEOF(yaz0_header_t);
@@ -949,6 +960,27 @@ ccp LibGetErrorText ( int stat, ccp ret_not_found )
     return ret_not_found;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+void SetupPager()
+{
+    if (isatty(fileno(stdout)))
+    {
+	opt_colorize = 1;
+	SetupColors();
+	StdoutToPager();
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void PrintHelpColor ( const InfoUI_t * iu )
+{
+    SetupPager();
+    PrintHelp(iu,stdout,0,"HELP",0,URI_HOME,first_param?first_param->arg:0);
+    ClosePager();
+}
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			compatibility			///////////////
@@ -1027,6 +1059,97 @@ char * PrintOptCompatible()
     const compatible_info_t *ci = compatible_info
 		+ ( (uint)compatible < COMPAT__N ? compatible : COMPAT_CURRENT );
     snprintf( buf, buf_size, "v%s, r%u", ci->version, ci->revision );
+    return buf;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			warnings			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+warn_mode_t WARN_MODE = WARN_M_DEFAULT;
+
+///////////////////////////////////////////////////////////////////////////////
+
+static const KeywordTab_t opt_warn_tab[] =
+{
+  { 0,				"NONE",			"OFF",	WARN_M_ALL | WARN_F_HIDE },
+  { WARN_M_DEFAULT,		"DEFAULT",		0,	WARN_M_ALL | WARN_F_HIDE },
+  { WARN_M_ALL,			"ALL",			0,	WARN_M_ALL },
+
+  { WARN_INVALID_OFFSET,	"INVALID-OFFSET",	0,	0 },
+
+  { WARN_LOG,			"LOG",			0,	0 },
+  { WARN_TEST,			"TEST",			"T",	0 },
+
+  { 0,0,0,0 }
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptWarn ( ccp arg )
+{
+    if (!arg)
+	return 0;
+
+    s64 stat = ScanKeywordList(arg,opt_warn_tab,0,true,0,WARN_MODE,
+				"Option --warn",ERR_SYNTAX);
+    if ( stat == -1 )
+	return 1;
+
+    WARN_MODE = stat;
+    if ( WARN_MODE & WARN_LOG )
+    {
+	char buf[200];
+	PrintWarnMode(buf,sizeof(buf),WARN_MODE);
+	fprintf(stderr,"WARN MODE: %s\n",buf);
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+uint PrintWarnMode ( char *buf, uint bufsize, warn_mode_t mode )
+{
+    DASSERT(buf);
+    DASSERT(bufsize>10);
+    char *dest = buf;
+    char *end = buf + bufsize - 1;
+
+    mode = mode & WARN_M_ALL | WARN_F_HIDE;
+    warn_mode_t mode1 = mode;
+
+    const KeywordTab_t *ct;
+    for ( ct = opt_warn_tab; ct->name1 && dest < end; ct++ )
+    {
+	if ( ct->opt & WARN_F_HIDE )
+	    continue;
+
+	if ( ct->opt ? (mode & ct->opt) == ct->id : mode & ct->id )
+	{
+	    if ( dest > buf )
+		*dest++ = ',';
+	    dest = StringCopyE(dest,end,ct->name1);
+	    mode &= ~(ct->id|ct->opt);
+	}
+    }
+
+    if ( mode1 == (WARN_M_DEFAULT|WARN_F_HIDE) )
+	dest = StringCopyE(dest,end," (default)");
+    else if (!mode1)
+	dest = StringCopyE(dest,end,"(none)");
+
+    *dest = 0;
+    return dest-buf;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetWarnMode()
+{
+    static char buf[200] = {0};
+    if (!*buf)
+	PrintWarnMode(buf,sizeof(buf),WARN_MODE);
     return buf;
 }
 
@@ -3703,6 +3826,7 @@ SortMode_t GetSortMode
 	case SORT_NONE:
 	case SORT_INAME:
 	case SORT_OFFSET:
+	case SORT_SIZE:
 	case SORT_U8:
 	case SORT_PACK:
 	case SORT_BRRES:
@@ -3740,8 +3864,10 @@ SortMode_t GetSortMode
 static const KeywordTab_t opt_sort_tab[] =
 {
 	{  SORT_NONE,		"NONE",		"0",		0 },
-	{  SORT_INAME,		"NAME",		"INAME",	0 },
+	{  SORT_INAME,		"NAME",		"N",		0 },
+	{  SORT_INAME,		"INAME",	0,		0 },
 	{  SORT_OFFSET,		"OFFSET",	0,		0 },
+	{  SORT_SIZE,		"SIZE",		"S",		0 },
 
 	{  SORT_U8,		"U8",		0,		0 },
 	{  SORT_PACK,		"PACK",		0,		0 },
@@ -3938,7 +4064,7 @@ enumError cmd_install()
     printf("\nInstall files to the share directory: %s\n",share_path);
     if ( !share_path || !*share_path )
 	return ERR_ERROR; // should never happen
-    
+
     char destbuf[PATH_MAX];
     enumError max_err = ERR_OK;
 
@@ -5170,33 +5296,48 @@ file_format_t RepairMagicByOpt
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			    misc			///////////////
+///////////////			SHA1 support			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void SetupPrintScriptByOptions ( PrintScript_t *ps )
+const sha1_db_t * GetSha1DbHex ( sha1_type_t type, ccp hex, ccp end )
 {
-    DASSERT(ps);
-
-    InitializePrintScript(ps);
-    ps->force_case	= opt_case;
-    ps->create_array	= script_array > 0;
-    ps->var_name	= script_varname ? script_varname : "res";
-    ps->var_prefix	= script_varname ? script_varname : "res_";
-    ps->eq_tabstop	= 2;
-    ps->ena_empty	= brief_count < 2;
-    ps->ena_comments	= brief_count < 1;
-
-    switch(script_fform)
-    {
-      case FF_JSON:	ps->fform = PSFF_JSON; break;
-      case FF_BASH:	ps->fform = PSFF_BASH; break;
-      case FF_SH:	ps->fform = PSFF_SH; break;
-      case FF_PHP:	ps->fform = PSFF_PHP; break;
-      case FF_MAKEDOC:	ps->fform = PSFF_MAKEDOC; break;
-      default:		ps->fform = print_sections ? PSFF_CONFIG : PSFF_UNKNOWN; break;
-    }
+    sha1_hash_t hash;
+    Sha1Hex2Bin(hash,hex,end);
+    return GetSha1DbBin(type,hash);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+const sha1_db_t * GetSha1DbBin ( sha1_type_t type, cvp hash )
+{
+    int beg = 0;
+    int end = SHA1_DB_N -1;
+    while ( beg <= end )
+    {
+	const int idx = (beg+end)/2;
+	const int stat = memcmp(hash,sha1_db[idx].sha1,sizeof(sha1_db->sha1));
+	if ( stat < 0 )
+	    end = idx - 1 ;
+	else if ( stat > 0 )
+	    beg = idx + 1;
+	else
+	{
+	    const sha1_db_t *res =  sha1_db + idx;
+	    return res->type & type ? res : 0;
+	}
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+u8 GetSha1Slot ( sha1_type_t type, cvp hash )
+{
+    const sha1_db_t *res = GetSha1DbBin(type,hash);
+    return res ? res->slot : 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 void SHA1_to_ID ( sha1_id_t id, const sha1_hash_t hash )
@@ -5225,6 +5366,44 @@ void SHA1_to_ID ( sha1_id_t id, const sha1_hash_t hash )
 	val >>= 5;
     }
     *dest = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetSha1Data ( cvp data, uint size )
+{
+    sha1_hash_t hash;
+    SHA1(data,size,hash);
+    return GetSha1Hex(hash);
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			    misc			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void SetupPrintScriptByOptions ( PrintScript_t *ps )
+{
+    DASSERT(ps);
+
+    InitializePrintScript(ps);
+    ps->force_case	= opt_case;
+    ps->create_array	= script_array > 0;
+    ps->var_name	= script_varname ? script_varname : "res";
+    ps->var_prefix	= script_varname ? script_varname : "res_";
+    ps->eq_tabstop	= 2;
+    ps->ena_empty	= brief_count < 2;
+    ps->ena_comments	= brief_count < 1;
+
+    switch(script_fform)
+    {
+      case FF_JSON:	ps->fform = PSFF_JSON; break;
+      case FF_BASH:	ps->fform = PSFF_BASH; break;
+      case FF_SH:	ps->fform = PSFF_SH; break;
+      case FF_PHP:	ps->fform = PSFF_PHP; break;
+      case FF_MAKEDOC:	ps->fform = PSFF_MAKEDOC; break;
+      default:		ps->fform = print_sections ? PSFF_CONFIG : PSFF_UNKNOWN; break;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////

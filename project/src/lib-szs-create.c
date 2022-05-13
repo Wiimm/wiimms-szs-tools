@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1317,7 +1317,7 @@ void FindSpecialFilesSZS
 		if ( !strcasecmp(fname,have_szs_file[i]) )
 		{
 		    const BZ2Manager_t *bm = GetCommonBZ2Manager(have_szs_fform[i]);
-		    const have_file_mode_t hfm = 
+		    const have_file_mode_t hfm =
 				   bm
 				&& file->size == bm->size
 				&& !memcmp( file->data ? file->data : szs->data + file->offset,
@@ -3146,6 +3146,9 @@ int CheckSZS
 {
     DASSERT(szs);
     PRINT("CheckSZS(%d,%d)\n",szs_mode,sub_mode);
+    if ( disable_checks > 0 )
+	return 0;
+
     szs_mode = GetMainCheckMode(szs_mode,true);
     sub_mode = GetSubCheckMode(sub_mode,true);
 
@@ -4958,6 +4961,8 @@ void AnalyseSZS
 	SHA1(szs->course_kmp_data,szs->course_kmp_size,sha1_data.hash);
 	Sha1Bin2Hex(as->sha1_kmp,sha1_data.hash);
 	memcpy(as->sha1_kmp_norm,as->sha1_kmp,sizeof(as->sha1_kmp_norm));
+	as->sha1_kmp_slot = as->sha1_kmp_norm_slot
+		= GetSha1Slot(SHA1T_KMP,sha1_data.hash);
 
 	kmp_t kmp;
 	InitializeKMP(&kmp);
@@ -4979,6 +4984,7 @@ void AnalyseSZS
 
 		SHA1(szs->course_kmp_data,szs->course_kmp_size,sha1_data.hash);
 		Sha1Bin2Hex(as->sha1_kmp_norm,sha1_data.hash);
+		as->sha1_kmp_norm_slot = GetSha1Slot(SHA1T_KMP,sha1_data.hash);
 
 		stgi->lap_count = as->lap_count;
 		stgi->speed_mod = as->speed_mod;
@@ -5050,6 +5056,7 @@ void AnalyseSZS
 	   || szs->have.kmp[HAVEKMP_MUSHROOM_CAR]
 	   || szs->have.kmp[HAVEKMP_PENGUIN_POS]
 	   || szs->have.kmp[HAVEKMP_EPROP_SPEED]
+	   || szs->have.kmp[HAVEKMP_GOOMBA_SIZE]
 	)
 	{
 	    ct_dest = StringCopyE(ct_dest,ct_end,",gobj");
@@ -5108,6 +5115,7 @@ void AnalyseSZS
     {
 	SHA1(szs->course_kcl_data,szs->course_kcl_size,sha1_data.hash);
 	Sha1Bin2Hex(as->sha1_kcl,sha1_data.hash);
+	as->sha1_kcl_slot = GetSha1Slot(SHA1T_KCL,sha1_data.hash);
     }
     else
 	valid_track = false;
@@ -5146,6 +5154,7 @@ void AnalyseSZS
     {
 	SHA1(szs->map_model_data,szs->map_model_size,sha1_data.hash);
 	Sha1Bin2Hex(as->sha1_minimap,sha1_data.hash);
+	as->sha1_minimap_slot = GetSha1Slot(SHA1T_MAP,sha1_data.hash);
     }
     else
 	szs->warn_bits |= 1 << WARNSZS_NO_MINIMAP;
@@ -5163,6 +5172,642 @@ void AnalyseSZS
     as->have		= szs->have;
     as->valid_track	= valid_track;
     as->duration_usec	= GetTimerUSec() - start_usec;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			check texture hacks		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void PrepareCheckTextureSZS ( szs_file_t * szs )
+{
+    DASSERT(szs);
+
+    static kcl_flag_t *kcl_flag = 0;
+    if (!kcl_flag)
+	kcl_flag = CreatePatchFlagKCL(KCL_MODE|KCLMD_CLR_VISUAL,opt_slot,false);
+
+    szs_iterator_t res;
+    int stat = FindFileSZS(szs,"course.kcl",0,false,&res);
+    if ( stat > 0 )
+    {
+	kcl_analyze_t ka;
+	u8 *data = szs->data + res.off;
+	if ( IsValidKCL(&ka,data,res.size,res.size,res.path) < VALID_ERROR )
+	{
+	    const uint n_tri  = ka.n[2];
+	    kcl_triangle_t *tri = (kcl_triangle_t*)( data + ka.off[2] );
+	    for ( int i = 0; i < n_tri; i++, tri++ )
+	    {
+		const kcl_flag_t flag = ntohs(tri->flag);
+		tri->flag = htons(kcl_flag[flag]);
+		if ( (flag&0x1f) == 0x12 ) // KCL flag 'force recalculation'
+		    szs->check_enpt = true;
+	    }
+	}
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CheckTextureRefSZS
+(
+    // returns ERR_OK | ERR_DIFFER | ERR_NOTHING_TO_DO | ERR_NO_SOURCE_FOUND | >=ERR_ERROR
+    szs_file_t	* szs2,		// NULL or second szs to compare
+    ccp		*status		// not NULL: store status info here -> FreeString()
+				// if !opt_reference: *status=NULL
+)
+{
+    DASSERT(szs2);
+    if (status)
+    {
+	FreeString(*status);
+	*status = 0;
+    }
+
+    if ( !opt_reference || !*opt_reference )
+	return ERR_NOTHING_TO_DO;
+
+    static int err = -1;
+    static szs_file_t *ref_szs = 0;
+
+    if ( err == -1 )
+    {
+	ref_szs = CALLOC(1,sizeof(*ref_szs));
+	err = LoadSZS(ref_szs,opt_reference,true,opt_ignore>0,true);
+	if (err)
+	{
+	    ResetSZS(ref_szs);
+	    FREE(ref_szs);
+	    ref_szs = 0;
+	}
+	else
+	    PrepareCheckTextureSZS(ref_szs);
+    }
+
+    if ( err || !ref_szs )
+    {
+	if (status)
+	    *status = STRDUP("-1=err");
+	return err;
+    }
+
+    return szs2 ? CheckTextureSZS(ref_szs,szs2,status) : ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#define KMP_POS_EPSILON		0.1
+#define KMP_ROT_EPSILON		0.05
+#define KMP_SCALE_EPSILON	0.01
+
+//-----------------------------------------------------------------------------
+
+typedef struct check_texture_t
+{
+    char info_buf[200];
+    char *info_ptr;
+    char *info_end;
+
+    char kinfo_buf[20];
+    char *kinfo_ptr;
+    char *kinfo_end;
+
+    kmp_t kmp1, kmp2;
+    u8 check_route[0x100];
+}
+check_texture_t;
+
+///////////////////////////////////////////////////////////////////////////////
+
+static bool compare_texture_helper
+(
+    szs_file_t		*szs1,
+    szs_file_t		*szs2,
+    ccp			subfile,
+    check_texture_t	*ck,
+    ccp			msg
+)
+{
+    szs_iterator_t res1, res2;
+    const int stat1 = FindFileSZS(szs1,subfile,0,false,&res1);
+    const int stat2 = FindFileSZS(szs2,subfile,0,false,&res2);
+    bool same = stat1 == stat2;
+    if ( same && stat1 > 0 )
+	same = res1.size == res2.size
+		&& !memcmp( szs1->data + res1.off, szs2->data + res2.off, res1.size );
+    if ( !same && ck && msg )
+	ck->info_ptr = StringCopyE(ck->info_ptr,ck->info_end,msg);
+
+    return same;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static bool compare_kmp_ck ( check_texture_t *ck )
+{
+    DASSERT(ck);
+
+    if	(  ck->kmp1.dlist[KMP_CKPH].used != ck->kmp2.dlist[KMP_CKPH].used
+	|| ck->kmp1.dlist[KMP_CKPT].used != ck->kmp2.dlist[KMP_CKPT].used
+	)
+    {
+	PRINT("N(CKPH)=%d,%d, N(CKPT)=%d,%d\n",
+		ck->kmp1.dlist[KMP_CKPH].used,ck->kmp2.dlist[KMP_CKPH].used,
+		ck->kmp1.dlist[KMP_CKPT].used,ck->kmp2.dlist[KMP_CKPT].used);
+	*ck->kinfo_ptr++ = 'c';
+	return false;
+    }
+
+    const kmp_ckph_entry_t *h1 = (kmp_ckph_entry_t*)ck->kmp1.dlist[KMP_CKPH].list;
+    const kmp_ckph_entry_t *h2 = (kmp_ckph_entry_t*)ck->kmp2.dlist[KMP_CKPH].list;
+    for ( int n = ck->kmp1.dlist[KMP_CKPH].used; n>0; n--, h1++, h2++ )
+	if (memcmp(h1,h2,sizeof(*h1)))
+	{
+	    *ck->kinfo_ptr++ = 'c';
+	    return false;
+	}
+
+    const kmp_ckpt_entry_t *p1 = (kmp_ckpt_entry_t*)ck->kmp1.dlist[KMP_CKPT].list;
+    const kmp_ckpt_entry_t *p2 = (kmp_ckpt_entry_t*)ck->kmp2.dlist[KMP_CKPT].list;
+    for ( int n = ck->kmp1.dlist[KMP_CKPT].used; n>0; n--, p1++, p2++ )
+    {
+	if (   p1->respawn	!= p2->respawn
+	    || p1->mode	!= p2->mode
+	    || p1->prev	!= p2->prev
+	    || p1->next	!= p2->next
+	    || fabs( p1->left[0]  - p2->left[0]  ) > KMP_POS_EPSILON
+	    || fabs( p1->left[1]  - p2->left[1]  ) > KMP_POS_EPSILON
+	    || fabs( p1->right[0] - p2->right[0] ) > KMP_POS_EPSILON
+	    || fabs( p1->right[1] - p2->right[1] ) > KMP_POS_EPSILON
+	)
+	{
+	    PRINT("A: %2x %2x %2x %2x %10.3f %10.3f %10.3f %10.3f\n",
+		    p1->respawn, p1->mode, p1->prev, p1->next,
+		    p1->left[0], p1->left[1], p1->right[0], p1->right[1] );
+	    PRINT("B: %2x %2x %2x %2x %10.3f %10.3f %10.3f %10.3f\n",
+		    p2->respawn, p2->mode, p2->prev, p2->next,
+		    p2->left[0], p2->left[1], p2->right[0], p2->right[1] );
+	    *ck->kinfo_ptr++ = 'c';
+	    return false;
+	}
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static const kmp_area_entry_t * next_area
+	( const kmp_area_entry_t *p, const kmp_area_entry_t *e )
+{
+    for ( ; p < e; p++ )
+	if ( p->type == 3 || p->type == 4 || p->type >= 8 && p->type <= 10 )
+	    break;
+    return p;
+}
+
+//-----------------------------------------------------------------------------
+
+static bool compare_kmp_area ( check_texture_t *ck )
+{
+    DASSERT(ck);
+
+    if ( ck->kmp1.dlist[KMP_AREA].used != ck->kmp2.dlist[KMP_AREA].used )
+    {
+	*ck->kinfo_ptr++ = 'a';
+	return false;
+    }
+
+    const kmp_area_entry_t *p1 = (kmp_area_entry_t*)ck->kmp1.dlist[KMP_AREA].list;
+    const kmp_area_entry_t *e1 = p1 + ck->kmp1.dlist[KMP_AREA].used;
+
+    const kmp_area_entry_t *p2 = (kmp_area_entry_t*)ck->kmp2.dlist[KMP_AREA].list;
+    const kmp_area_entry_t *e2 = p2 + ck->kmp2.dlist[KMP_AREA].used;
+
+    for (;;)
+    {
+	p1 = next_area(p1,e1);
+	p2 = next_area(p2,e2);
+	if ( p1 >= e1 || p2 >= e2 )
+	    break;
+
+	if (   memcmp( &p1->mode, &p2->mode, 4 )
+	    || memcmp( p1->setting, p2->setting, 8 )
+	    || fabs( p1->position[0] - p2->position[0]	) > KMP_POS_EPSILON
+	    || fabs( p1->position[1] - p2->position[1]	) > KMP_POS_EPSILON
+	    || fabs( p1->position[2] - p2->position[2]	) > KMP_POS_EPSILON
+	    || fabs( p1->rotation[0] - p2->rotation[0]	) > KMP_ROT_EPSILON
+	    || fabs( p1->rotation[1] - p2->rotation[1]	) > KMP_ROT_EPSILON
+	    || fabs( p1->rotation[2] - p2->rotation[2]	) > KMP_ROT_EPSILON
+	    || fabs( p1->scale[0]    - p2->scale[0]	) > KMP_SCALE_EPSILON
+	    || fabs( p1->scale[1]    - p2->scale[1]	) > KMP_SCALE_EPSILON
+	    || fabs( p1->scale[2]    - p2->scale[2]	) > KMP_SCALE_EPSILON
+	)
+	{
+	    *ck->kinfo_ptr++ = 'a';
+	    return false;
+	}
+
+	p1++;
+	p2++;
+    }
+
+    if ( p1 != e1 || p2 != e2 )
+    {
+	*ck->kinfo_ptr++ = 'a';
+	return false;
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static const kmp_gobj_entry_t * next_gobj
+	( const kmp_gobj_entry_t *p, const kmp_gobj_entry_t *e )
+{
+    for ( ; p < e; p++ )
+    {
+	if ( p->obj_id >= GOBJ_MIN_DEF )
+	    break;
+	if ( p->pflags )
+	{
+	    const u16 relevant_id = GetRelevantObjectId(p->obj_id);
+	    if ( ObjectInfo[relevant_id].flags & OBF_SOLID )
+		break;
+	}
+    }
+    return p;
+}
+
+//-----------------------------------------------------------------------------
+
+static bool compare_kmp_gobj ( check_texture_t *ck )
+{
+    DASSERT(ck);
+
+    SortGOBJ(&ck->kmp1,KSORT_XYZ);
+    SortGOBJ(&ck->kmp2,KSORT_XYZ);
+
+    const kmp_gobj_entry_t *p1 = (kmp_gobj_entry_t*)ck->kmp1.dlist[KMP_GOBJ].list;
+    const kmp_gobj_entry_t *e1 = p1 + ck->kmp1.dlist[KMP_GOBJ].used;
+
+    const kmp_gobj_entry_t *p2 = (kmp_gobj_entry_t*)ck->kmp2.dlist[KMP_GOBJ].list;
+    const kmp_gobj_entry_t *e2 = p2 + ck->kmp2.dlist[KMP_GOBJ].used;
+
+    bool valid = true;
+    for (;;)
+    {
+	p1 = next_gobj(p1,e1);
+	p2 = next_gobj(p2,e2);
+	if ( p1 >= e1 || p2 >= e2 )
+	    break;
+
+	if ( p1->route_id < sizeof(ck->check_route) )
+	    ck->check_route[p1->route_id] = 1;
+
+	if ( valid &&
+		(  memcmp( &p1->obj_id, &p2->obj_id, 4 )
+		|| memcmp( &p1->route_id, &p2->route_id, 20 )
+		|| fabs( p1->position[0] - p2->position[0]	) > KMP_POS_EPSILON
+		|| fabs( p1->position[1] - p2->position[1]	) > KMP_POS_EPSILON
+		|| fabs( p1->position[2] - p2->position[2]	) > KMP_POS_EPSILON
+		|| fabs( p1->rotation[0] - p2->rotation[0]	) > KMP_ROT_EPSILON
+		|| fabs( p1->rotation[1] - p2->rotation[1]	) > KMP_ROT_EPSILON
+		|| fabs( p1->rotation[2] - p2->rotation[2]	) > KMP_ROT_EPSILON
+		|| fabs( p1->scale[0]    - p2->scale[0]	) > KMP_SCALE_EPSILON
+		|| fabs( p1->scale[1]    - p2->scale[1]	) > KMP_SCALE_EPSILON
+		|| fabs( p1->scale[2]    - p2->scale[2]	) > KMP_SCALE_EPSILON
+	))
+	{
+	    valid = false;
+	}
+
+	p1++;
+	p2++;
+    }
+
+    if ( !valid || p1 != e1 || p2 != e2 )
+    {
+	*ck->kinfo_ptr++ = 'g';
+	return false;
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static bool compare_kmp_poti ( check_texture_t *ck )
+{
+    DASSERT(ck);
+
+    const int ng1 = ck->kmp1.dlist[KMP_POTI].used;
+    const int ng2 = ck->kmp2.dlist[KMP_POTI].used;
+    const int np1 = ck->kmp1.poti_point.used;
+    const int np2 = ck->kmp2.poti_point.used;
+
+    if ( ng1 != ng2 || np1 != np2 )
+    {
+     err:
+	*ck->kinfo_ptr++ = 'p';
+	return false;
+    }
+
+    const kmp_poti_group_t * pg1 = (kmp_poti_group_t*)ck->kmp1.dlist[KMP_POTI].list;
+    const kmp_poti_group_t * pg2 = (kmp_poti_group_t*)ck->kmp2.dlist[KMP_POTI].list;
+    const kmp_poti_point_t * pp1 = (kmp_poti_point_t*)ck->kmp1.poti_point.list;
+    const kmp_poti_point_t * pp2 = (kmp_poti_point_t*)ck->kmp2.poti_point.list;
+
+    int i, gi;
+    for ( gi = i = 0; gi < ng1 && i < np1; gi++, pg1++, pg2++ )
+    {
+	if (memcmp(pg1,pg2,sizeof(*pg1)))
+	    goto err;
+
+	const int en = pg1->n_point;
+	if ( gi < sizeof(ck->check_route) && !ck->check_route[gi] )
+	{
+	    pp1 += en;
+	    pp2 += en;
+	    continue;
+	}
+
+	for ( int ei = 0; ei < en; ei++, i++, pp1++, pp2++ )
+	{
+	    if	(  pp1->speed   != pp2->speed
+		|| pp1->unknown != pp2->unknown
+		|| fabs( pp1->position[0] - pp2->position[0] ) > KMP_POS_EPSILON
+		|| fabs( pp1->position[1] - pp2->position[1] ) > KMP_POS_EPSILON
+		|| fabs( pp1->position[2] - pp2->position[2] ) > KMP_POS_EPSILON
+		)
+	    {
+		*ck->kinfo_ptr++ = 'p';
+		return false;
+	    }
+	}
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static bool compare_kmp_stgi ( check_texture_t *ck )
+{
+    DASSERT(ck);
+
+    if ( ck->kmp1.dlist[KMP_STGI].used != ck->kmp2.dlist[KMP_STGI].used )
+    {
+	*ck->kinfo_ptr++ = 's';
+	return false;
+    }
+
+    const kmp_stgi_entry_t *p1 = (kmp_stgi_entry_t*)ck->kmp1.dlist[KMP_STGI].list;
+    const kmp_stgi_entry_t *p2 = (kmp_stgi_entry_t*)ck->kmp2.dlist[KMP_STGI].list;
+    for ( int n = ck->kmp1.dlist[KMP_STGI].used; n>0; n--, p1++, p2++ )
+    {
+	const u8 lap_count1  = p1->lap_count ? p1->lap_count : 3;
+	const u8 lap_count2  = p2->lap_count ? p2->lap_count : 3;
+	const u16 speed_mod1 = p1->speed_mod ? p1->speed_mod : 0x3f80;
+	const u16 speed_mod2 = p2->speed_mod ? p2->speed_mod : 0x3f80;
+
+	if (   lap_count1	!= lap_count2
+	    || speed_mod1	!= speed_mod2
+	    || p1->pole_pos	!= p2->pole_pos
+	    || p1->narrow_start != p2->narrow_start
+	)
+	{
+	    *ck->kinfo_ptr++ = 's';
+	    return false;
+	}
+    }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static bool compare_kmp_pt1
+(
+    check_texture_t	*ck,
+    kmp_entry_t		sect,  // KMP_JGPT | KMP_CNPT | KMP_MSPT | KMP_KTPT
+    char		msg
+)
+{
+    DASSERT(ck);
+
+    if ( ck->kmp1.dlist[sect].used != ck->kmp2.dlist[sect].used )
+    {
+	*ck->kinfo_ptr++ = msg;
+	return false;
+    }
+
+    const kmp_jgpt_entry_t *p1 = (kmp_jgpt_entry_t*)ck->kmp1.dlist[sect].list;
+    const kmp_jgpt_entry_t *p2 = (kmp_jgpt_entry_t*)ck->kmp2.dlist[sect].list;
+    for ( int n = ck->kmp1.dlist[sect].used; n>0; n--, p1++, p2++ )
+    {
+	if (   p1->id     != p2->id
+	    || p1->effect != p2->effect
+	    || fabs( p1->position[0] - p2->position[0] ) > KMP_POS_EPSILON
+	    || fabs( p1->position[1] - p2->position[1] ) > KMP_POS_EPSILON
+	    || fabs( p1->position[2] - p2->position[2] ) > KMP_POS_EPSILON
+	    || fabs( p1->rotation[0] - p2->rotation[0] ) > KMP_ROT_EPSILON
+	    || fabs( p1->rotation[1] - p2->rotation[1] ) > KMP_ROT_EPSILON
+	    || fabs( p1->rotation[2] - p2->rotation[2] ) > KMP_ROT_EPSILON
+	)
+	{
+	    *ck->kinfo_ptr++ = msg;
+	    return false;
+	}
+    }
+
+    return true;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+static bool compare_kmp_pt2
+(
+    check_texture_t	*ck,
+    kmp_entry_t		sect_ph,  // KMP_ENPH | KMP_ITPH
+    kmp_entry_t		sect_pt,  // KMP_ENPT | KMP_ITPT
+    char		msg
+)
+{
+    DASSERT();
+
+    if	(  ck->kmp1.dlist[sect_ph].used != ck->kmp2.dlist[sect_ph].used
+	|| ck->kmp1.dlist[sect_pt].used != ck->kmp2.dlist[sect_pt].used
+	)
+    {
+	*ck->kinfo_ptr++ = msg;
+	return false;
+    }
+
+    const kmp_enph_entry_t *h1 = (kmp_enph_entry_t*)ck->kmp1.dlist[sect_ph].list;
+    const kmp_enph_entry_t *h2 = (kmp_enph_entry_t*)ck->kmp2.dlist[sect_ph].list;
+    uint size = sizeof(*h1);
+    if ( opt_battle_mode <= OFFON_OFF )
+	size -= sizeof(h1->setting);
+    for ( int n = ck->kmp1.dlist[sect_ph].used; n>0; n--, h1++, h2++ )
+	if (memcmp(h1,h2,size))
+	{
+	    *ck->kinfo_ptr++ = msg;
+	    return false;
+	}
+
+    const kmp_enpt_entry_t *p1 = (kmp_enpt_entry_t*)ck->kmp1.dlist[sect_pt].list;
+    const kmp_enpt_entry_t *p2 = (kmp_enpt_entry_t*)ck->kmp2.dlist[sect_pt].list;
+    for ( int n = ck->kmp1.dlist[sect_pt].used; n>0; n--, p1++, p2++ )
+    {
+	if (   p1->prop[0] != p2->prop[0]
+	    || p1->prop[1] != p2->prop[1]
+	    || fabs( p1->position[0] - p2->position[0] ) > KMP_POS_EPSILON
+	    || fabs( p1->position[1] - p2->position[1] ) > KMP_POS_EPSILON
+	    || fabs( p1->position[2] - p2->position[2] ) > KMP_POS_EPSILON
+	    || fabs( p1->scale	     - p2->scale       ) > KMP_SCALE_EPSILON
+	)
+	{
+	    *ck->kinfo_ptr++ = msg;
+	    return false;
+	}
+    }
+
+    return true;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CheckTextureSZS
+(
+    // returns ERR_OK | ERR_DIFFER | ERR_ERROR
+    szs_file_t	* szs1,		// first szs to compare
+    szs_file_t	* szs2,		// second szs to compare
+    ccp		*status		// not NULL: store status info here -> FreeString()
+)
+{
+    DASSERT(szs1);
+    DASSERT(szs2);
+    disable_checks++;
+
+    if (status)
+    {
+	FreeString(*status);
+	*status = 0;
+    }
+
+    check_texture_t ck;
+    memset(&ck,0,sizeof(ck));
+    ck.info_end = ck.info_buf + sizeof(ck.info_buf) - 2;
+    ck.info_ptr = StringCopyE(ck.info_buf,ck.info_end,"0=no");
+    char *info_start = ck.info_ptr;
+
+
+    //--- check KCL
+
+    compare_texture_helper(szs1,szs2,"course.kcl",&ck,",KCL");
+
+
+    //--- last check: KMP
+
+    szs_iterator_t res1, res2;
+    int stat1 = FindFileSZS(szs1,"course.kmp",0,false,&res1);
+    int stat2 = FindFileSZS(szs2,"course.kmp",0,false,&res2);
+
+    if ( stat1 != stat2 )
+	ck.info_ptr = StringCopyE(ck.info_ptr,ck.info_end,",KMP");
+    else if ( stat1 > 0
+	    && ( res1.size != res2.size
+		|| memcmp( szs1->data + res1.off, szs2->data + res2.off, res1.size )))
+    {
+	InitializeKMP(&ck.kmp1);
+	InitializeKMP(&ck.kmp2);
+	enumError err1 = ScanKMP(&ck.kmp1,false,szs1->data+res1.off,res1.size,0);
+	enumError err2 = ScanKMP(&ck.kmp2,false,szs2->data+res2.off,res2.size,0);
+	if ( err1 || err2 )
+	    ck.info_ptr = StringCopyE(ck.info_ptr,ck.info_end,",KMP");
+	else
+	{
+	    ck.kinfo_end = ck.kinfo_buf + sizeof(ck.kinfo_buf) - 2;
+	    ck.kinfo_ptr = StringCopyE(ck.kinfo_buf,ck.kinfo_end,",KMP=");
+	    char *kinfo_start = ck.kinfo_ptr;
+
+	    compare_kmp_area(&ck);				// KMP_AREA (a)
+//X								// KMP_CAME (?)		not needed
+	    compare_kmp_ck(&ck);				// KMP_CKPH + CKPT (c)
+	    if ( szs1->check_enpt || szs2->check_enpt  )
+		compare_kmp_pt2(&ck,KMP_ENPH,KMP_ENPT,'e');	// KMP_ENPH + ENPT (e)
+	    compare_kmp_gobj(&ck);				// KMP_GOBJ (g)
+	    compare_kmp_pt2(&ck,KMP_ITPH,KMP_ITPT,'i');		// KMP_ITPH+ ITPT (i)
+	    compare_kmp_pt1(&ck,KMP_JGPT,'j');			// KMP_JGPT (j)
+	    compare_kmp_pt1(&ck,KMP_KTPT,'k');			// KMP_KTPT (k)	
+	    compare_kmp_pt1(&ck,KMP_MSPT,'m');			// KMP_MSPT (m)
+	    compare_kmp_pt1(&ck,KMP_CNPT,'n');			// KMP_CNPT (n)
+	    compare_kmp_poti(&ck);				// KMP_POTI (p)
+	    compare_kmp_stgi(&ck);				// KMP_STGI (s)
+
+	    //--- KMP summary
+
+	    if ( ck.kinfo_ptr > kinfo_start )
+	    {
+		*ck.kinfo_ptr = 0;
+		ck.info_ptr = StringCopyE(ck.info_ptr,ck.info_end,ck.kinfo_buf);
+	    }
+	}
+	ResetKMP(&ck.kmp1);
+	ResetKMP(&ck.kmp2);
+    }
+
+
+    //--- check LEX
+
+    compare_texture_helper(szs1,szs2,"course.lex",&ck,",LEX");
+
+
+    //--- check MAP
+
+    stat1 = FindFileSZS(szs1,"map_model.brres",0,false,&res1);
+    stat2 = FindFileSZS(szs2,"map_model.brres",0,false,&res2);
+    if ( stat1 > 0 && stat2 > 0 )
+    {
+	sha1_hash_t hash;
+	SHA1( szs1->data+res1.off, res1.size, hash );
+	int slot1 = GetSha1Slot(SHA1T_MAP,hash);
+	if (slot1)
+	{
+	    SHA1( szs2->data+res2.off, res2.size, hash );
+	    int slot2 = GetSha1Slot(SHA1T_MAP,hash);
+	    if ( slot2 && slot2 != slot1 )
+	    {
+		if ( slot2 > 100 )
+		    ck.info_ptr = snprintfE(ck.info_ptr,ck.info_end,",MAP=A%u",slot2%100);
+		else
+		    ck.info_ptr = snprintfE(ck.info_ptr,ck.info_end,",MAP=%u",slot2);
+	    }
+	}
+    }
+
+
+    //--- finalize
+
+    disable_checks--;
+    if ( ck.info_ptr > info_start )
+    {
+	if (status)
+	{
+	    *info_start = ' ';
+	    *status = STRDUP(ck.info_buf);
+	}
+	return ERR_DIFFER;
+    }
+
+    if (status)
+	*status = STRDUP("1=yes");
+    return ERR_OK;
 }
 
 //

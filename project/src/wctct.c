@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -58,6 +58,7 @@
 
 static void help_exit ( bool xmode )
 {
+    SetupPager();
     fputs( TITLE "\n", stdout );
 
     if (xmode)
@@ -69,6 +70,7 @@ static void help_exit ( bool xmode )
     else
 	PrintHelpCmd(&InfoUI_wctct,stdout,0,0,"HELP",0,URI_HOME);
 
+    ClosePager();
     exit(ERR_OK);
 }
 
@@ -749,6 +751,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
@@ -892,8 +895,7 @@ static enumError CheckCommand ( int argc, char ** argv )
     switch ((enumCommands)cmd_ct->id)
     {
 	case CMD_VERSION:	version_exit();
-	case CMD_HELP:		PrintHelp(&InfoUI_wctct,stdout,0,"HELP",0,URI_HOME,
-					first_param ? first_param->arg : 0 ); break;
+	case CMD_HELP:		PrintHelpColor(&InfoUI_wctct); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;

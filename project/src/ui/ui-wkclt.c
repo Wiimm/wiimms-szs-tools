@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -261,6 +261,34 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" See https://szs.wiimm.de/opt/slot for details."
     },
 
+    {	OPT_ID, false, false, false, false, false, 0, "id",
+	0,
+	"Print an ID with 8 characters instead of a SHA-1 sum with 40"
+	" characters. The SHA-1 sum is used to calculate the ID. The ID"
+	" consists of '0'-'9' and 'a'-'w' (32 characters)."
+    },
+
+    {	OPT_BASE64, true, false, false, false, false, 0, "base64",
+	"[=mode]",
+	"Encode the the checksum string as BASE64 with 27 characters instead"
+	" of hex. If a parameter is set, it acts like --coding=mode."
+    },
+
+    {	OPT_DB64, true, false, false, false, false, 0, "db64",
+	"[=mode]",
+	"Encode the the checksum string and some length as BASE64 with 32"
+	" characters instead of hex for database searches. This options"
+	" implies --coding=URL if no other coding is defined. If a parameter"
+	" is set, it acts like --coding=mode. Option --db64 has priority over"
+	" --base64."
+    },
+
+    {	OPT_CODING, false, false, false, false, false, 0, "coding",
+	"mode",
+	"Define the coding of the non alphanumeric characters for BASE64:"
+	" STANDARD (+/=, default), URL (-_=), STAR (-_*) or XML (.-*)."
+    },
+
     {	OPT_ROUND, false, false, false, false, false, 0, "round",
 	0,
 	"Print additional lines with rounded values (to 3 and 2 bytes for"
@@ -365,7 +393,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Print in machine readable sections and parameter lines."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 37
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 41
 
     //----- global options -----
 
@@ -421,8 +449,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_MAX_WIDTH, false, false, false, true, false, 0, "max-width",
 	"maxwidth",
 	"Define the maximum terminal width (number of columns) for help and"
-	" some other messages and disable the automatic detection of the"
-	" terminal width. This option is ignored if --width is set."
+	" some other messages. The default is 120. This option is ignored if"
+	" --width is set."
     },
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
@@ -441,6 +469,16 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
 	0,
 	"This debug option enables the logging of internal lists and maps."
+    },
+
+    {	OPT_WARN, false, false, false, false, false, 'W', "warn",
+	"list",
+	"Enable or disable warnings. Parameter 'list' is a comma separated"
+	" list of keywords. A minus sign before a keyword disables a warning."
+	" Each occurrence of the option will only change entered warning and"
+	" all other warnings are untouched.\n"
+	"  Keyword DEFAULT resets the default settings, OFF disables and ALL"
+	" enables all. The other allowed keywords are: INVALID-OFFSET."
     },
 
     {	OPT_DE, false, false, false, false, false, 0, "de",
@@ -642,7 +680,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 72
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 77
 
 };
 
@@ -773,6 +811,12 @@ static const InfoOption_t option_cmd_CFF_BRIEF =
 	"Suppress the comments with the alternative expression formats."
     };
 
+static const InfoOption_t option_cmd_TYPES_BRIEF =
+    {	OPT_BRIEF, false, false, false, false, false, 'B', "brief",
+	0,
+	"Print only the resulting flag."
+    };
+
 static const InfoOption_t option_cmd_FLAGS_BRIEF =
     {	OPT_BRIEF, false, false, false, false, false, 'B', "brief",
 	0,
@@ -851,6 +895,12 @@ static const InfoOption_t option_cmd_CHECK_QUIET =
 	"Be quiet until the first warning or hint is found."
     };
 
+static const InfoOption_t option_cmd_SHA1_BRIEF =
+    {	OPT_BRIEF, false, false, false, false, false, 'B', "brief",
+	0,
+	"Suppress output of the filename."
+    };
+
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -880,6 +930,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_ENCODE,	"ENCODE",	"ENC",		0 },
     { CMD_COPY,		"COPY",		"CP",		0 },
     { CMD_CFF,		"CFF",		0,		0 },
+    { CMD_TYPES,	"TYPES",	0,		0 },
     { CMD_FLAGS,	"FLAGS",	"F",		0 },
     { CMD_DUMP,		"DUMP",		"D",		0 },
     { CMD_DBRIEF,	"DBRIEF",	"DB",		0 },
@@ -888,6 +939,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_TRAVERSE,	"TRAVERSE",	0,		0 },
     { CMD_FALL,		"FALL",		0,		0 },
     { CMD_CHECK,	"CHECK",	"CHK",		0 },
+    { CMD_SHA1,		"SHA1",		0,		0 },
     { CMD_ANALYZE,	"ANALYZE",	0,		0 },
     { CMD_BLOW,		"BLOW",		0,		0 },
 
@@ -899,7 +951,7 @@ static const KeywordTab_t CommandTab[] =
 ///////////////            OptionShort & OptionLong             ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static const char OptionShort[] = "VhqvLc:lHBPNM:T:A:td:D:E:orupi";
+static const char OptionShort[] = "VhqvLW:c:lHBPNM:T:A:td:D:E:orupi";
 
 static const struct option OptionLong[] =
 {
@@ -916,6 +968,7 @@ static const struct option OptionLong[] =
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
+	{ "warn",		1, 0, 'W' },
 	{ "de",			0, 0, GO_DE },
 	{ "colors",		2, 0, GO_COLORS },
 	{ "no-colors",		0, 0, GO_NO_COLORS },
@@ -961,6 +1014,10 @@ static const struct option OptionLong[] =
 	{ "xtridata",		2, 0, GO_XTRIDATA },
 	 { "xtri",		2, 0, GO_XTRIDATA },
 	{ "slot",		1, 0, GO_SLOT },
+	{ "id",			0, 0, GO_ID },
+	{ "base64",		2, 0, GO_BASE64 },
+	{ "db64",		2, 0, GO_DB64 },
+	{ "coding",		1, 0, GO_CODING },
 	{ "round",		0, 0, GO_ROUND },
 	{ "long",		0, 0, 'l' },
 	{ "no-header",		0, 0, 'H' },
@@ -1040,7 +1097,8 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x054 T */	OPT_TRACKS,
 	/* 0x055   */	 0,
 	/* 0x056 V */	OPT_VERSION,
-	/* 0x057   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+	/* 0x057 W */	OPT_WARN,
+	/* 0x058   */	 0,0,0,0, 0,0,0,0, 0,0,0,
 	/* 0x063 c */	OPT_CONST,
 	/* 0x064 d */	OPT_DEST,
 	/* 0x065   */	 0,0,0,
@@ -1093,20 +1151,24 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x0a0   */	OPT_FLAG_FILE,
 	/* 0x0a1   */	OPT_XTRIDATA,
 	/* 0x0a2   */	OPT_SLOT,
-	/* 0x0a3   */	OPT_ROUND,
-	/* 0x0a4   */	OPT_NO_ECHO,
-	/* 0x0a5   */	OPT_UTF_8,
-	/* 0x0a6   */	OPT_NO_UTF_8,
-	/* 0x0a7   */	OPT_FORCE,
-	/* 0x0a8   */	OPT_REPAIR_MAGICS,
-	/* 0x0a9   */	OPT_TINY,
-	/* 0x0aa   */	OPT_OLD,
-	/* 0x0ab   */	OPT_STD,
-	/* 0x0ac   */	OPT_NEW,
-	/* 0x0ad   */	OPT_EXTRACT,
-	/* 0x0ae   */	OPT_NUMBER,
-	/* 0x0af   */	OPT_SECTIONS,
-	/* 0x0b0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x0a3   */	OPT_ID,
+	/* 0x0a4   */	OPT_BASE64,
+	/* 0x0a5   */	OPT_DB64,
+	/* 0x0a6   */	OPT_CODING,
+	/* 0x0a7   */	OPT_ROUND,
+	/* 0x0a8   */	OPT_NO_ECHO,
+	/* 0x0a9   */	OPT_UTF_8,
+	/* 0x0aa   */	OPT_NO_UTF_8,
+	/* 0x0ab   */	OPT_FORCE,
+	/* 0x0ac   */	OPT_REPAIR_MAGICS,
+	/* 0x0ad   */	OPT_TINY,
+	/* 0x0ae   */	OPT_OLD,
+	/* 0x0af   */	OPT_STD,
+	/* 0x0b0   */	OPT_NEW,
+	/* 0x0b1   */	OPT_EXTRACT,
+	/* 0x0b2   */	OPT_NUMBER,
+	/* 0x0b3   */	OPT_SECTIONS,
+	/* 0x0b4   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1122,184 +1184,196 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[37] = // cmd #1
+static u8 option_allowed_cmd_VERSION[41] = // cmd #1
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,1,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  1
 };
 
-static u8 option_allowed_cmd_HELP[37] = // cmd #2
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1
-};
-
-static u8 option_allowed_cmd_CONFIG[37] = // cmd #3
-{
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,1,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
-};
-
-static u8 option_allowed_cmd_ARGTEST[37] = // cmd #4
+static u8 option_allowed_cmd_HELP[41] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1
+    1,1,1,1,1, 1,1,1,1,1,  1
 };
 
-static u8 option_allowed_cmd_TEST[37] = // cmd #5
+static u8 option_allowed_cmd_CONFIG[41] = // cmd #3
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0
+};
+
+static u8 option_allowed_cmd_ARGTEST[41] = // cmd #4
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1
+    1,1,1,1,1, 1,1,1,1,1,  1
 };
 
-static u8 option_allowed_cmd_COLORS[37] = // cmd #6
+static u8 option_allowed_cmd_TEST[41] = // cmd #5
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,1,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1
 };
 
-static u8 option_allowed_cmd_ERROR[37] = // cmd #7
+static u8 option_allowed_cmd_COLORS[41] = // cmd #6
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,1,1,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0
 };
 
-static u8 option_allowed_cmd_FILETYPE[37] = // cmd #8
+static u8 option_allowed_cmd_ERROR[41] = // cmd #7
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 1,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  1
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[37] = // cmd #9
+static u8 option_allowed_cmd_FILETYPE[41] = // cmd #8
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,1,  0
 };
 
-static u8 option_allowed_cmd_SYMBOLS[37] = // cmd #10
+static u8 option_allowed_cmd_FILEATTRIB[41] = // cmd #9
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,1,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0
 };
 
-static u8 option_allowed_cmd_FUNCTIONS[37] = // cmd #11
+static u8 option_allowed_cmd_SYMBOLS[41] = // cmd #10
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,1,1,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0
 };
 
-static u8 option_allowed_cmd_CALCULATE[37] = // cmd #12
+static u8 option_allowed_cmd_FUNCTIONS[41] = // cmd #11
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0
+};
+
+static u8 option_allowed_cmd_CALCULATE[41] = // cmd #12
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0
 };
 
-static u8 option_allowed_cmd_MATRIX[37] = // cmd #13
+static u8 option_allowed_cmd_MATRIX[41] = // cmd #13
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,0,1,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0
 };
 
-static u8 option_allowed_cmd_FLOAT[37] = // cmd #14
+static u8 option_allowed_cmd_FLOAT[41] = // cmd #14
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  1,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0
 };
 
-static u8 option_allowed_cmd_EXPORT[37] = // cmd #15
+static u8 option_allowed_cmd_EXPORT[41] = // cmd #15
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0
 };
 
-static u8 option_allowed_cmd_CAT[37] = // cmd #16
+static u8 option_allowed_cmd_CAT[41] = // cmd #16
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,1,0,0,0,
-    0,0,0,0,0, 1,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,1,
+    1,0,0,0,0, 0,0,0,0,1,  0
 };
 
-static u8 option_allowed_cmd_DECODE[37] = // cmd #17
+static u8 option_allowed_cmd_DECODE[41] = // cmd #17
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,1,1,1,1,
-    1,1,1,1,1, 1,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  0
 };
 
-static u8 option_allowed_cmd_ENCODE[37] = // cmd #18
+static u8 option_allowed_cmd_ENCODE[41] = // cmd #18
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,1,1,1,1,
-    1,1,1,1,1, 1,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  0
 };
 
-static u8 option_allowed_cmd_COPY[37] = // cmd #19
+static u8 option_allowed_cmd_COPY[41] = // cmd #19
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,1,1,1,1,
-    1,1,1,1,1, 1,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  0
 };
 
-static u8 option_allowed_cmd_CFF[37] = // cmd #20
+static u8 option_allowed_cmd_CFF[41] = // cmd #20
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,1,0,1,0, 1,1,1,1,1,
-    1,1,1,1,1, 1,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 1,0,1,0,1,
+    1,1,1,1,1, 1,1,1,1,1,  0
 };
 
-static u8 option_allowed_cmd_FLAGS[37] = // cmd #21
+static u8 option_allowed_cmd_TYPES[41] = // cmd #21
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,1,1,0, 0,1,0,0,0,
-    0,0,0,0,0, 1,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0
 };
 
-static u8 option_allowed_cmd_DUMP[37] = // cmd #22
+static u8 option_allowed_cmd_FLAGS[41] = // cmd #22
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,0,1,0, 0,1,0,0,0,
-    0,0,0,0,0, 1,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,1,1,0,0,
+    1,0,0,0,0, 0,0,0,0,1,  0
 };
 
-static u8 option_allowed_cmd_DBRIEF[37] = // cmd #23
+static u8 option_allowed_cmd_DUMP[41] = // cmd #23
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,0,1,0, 0,1,0,0,0,
-    0,0,0,0,0, 1,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
+    1,0,0,0,0, 0,0,0,0,1,  0
 };
 
-static u8 option_allowed_cmd_LIST[37] = // cmd #24
+static u8 option_allowed_cmd_DBRIEF[41] = // cmd #24
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,1,0,0,0,
-    0,0,0,0,0, 1,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
+    1,0,0,0,0, 0,0,0,0,1,  0
 };
 
-static u8 option_allowed_cmd_TRIANGLES[37] = // cmd #25
-{
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,0,1,0, 0,1,0,0,0,
-    0,0,0,0,0, 1,0
-};
-
-static u8 option_allowed_cmd_TRAVERSE[37] = // cmd #26
-{
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,0,1,0, 0,1,0,0,0,
-    0,0,0,0,0, 1,0
-};
-
-static u8 option_allowed_cmd_FALL[37] = // cmd #27
-{
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,0,1,0, 0,1,0,0,0,
-    0,0,0,0,0, 1,0
-};
-
-static u8 option_allowed_cmd_CHECK[37] = // cmd #28
-{
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,1,0, 1,1,0,0,0,
-    0,0,0,0,0, 1,0
-};
-
-static u8 option_allowed_cmd_ANALYZE[37] = // cmd #29
+static u8 option_allowed_cmd_LIST[41] = // cmd #25
 {
     0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 1,0
+    1,0,0,0,0, 0,0,0,0,1,  0
 };
 
-static u8 option_allowed_cmd_BLOW[37] = // cmd #30
+static u8 option_allowed_cmd_TRIANGLES[41] = // cmd #26
+{
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
+    1,0,0,0,0, 0,0,0,0,1,  0
+};
+
+static u8 option_allowed_cmd_TRAVERSE[41] = // cmd #27
+{
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
+    1,0,0,0,0, 0,0,0,0,1,  0
+};
+
+static u8 option_allowed_cmd_FALL[41] = // cmd #28
+{
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
+    1,0,0,0,0, 0,0,0,0,1,  0
+};
+
+static u8 option_allowed_cmd_CHECK[41] = // cmd #29
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,1,
+    1,0,0,0,0, 0,0,0,0,1,  0
+};
+
+static u8 option_allowed_cmd_SHA1[41] = // cmd #30
+{
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,1,0,0,
+    0,0,0,0,0, 0,0,0,0,1,  0
+};
+
+static u8 option_allowed_cmd_ANALYZE[41] = // cmd #31
+{
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,1,  0
+};
+
+static u8 option_allowed_cmd_BLOW[41] = // cmd #32
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 1,0
+    0,0,0,0,0, 0,0,0,0,1,  0
 };
 
 
@@ -1321,6 +1395,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
+	OptionInfo + OPT_WARN,
 	OptionInfo + OPT_DE,
 	OptionInfo + OPT_COLORS,
 	OptionInfo + OPT_NO_COLORS,
@@ -1688,6 +1763,14 @@ static const InfoOption_t * option_tab_cmd_CFF[] =
 	0
 };
 
+static const InfoOption_t * option_tab_cmd_TYPES[] =
+{
+	OptionInfo + OPT_NO_HEADER,
+	&option_cmd_TYPES_BRIEF,
+
+	0
+};
+
 static const InfoOption_t * option_tab_cmd_FLAGS[] =
 {
 	OptionInfo + OPT_NO_HEADER,
@@ -1952,6 +2035,44 @@ static const InfoOption_t * option_tab_cmd_CHECK[] =
 	0
 };
 
+static const InfoOption_t * option_tab_cmd_SHA1[] =
+{
+	OptionInfo + OPT_IGNORE,
+	OptionInfo + OPT_ID,
+	OptionInfo + OPT_BASE64,
+	OptionInfo + OPT_DB64,
+	OptionInfo + OPT_CODING,
+	&option_cmd_SHA1_BRIEF,
+
+	OptionInfo + OPT_NONE, // separator
+
+	OptionInfo + OPT_CONST,
+	OptionInfo + OPT_SCALE,
+	OptionInfo + OPT_SHIFT,
+	OptionInfo + OPT_XSS,
+	OptionInfo + OPT_YSS,
+	OptionInfo + OPT_ZSS,
+	OptionInfo + OPT_ROT,
+	OptionInfo + OPT_XROT,
+	OptionInfo + OPT_YROT,
+	OptionInfo + OPT_ZROT,
+	OptionInfo + OPT_TRANSLATE,
+	OptionInfo + OPT_NULL,
+	OptionInfo + OPT_NEXT,
+	OptionInfo + OPT_ASCALE,
+	OptionInfo + OPT_AROT,
+	OptionInfo + OPT_TFORM_SCRIPT,
+	OptionInfo + OPT_KCL,
+	OptionInfo + OPT_KCL_FLAG,
+	OptionInfo + OPT_KCL_SCRIPT,
+	OptionInfo + OPT_TRI_AREA,
+	OptionInfo + OPT_TRI_HEIGHT,
+	OptionInfo + OPT_FLAG_FILE,
+	OptionInfo + OPT_SLOT,
+
+	0
+};
+
 static const InfoOption_t * option_tab_cmd_ANALYZE[] =
 {
 	OptionInfo + OPT_IGNORE,
@@ -2010,7 +2131,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms KCL Tool : Analyze, modify, export and create KCL and OBJ"
 	" files.",
 	0,
-	26,
+	27,
 	option_tab_tool,
 	0
     },
@@ -2358,6 +2479,26 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	option_allowed_cmd_CFF
     },
 
+    {	CMD_TYPES,
+	true,
+	false,
+	false,
+	"TYPES",
+	0,
+	"wkclt TYPES arg...",
+	"Print a line with KCL flag details for each argument. ARG is a comma"
+	" or space separated list of a optional BASEVAL and a list of TERMS."
+	" BASEVAL can be any hexa-decimal number. The format of TERMS is"
+	" X[=]VALUE. So a TERM begin with letter T (Type), V (Value) or a"
+	" group identifier (W, X,Y or Z), followed by an optional equal sign"
+	" and finished by a decimal number. It overrides the related part of"
+	" BASEVAL.",
+	0,
+	2,
+	option_tab_cmd_TYPES,
+	option_allowed_cmd_TYPES
+    },
+
     {	CMD_FLAGS,
 	false,
 	false,
@@ -2489,6 +2630,21 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	8,
 	option_tab_cmd_CHECK,
 	option_allowed_cmd_CHECK
+    },
+
+    {	CMD_SHA1,
+	false,
+	false,
+	false,
+	"SHA1",
+	0,
+	"wszst SHA1 [source]...",
+	"Print a SHA1 checksum of the KCL for each source. The checksum is"
+	" calculated after patching.",
+	0,
+	29,
+	option_tab_cmd_SHA1,
+	option_allowed_cmd_SHA1
     },
 
     {	CMD_ANALYZE,

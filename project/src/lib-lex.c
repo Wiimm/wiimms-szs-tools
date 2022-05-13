@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -135,6 +135,7 @@ static const feature_var_t szs_feature_list[] =
 
 static const feature_var_t kmp_feature_list[] =
 {
+    DEF_VAR( 0,HAVEKMP_GOOMBA_SIZE,	kmp_goomba_size,	"KMP: Goomba with scale != 1.00" ),
     DEF_VAR( 0,HAVEKMP_WOODBOX_HT,	kmp_woodbox_ht,		"KMP: Woodbox with fall height" ),
     DEF_VAR( 0,HAVEKMP_MUSHROOM_CAR,	kmp_mushroom_car,	"KMP: penguin_m as mushroom car" ),
     DEF_VAR( 0,HAVEKMP_PENGUIN_POS,	kmp_penguin_pos,	"KMP: Alternative start of penguin_m" ),
@@ -160,10 +161,10 @@ static const feature_var_t lex_section_list[] =
     DEF_VAR( 0,HAVELEXS_SET1,		lex_sect_set1,	"LEX section SET1" ),
     DEF_VAR( 0,HAVELEXS_CANN,		lex_sect_cann,	"LEX section CANN" ),
     DEF_VAR( 0,HAVELEXS_HIPT,		lex_sect_hipt,	"LEX section HIPT" ),
-    // move HAVELEXS_TEST to here
 
     {0,0,0,0,0}
 };
+
 //-----------------------------------------------------------------------------
 
 static const feature_var_t lex_feature_list[] =
@@ -172,7 +173,7 @@ static const feature_var_t lex_feature_list[] =
     DEF_VAR( 0,HAVELEXF_ITEM_RANGE,	lex_item_range,	"LEX: Expand the range of item positions" ),
     DEF_VAR( 0,HAVELEXF_CANNON,		lex_cannon,	"LEX: Alternative cannon settings" ),
     DEF_VAR( 0,HAVELEXF_HIDE_POS,	lex_hide_pos,	"LEX: Hide position tracker conditionally" ),
-    // move HAVELEXF_TEST_ACTIVE to here
+    DEF_VAR( 0,HAVELEXF_START_ITEM,	lex_start_item,	"LEX: Player can get item before start of race." ),
     {0,0,0,0,0}
 };
 
@@ -194,6 +195,7 @@ typedef struct feature_list_t
     const feature_var_t	*var;		// var list
     uint		var_type;	// one of enum feature_list_var_type
     uint		offset;		// offset in analyse_szs_t
+    uint		max_value;	// maximum possible value
     ccp			ref_prefix;	// prefix for references
     ccp			heading1;	// heading1
     ccp			heading2;	// heading2
@@ -207,6 +209,7 @@ static const feature_list_t feature_lists[] =
     { szs_feature_list,
 		FVT_BYTE_ARRAY,
 		offsetof(szs_have_t,szs),
+		FZV_MAYBE_IMPACT,
 		"SZS file",
 		"Additional sub-files found in SZS file",
 		"0:no file, 1:unmodified file, 2:modified file" },
@@ -214,32 +217,35 @@ static const feature_list_t feature_lists[] =
     { kmp_feature_list,
 		FVT_BOOL_ARRAY,
 		offsetof(szs_have_t,kmp),
+		FZV_IMPACT,
 		"KMP feature",
 		"Special features found in KMP (sub-file course.kmp)",
-		0 },
+		"0:not found, 1:found without impact, 3:found with impact" },
 
     { lex_section_list,
 		FVT_UINT_BITS,
 		offsetof(szs_have_t,lex_sect),
+		FZV_MAYBE_IMPACT,
 		"LEX section",
 		"Sections found in LEX (sub-file course.lex)",
-		0 },
+		"0:section not found, 1:section found, 2:found and relevant" },
 
     { lex_feature_list,
 		FVT_UINT_BITS,
 		offsetof(szs_have_t,lex_feat),
+		FZV_IMPACT,
 		"LEX feature",
 		"Special features found in LEX (sub-file course.lex)",
-		0 },
+		"0:not found, 1:found without impact, 3:found with impact" },
 
-    {0,0,0,0,0}
+    {0,0,0,0,0,0}
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 void InitializeFeaturesSZS ( features_szs_t * fs )
-{   
+{
     DASSERT(fs);
     memset(fs,0,sizeof(*fs));
     fs->size_be = htons(sizeof(*fs));
@@ -323,8 +329,8 @@ void SetupFeaturesSZS ( features_szs_t *fs, const szs_have_t *have, bool is_lex 
 		for ( var = list->var; var->offset; var++ )
 		    ((u8*)fs)[var->offset]
 				= is_lex && var->no_lex
-				? 1
-				: src[var->index] > 0;
+				? list->max_value
+				: src[var->index] > 0 ? list->max_value : 0;
 	    }
 	    break;
 
@@ -334,7 +340,7 @@ void SetupFeaturesSZS ( features_szs_t *fs, const szs_have_t *have, bool is_lex 
 		for ( var = list->var; var->offset; var++ )
 		    ((u8*)fs)[var->offset]
 				= is_lex && var->no_lex
-				? 1
+				? list->max_value
 				: src[var->index];
 	    }
 	    break;
@@ -345,8 +351,8 @@ void SetupFeaturesSZS ( features_szs_t *fs, const szs_have_t *have, bool is_lex 
 		for ( var = list->var; var->offset; var++ )
 		    ((u8*)fs)[var->offset]
 				= is_lex && var->no_lex
-				? 1
-				: ( val & 1 << var->index ) != 0;
+				? list->max_value
+				: ( val & 1 << var->index ) != 0 ? list->max_value : 0;
 	    }
 	    break;
 
@@ -354,6 +360,10 @@ void SetupFeaturesSZS ( features_szs_t *fs, const szs_have_t *have, bool is_lex 
 	    ASSERT(0);
 	}
     }
+
+    //-------------------------------------------------------------------------
+
+    NormalizeFeatures(fs);
 
     // ??? [[2do]]
 }
@@ -407,15 +417,33 @@ void PrintFeaturesSZS
 (
     PrintScript_t	*ps,		// valid output definition
     const features_szs_t *fs,		// valid source
-    bool		is_lex,		// TRUE: Create output for a LEX file 
+    bool		is_lex,		// TRUE: Create output for a LEX file
     int			comments,	// >0: add extended comments
     int			print_modes,	// >0: append ",MODES"
-    u8			include,	// print only if all bits match 
+    u8			include,	// print only if all bits match
     u8			exclude		// exclude if any bit match
 )
 {
     DASSERT(ps);
     DASSERT(fs);
+
+    PrintScriptVars(ps,0,
+	"\n"
+	"# The base value (lower bits) of each feature is one of:\n"
+	"#   %u: file or feature not found.\n"
+	"#   %u: file or feature found, but no impact.\n"
+	"#   %u: file or feature found, maybe some settings with impact.\n"
+	"#   %u: feature found with impact to game play.\n",
+	FZV_UNDEF, FZV_NO_IMPACT, FZV_MAYBE_IMPACT, FZV_IMPACT );
+
+    if ( comments >= 1 )
+	PrintScriptVars(ps,0,
+		"#\n"
+		"# If value is %u, then some additional bits may be set:\n"
+		"#   0x%02x: Impact to game play of time-trial.\n"
+		"#   0x%02x: Impact to game play of offline (local) races and battles.\n"
+		"#   0x%02x: Impact to game play of online races and battles.\n",
+		FZV_IMPACT, FZM_TIMETRIAL, FZM_OFFLINE, FZM_ONLINE );
 
     if ( ps->fform == PSFF_UNKNOWN && comments >= 0 )
 	ps->fform = PSFF_ASSIGN;
@@ -470,11 +498,18 @@ void PrintFeaturesSZS
 		    if (effect)
 			PrintScriptVars(ps,0,"# %s\n",effect);
 		}
-		if ( print_modes > 0 )
-		    PrintScriptVars(ps,0,"%s=\"%u,%s\"\n",
-				var->name, value, GetFeaturesMode(mode) );
+
+		char valbuf[30];
+		if ( value & FZV_M_OPTIONS && !is_lex && comments )
+		    snprintf(valbuf,sizeof(valbuf),"0x%02x",value);
 		else
-		    PrintScriptVars(ps,0,"%s=%u\n",var->name,value);
+		    snprintf(valbuf,sizeof(valbuf),"%u", value & FZV_M_VALUE );
+
+		if ( print_modes > 0 )
+		    PrintScriptVars(ps,0,"%s=\"%s,%s\"\n",
+				var->name, valbuf, GetFeaturesMode(mode) );
+		else
+		    PrintScriptVars(ps,0,"%s=%s\n",var->name,valbuf);
 	    }
 	}
     }
@@ -495,7 +530,7 @@ const features_szs_t * GetFeaturesModes()
     if (!m.size_be)
     {
 	InitializeFeaturesSZS(&m);
-	
+
 	const u8 invalid = FZM_SECTION | FZM_BATTLE | FZM_TIMETRIAL;
 	memset((u8*)&m+sizeof(m.size_be),invalid,sizeof(m)-sizeof(m.size_be));
 
@@ -512,6 +547,7 @@ const features_szs_t * GetFeaturesModes()
 	m.f_aiparam_baa		=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_OFFLINE;
 	m.f_aiparam_bas		=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_OFFLINE;
 
+	m.kmp_goomba_size	=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
 	m.kmp_woodbox_ht	=              FZM_GAMEPLAY | FZM_M_TYPE | no_timetrial;
 	m.kmp_mushroom_car	= FZM_VISUAL | FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
 	m.kmp_penguin_pos	=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
@@ -523,18 +559,20 @@ const features_szs_t * GetFeaturesModes()
 	m.kmp_eprop_speed	=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
 	m.kmp_coob_riidefii	=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
 	m.kmp_coob_khacker	=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
-	m.kmp_uncond_oob	=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
+	m.kmp_uncond_oob	=			      FZM_M_TYPE | FZM_M_WHERE;
 
-	m.lex_sect_fea0		=  FZM_SECTION;
+	// existence of a section don't have impact to gameplay => see lex attributes
+	m.lex_sect_fea0		=							  FZM_SECTION;
 	m.lex_sect_test		= FZM_VISUAL | FZM_GAMEPLAY | FZM_M_TYPE | no_timetrial | FZM_SECTION;
-	m.lex_sect_set1		=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_ONLINE   | FZM_SECTION;
-	m.lex_sect_cann		=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE  | FZM_SECTION;
-	m.lex_sect_hipt		= FZM_VISUAL                | FZM_M_TYPE | no_timetrial | FZM_SECTION;
+	m.lex_sect_set1		=	       FZM_GAMEPLAY | FZM_M_TYPE | FZM_ONLINE   | FZM_SECTION;
+	m.lex_sect_cann		=	       FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE  | FZM_SECTION;
+	m.lex_sect_hipt		= FZM_VISUAL		    | FZM_M_TYPE | no_timetrial | FZM_SECTION;
 
 	m.lex_test_active	= FZM_VISUAL | FZM_GAMEPLAY | FZM_M_TYPE | no_timetrial;
 	m.lex_item_range	=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_ONLINE;
 	m.lex_cannon		=              FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE;
 	m.lex_hide_pos		= FZM_VISUAL                | FZM_M_TYPE | no_timetrial;
+	m.lex_start_item	=	       FZM_GAMEPLAY | FZM_M_TYPE | FZM_ONLINE;
 
      #if CHECK_FEATURES
 	uint err_count = 0;
@@ -581,10 +619,10 @@ ccp GetFeaturesEffects ( features_szs_mode_t mode )
     {
 	{ 0,FZM_SECTION,		"section" },
 
-	{ 1,FZM_M_KIND,			"no effects" },
-	{ 0,FZM_M_KIND,			"visual and gameplay effects" },
-	{ 0,FZM_VISUAL,			"visual effects only" },
-	{ 0,FZM_GAMEPLAY,		"gameplay effects" },
+	{ 1,FZM_M_KIND,			"no impact" },
+	{ 0,FZM_M_KIND,			"visual and gameplay impact" },
+	{ 0,FZM_VISUAL,			"visual impact only" },
+	{ 0,FZM_GAMEPLAY,		"gameplay impact" },
 
 	{ 0,FZM_M_TYPE,			0 },
 	{ 0,FZM_BATTLE,			"battle only" },
@@ -629,6 +667,31 @@ ccp GetFeaturesEffectsByOffset ( uint offset )
 
     const features_szs_t *fs = GetFeaturesModes();
     return GetFeaturesEffects(((u8*)fs)[offset]);
+}
+
+//-----------------------------------------------------------------------------
+
+void NormalizeFeatures ( features_szs_t *fs )
+{
+    if (fs)
+    {
+	const features_szs_t *mode = GetFeaturesModes();
+	for ( int idx = 2; idx < sizeof(features_szs_t); idx++ )
+	{
+	    const u8 md = ((u8*)mode)[idx];
+
+	    u8 *ptr = ((u8*)fs) + idx;
+	    u8 val = *ptr & FZV_M_VALUE;
+	    if ( val >= FZV_IMPACT )
+	    {
+		if ( md & FZM_GAMEPLAY )
+		    val = FZV_IMPACT | md & FZV_M_OPTIONS;
+		else
+		    val = FZV_NO_IMPACT;
+	    }
+	    *ptr = val;
+	}
+    }
 }
 
 //
@@ -745,6 +808,8 @@ static void FixLEXElement_SET1 ( lex_set1_t *set1 )
 	if ( !isnormal(f) || f < 1.0 )
 	    write_bef4(set1->item_factor.v+i,1.0);
     }
+
+    set1->start_item = set1->start_item > 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -1105,6 +1170,10 @@ static uint GetLexFeaturesSET1 ( const lex_element_t *elem )
 	    have_feat |= 1 << HAVELEXF_ITEM_RANGE;
 	}
     }
+
+    if ( size > offsetof(lex_set1_t,start_item) && set1->start_item )
+	have_feat |= 1 << HAVELEXF_START_ITEM;
+
     return have_feat;
 }
 
@@ -1156,6 +1225,7 @@ const have_lex_info_t have_lex_feat_info[HAVELEXF__N] =
     { HAVELEXF_ITEM_RANGE,	"itempos",	0 },
     { HAVELEXF_CANNON,		"cannon",	0 },
     { HAVELEXF_HIDE_POS,	"hipt",		0 },
+    { HAVELEXF_START_ITEM,	"startitem",	0 },
     //--- add new sections here (order is important)
 };
 
@@ -1665,16 +1735,22 @@ static enumError ScanLEXElement_SET1
 
     //--- setup data
 
-    lex_set1_t set1;
-    memset(&set1,0,sizeof(set1));
+    lex_set1_t set1 = { .item_factor.v = {1,1,1} };
+    //HexDump16(stdout,0,0,&set1,sizeof(set1));
 
     const ScanParam_t ptab[] =
     {
 	{ "ITEM-POS-FACTOR",	SPM_FLOAT3_BE,	&set1.item_factor },
-	{ "TEST1",		SPM_U8,		set1.test+0 },
-	{ "TEST2",		SPM_U8,		set1.test+1 },
-	{ "TEST3",		SPM_U8,		set1.test+2 },
-	{ "TEST4",		SPM_U8,		set1.test+3 },
+	{ "START-ITEM",		SPM_U8,		&set1.start_item },
+
+	// renamed at 2021-05-12
+	{ "TEST1",		SPM_U8,		&set1.start_item },	// [[obsolete]] 2022
+	{ "TEST2",		SPM_U8,		&set1.test_0d },	// [[obsolete]] 2022
+	{ "TEST_0D",		SPM_U8,		&set1.test_0d },
+	{ "TEST3",		SPM_U8,		&set1.test_0e },	// [[obsolete]] 2022
+	{ "TEST_0E",		SPM_U8,		&set1.test_0e },
+	{ "TEST4",		SPM_U8,		&set1.test_0f },	// [[obsolete]] 2022
+	{ "TEST_0F",		SPM_U8,		&set1.test_0f },
 	{0}
     };
 
@@ -2257,13 +2333,15 @@ static enumError SaveTextLEX_SET1
 		,bef4(&set1->item_factor.x)
 		,bef4(&set1->item_factor.y)
 		,bef4(&set1->item_factor.z)
+		,set1->start_item
 		);
 
-    if (*(u32*)set1->test)
+    if ( set1->test_0d || set1->test_0e || set1->test_0f )
 	fprintf(f,text_lex_elem_set1_develop_cr
-		,set1->test[0],set1->test[1],set1->test[2],set1->test[3]
+		,set1->test_0d
+		,set1->test_0e
+		,set1->test_0f
 		);
-
     if ( size > sizeof(lex_set1_t) )
     {
 	fputs("\n# Hex dump for unknown settings:\n",f);

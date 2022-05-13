@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -54,6 +54,20 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			helpers				///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+uint NormalizeMusicID ( uint music_id )
+{
+    if ( music_id < MKW_N_TRACKS )
+	music_id = track_info[music_id].music_id;
+    else if ( music_id < MKW_N_TRACKS + MKW_N_ARENAS )
+	music_id = arena_info[music_id-MKW_N_TRACKS].music_id;
+
+    if ( MusicID2TrackId(music_id,music_id,-1) == -1 )
+	music_id = track_info[0].music_id;
+    return music_id;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 int MusicID2TrackId ( uint music_id, int no_track, int not_found )
@@ -362,8 +376,26 @@ ccp PrintMusicID ( uint mid, bool force_hex )
 
 ccp PrintPropertyID ( uint tid, bool force_hex )
 {
-    if ( tid < MKW_N_TRACKS && !force_hex )
-	return track_info[tid].abbrev;
+    if (!force_hex)
+    {
+	if (IsMkwTrack(tid))
+	    return track_info[tid].abbrev;
+	if (IsMkwArena(tid))
+	    return arena_info[tid-MKW_ARENA_BEG].abbrev;
+    }
+
+    const int bufsize = 8;
+    char *buf = GetCircBuf(bufsize);
+    snprintf(buf,bufsize,"0x%02x",tid);
+    return buf;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintArenaSlot ( uint tid, bool force_hex )
+{
+    if ( !force_hex && IsMkwArena(tid) )
+	return PrintCircBuf("A%u",arena_info[tid-MKW_ARENA_BEG].def_slot);
 
     const int bufsize = 8;
     char *buf = GetCircBuf(bufsize);
@@ -1948,7 +1980,101 @@ static enumError ScanRTL_Track
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static enumError ScanRacingTrackList ( ctcode_t *ctcode, ScanInfo_t * si )
+enumError ScanSetupArena ( ctcode_arena_t *ca, ScanInfo_t * si )
+{
+    DASSERT(ca);
+    DASSERT(si);
+
+    enumError max_err = ERR_OK;
+    for(;;)
+    {
+	char ch = NextCharSI(si,true);
+	if ( !ch || ch == '[' )
+	    break;
+
+	ScanFile_t *sf = si->cur_file;
+	DASSERT(sf);
+	ccp ptr0 = sf->ptr;
+
+	uint slot;
+	enumError err = ScanUIntValueSI(si,&slot);
+	if (err)
+	    return err;
+
+	if ( slot < MKW_ARENA_BEG || slot >= MKW_ARENA_END )
+	{
+	    ccp eol = FindNextLineFeedSI(si,true);
+	    if ( si->no_warn <= 0 )
+	    {
+		ERROR0(ERR_WARNING,
+			"Invalid arena slot #%d [%s @%u]: %.*s\n",
+			slot, sf->name, sf->line, (int)(eol - ptr0), ptr0 );
+	    }
+	    sf->ptr = eol;
+	    continue;
+	}
+
+
+	//--- property id
+
+	if ( NextCharSI(si,false) == ';' )
+	    sf->ptr++;
+
+	ptr0 = sf->ptr;
+	int property_id;
+	err = ScanIntValueSI(si,&property_id);
+	if (err)
+	    return err;
+
+	if ( property_id > 0 && ( property_id < MKW_ARENA_BEG || property_id >= MKW_ARENA_END ))
+	{
+	    ccp eol = FindNextLineFeedSI(si,true);
+	    if ( si->no_warn <= 0 )
+	    {
+		ERROR0(ERR_WARNING,
+			"Invalid arena slot #%d [%s @%u]: %.*s\n",
+			property_id, sf->name, sf->line, (int)(eol - ptr0), ptr0 );
+	    }
+	    sf->ptr = eol;
+	    continue;
+	}
+
+
+	//--- music id
+
+	if ( NextCharSI(si,false) == ';' )
+	    sf->ptr++;
+
+	int music_id = -1;
+	if (NextCharSI(si,false))
+	{
+	    err = ScanIntValueSI(si,&music_id);
+	    if (err)
+		return err;
+	}
+
+
+	//--- store data id
+
+	slot -= MKW_ARENA_BEG;
+	if ( property_id >= 0 )
+	    ca->prop[slot] = property_id;
+	if ( music_id >= 0 )
+	    ca->music[slot] = NormalizeMusicID(music_id);
+
+	CheckEolSI(si);
+	if ( max_err < err )
+	     max_err = err;
+    }
+
+    //HexDump16(stdout,0,0,ca->prop,sizeof(ca->prop));
+    //HexDump16(stdout,0,0,ca->music,sizeof(ca->music));
+    return max_err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError ScanTrackList ( ctcode_t *ctcode, ScanInfo_t * si )
 {
     DASSERT(ctcode);
     DASSERT(si);
@@ -2015,6 +2141,12 @@ static enumError ScanRacingTrackList ( ctcode_t *ctcode, ScanInfo_t * si )
 		err = ScanRTL_Track(ctcode,si,true,false);
 		break;
 
+	    case 'b':
+	    case 'B':
+		sf->ptr++;
+		err = ScanRTL_Track(ctcode,si,true,true);
+		break;
+
 	    default:
 		{
 		    ccp eol = FindNextLineFeedSI(si,true);
@@ -2035,11 +2167,99 @@ static enumError ScanRacingTrackList ( ctcode_t *ctcode, ScanInfo_t * si )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			ScanTextArena()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanTextArena
+(
+    ctcode_arena_t	*ca,		// valid data structure
+    ccp			fname,		// NULL or file name for error messages
+    const void		*data,		// data to scan
+    uint		data_size	// size of 'data'
+)
+{
+    DASSERT(ca);
+
+    const uint CTCODE_VERSION = 1;
+
+    //--- setup parser
+
+    enum { SECT_SETUP_ARENA, N_SECT };
+    const KeywordTab_t sect_names[] =
+    {
+	    { SECT_SETUP_ARENA,		"SETUP-ARENA",		0, 0 },
+	    { 0,0,0,0 }
+    };
+
+    ScanInfo_t si;
+    InitializeSI(&si,data,data_size,fname,CTCODE_VERSION);
+    si.predef = SetupVarsCTCODE();
+
+
+    //--- main loop
+
+    enumError max_err = ERR_OK;
+
+    for(;;)
+    {
+	char ch = NextCharSI(&si,true);
+	if (!ch)
+	    break;
+
+	if ( ch != '[' )
+	{
+	    NextLineSI(&si,true,false);
+	    continue;
+	}
+	ResetLocalVarsSI(&si,CTCODE_VERSION);
+
+	si.cur_file->ptr++;
+	char name[20];
+	ScanNameSI(&si,name,sizeof(name),true,true,0);
+
+	int abbrev_count;
+	const KeywordTab_t *cmd = ScanKeyword(&abbrev_count,name,sect_names);
+	if ( !cmd || abbrev_count )
+	    continue;
+	NextLineSI(&si,false,false);
+	PRINT("--> %-6s #%-4u |%.3s|\n",cmd->name1,si.cur_file->line,si.cur_file->ptr);
+
+	if ( cmd->id < 0 || cmd->id > N_SECT )
+	    continue;
+
+	enumError err = ERR_OK;
+	switch (cmd->id)
+	{
+	    case SECT_SETUP_ARENA:
+		PRINT("SCAN [SETUP-ARENA]\n");
+		err = ScanSetupArena(ca,&si);
+		break;
+
+	    default:
+		// ignore all other section without any warnings
+		break;
+	}
+
+	if ( max_err < err )
+	     max_err = err;
+    }
+
+    CheckLevelSI(&si);
+    if ( max_err < ERR_WARNING && si.total_err )
+	max_err = ERR_WARNING;
+    PRINT("ERR(ScanTextCTCODE) = %u (errcount=%u)\n", max_err, si.total_err );
+    ResetSI(&si);
+
+    return max_err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			ScanTextCTCODE()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 static enumError ScanSetup ( ctcode_t *ctcode, ScanInfo_t * si );
-static enumError ScanRacingTrackList ( ctcode_t *ctcode, ScanInfo_t * si );
+static enumError ScanTrackList ( ctcode_t *ctcode, ScanInfo_t * si );
 
 //-----------------------------------------------------------------------------
 
@@ -2072,11 +2292,14 @@ enumError ScanTextCTCODE
 
     //--- setup parser
 
-    enum { SECT_SETUP, SECT_RACING_TRACK_LIST, N_SECT };
+    enum { SECT_SETUP, SECT_SETUP_ARENA,
+		SECT_TRACK_LIST, SECT_RACING_TRACK_LIST, N_SECT };
     const KeywordTab_t sect_names[] =
     {
 	    { SECT_SETUP,		"SETUP",		0, 0 },
-	    { SECT_RACING_TRACK_LIST,	"RACING-TRACK-LIST",	0, 0 },
+	    { SECT_SETUP_ARENA,		"SETUP-ARENA",		0, 0 },
+	    { SECT_TRACK_LIST,		"TRACK-LIST",		0, 0 },
+	    { SECT_RACING_TRACK_LIST,	"RACING-TRACK-LIST",	0, 0 }, // [[deprecated]] 2021-08
 	    { 0,0,0,0 }
     };
 
@@ -2124,9 +2347,19 @@ enumError ScanTextCTCODE
 		err = ScanSetup(ctcode,&si);
 		break;
 
+	    case SECT_SETUP_ARENA:
+		PRINT("SCAN [SETUP-ARENA]\n");
+		err = ScanSetupArena(&ctcode->arena,&si);
+		break;
+
+	    case SECT_TRACK_LIST:
+		PRINT("SCAN [TRACK-LIST]\n");
+		err = ScanTrackList(ctcode,&si);
+		break;
+
 	    case SECT_RACING_TRACK_LIST:
 		PRINT("SCAN [RACING-TRACK-LIST]\n");
-		err = ScanRacingTrackList(ctcode,&si);
+		err = ScanTrackList(ctcode,&si);
 		break;
 
 	    default:
@@ -2661,6 +2894,15 @@ enumError ScanLEBinCTCODE
     }
 
 
+    //--- copy arena properties
+
+    for ( int a = 0; a < MKW_N_ARENAS; a++ )
+    {
+	ctcode->arena.prop[a]  = ana.property[a+MKW_ARENA_BEG];
+	ctcode->arena.music[a] = ana.music[a+MKW_ARENA_BEG];
+    }
+
+
     //--- copy lecode parameter
 
     if (!ctcode->lpar)
@@ -2962,10 +3204,35 @@ enumError SaveTextCTCODE
 		ctcode->n_unused_cups );
 
 
+    //--- print arena setup
+
+    if (omode.lecode)
+    {
+	fputs(section_sep,F.f);
+	fputs(text_ctcode_setup_arena_cr,F.f);
+
+	for ( int i = 0; i < MKW_N_ARENAS; i++ )
+	{
+	    if ( i == MKW_N_ARENAS/2 )
+		fputs("\r\n",F.f);
+
+	    const int a		= arena_pos[i];
+	    const TrackInfo_t *ai = arena_info+a;
+	    const int prop	= ctcode->arena.prop[a]  ? ctcode->arena.prop[a]  : ai->track_id;
+	    const int music	= ctcode->arena.music[a] ? ctcode->arena.music[a] : ai->music_id;
+	    fprintf(F.f, "%s %s %s\r\n",
+			PrintArenaSlot(ai->track_id,false),
+			PrintArenaSlot(prop,false),
+			music == ai->music_id ? "" : PrintMusicID(music,false) );
+	}
+    }
+
+
     //--- print track list
 
     if ( omode.mode & 1 && ctcode->used_tracks )
     {
+// [[2do]] [TRACK-LIST]
 	fprintf(F.f,"%s[RACING-TRACK-LIST]\r\n%s",
 			section_sep,
 			omode.syntax

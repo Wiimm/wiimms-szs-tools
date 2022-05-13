@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -153,6 +153,12 @@ enum
 ccp LibGetErrorName ( int stat, ccp ret_not_found );
 ccp LibGetErrorText ( int stat, ccp ret_not_found );
 
+void SetupPager();
+static inline void ClosePager() { CloseStdoutToPager(); }
+
+struct InfoUI_t;
+void PrintHelpColor ( const struct InfoUI_t * iu );
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			compatibility			///////////////
@@ -190,6 +196,53 @@ extern const compatible_info_t compatible_info[COMPAT__N];
 const compatible_info_t * ScanCompatible ( ccp arg );
 int ScanOptCompatible ( ccp arg );
 char * PrintOptCompatible(); // circ-buf
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			 warn_mode_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[warn_mode_t]]
+
+typedef enum warn_mode_t
+{
+    //--- general mode
+
+    WARN_INVALID_OFFSET		= 0x0000001,
+
+
+    //--- hidden options
+
+    WARN_LOG		= 1<<28,	// enable kcl trace log to stdout
+     WARN_M_HIDDEN	 = WARN_LOG,
+
+    WARN_F_HIDE	= 1<<29,	// help flag to hide modes in PrintWarnMode()
+
+
+    //--- test mode
+
+    WARN_TEST		= 1<<30,	// reserved for testing
+
+
+    //--- summaries
+
+    WARN_M_DEFAULT	= WARN_INVALID_OFFSET	// default settings
+			| 0,
+
+    WARN_M_ALL		= WARN_INVALID_OFFSET	// all relevant bits
+			| 0,
+
+    WARN_M_PRINT	= WARN_M_ALL		// all relevant bits for obj output
+			& ~WARN_M_HIDDEN,
+}
+warn_mode_t;
+
+//-----------------------------------------------------------------------------
+
+extern warn_mode_t WARN_MODE;
+
+int  ScanOptWarn ( ccp arg );
+uint PrintWarnMode( char *buf, uint bufsize, warn_mode_t mode );
+ccp  GetWarnMode();
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1131,6 +1184,7 @@ typedef enum SortMode_t
 
     SORT_INAME,		// sort with strcasecmp()
     SORT_OFFSET,	// sort by offset and size
+    SORT_SIZE,		// sort by size (and offset)
 
     SORT_U8,		// sort like Nintendo sort U8 archives
     SORT_PACK,		// sort like Nintendo sort U8 archives (inexact)
@@ -1159,6 +1213,7 @@ int ScanOptSort ( ccp arg );
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			slot mode			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[SlotMode_t]]
 
 typedef enum SlotMode_t
 {
@@ -1169,13 +1224,13 @@ typedef enum SlotMode_t
 
     //--- jobs
 
-    SLOTMD_RM_ICE	= 0x0001,   // rm ice.brres from SZS and KMP
-    SLOTMD_RM_SUNDS	= 0x0002,   // rm 'sunDS' and 'pylon01' from SZS and KMP
-    SLOTMD_RM_SHYGUY	= 0x0004,   // rm 'HeyhoShipGBA'+'HeyhoBallGBA' from SZS and KMP
+    SLOTMD_RM_ICE	= 0x0001,   // remove ice.brres from SZS+KMP
+    SLOTMD_RM_SUNDS	= 0x0002,   // remove 'sunDS' and 'pylon01' from SZS+KMP
+    SLOTMD_RM_SHYGUY	= 0x0004,   // remove 'HeyhoShipGBA'+'HeyhoBallGBA' from SZS+KMP
 
     SLOTMD_ADD_GICE	= 0x0010,   // add 'ice' to KMP/GOBJ
     SLOTMD_ADD_BICE	= 0x0020,   // add 'ice.brres' to SZS
-    SLOTMD_ADD_SHYGUY	= 0x0040,   // add 'HeyhoShipGBA' to SZS and KMP
+    SLOTMD_ADD_SHYGUY	= 0x0040,   // add 'HeyhoShipGBA' to SZS+KMP
 
     SLOTMD_ICE_TO_WATER	= 0x0100,   // change KCL flag 0x70 to 0x30
     SLOTMD_WATER_TO_ICE	= 0x0200,   // change KCL flag 0x30 to 0x70
@@ -1607,6 +1662,7 @@ static inline uint GetStrIdxCountMIL ( const MemItem_t * mi )
 //-----------------------------------------------------------------------------
 
 void SetSource ( ccp source );
+void SetReference ( ccp source );
 void SetDest ( ccp dest, bool mkdir );
 void CheckOptDest ( ccp default_dest, bool default_mkdir );
 
@@ -2008,6 +2064,42 @@ extern ccp autoadd_destination;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			SHA1 support			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[sha1_type_t]]
+
+typedef enum sha1_type_t
+{
+    SHA1T_KCL	= 0x01,
+    SHA1T_KMP	= 0x02,
+    SHA1T_MAP	= 0x04,
+
+    SHA1T__ALL	= 0x07
+}
+__attribute__ ((packed)) sha1_type_t;
+
+//-----------------------------------------------------------------------------
+// [[sha1_db_t]]
+
+typedef struct sha1_db_t
+{
+    u8		slot;	// 11..84, 111..125
+    sha1_type_t	type;
+    sha1_hash_t sha1;
+}
+__attribute__ ((packed)) sha1_db_t;
+
+//-----------------------------------------------------------------------------
+
+const sha1_db_t * GetSha1DbHex ( sha1_type_t type, ccp hex, ccp end );
+const sha1_db_t * GetSha1DbBin ( sha1_type_t type, cvp hash );
+u8 GetSha1Slot ( sha1_type_t type, cvp hash );
+
+void SHA1_to_ID ( sha1_id_t id, const sha1_hash_t hash );
+ccp GetSha1Data ( cvp data, uint size );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			    misc			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[IsArena_t]]
@@ -2072,8 +2164,6 @@ void AnalyzeKMP  ( const struct kmp_t * kmp, ccp base_fname );
 
 struct kcl_t;
 void AnalyzeKCL  ( const struct kcl_t * kcl );
-
-void SHA1_to_ID ( sha1_id_t id, const sha1_hash_t hash );
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2178,7 +2268,8 @@ typedef struct output_mode_t
     bool		syntax;		// true: print syntax infos
     u8			mode;		// 1:list, 2:ref, 3:full
     bool		cross_ref;	// true: print cross reference infos
-    bool		hex;		// force hex out
+    bool		hex;		// true: force hex out
+    bool		lecode;		// true: print LE-CODE specific data
 }
 output_mode_t;
 
@@ -2214,7 +2305,6 @@ extern ccp		config_path;
 extern ccp		tool_name;
 extern ccp		std_share_path;
 extern ccp		share_path;
-extern volatile int	SIGINT_level;
 extern volatile int	verbose;
 extern volatile int	logging;
 extern bool		allow_all;
@@ -2228,12 +2318,14 @@ extern int		testmode;
 extern int		force_count;
 extern uint		opt_tiny;
 extern bool		force_kmp;
+extern int		disable_checks;
 extern OffOn_t		opt_battle_mode;
 extern OffOn_t		opt_export_flags;
 extern int		opt_route_options;
 extern OffOn_t		opt_wim0;
 extern ccp		opt_source;
 extern StringField_t	source_list;
+extern ccp		opt_reference;
 extern ccp		opt_dest;
 extern bool		opt_mkdir;
 extern bool		opt_overwrite;

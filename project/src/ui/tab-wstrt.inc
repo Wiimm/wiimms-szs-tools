@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -116,10 +116,11 @@
 		" Keywords are @PAL@ (default), @USA@, @JAPAN@, @KOREA@, or any abbreviation of them."
 		" They select the region for the following addresses."
 		" The hex numbers (with or without @0x@ prefix) are interpreted as addresses."
-		" If possible, they are ported to all other regions."
+		" If an address begins with @m@ or @s@,"
+		" then it is interpreted as a file offset for @main.dol@ or @staticr.rel@."
+		" All addresses are ported to all other regions."
 		" The result is printed as colorized table."
-		"\n"
-		" This address porting is EXPERIMENTAL!" },
+		"\1 See https://szs.wiimm.de/cmd/wstrt/port for more details." },
 
   { T_DEF_CMD,	"WHERE",	"WHERE",
 		    "wstrt WHERE address...",
@@ -129,7 +130,8 @@
 		" The result is output as a human and machine readable table."
 		"\n "
 		" This command is well suited to converting addresses"
-		" into file offsets and vice versa." },
+		" into file offsets and vice versa."
+		"\1 See https://szs.wiimm.de/cmd/wstrt/where for more details." },
 
   { H_DEF_CMD,	"HTTPS",	"_HTTPS",
 		    "wstrt _HTTPS file...",
@@ -228,6 +230,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GM,	"LOGGING",	"L|logging",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GP,	"WARN",		"W|warn",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_G,	"DE",		"de",
@@ -660,7 +665,13 @@
 
   { T_OPT_C,	"NO_0X",		"0|no-0x|no0x",
 		0,
-		"Suppress 0x prefix of hex numbers." },
+		"Suppress 0x prefix of hex numbers."
+		" This is the default for cheat codes." },
+
+  { T_OPT_C,	"UPPER",		"U|upper",
+		0,
+		"Print digits A-F of hex numbers in upper case."
+		" This is the default for cheat codes." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -995,6 +1006,7 @@
   { T_COPT,	"PORT_DB",	0,0,0 },
   { T_COPT,	"ORDER",	0,0,0 },
   { T_COPT,	"NO_0X",	0,0,0 },
+  { T_COPT,	"UPPER",	0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,
 		"Suppress the table header and footer and output exactly 1 line for"
 		" each specified address. This makes the output more machine-readable." },
@@ -1008,6 +1020,7 @@
   { T_CMD_BEG,	"WHERE",	0,0,0 },
   { T_COPT,	"ORDER",	0,0,0 },
   { T_COPT,	"NO_0X",	0,0,0 },
+  { T_COPT,	"UPPER",	0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,
 		"Suppress the table header and footer and output exactly 1 line for"
 		" each specified address. This makes the output more machine-readable." },

@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -41,6 +41,7 @@
 #include <sys/stat.h>
 
 #include "lib-szs.h"
+#include "lib-kcl.h"
 #include "lib-rarc.h"
 #include "lib-pack.h"
 #include "lib-rkc.h"
@@ -55,7 +56,8 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			have_szs_file			///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// order is important, compare enum have_szs_file_t and ct.wiimm.de
+// order is important,
+// compare have_szs_name[], have_szs_file[], have_szs_fform[] and ct.wiimm.de
 
 const ccp have_szs_name[HAVESZS__N] =
 {
@@ -98,6 +100,41 @@ const file_format_t have_szs_fform[HAVESZS__N] =
     FF_UNKNOWN,		// HAVESZS_AIPARAM_BAA
     FF_UNKNOWN,		// HAVESZS_AIPARAM_BAS
 };
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			have_attrib			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const ccp have_attrib_name[HAVEATT__N] =
+{
+    "cheat",		// HAVEATT_CHEAT
+    "edit",		// HAVEATT_EDIT
+    "reverse",		// HAVEATT_REVERSE
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp CreateSpecialInfoAttrib
+	( have_attrib_t attrib, bool add_value, ccp return_if_empty )
+{
+    static char buf[500];
+    char *dest = buf;
+
+    if (add_value)
+	dest = snprintfE( dest, buf+sizeof(buf), "%u=" , attrib );
+
+    uint i, mask;
+    ccp sep = "";
+    for ( i = 0, mask = 1; i < HAVEATT__N; i++, mask <<= 1 )
+	if ( attrib & mask )
+	{
+	    dest = StringCat2E(dest,buf+sizeof(buf),sep,have_attrib_name[i]);
+	    sep = ",";
+	}
+
+    return dest == buf ? return_if_empty : CopyCircBuf0(buf,dest-buf);
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -3192,7 +3229,7 @@ static int iterate_sort_files
     {
 	if ( it->off > it->szs->size || it->off + it->size > it->szs->size )
 	{
-	    if ( it->size != M1(it->size) )
+	    if ( it->size != M1(it->size) && WARN_MODE & WARN_INVALID_OFFSET && verbose >= -2 )
 		ERROR0(ERR_WARNING,
 		    "Invalid offset [%x..%x, size=%zx] for subfile.\n"
 		    "=> File ignored: %s%s%s\n",
@@ -3270,12 +3307,13 @@ static int iterate_sub_files
     {
 	if ( it->off > it->szs->size || it->off + it->size > it->szs->size )
 	{
-	    ERROR0(ERR_WARNING,
-		"Invalid offset [%x..%x, size=%zx] for subfile.\n"
-		"=> File ignored: %s%s%s\n",
-		it->off, it->off+it->size, it->szs->size,
-		it->szs->fname, *it->szs->fname ? "/" : "",
-		it->path );
+	    if ( WARN_MODE & WARN_INVALID_OFFSET && verbose >= -2 )
+		ERROR0(ERR_WARNING,
+			"Invalid offset [%x..%x, size=%zx] for subfile.\n"
+			"=> File ignored: %s%s%s\n",
+			it->off, it->off+it->size, it->szs->size,
+			it->szs->fname, *it->szs->fname ? "/" : "",
+			it->path );
 	    return 0;
 	}
 
@@ -3335,16 +3373,17 @@ static int iterate_sub_files
     return it->func_sub(it,term);
 }
 
+
 ///////////////////////////////////////////////////////////////////////////////
 // [[IterateFilesSZS]]
 
 int IterateFilesSZS
 (
-    szs_file_t		* szs,		// valid szs
+    szs_file_t		*szs,		// valid szs
     szs_iterator_func	func,		// call back function
-    void		* param,	// user defined parameter
+    void		*param,		// user defined parameter
     const iterator_param_t
-			*p_itpar,		// NULL or iteration parameters
+			*p_itpar,	// NULL or iteration parameters
     int			recurse		// 0:off, <0:unlimited, >0:max depth
 )
 {
@@ -3404,9 +3443,9 @@ int IterateFilesSZS
 
 int IterateFilesParSZS
 (
-    szs_file_t		* szs,		// valid szs
+    szs_file_t		*szs,		// valid szs
     szs_iterator_func	func,		// call back function
-    void		* param,	// user defined parameter
+    void		*param,		// user defined parameter
     bool		clean_path,	// true: clean path from ../ and more
     bool		show_root_node,	// true: include root node in iteration
     int			recurse,	// 0:off, <0:unlimited, >0:max depth
@@ -3622,6 +3661,90 @@ int IterateFilesData
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////		      FindFileSZS()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+struct find_subfile_t
+{
+    ccp path;
+    int status;
+    szs_iterator_t result;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+int find_subfile_iter
+(
+    struct szs_iterator_t	*it,	// iterator struct with all infos
+    bool			term	// true: termination hint
+)
+{
+    if (!term)
+    {
+	struct find_subfile_t *fsub = it->param;
+	DASSERT(fsub);
+
+	ccp path = it->path;
+	if ( path[0] == '.' && path[1] == '/' )
+	    path += 2;
+	if (!strcmp(path,fsub->path))
+	{
+	    fsub->status = 1;
+	    fsub->result = *it;
+	    return 1;
+	}
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int FindFileSZS
+(
+    // -1: error, 0: not found + result cleared, 1: found + result set
+    szs_file_t		*szs,		// valid szs
+    ccp			path,		// path to find
+    const iterator_param_t
+			*p_itpar,	// NULL or iteration parameters
+    int			recurse,	// 0:off, <0:unlimited, >0:max depth
+    szs_iterator_t	*result		// not NULL: store result here
+)
+{
+    if ( !szs || !path )
+	goto err;
+
+    while ( path[0] == '.' && path[1] == '/' )
+	path += 2;
+    if (!*path)
+	goto err;
+
+    struct find_subfile_t fsub = {0};
+    fsub.path = path;
+
+    int stat = IterateFilesSZS(szs,find_subfile_iter,&fsub,p_itpar,recurse);
+    DASSERT(szs);
+//DEL printf("FindFileSZS(%s): %d\n",path,stat);
+    if ( stat >= 0 )
+    {
+	if (result)
+	{
+	    if ( fsub.status > 0 )
+		memcpy(result,&fsub.result,sizeof(*result));
+	    else
+		memset(result,0,sizeof(*result));
+	}
+	if ( fsub.status >= 0 )
+	    return fsub.status;
+    }
+
+ err:
+    if (result)
+	memset(result,0,sizeof(*result));
+    return -1;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////		      cut files: BRSUB			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3797,10 +3920,11 @@ int CutFilesBRSUB
 	    {
 		if ( (u8*)bcut.eptr > max_eptr )
 		{
-		    ERROR0(ERR_WARNING,
-			"Invalid offset for BRSUB file => %u of %u entries ignored: %s%s%s\n",
-			bg_n_entry - cur_entry, bg_n_entry,
-			it->szs->fname, *it->szs->fname ? "/" : "", it->path );
+		    if ( WARN_MODE & WARN_INVALID_OFFSET && verbose >= -2 )
+			ERROR0(ERR_WARNING,
+				"Invalid offset for BRSUB file => %u of %u entries ignored: %s%s%s\n",
+				bg_n_entry - cur_entry, bg_n_entry,
+				it->szs->fname, *it->szs->fname ? "/" : "", it->path );
 		    break;
 		}
 		u32 data_off = bcut.endian->rd32(&bcut.eptr->data_off);
@@ -4387,6 +4511,7 @@ CmpFuncSubFile GetCmpFunc
 	    return cmp_subfile_pack;
 
 	case SORT_OFFSET:
+	case SORT_SIZE:
 	    return cmp_subfile_offset;
 
 	//case SORT_BREFF:
@@ -4474,7 +4599,7 @@ bool SortSubFilesSZS
 enumError DiffSZS
 (
     szs_file_t	* szs1,		// first szs to compare
-    szs_file_t	* szs2,		// second szs tp compare
+    szs_file_t	* szs2,		// second szs to compare
     int		recurse,	// 0:off, <0:unlimited, >0:max depth
     int		cut_files,	// <0:never, =0:auto, >0:always
     bool	quiet		// true: be quiet

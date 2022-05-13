@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -67,6 +67,7 @@ typedef enum enumOptions
 	OPT_LT_ONLINE,
 	OPT_LT_N_PLAYERS,
 	OPT_LE_DEFINE,
+	OPT_LE_ARENA,
 	OPT_LPAR,
 	OPT_ALIAS,
 	OPT_ENGINE,
@@ -99,7 +100,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 43
+	OPT__N_SPECIFIC, // == 44
 
 	//----- global options -----
 
@@ -114,6 +115,7 @@ typedef enum enumOptions
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_WARN,
 	OPT_DE,
 	OPT_COLORS,
 	OPT_NO_COLORS,
@@ -138,7 +140,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 77
+	OPT__N_TOTAL // == 79
 
 } enumOptions;
 
@@ -164,6 +166,7 @@ typedef enum enumOptions
 //	OB_LT_ONLINE		= 1llu << OPT_LT_ONLINE,
 //	OB_LT_N_PLAYERS		= 1llu << OPT_LT_N_PLAYERS,
 //	OB_LE_DEFINE		= 1llu << OPT_LE_DEFINE,
+//	OB_LE_ARENA		= 1llu << OPT_LE_ARENA,
 //	OB_LPAR			= 1llu << OPT_LPAR,
 //	OB_ALIAS		= 1llu << OPT_ALIAS,
 //	OB_ENGINE		= 1llu << OPT_ENGINE,
@@ -216,6 +219,7 @@ typedef enum enumOptions
 //				| OB_DEBUG,
 //
 //	OB_GRP_PATCH		= OB_LE_DEFINE
+//				| OB_LE_ARENA
 //				| OB_LPAR
 //				| OB_ALIAS
 //				| OB_GRP_PARAM,
@@ -379,6 +383,7 @@ typedef enum enumGetOpt
 	GO_MAX_FILE_SIZE	= 'M',
 	GO_NO_PARAM		= 'P',
 	GO_VERSION		= 'V',
+	GO_WARN			= 'W',
 	GO_EXPORT		= 'X',
 
 	GO_CONST		= 'c',
@@ -426,6 +431,7 @@ typedef enum enumGetOpt
 	GO_NEW,
 	GO_EXTRACT,
 	GO_LE_DEFINE,
+	GO_LE_ARENA,
 	GO_LPAR,
 	GO_ALIAS,
 	GO_ENGINE,

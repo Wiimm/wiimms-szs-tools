@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -306,7 +306,14 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_NO_0X, false, false, false, false, false, '0', "no-0x",
 	0,
-	"Suppress 0x prefix of hex numbers."
+	"Suppress 0x prefix of hex numbers. This is the default for cheat"
+	" codes."
+    },
+
+    {	OPT_UPPER, false, false, false, false, false, 'U', "upper",
+	0,
+	"Print digits A-F of hex numbers in upper case. This is the default"
+	" for cheat codes."
     },
 
     {	OPT_VADDR, false, false, false, false, true, 0, "vaddr",
@@ -479,7 +486,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" dependent (multiple of format size)."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 65
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 66
 
     //----- global options -----
 
@@ -540,8 +547,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_MAX_WIDTH, false, false, false, true, false, 0, "max-width",
 	"maxwidth",
 	"Define the maximum terminal width (number of columns) for help and"
-	" some other messages and disable the automatic detection of the"
-	" terminal width. This option is ignored if --width is set."
+	" some other messages. The default is 120. This option is ignored if"
+	" --width is set."
     },
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
@@ -560,6 +567,16 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
 	0,
 	"This debug option enables the logging of internal lists and maps."
+    },
+
+    {	OPT_WARN, false, false, false, false, false, 'W', "warn",
+	"list",
+	"Enable or disable warnings. Parameter 'list' is a comma separated"
+	" list of keywords. A minus sign before a keyword disables a warning."
+	" Each occurrence of the option will only change entered warning and"
+	" all other warnings are untouched.\n"
+	"  Keyword DEFAULT resets the default settings, OFF disables and ALL"
+	" enables all. The other allowed keywords are: INVALID-OFFSET."
     },
 
     {	OPT_DE, false, false, false, false, false, 0, "de",
@@ -869,7 +886,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" directory."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 116
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 118
 
 };
 
@@ -1079,7 +1096,7 @@ static const KeywordTab_t CommandTab[] =
 ///////////////            OptionShort & OptionLong             ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static const char OptionShort[] = "Vh@qvLc:lBHT:A:R:td:D:E:orupi0";
+static const char OptionShort[] = "Vh@qvLW:c:lBHT:A:R:td:D:E:orupi0U";
 
 static const struct option OptionLong[] =
 {
@@ -1097,6 +1114,7 @@ static const struct option OptionLong[] =
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
+	{ "warn",		1, 0, 'W' },
 	{ "de",			0, 0, GO_DE },
 	{ "colors",		2, 0, GO_COLORS },
 	{ "no-colors",		0, 0, GO_NO_COLORS },
@@ -1210,6 +1228,7 @@ static const struct option OptionLong[] =
 	{ "order",		1, 0, GO_ORDER },
 	{ "no-0x",		0, 0, '0' },
 	 { "no0x",		0, 0, '0' },
+	{ "upper",		0, 0, 'U' },
 	{ "vaddr",		1, 0, GO_VADDR },
 	 { "va",		1, 0, GO_VADDR },
 	{ "faddr",		1, 0, GO_FADDR },
@@ -1281,9 +1300,10 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x052 R */	OPT_REGION,
 	/* 0x053   */	 0,
 	/* 0x054 T */	OPT_TRACKS,
-	/* 0x055   */	 0,
+	/* 0x055 U */	OPT_UPPER,
 	/* 0x056 V */	OPT_VERSION,
-	/* 0x057   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 
+	/* 0x057 W */	OPT_WARN,
+	/* 0x058   */	 0,0,0,0, 0,0,0,0, 0,0,0,
 	/* 0x063 c */	OPT_CONST,
 	/* 0x064 d */	OPT_DEST,
 	/* 0x065   */	 0,0,0,
@@ -1407,172 +1427,172 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[65] = // cmd #1
+static u8 option_allowed_cmd_VERSION[66] = // cmd #1
 {
     0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_HELP[65] = // cmd #2
+static u8 option_allowed_cmd_HELP[66] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1
+    1,1,1,1,1, 1
 };
 
-static u8 option_allowed_cmd_CONFIG[65] = // cmd #3
-{
-    0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
-};
-
-static u8 option_allowed_cmd_ARGTEST[65] = // cmd #4
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1
-};
-
-static u8 option_allowed_cmd_TEST[65] = // cmd #5
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1
-};
-
-static u8 option_allowed_cmd_COLORS[65] = // cmd #6
+static u8 option_allowed_cmd_CONFIG[66] = // cmd #3
 {
     0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_ERROR[65] = // cmd #7
+static u8 option_allowed_cmd_ARGTEST[66] = // cmd #4
+{
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1
+};
+
+static u8 option_allowed_cmd_TEST[66] = // cmd #5
+{
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1
+};
+
+static u8 option_allowed_cmd_COLORS[66] = // cmd #6
+{
+    0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0
+};
+
+static u8 option_allowed_cmd_ERROR[66] = // cmd #7
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_FILETYPE[65] = // cmd #8
+static u8 option_allowed_cmd_FILETYPE[66] = // cmd #8
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[65] = // cmd #9
+static u8 option_allowed_cmd_FILEATTRIB[66] = // cmd #9
 {
     0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_RAWDUMP[65] = // cmd #10
+static u8 option_allowed_cmd_RAWDUMP[66] = // cmd #10
 {
     0,0,0,0,0, 0,1,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_DUMP[65] = // cmd #11
+static u8 option_allowed_cmd_DUMP[66] = // cmd #11
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_CDUMP[65] = // cmd #12
+static u8 option_allowed_cmd_CDUMP[66] = // cmd #12
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_HEXDUMP[65] = // cmd #13
+static u8 option_allowed_cmd_HEXDUMP[66] = // cmd #13
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1
+    0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1
 };
 
-static u8 option_allowed_cmd_PORT[65] = // cmd #14
+static u8 option_allowed_cmd_PORT[66] = // cmd #14
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,1,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_WHERE[65] = // cmd #15
+static u8 option_allowed_cmd_WHERE[66] = // cmd #15
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_HTTPS[65] = // cmd #16
+static u8 option_allowed_cmd_HTTPS[66] = // cmd #16
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_EXTRACT[65] = // cmd #17
+static u8 option_allowed_cmd_EXTRACT[66] = // cmd #17
 {
     0,0,0,0,0, 0,1,1,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_TRACKS[65] = // cmd #18
+static u8 option_allowed_cmd_TRACKS[66] = // cmd #18
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_ARENAS[65] = // cmd #19
+static u8 option_allowed_cmd_ARENAS[66] = // cmd #19
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_FILES[65] = // cmd #20
+static u8 option_allowed_cmd_FILES[66] = // cmd #20
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_FIND[65] = // cmd #21
+static u8 option_allowed_cmd_FIND[66] = // cmd #21
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_POINTS[65] = // cmd #22
+static u8 option_allowed_cmd_POINTS[66] = // cmd #22
 {
     0,1,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_ANALYZE[65] = // cmd #23
+static u8 option_allowed_cmd_ANALYZE[66] = // cmd #23
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
-static u8 option_allowed_cmd_PATCH[65] = // cmd #24
+static u8 option_allowed_cmd_PATCH[66] = // cmd #24
 {
     0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0
+    0,0,0,0,0, 0
 };
 
 
@@ -1594,6 +1614,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
+	OptionInfo + OPT_WARN,
 	OptionInfo + OPT_DE,
 	OptionInfo + OPT_COLORS,
 	OptionInfo + OPT_NO_COLORS,
@@ -1772,6 +1793,7 @@ static const InfoOption_t * option_tab_cmd_PORT[] =
 	OptionInfo + OPT_PORT_DB,
 	OptionInfo + OPT_ORDER,
 	OptionInfo + OPT_NO_0X,
+	OptionInfo + OPT_UPPER,
 	&option_cmd_PORT_NO_HEADER,
 	&option_cmd_PORT_BRIEF,
 	&option_cmd_PORT_LONG,
@@ -1783,6 +1805,7 @@ static const InfoOption_t * option_tab_cmd_WHERE[] =
 {
 	OptionInfo + OPT_ORDER,
 	OptionInfo + OPT_NO_0X,
+	OptionInfo + OPT_UPPER,
 	&option_cmd_WHERE_NO_HEADER,
 	&option_cmd_WHERE_BRIEF,
 	&option_cmd_WHERE_LONG,
@@ -1997,7 +2020,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms StaticR Tool : Manipulate the 'main.dol' and 'StaticR.rel'"
 	" files of Mario Kart Wii.",
 	0,
-	39,
+	40,
 	option_tab_tool,
 	0
     },
@@ -2218,12 +2241,13 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"The command expects a list of keywords or hex numbers. Keywords are"
 	" PAL (default), USA, JAPAN, KOREA, or any abbreviation of them. They"
 	" select the region for the following addresses. The hex numbers (with"
-	" or without 0x prefix) are interpreted as addresses. If possible,"
-	" they are ported to all other regions. The result is printed as"
-	" colorized table.\n"
-	" This address porting is EXPERIMENTAL!",
+	" or without 0x prefix) are interpreted as addresses. If an address"
+	" begins with m or s, then it is interpreted as a file offset for"
+	" main.dol or staticr.rel. All addresses are ported to all other"
+	" regions. The result is printed as colorized table. See"
+	" https://szs.wiimm.de/cmd/wstrt/port for more details.",
 	0,
-	6,
+	7,
 	option_tab_cmd_PORT,
 	option_allowed_cmd_PORT
     },
@@ -2239,9 +2263,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" in which the specified addresses are located is calculated for each"
 	" region. The result is output as a human and machine readable table.\n"
 	"  This command is well suited to converting addresses into file"
-	" offsets and vice versa.",
+	" offsets and vice versa. See https://szs.wiimm.de/cmd/wstrt/where for"
+	" more details.",
 	0,
-	5,
+	6,
 	option_tab_cmd_WHERE,
 	option_allowed_cmd_WHERE
     },

@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -65,6 +65,7 @@
 
 static void help_exit ( bool xmode )
 {
+    SetupPager();
     fputs( TITLE "\n", stdout );
 
     if (xmode)
@@ -76,6 +77,7 @@ static void help_exit ( bool xmode )
     else
 	PrintHelpCmd(&InfoUI_wstrt,stdout,0,0,"HELP",0,URI_HOME);
 
+    ClosePager();
     exit(ERR_OK);
 }
 
@@ -419,6 +421,7 @@ static void setup_order ( int index[STR_ZBI_N], int delta )
 	    switch(*ptr++)
 	    {
 		case 'p': case 'P': idx = STR_M_PAL - STR_ZBI_FIRST; break;
+		case 'e': case 'E':
 		case 'u': case 'U': idx = STR_M_USA - STR_ZBI_FIRST; break;
 		case 'j': case 'J': idx = STR_M_JAP - STR_ZBI_FIRST; break;
 		case 'k': case 'K': idx = STR_M_KOR - STR_ZBI_FIRST; break;
@@ -453,7 +456,7 @@ typedef struct hex_in_t
     u32 cheat;		// if is_cheat: highest 7 bits
     bool is_dol_offset;	// true: prefix 'M' used
     bool is_rel_offset;	// true: prefix 'S' used
-    bool is_cheat;	// if a cheat code, where only lowest 25 bits are relevant
+    bool is_cheat;	// it's a cheat code, where only lowest 25 bits are relevant
     bool is_6hex;	// hex number with exact 6 hex digits
 }
 hex_in_t;
@@ -462,7 +465,7 @@ hex_in_t;
 
 static hex_in_t scan_hex ( str_mode_t mode, ccp arg )
 {
-    hex_in_t hex = {0};
+    hex_in_t hex = { .cheat = ~0 };
 
     hex.is_dol_offset	= *arg == 'm' || *arg == 'M';
     hex.is_rel_offset	= *arg == 's' || *arg == 'S';
@@ -495,20 +498,32 @@ static hex_in_t scan_hex ( str_mode_t mode, ccp arg )
 
 static void print_address ( u32 addr, bool highlight, u32 cheat_code )
 {
-    if (cheat_code)
+    const bool is_cheat_code = cheat_code != ~0;
+    if (is_cheat_code)
 	addr = addr & 0x01ffffff | cheat_code;
 
+    ccp col1, col2;
     if (highlight)
     {
+	col1 = colout->value;
+	col2 = colout->reset;
+    }
+    else
+	col1 = col2 = "";
+
+    if ( opt_upper || is_cheat_code )
+    {
 	if (opt_no_0x)
-	    printf(" %s%08x%s",colout->value,addr,colout->reset);
+	    printf(" %s%08X%s",col1,addr,col2);
+	else if (is_cheat_code)
+	    printf("   %s%08X%s",col1,addr,col2);
 	else
-	    printf(" %s%#010x%s",colout->value,addr,colout->reset);
+	    printf(" %s%#010X%s",col1,addr,col2);
     }
     else if (opt_no_0x)
-	printf(" %08x",addr);
+	printf(" %s%08x%s",col1,addr,col2);
     else
-	printf(" %#010x",addr);
+	printf(" %s%#010x%s",col1,addr,col2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -519,17 +534,29 @@ static void print_offset ( str_mode_t mode, u32 addr, bool highlight )
 
     if ( aoff < 0 )
 	printf("      %s-", opt_no_0x ? "": "  " );
-    else if ( highlight )
-    {
-	if (opt_no_0x)
-	    printf(" %s%6x%s",colout->value,aoff,colout->reset);
-	else
-	    printf(" %s%#8x%s",colout->value,aoff,colout->reset);
-    }
-    else if (opt_no_0x)
-	printf(" %6x",aoff);
     else
-	printf(" %#8x",aoff);
+    {
+	ccp col1, col2;
+	if (highlight)
+	{
+	    col1 = colout->value;
+	    col2 = colout->reset;
+	}
+	else
+	    col1 = col2 = "";
+
+	if ( opt_upper )
+	{
+	    if (opt_no_0x)
+		printf(" %s%6X%s",col1,aoff,col2);
+	    else
+		printf(" %s%#8X%s",col1,aoff,col2);
+	}
+	else if (opt_no_0x)
+	    printf(" %s%6x%s",col1,aoff,col2);
+	else
+	    printf(" %s%#8x%s",col1,aoff,col2);
+    }
 }
 
 //
@@ -547,12 +574,14 @@ static enumError cmd_port()
 	SetupAddrPortDB();
 	const addr_port_version_t *vers = GetAddrPortVersion();
 	printf("\nAddress Porting Database:\n"
-		"  Time stamp: %s\n"
+		"  File:       %s\n"
+		"  Timestamp:  %s\n"
 		"  DB version: %5u\n"
 		"  Revision:   %5u\n"
 		"  N(records): %5u\n"
 		"  Size:       %5s\n"
-		,PrintTimeByFormat("%F %T",vers->timestamp)
+		,addr_port_file
+		,PrintTimeByFormat("%F %T %Z",vers->timestamp)
 		,vers->db_version
 		,vers->revision
 		,vers->n_records
@@ -1557,6 +1586,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break;
@@ -1641,6 +1671,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_PORT_DB:	opt_port_db = optarg; break;
 	case GO_ORDER:		opt_order = optarg; break;
 	case GO_NO_0X:		opt_no_0x = true; break;
+	case GO_UPPER:		opt_upper = true; break;
 
 	case GO_VADDR:		InsertAddressMemMap(&vaddr,true,optarg,16); break;
 	case GO_FADDR:		InsertAddressMemMap(&faddr,true,optarg,16); break;
@@ -1754,8 +1785,7 @@ static enumError CheckCommand ( int argc, char ** argv )
     switch ((enumCommands)cmd_ct->id)
     {
 	case CMD_VERSION:	version_exit();
-	case CMD_HELP:		PrintHelp(&InfoUI_wstrt,stdout,0,"HELP",0,URI_HOME,
-					first_param ? first_param->arg : 0 ); break;
+	case CMD_HELP:		PrintHelpColor(&InfoUI_wstrt); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;

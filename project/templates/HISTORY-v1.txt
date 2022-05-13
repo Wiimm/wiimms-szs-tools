@@ -1003,7 +1003,7 @@ szs v1.54a r7393 - 2017-08-14
  - Support for RKC (competition) files added:
    RKC files are handled like other archives. Tool wszst is able to detect,
    list, extract or create a RKC file, also recursive. Direct creation and
-   optimation of the included SZS is not implemented yet.
+   optimization of the included SZS is not implemented yet.
  - New keyword for option --kmp: MAX-LAPS: Keyword MAX-LAPS has only impact,
    if one of 1LAP,...,9LAPS is set too. Then, the number of laps is only
    decreased to the specified number, but never increased.

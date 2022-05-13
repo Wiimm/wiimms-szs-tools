@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -116,6 +116,7 @@ __attribute__ ((packed)) kcl_head_t;
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			kcl_triangle_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[kcl_triangle_t]]
 
 typedef struct kcl_triangle_t
 {
@@ -319,12 +320,14 @@ typedef enum kcl_mode_t
 
     KCLMD_CONV_FACEUP	= 1ull<<34,	// convert face up walls to road
     KCLMD_WEAK_WALLS	= 1ull<<35,	// OR 0x8000 to KCL flags of walls
-    KCLMD_NEW		= 1ull<<36,	// create a new KCL file even if nothing changed
-    KCLMD_SORT		= 1ull<<37,	// sort triangles
+    KCLMD_CLR_VISUAL	= 1ull<<36,	// clear effect bits
+    KCLMD_NEW		= 1ull<<37,	// create a new KCL file even if nothing changed
+    KCLMD_SORT		= 1ull<<38,	// sort triangles
      KCLMD_M_PATCH	 = KCLMD_M_DROP
 			 | KCLMD_M_RM
 			 | KCLMD_CONV_FACEUP
 			 | KCLMD_WEAK_WALLS
+			 | KCLMD_CLR_VISUAL
 			 | KCLMD_NEW
 			 | KCLMD_SORT,
 
@@ -380,7 +383,7 @@ typedef enum kcl_mode_t
 			| KCLMD_TEST,
 
     KCLMD_M_PRINT	= KCLMD_M_ALL		// all relevant bits for obj output
-			% ~KCLMD_ADD_ROAD
+			& ~KCLMD_ADD_ROAD
 			& ~KCLMD_IN_SWAP
 			& ~KCLMD_AUTO
 			& ~KCLMD_M_HEX
@@ -613,6 +616,16 @@ bool DropSortHelper
     kcl_t		*kcl,		// valid KCL
     uint		drop_mask,	// not 0: drop triangles with set bits
     bool		sort		// true: sort triangles
+);
+
+typedef u16 kcl_flag_t;
+kcl_flag_t * CreatePatchFlagKCL
+(
+    // returns NULL or N_KCL_FLAG elements
+
+    kcl_mode_t kcl_mode,    // relevant: KCLMD_CLR_VISUAL | KCLMD_WEAK_WALLS
+    SlotMode_t slot_mode,   // relevant: SLOTMD_ICE_TO_WATER | SLOTMD_WATER_TO_ICE
+    bool null_on_orig	    // TRUE: return NULL on no flag modifications
 );
 
 bool KCL_ACTION_LOG ( const char * format, ... )
@@ -1096,7 +1109,7 @@ uint GetExportFlagKCL ( uint kcl_flag );
 
 extern int have_kcl_patch_count;
 extern StringField_t kcl_script_list;
-extern u16 *patch_kcl_flag; // NULL or 'N_KCL_FLAG' elements
+extern kcl_flag_t *patch_kcl_flag; // NULL or 'N_KCL_FLAG' elements
 
 //-----------------------------------------------------------------------------
 

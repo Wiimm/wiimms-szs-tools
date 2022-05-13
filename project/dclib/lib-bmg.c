@@ -14,16 +14,16 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
+ *   This library is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
+ *   This library is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
  *   GNU General Public License for more details.                          *
@@ -500,7 +500,7 @@ uint PrintString16BMG
 	xd.indent	= 2;
 	xd.assumed_size	= mem.len;
 	XDiff( &xd, buf,dest-buf,true, mem.ptr,mem.len,true, 5,false );
-    }    
+    }
     ResetFastBuf(&fb.b);
   #endif
 
@@ -542,7 +542,7 @@ uint PrintFastBuf16BMG
 
     char buf[1300];
     char *dest		= buf;
-    char *dest_term	= dest + sizeof(buf) - 1; 
+    char *dest_term	= dest + sizeof(buf) - 1;
     char *dest_end	= dest_term - 270; // escape sequence with 256 bytes possible
     char *last_u	= 0;
 
@@ -6439,6 +6439,36 @@ void DumpCtBMG ( FILE *f, int indent, ct_bmg_t *ctb )
     DumpCtMidHelper2( f,indent, &ctb->cup_ref,		"  Cup reference:" );
     DumpCtMidHelper1( f,indent, ctb->random.beg,	"  Random text:" );
 }
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			sizeof_info_t: bmg		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[sizeof_info_bmg]]
+
+const sizeof_info_t sizeof_info_bmg[] =
+{
+    SIZEOF_INFO_TITLE("BMG")
+	SIZEOF_INFO_ENTRY(bmg_range_t)
+	SIZEOF_INFO_ENTRY(bmg_section_t)
+	SIZEOF_INFO_ENTRY(bmg_header_t)
+	SIZEOF_INFO_ENTRY(bmg_inf_item_t)
+	SIZEOF_INFO_ENTRY(bmg_inf_t)
+	SIZEOF_INFO_ENTRY(bmg_dat_t)
+	SIZEOF_INFO_ENTRY(bmg_mid_t)
+	SIZEOF_INFO_ENTRY(bmg_flw_t)
+	SIZEOF_INFO_ENTRY(bmg_fli_t)
+	SIZEOF_INFO_ENTRY(bmg_sect_info_t)
+	SIZEOF_INFO_ENTRY(bmg_sect_list_t)
+	SIZEOF_INFO_ENTRY(bmg_raw_section_t)
+	SIZEOF_INFO_ENTRY(bmg_item_t)
+	SIZEOF_INFO_ENTRY(bmg_t)
+	SIZEOF_INFO_ENTRY(bmg_create_t)
+	SIZEOF_INFO_ENTRY(bmg_scan_mid_t)
+	SIZEOF_INFO_ENTRY(ct_bmg_t)
+
+    SIZEOF_INFO_TERM()
+};
 
 //
 ///////////////////////////////////////////////////////////////////////////////

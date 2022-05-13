@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -169,6 +169,17 @@
 		" If the flag file already exists, only missing group names"
 		" are added at the end of file." },
 
+  { H_DEF_CMD,	"TYPES",	"TYPES",
+		    "wkclt TYPES arg...",
+		"Print a line with KCL flag details for each argument."
+		" ARG is a comma or space separated list of a optional BASEVAL"
+		" and a list of TERMS. BASEVAL can be any hexa-decimal number."
+		" The format of TERMS is @X[=]VALUE@."
+		" So a TERM begin with letter @T@ (Type), @V@ (Value) or a group"
+		" identifier (W, X,Y or Z), followed by an optional equal sign"
+		" and finished by a decimal number."
+		" It overrides the related part of BASEVAL." },
+
   { T_DEF_CMD,	"FLAGS",	"FLAGS|F",
 		    "wkclt FLAGS source...",
 		"Print a KCL type and flag usage statistic for each source"
@@ -226,6 +237,11 @@
 		" Hints and warnings are written to standard output."
 		" The exit status is @'DIFFER'@ if at least one KMP warning found." },
 
+  { T_DEF_CMD,	"SHA1",		"SHA1",
+		    "wszst SHA1 [source]...",
+		"Print a SHA1 checksum of the KCL for each source."
+		" The checksum is calculated after patching." },
+
   { H_DEF_CMD,	"ANALYZE",	"ANALYZE",
 		    "wkclt ANALYZE source...",
 		"Analyze some KCL data." },
@@ -273,6 +289,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GM,	"LOGGING",	"L|logging",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GP,	"WARN",		"W|warn",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_G,	"DE",		"de",
@@ -365,6 +384,18 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_CP,	"SLOT",		"slot",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"ID",		"id",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_CO,	"BASE64",	"base64",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_CO,	"DB64",		"db64",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_CP,	"CODING",	"coding",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"ROUND",	"round",
@@ -701,6 +732,13 @@
   { T_COPT,	"CONST",	0,0,0 },
   { T_COPT,	"FLAG_FILE",	0,0,0 },
 
+  //---------- COMMAND wkclt TYPES ----------
+
+  { T_CMD_BEG,	"TYPES",	0,0,0 },
+  { T_COPT,	"NO_HEADER",	0,0,0 },
+  { T_COPT,	"BRIEF",	0,0,
+		"Print only the resulting flag." },
+
   //---------- COMMAND wkclt FLAGS ----------
 
   { T_CMD_BEG,	"FLAGS",	0,0,0 },
@@ -794,6 +832,19 @@
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+
+  //---------- COMMAND wkclt SHA1 ----------
+
+  { T_CMD_BEG,	"SHA1",		0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_COPT,	"ID",		0,0,0 },
+  { T_COPT,	"BASE64",	0,0,0 },
+  { T_COPT,	"DB64",		0,0,0 },
+  { T_COPT,	"CODING",	0,0,0 },
+  { T_COPT,	"BRIEF",	0,0,
+	"Suppress output of the filename." },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wkclt ANALYZE ----------
 

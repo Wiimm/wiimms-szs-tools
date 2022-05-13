@@ -17,7 +17,7 @@
 ##   This file is part of the SZS project.                         ##
 ##   Visit https://szs.wiimm.de/ for project details and sources.  ##
 ##                                                                 ##
-##   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>      ##
+##   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>      ##
 ##                                                                 ##
 #####################################################################
 
@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.26a
+VERSION_NUM		= 2.27a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -146,7 +146,7 @@ DEFINES1	+= -DUIOPT_INDEX_SIZE=310	# define max number of options (default 0x100
 
 CFLAGS		+= -std=gnu99 -fomit-frame-pointer -fno-strict-aliasing -funroll-loops
 CFLAGS		+= -Wall -Wno-parentheses -Wno-unused-function
-CFLAGS		+= -Wno-deprecated-declarations
+CFLAGS		+= -Wno-deprecated-declarations -Wno-gnu-variable-sized-type-not-at-end
 CFLAGS		+= -O3 -Isrc -I$(UI) -I.
 
 DEPFLAGS	+= -MMD
@@ -154,7 +154,7 @@ DEPFLAGS	+= -MMD
 #--- system depedent flags & libs
 
 ifeq ($(SYSTEM),mac)
- CFLAGS		+= -I/usr/local/include
+ CFLAGS		+= -I/usr/local/include -Wno-typedef-redefinition
 endif
 
 ifeq ($(SYSTEM_LINUX),1)
@@ -169,14 +169,11 @@ ifeq ($(SYSTEM),cygwin)
  LDFLAGS	+= -static-libgcc
 endif
 
-#ifeq ($(HAVE_PCRE),1)
-#ifeq ($(STATIC),1)
-# LIBS		+= $(PCRE_A)
-#else
-# LIBS		+= -lpcre
-#endif
-# DEFINES1	+= -DHAVE_PCRE=1
-#endif
+ifeq ($(shell expr $(GCC_VERSION) '>=' 7.0 ),1)
+ifneq ($(SYSTEM),mac)
+  CFLAGS	+= -Wno-format-truncation
+endif
+endif
 
 ifeq ($(HAVE_SHA),1)
  ifeq ($(SYSTEM_LINUX),1)
@@ -421,6 +418,7 @@ default_rule: all
 ###############################################################################
 # local definitions
 
+-include ./dclib/Makefile.rules
 -include makefiles-local/Makefile.local.$(SYSTEM)
 -include Makefile.user
 
@@ -596,15 +594,6 @@ c++ clean++: do_clean+ st
 #
 #--------------------------
 
-.PHONY: dclib
-dclib:
-	@echo "DCLIB_MYSQL=$(DCLIB_MYSQL)"
-	@echo "DCLIB_FLAGS=$(DCLIB_FLAGS)"
-	@echo "DCLIB_O=$(DCLIB_O)"
-
-#
-#--------------------------
-
 .PHONY : debug
 debug:
 	@printf "$(LOGFORMAT)" enable debug "-> define -DDEBUG"
@@ -746,29 +735,30 @@ doc+: doc info
 
 .PHONY : flags
 flags:
-	@echo  ""
-	@echo  "SYSTEM: |$(SYSTEM)|$(SYSTEM2)|"
-	@echo  ""
-	@echo  "DEFINES: $(DEFINES)"
-	@echo  ""
-	@echo  "CFLAGS:  $(CFLAGS)"
-	@echo  ""
-	@echo  "LDFLAGS: $(LDFLAGS)"
-	@echo  ""
-	@echo  "OPT_STATIC: $(OPT_STATIC)"
-	@echo  ""
-	@echo  "LIBS: $(LIBS)"
-	@echo  ""
-	@echo  "C_OBJECTS: $(C_OBJECTS)"
-	@echo  ""
-	@echo  "UI_FILES: $(UI_FILES)"
-	@echo  ""
-	@echo  "ALL_TOOLS: $(ALL_TOOLS)"
-	@echo  ""
-	@echo  "WRAPPER_TOOLS: $(WRAPPER_TOOLS)"
-	@echo  ""
-	@echo  "ALL_TOOLS_X: $(ALL_TOOLS_X)"
-	@echo  ""
+	@echo ""
+	@echo "SYSTEM: |$(SYSTEM)|$(SYSTEM2)|"
+	@echo "GCC:    |$(GCC_VERSION)|"
+	@echo ""
+	@echo "DEFINES: $(DEFINES)"
+	@echo ""
+	@echo "CFLAGS:  $(CFLAGS)"
+	@echo ""
+	@echo "LDFLAGS: $(LDFLAGS)"
+	@echo ""
+	@echo "OPT_STATIC: $(OPT_STATIC)"
+	@echo ""
+	@echo "LIBS: $(LIBS)"
+	@echo ""
+	@echo "C_OBJECTS: $(C_OBJECTS)"
+	@echo ""
+	@echo "UI_FILES: $(UI_FILES)"
+	@echo ""
+	@echo "ALL_TOOLS: $(ALL_TOOLS)"
+	@echo ""
+	@echo "WRAPPER_TOOLS: $(WRAPPER_TOOLS)"
+	@echo ""
+	@echo "ALL_TOOLS_X: $(ALL_TOOLS_X)"
+	@echo ""
 
 #
 #--------------------------

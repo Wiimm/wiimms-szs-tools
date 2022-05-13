@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -50,6 +50,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ccp	opt_le_define		= 0;
+ccp	opt_le_arena		= 0;
 ccp	opt_lpar		= 0;
 ccp	opt_track_dest		= 0;
 ParamField_t opt_track_source	= {0};
@@ -474,9 +475,10 @@ bool GetNextDebugMode ( lecode_debug_info_t *ldi )
 	{ LEDEB_POSITION,	0,			"POSITION"	},
 	{ LEDEB_CHECK_POINT,	LEDEB_S_CHECK_POINT,	"CHECK-POINT"	},
 	{ LEDEB_RESPAWN,	0,			"RESPAWN"	},
+	{ LEDEB_ITEM_POINT,	0,			"ITEM-POINT"	},
+	{ LEDEB_KCL_TYPE,	0,			"KCL-TYPE"	},
 	{ LEDEB_LAP_POS,	0,			"LAP-POS"	},
- 	{ LEDEB_XPF,		LEDEB_S_XPF,		"XPF"		},
-// [[xpf+]]
+	{ LEDEB_XPF,		LEDEB_S_XPF,		"XPF"		},
     };
 
     while ( ldi->index >= 0 && ldi->index < sizeof(tab)/sizeof(*tab) )
@@ -518,6 +520,8 @@ lecode_debug_t DecodeLecodeDebug ( lecode_debug_ex_t *lde, lecode_debug_t mode )
     lde->position	= ( mode & LEDEB_POSITION ) > 0;
     lde->check_point	= mode >> LEDEB_S_CHECK_POINT & LEDEB_M_CHECK_POINT;
     lde->respawn	= ( mode & LEDEB_RESPAWN ) > 0;
+    lde->item_point	= ( mode & LEDEB_ITEM_POINT ) > 0;
+    lde->kcl_type	= ( mode & LEDEB_KCL_TYPE ) > 0;
     lde->lap_pos	= ( mode & LEDEB_LAP_POS ) > 0;
     lde->xpf		= mode >> LEDEB_S_XPF & LEDEB_M_XPF;
 
@@ -541,6 +545,8 @@ lecode_debug_t EncodeLecodeDebug ( lecode_debug_ex_t *lde )
     if ( lde->space )		mode |= LEDEB_SPACE;
     if ( lde->position )	mode |= LEDEB_POSITION;
     if ( lde->respawn )		mode |= LEDEB_RESPAWN;
+    if ( lde->item_point )	mode |= LEDEB_ITEM_POINT;
+    if ( lde->kcl_type )	mode |= LEDEB_KCL_TYPE;
     if ( lde->lap_pos )		mode |= LEDEB_LAP_POS;
 
     return DecodeLecodeDebug(lde,mode); // normalize all settings
@@ -597,10 +603,11 @@ bool SetupLecodeDebugLPAR
 	{ PREDEBUG_VERTICAL,-1, 0 }, // hide speedo
 	{ PREDEBUG_VERTICAL, 1, LEDEB_CHECK_POINT },
 	{ PREDEBUG_VERTICAL, 2, LEDEB_RESPAWN },
-	{ PREDEBUG_VERTICAL, 3, LEDEB_LAP_POS },
-	{ PREDEBUG_VERTICAL, 4, LEDEB_POSITION },
-	{ PREDEBUG_VERTICAL, 5, LEDEB_LONG_XPF },
-// [[xpf+]]
+	{ PREDEBUG_VERTICAL, 3, LEDEB_ITEM_POINT },
+	{ PREDEBUG_VERTICAL, 4, LEDEB_KCL_TYPE },
+	{ PREDEBUG_VERTICAL, 5, LEDEB_LAP_POS },
+	{ PREDEBUG_VERTICAL, 6, LEDEB_POSITION },
+	{ PREDEBUG_VERTICAL, 7, LEDEB_LONG_XPF },
 
 	{0,0,0}
     };
@@ -920,7 +927,7 @@ void InitializeLPAR ( le_lpar_t *lpar, bool load_lpar )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
- 
+
 static void NormalizeLPAR ( le_lpar_t * lp )
 {
     DASSERT(lp);
@@ -1178,7 +1185,7 @@ enumError WriteSectionLPAR
     {
 	fputs(text_lpar_sect_chat_cr,f);
 
-	int i; 
+	int i;
 	for ( i = 0; i < BMG_N_CHAT; i++ )
 	    if ( lpar->chat_mode_1[i] || lpar->chat_mode_2[i] )
 		break;
@@ -1186,7 +1193,7 @@ enumError WriteSectionLPAR
 	    fputs(text_lpar_sect_chat_example_cr,f);
     }
 
-    int last_group = -1; 
+    int last_group = -1;
     for ( int i = 0; i < BMG_N_CHAT; i++ )
     {
 	const u16 mode1 = lpar->chat_mode_1[i];
@@ -1291,6 +1298,66 @@ void ResetLEAnalyseUsage ( le_analyse_t *ana )
 	    ana->usage = 0;
 	}
 	ana->usage_size = 0;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void ApplyArena ( le_analyse_t * ana, const ctcode_arena_t * ca )
+{
+    DASSERT(ana);
+    DASSERT(ca);
+
+    if (!ana->arena_setup)
+	SetupArenasLEAnalyse(ana,false);
+
+    if (ana->property)
+	for ( int a = 0; a < MKW_N_ARENAS; a++ )
+	    if (ca->prop[a])
+	    {
+		ana->property[a+MKW_ARENA_BEG] = ca->prop[a];
+		ana->arena_applied = true;
+	    }
+
+    if (ana->music)
+	for ( int a = 0; a < MKW_N_ARENAS; a++ )
+	    if (ca->music[a])
+	    {
+		ana->music[a+MKW_ARENA_BEG] = ca->music[a];
+		ana->arena_applied = true;
+	    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SetupArenasLEAnalyse ( le_analyse_t *ana, bool force )
+{
+    DASSERT(ana);
+    if ( ana->property && ana->music )
+    {
+	ana->arena_setup = true;
+
+	if ( force || !ana->property[MKW_ARENA_BEG] )
+	{
+	    const TrackInfo_t *ai = arena_info;
+	    for ( int a = 0; a < MKW_N_ARENAS; a++, ai++ )
+	    {
+		ana->property[a+MKW_ARENA_BEG] = ai->track_id;
+		ana->music[a+MKW_ARENA_BEG]    = ai->music_id;
+	    }
+	}
+
+	if ( opt_le_arena && *opt_le_arena )
+	{
+	    raw_data_t raw;
+	    if ( LoadRawData(&raw,true,opt_le_arena,0,false,0) == ERR_OK )
+	    {
+		ctcode_arena_t ca = {{0}};
+		ScanTextArena(&ca,raw.fname,raw.data,raw.data_size);
+		ApplyArena(ana,&ca);
+	    }
+	    ResetRawData(&raw);
+	}
     }
 }
 
@@ -1567,8 +1634,8 @@ enumError AnalyseLEBinary
 	     *(uint*)((u8*)ana+pnm->off_max) = max;
     }
 
+    SetupArenasLEAnalyse(ana,false);
     CalculateStatsLE(ana);
-
 
     //--- return
 
@@ -1801,7 +1868,7 @@ static ccp GetSlotInfo
     uint		*warnings	// not NULL: increment on warnings
 )
 {
-    if ( tid < ana->n_slot )
+    if ( tid < ana->n_slot || IsMkwArena(tid) )
     {
 	uint warn = 0;
 
@@ -1848,7 +1915,7 @@ static ccp GetSlotInfo
 		    music0 = col->reset;
 		}
 	    }
-	    else if (!(music&1))
+	    else if ( !(music&1) || IsMkwArena(tid) && MusicID2TrackId(music,0,0) != tid )
 	    {
 		warn |= 1;
 		if (col)
@@ -1887,17 +1954,14 @@ static ccp GetSlotInfo
 	    flags = "-?-";
 
 	static const char warn_list[] = " <!!";
-	char buf[40];
-	const int len = is_alias
-		? snprintf(buf,sizeof(buf),"[%s->%4x %s,%s] ",
+	return is_alias
+		? PrintCircBuf("[%s->%4x %s,%s] ",
 				col->differ, TrackByAliasLE(prop,music),
 				col->reset, flags )
-		: snprintf(buf,sizeof(buf),"[%s%s%s,%s%s%s,%s]%c",
+		: PrintCircBuf("[%s%s%s,%s%s%s,%s]%c",
 				prop1, propx, prop0,
 				music1, musicx, music0,
 				flags, warn_list[warn] );
-	if ( len > 0 )
-	    return CopyCircBuf0(buf,len);
     }
 
     if (col)
@@ -2310,7 +2374,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 		"%*s" "Allow cheat codes: %u = %s\n"
 		,indent,"", h->cheat_mode, GetCheatModeInfo(h->cheat_mode)
 		);
-	
+
 	fprintf(f,
 		"%*s" "Engine chances:    "
 			"%u + %u + %u = %u (1%s0cc+mirror=total)\n"
@@ -2350,7 +2414,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 	    }
 	    else
 		comment = "";
-	    
+
 	    fprintf(f,
 		"%*s" "Speedometer:       %u%s\n",
 		indent,"", h->enable_speedo, comment );
@@ -2603,13 +2667,16 @@ const ctcode_t * LoadLEFile ( uint le_phase )
 	le_file_done = false;
     }
 
+
+    // --le-define
+
     if ( !le_file_done && opt_le_define && *opt_le_define )
     {
 	PRINT("le=%d, ctm=%d[%s]\n",
 			le_phase, ct_mode, GetCtModeNameBMG(ct_mode,true) );
 	if ( logging > 1 )
-	    fprintf(stdlog,"Load LE definition for phase %d (%s)\n",
-			le_phase, GetCtModeNameBMG(ct_mode,true) );
+	    fprintf(stdlog,"Load LE definition (%s)\n",
+			GetCtModeNameBMG(ct_mode,true) );
 
 	le_file_done = true;
 	le_file = MALLOC(sizeof(*le_file));
@@ -2633,6 +2700,8 @@ const ctcode_t * LoadLEFile ( uint le_phase )
 enumError ApplyLEFile ( le_analyse_t * ana )
 {
     DASSERT(ana);
+    SetupArenasLEAnalyse(ana,false);
+
     const ctcode_t *ctcode = LoadLEFile(ana->version);
     return ctcode ? ApplyCTCODE(ana,ctcode) : ERR_ERROR;
 }
@@ -2741,6 +2810,15 @@ enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode )
 	    ana->n_slot++;
 	}
     }
+
+
+    //--- arena setup (override)
+
+    SetupArenasLEAnalyse(ana,false);
+    ApplyArena(ana,&ctcode->arena);
+
+
+    //--- setup by version
 
     switch (ana->param_vers)
     {

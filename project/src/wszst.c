@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -51,6 +51,12 @@
 #include "lib-image.h"
 #include "lib-common.h"
 #include "lib-rkg.h"
+#include "lib-bzip2.h"
+#include "lib-pack.h"
+#include "lib-rarc.h"
+#include "lib-rkc.h"
+#include "lib-staticr.h"
+#include "db-dol.h"
 #include "crypt.h"
 #include "ui.h" // [[dclib]] wrapper
 #include "ui-wszst.c"
@@ -81,6 +87,7 @@
 
 static void help_exit ( bool xmode )
 {
+    SetupPager();
     fputs( TITLE "\n", stdout );
 
     if (xmode)
@@ -92,6 +99,7 @@ static void help_exit ( bool xmode )
     else
 	PrintHelpCmd(&InfoUI_wszst,stdout,0,0,"HELP",0,URI_HOME);
 
+    ClosePager();
     exit(ERR_OK);
 }
 
@@ -245,6 +253,344 @@ static void set_all ( bool force_cut )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			sizeof data			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static const sizeof_info_t sizeof_info_szs_list[] =
+{
+    SIZEOF_INFO_TITLE("SZS basics")
+	SIZEOF_INFO_ENTRY(compatible_info_t)
+	SIZEOF_INFO_ENTRY(SubFile_t)
+	SIZEOF_INFO_ENTRY(SubFileList_t)
+	SIZEOF_INFO_ENTRY(SubDirList_t)
+	SIZEOF_INFO_ENTRY(SubDir_t)
+	SIZEOF_INFO_ENTRY(SubFileIterator_t)
+	SIZEOF_INFO_ENTRY(DataContainer_t)
+	SIZEOF_INFO_ENTRY(search_filter_t)
+	SIZEOF_INFO_ENTRY(SubstString_t)
+	SIZEOF_INFO_ENTRY(repair_ff_t)
+	SIZEOF_INFO_ENTRY(slot_info_t)
+	SIZEOF_INFO_ENTRY(FormatFieldItem_t)
+	SIZEOF_INFO_ENTRY(FormatField_t)
+	SIZEOF_INFO_ENTRY(tiny_param_t)
+	SIZEOF_INFO_ENTRY(ParamList_t)
+	SIZEOF_INFO_ENTRY(List_t)
+	SIZEOF_INFO_ENTRY(MemItem_t)
+	SIZEOF_INFO_ENTRY(SetupDef_t)
+	SIZEOF_INFO_ENTRY(ListDef_t)
+	SIZEOF_INFO_ENTRY(SetupParam_t)
+	SIZEOF_INFO_ENTRY(config_t)
+	SIZEOF_INFO_ENTRY(data_tab_t)
+	SIZEOF_INFO_ENTRY(output_mode_t)
+
+    SIZEOF_INFO_TITLE("SZS basics: numeric")
+	SIZEOF_INFO_ENTRY(tri_metrics_t)
+	SIZEOF_INFO_ENTRY(octahedron_t)
+	SIZEOF_INFO_ENTRY(cuboid_t)
+	SIZEOF_INFO_ENTRY(IndexList_t)
+	SIZEOF_INFO_ENTRY(FuncParam_t)
+	SIZEOF_INFO_ENTRY(FuncTable_t)
+	SIZEOF_INFO_ENTRY(FuncInfo_t)
+	SIZEOF_INFO_ENTRY(Var_t)
+	SIZEOF_INFO_ENTRY(VarMap_t)
+	SIZEOF_INFO_ENTRY(ScanLoop_t)
+	SIZEOF_INFO_ENTRY(ScanMacro_t)
+	SIZEOF_INFO_ENTRY(ScanFile_t)
+	SIZEOF_INFO_ENTRY(ScanInfo_t)
+	SIZEOF_INFO_ENTRY(ScanParam_t)
+	SIZEOF_INFO_ENTRY(Line_t)
+
+    SIZEOF_INFO_TITLE("Archives and packing")
+	SIZEOF_INFO_ENTRY(BZIP2_t)
+	SIZEOF_INFO_ENTRY(BZ2Manager_t)
+	SIZEOF_INFO_ENTRY(BZ2Source_t)
+	SIZEOF_INFO_ENTRY(sha1_size_t)
+	SIZEOF_INFO_ENTRY(sha1_type_t)
+	SIZEOF_INFO_ENTRY(sha1_db_t)
+	SIZEOF_INFO_ENTRY(DistributionInfo_t)
+	SIZEOF_INFO_ENTRY(pack_header_t)
+	SIZEOF_INFO_ENTRY(pack_metric_t)
+
+    SIZEOF_INFO_TITLE("BREFF & BREFT")
+	SIZEOF_INFO_ENTRY(breff_root_head_t)
+	SIZEOF_INFO_ENTRY(breff_root_t)
+	SIZEOF_INFO_ENTRY(breff_item_name_t)
+	SIZEOF_INFO_ENTRY(breff_item_data_t)
+	SIZEOF_INFO_ENTRY(breff_item_list_t)
+	SIZEOF_INFO_ENTRY(breft_image_t)
+
+    SIZEOF_INFO_TITLE("BRRES")
+	SIZEOF_INFO_ENTRY(brres_info_t)
+	SIZEOF_INFO_ENTRY(brsub_list_t)
+	SIZEOF_INFO_ENTRY(brsub_info_t)
+	SIZEOF_INFO_ENTRY(brsub_iterator_t)
+	SIZEOF_INFO_ENTRY(brres_t)
+	SIZEOF_INFO_ENTRY(tex_info_t)
+	SIZEOF_INFO_ENTRY(name_ref_elem_t)
+	SIZEOF_INFO_ENTRY(name_ref_var_t)
+	SIZEOF_INFO_ENTRY(name_ref_t)
+
+    SIZEOF_INFO_TITLE("Common files")
+	SIZEOF_INFO_ENTRY(object_type_t)
+	SIZEOF_INFO_ENTRY(object_mgr_t)
+	SIZEOF_INFO_ENTRY(itemslot_bin_t)
+	SIZEOF_INFO_ENTRY(itemslot_t)
+	SIZEOF_INFO_ENTRY(minigame_kmg_head_t)
+	SIZEOF_INFO_ENTRY(minigame_kmg_t)
+	SIZEOF_INFO_ENTRY(minigame_t)
+	SIZEOF_INFO_ENTRY(objflow_bin_t)
+	SIZEOF_INFO_ENTRY(objflow_t)
+	SIZEOF_INFO_ENTRY(geohit_bin_t)
+	SIZEOF_INFO_ENTRY(geohit_t)
+
+    SIZEOF_INFO_TITLE("CT-CODE")
+	SIZEOF_INFO_ENTRY(ctcode_sect_info_t)
+	SIZEOF_INFO_ENTRY(ctcode_header_t)
+	SIZEOF_INFO_ENTRY(ctcode_cup1_data_t)
+	SIZEOF_INFO_ENTRY(ctcode_cup1_head_t)
+	SIZEOF_INFO_ENTRY(ctcode_crs1_data_t)
+	SIZEOF_INFO_ENTRY(ctcode_crs1_head_t)
+	SIZEOF_INFO_ENTRY(ctcode_cupref_t)
+	SIZEOF_INFO_ENTRY(ctcode_arena_t)
+	SIZEOF_INFO_ENTRY(ctcode_t)
+
+    SIZEOF_INFO_TITLE("DOL")
+	SIZEOF_INFO_ENTRY(DolSectionMap_t)
+	SIZEOF_INFO_ENTRY(DolAddressMap_t)
+
+    SIZEOF_INFO_TITLE("File DB")
+	SIZEOF_INFO_ENTRY(DbFile_t)
+	SIZEOF_INFO_ENTRY(DbFileSZS_t)
+	SIZEOF_INFO_ENTRY(DbFileSHA1_t)
+	SIZEOF_INFO_ENTRY(DbFileFILE_t)
+	SIZEOF_INFO_ENTRY(DbFileGROUP_t)
+
+    SIZEOF_INFO_TITLE("Images")
+	SIZEOF_INFO_ENTRY(MipmapOptions_t)
+	SIZEOF_INFO_ENTRY(ImageGeometry_t)
+	SIZEOF_INFO_ENTRY(Image_t)
+	SIZEOF_INFO_ENTRY(cmpr_info_t)
+	SIZEOF_INFO_ENTRY(tpl_header_t)
+	SIZEOF_INFO_ENTRY(tpl_imgtab_t)
+	SIZEOF_INFO_ENTRY(tpl_pal_header_t)
+	SIZEOF_INFO_ENTRY(tpl_img_header_t)
+	SIZEOF_INFO_ENTRY(bti_header_t)
+
+    SIZEOF_INFO_TITLE("KCL")
+	SIZEOF_INFO_ENTRY(kcl_attrib_name_t)
+	SIZEOF_INFO_ENTRY(kcl_class_t)
+	SIZEOF_INFO_ENTRY(kcl_type_t)
+	SIZEOF_INFO_ENTRY(kcl_analyze_t)
+	SIZEOF_INFO_ENTRY(kcl_head_t)
+	SIZEOF_INFO_ENTRY(kcl_triangle_t)
+	SIZEOF_INFO_ENTRY(kcl_tridata_flt_t)
+	SIZEOF_INFO_ENTRY(kcl_tridata_dbl_t)
+	SIZEOF_INFO_ENTRY(kcl_tridata0_t)
+	SIZEOF_INFO_ENTRY(kcl_tridata1_t)
+	SIZEOF_INFO_ENTRY(kcl_t)
+	SIZEOF_INFO_ENTRY(kcl_tri_param_t)
+	SIZEOF_INFO_ENTRY(kcl_cube_t)
+ #if SUPPORT_KCL_CUBE
+	SIZEOF_INFO_ENTRY(kcl_cube_list_t)
+ #endif
+	SIZEOF_INFO_ENTRY(kcl_tri_t)
+
+    SIZEOF_INFO_TITLE("KMP basics")
+	SIZEOF_INFO_ENTRY(kmp_file_gen_t)
+	SIZEOF_INFO_ENTRY(kmp_file_mkw_t)
+	SIZEOF_INFO_ENTRY(kmp_file_wim0_t)
+	SIZEOF_INFO_ENTRY(kmp_head_info_t)
+	SIZEOF_INFO_ENTRY(kmp_list_head_t)
+	SIZEOF_INFO_ENTRY(kmp_ktpt_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_enpt_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_enph_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_ckpt_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_gobj_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_poti_group_t)
+	SIZEOF_INFO_ENTRY(kmp_poti_point_t)
+	SIZEOF_INFO_ENTRY(kmp_area_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_came_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_jgpt_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_stgi_entry_t)
+	SIZEOF_INFO_ENTRY(kmp_wim0_t)
+	SIZEOF_INFO_ENTRY(kmp_wim0_sect_t)
+	SIZEOF_INFO_ENTRY(kmp_wim0_info_t)
+	SIZEOF_INFO_ENTRY(kmp_section_t)
+	SIZEOF_INFO_ENTRY(kmp_rtype_info_t)
+	SIZEOF_INFO_ENTRY(kmp_gopt_t)
+	SIZEOF_INFO_ENTRY(kmp_gopt2_t)
+	SIZEOF_INFO_ENTRY(kmp_group_elem_t)
+	SIZEOF_INFO_ENTRY(kmp_group_t)
+	SIZEOF_INFO_ENTRY(kmp_group_list_t)
+	SIZEOF_INFO_ENTRY(kmp_rtobj_t)
+	SIZEOF_INFO_ENTRY(kmp_rtobj_list_t)
+	SIZEOF_INFO_ENTRY(kmp_ph_t)
+	SIZEOF_INFO_ENTRY(kmp_flag_t)
+	SIZEOF_INFO_ENTRY(kmp_t)
+	SIZEOF_INFO_ENTRY(Itembox_t)
+	SIZEOF_INFO_ENTRY(DrawKCL_t)
+	SIZEOF_INFO_ENTRY(pos_param_t)
+	SIZEOF_INFO_ENTRY(pos_file_t)
+	SIZEOF_INFO_ENTRY(kmp_obj_info_t)
+
+    SIZEOF_INFO_TITLE("KMP analysis")
+	SIZEOF_INFO_ENTRY(kmp_linfo_t)
+	SIZEOF_INFO_ENTRY(kmp_finish_t)
+	SIZEOF_INFO_ENTRY(kmp_usedpos_obj_t)
+	SIZEOF_INFO_ENTRY(kmp_usedpos_t)
+	SIZEOF_INFO_ENTRY(kmp_pflags_t)
+	SIZEOF_INFO_ENTRY(gobj_cond_ref_t)
+	SIZEOF_INFO_ENTRY(gobj_cond_mask_t)
+	SIZEOF_INFO_ENTRY(cond_ref_info_t)
+	SIZEOF_INFO_ENTRY(kmp_ana_defobj_t)
+	SIZEOF_INFO_ENTRY(kmp_ana_ref_t)
+	SIZEOF_INFO_ENTRY(gobj_condition_t)
+	SIZEOF_INFO_ENTRY(gobj_condition_set_t)
+	SIZEOF_INFO_ENTRY(kmp_gobj_info_t)
+	SIZEOF_INFO_ENTRY(kmp_ana_gobj_t)
+	SIZEOF_INFO_ENTRY(kmp_ana_pflag_res_t)
+	SIZEOF_INFO_ENTRY(kmp_ana_pflag_t)
+
+    SIZEOF_INFO_TITLE("LE-CODE")
+	SIZEOF_INFO_ENTRY(lecode_debug_info_t)
+	SIZEOF_INFO_ENTRY(lecode_debug_ex_t)
+	SIZEOF_INFO_ENTRY(le_lpar_t)
+	SIZEOF_INFO_ENTRY(le_binary_head_t)
+	SIZEOF_INFO_ENTRY(le_binary_head_v4_t)
+	SIZEOF_INFO_ENTRY(le_binary_param_t)
+	SIZEOF_INFO_ENTRY(le_binpar_v1_35_t)
+	SIZEOF_INFO_ENTRY(le_binpar_v1_37_t)
+	SIZEOF_INFO_ENTRY(le_binpar_v1_f8_t)
+	SIZEOF_INFO_ENTRY(le_binpar_v1_1b8_t)
+	SIZEOF_INFO_ENTRY(le_binpar_v1_1bc_t)
+	SIZEOF_INFO_ENTRY(le_binpar_v1_260_t)
+	SIZEOF_INFO_ENTRY(le_binpar_v1_264_t)
+	SIZEOF_INFO_ENTRY(le_binpar_v1_t)
+	SIZEOF_INFO_ENTRY(le_cup_par_t)
+	SIZEOF_INFO_ENTRY(le_course_par_t)
+	SIZEOF_INFO_ENTRY(le_analyse_t)
+
+    SIZEOF_INFO_TITLE("LEX")
+	SIZEOF_INFO_ENTRY(features_szs_t)
+	SIZEOF_INFO_ENTRY(check_features_szs_t)
+	SIZEOF_INFO_ENTRY(have_lex_info_t)
+	SIZEOF_INFO_ENTRY(lex_header_t)
+	SIZEOF_INFO_ENTRY(lex_element_t)
+	SIZEOF_INFO_ENTRY(lex_set1_t)
+	SIZEOF_INFO_ENTRY(lex_hipt_rule_t)
+	SIZEOF_INFO_ENTRY(lex_test_t)
+	SIZEOF_INFO_ENTRY(lex_item_t)
+	SIZEOF_INFO_ENTRY(lex_t)
+	SIZEOF_INFO_ENTRY(lex_info_t)
+
+    SIZEOF_INFO_TITLE("MDL")
+	SIZEOF_INFO_ENTRY(mdl_head_t)
+	SIZEOF_INFO_ENTRY(mdl_t)
+	SIZEOF_INFO_ENTRY(mdl_sect0_t)
+	SIZEOF_INFO_ENTRY(mdl_sect1_t)
+	SIZEOF_INFO_ENTRY(mdl_sect2_t)
+	SIZEOF_INFO_ENTRY(mdl_sect8_t)
+	SIZEOF_INFO_ENTRY(mdl_sect8_layer_t)
+	SIZEOF_INFO_ENTRY(Slot42MaterialInfo_t)
+	SIZEOF_INFO_ENTRY(Slot42MaterialStat_t)
+	SIZEOF_INFO_ENTRY(mdl_sect10_t)
+	SIZEOF_INFO_ENTRY(mdl_minimap_t)
+	SIZEOF_INFO_ENTRY(StringIteratorMDL_t)
+
+    SIZEOF_INFO_TITLE("MKW")
+	SIZEOF_INFO_ENTRY(TrackInfo_t)
+	SIZEOF_INFO_ENTRY(MusicInfo_t)
+
+    SIZEOF_INFO_TITLE("Object DB")
+	SIZEOF_INFO_ENTRY(ObjSettingFormat_t)
+	SIZEOF_INFO_ENTRY(ObjectInfo_t)
+	SIZEOF_INFO_ENTRY(ObjSpec_t)
+	SIZEOF_INFO_ENTRY(UsedObject_t)
+	SIZEOF_INFO_ENTRY(UsedFile_t)
+	SIZEOF_INFO_ENTRY(UsedFileSZS_t)
+	SIZEOF_INFO_ENTRY(UsedFileSHA1_t)
+	SIZEOF_INFO_ENTRY(UsedFileFILE_t)
+	SIZEOF_INFO_ENTRY(UsedFileGROUP_t)
+
+    SIZEOF_INFO_TITLE("PAT")
+	SIZEOF_INFO_ENTRY(pat_head_t)
+	SIZEOF_INFO_ENTRY(pat_s0_belem_t)
+	SIZEOF_INFO_ENTRY(pat_s0_bhead_t)
+	SIZEOF_INFO_ENTRY(pat_s0_sref_t)
+	SIZEOF_INFO_ENTRY(pat_s0_selem_t)
+	SIZEOF_INFO_ENTRY(pat_s0_shead_t)
+	SIZEOF_INFO_ENTRY(pat_analyse_t)
+	SIZEOF_INFO_ENTRY(pat_element_t)
+	SIZEOF_INFO_ENTRY(pat_t)
+
+    SIZEOF_INFO_TITLE("RARC")
+	SIZEOF_INFO_ENTRY(rarc_file_header_t)
+	SIZEOF_INFO_ENTRY(rarc_header_t)
+	SIZEOF_INFO_ENTRY(rarc_node_t)
+	SIZEOF_INFO_ENTRY(rarc_entry_t)
+
+    SIZEOF_INFO_TITLE("RKC")
+	SIZEOF_INFO_ENTRY(rkco_t)
+	SIZEOF_INFO_ENTRY(rkct_t)
+
+    SIZEOF_INFO_TITLE("RKG")
+	SIZEOF_INFO_ENTRY(rkg_head_t)
+	SIZEOF_INFO_ENTRY(rkg_info_t)
+
+    SIZEOF_INFO_TITLE("StaticR")
+	SIZEOF_INFO_ENTRY(str_server_list_t)
+	SIZEOF_INFO_ENTRY(str_server_patch_t)
+	SIZEOF_INFO_ENTRY(staticr_t)
+	SIZEOF_INFO_ENTRY(VersusPointsInfo_t)
+	SIZEOF_INFO_ENTRY(rel_header_t)
+	SIZEOF_INFO_ENTRY(rel_sect_info_t)
+	SIZEOF_INFO_ENTRY(rel_imp_t)
+	SIZEOF_INFO_ENTRY(rel_data_t)
+	SIZEOF_INFO_ENTRY(rel_info_t)
+	SIZEOF_INFO_ENTRY(wpf_t)
+	SIZEOF_INFO_ENTRY(wpf_head_t)
+	SIZEOF_INFO_ENTRY(addr_port_t)
+	SIZEOF_INFO_ENTRY(addr_port_version_t)
+
+    SIZEOF_INFO_TITLE("SZS")
+	SIZEOF_INFO_ENTRY(yaz0_header_t)
+	SIZEOF_INFO_ENTRY(u8_header_t)
+	SIZEOF_INFO_ENTRY(u8_node_t)
+	SIZEOF_INFO_ENTRY(string_pool_t)
+	SIZEOF_INFO_ENTRY(szs_subfile_t)
+	SIZEOF_INFO_ENTRY(szs_subfile_list_t)
+	SIZEOF_INFO_ENTRY(szs_have_t)
+	SIZEOF_INFO_ENTRY(szs_file_t)
+	SIZEOF_INFO_ENTRY(szs_norm_t)
+//	SIZEOF_INFO_ENTRY(check_szs_t)
+	SIZEOF_INFO_ENTRY(slot_ana_t)
+	SIZEOF_INFO_ENTRY(iterator_param_t)
+	SIZEOF_INFO_ENTRY(szs_iterator_t)
+	SIZEOF_INFO_ENTRY(brres_header_t)
+	SIZEOF_INFO_ENTRY(brres_entry_t)
+	SIZEOF_INFO_ENTRY(brres_group_t)
+	SIZEOF_INFO_ENTRY(brres_root_t)
+	SIZEOF_INFO_ENTRY(brsub_header_t)
+	SIZEOF_INFO_ENTRY(brsub_cut_t)
+	SIZEOF_INFO_ENTRY(szs_extract_t)
+	SIZEOF_INFO_ENTRY(raw_data_t)
+	SIZEOF_INFO_ENTRY(wbz_header_t)
+	SIZEOF_INFO_ENTRY(analyse_szs_t)
+	SIZEOF_INFO_ENTRY(file_type_t)
+
+    SIZEOF_INFO_TERM()
+};
+
+//-----------------------------------------------------------------------------
+
+static const sizeof_info_t *sizeof_info_szs[] =
+{
+    sizeof_info_szs_list,
+    0
+};
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command test			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -254,6 +600,7 @@ static enumError cmd_test_options()
 
     printf("  test:        %16x = %12d\n",testmode,testmode);
     printf("  verbose:     %16x = %12d\n",verbose,verbose);
+    printf("  warn modes:  %16llx = \"%s\"\n",(u64)WARN_MODE,GetWarnMode());
     printf("  force:       %16x = %12d (kmp=%d)\n",force_count,force_count,force_kmp);
     printf("  sort:        %16x = %12d\n",opt_sort,opt_sort);
     printf("  width:       %16x = %12d\n",opt_width,opt_width);
@@ -844,6 +1191,42 @@ static enumError cmd_export()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			command sizeof			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_sizeof()
+{
+    sizeof_info_order_t order;
+    switch (GetSortMode(opt_sort,0,SORT_NONE))
+    {
+     case SORT_INAME:	order = SIZEOF_ORDER_NAME; break;
+     case SORT_SIZE:	order = SIZEOF_ORDER_SIZE; break;
+     default:		order = SIZEOF_ORDER_NONE; break;
+    }
+
+    SetupPager();
+    PrintMode_t pm = { .fout = stdout, .cout = colout, .debug = logging };
+    ArgManager_t am = { .force_case = LOUP_LOWER };
+    for ( ParamList_t *param = first_param; param; param = param->next )
+	AppendArgManager(&am,param->arg,0,false);
+
+    const sizeof_info_t **si_list;
+    if (brief_count)
+	si_list = sizeof_info_szs;
+    else
+    {
+	AddListToSizeofInfoMgr(sizeof_info_szs);
+	si_list = GetSizeofInfoMgrList();
+    }
+
+    ListSizeofInfo(&pm,si_list,&am,order);
+
+    ClosePager();
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command _CODE			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -985,7 +1368,7 @@ void PrintNorm ( const szs_norm_t *norm )
     if ( !norm || !norm->f )
 	return;
 
-    
+
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1907,6 +2290,9 @@ static enumError cmd_analyze()
     PrintScript_t ps;
     SetupPrintScriptByOptions(&ps);
 
+    patch_action_log_disabled++;
+    CheckTextureRefSZS(&szs,0);
+
     ParamList_t *param;
     for ( param = first_param; param; param = param->next )
     {
@@ -1939,6 +2325,7 @@ static enumError cmd_analyze()
 
 	//--- analyse szs
 
+	const u_usec_t start_usec = GetTimerUSec();
 	AnalyseSZS(&as,false,&szs,param->arg);
 
 
@@ -1975,10 +2362,40 @@ static enumError cmd_analyze()
 	    name_attrib++;
 	    ccp end = strrchr(name_attrib,']');
 	    if (end)
+	    {
 		name_attrib_len = end - name_attrib;
+		for ( ccp ptr = name_attrib; ptr < end; )
+		{
+		    ccp sep = strchr(ptr,',');
+		    if (!sep)
+			sep = end;
+		    switch ( sep-ptr )
+		    {
+		     case 4:
+			if (!memcmp(ptr,"edit",4)) szs.have.attrib |= 1 << HAVEATT_EDIT;
+			break;
+
+		     case 5:
+			if (!memcmp(ptr,"cheat",5)) szs.have.attrib |= 1 << HAVEATT_CHEAT;
+			break;
+
+		     case 7:
+			if (!memcmp(ptr,"reverse",7)) szs.have.attrib |= 1 << HAVEATT_REVERSE;
+			break;
+		    }
+		    ptr = sep + 1;
+		}
+	    }
 	}
 	else
 	    name_attrib = EmptyString;
+
+
+	ccp texture_info = 0;
+	PrepareCheckTextureSZS(&szs);
+	CheckTextureRefSZS(&szs,&texture_info);
+
+	const u_usec_t duration_usec = GetTimerUSec() - start_usec;
 
 
 	//--- print result
@@ -1995,6 +2412,10 @@ static enumError cmd_analyze()
 		 "sha1_course=\"%s\"\n"
 		 "sha1_vrcorn=\"%s\"\n"
 		 "sha1_minimap=\"%s\"\n"
+		 "sha1_kcl_slot=%u\n"
+		 "sha1_kmp_slot=%u\n"
+		 "sha1_kmp_norm_slot=%u\n"
+		 "sha1_minimap_slot=%u\n"
 		"valid_track=%u\n"
 		"is_arena=\"%u %s\"\n"
 		"n_ckpt0=%d\n"
@@ -2015,13 +2436,14 @@ static enumError cmd_analyze()
 		"special_files=\"%s\"\n"
 		"original_files=\"%s\"\n"
 		"modified_files=\"%s\"\n"
+		"special_attrib=\"%s\"\n"
 		"special_kmp=\"%s\"\n"
 		"lex_sections=\"%s\"\n"
 		"lex_features=\"%s\"\n"
 		"warn=\"%u=%s\"\n"
 		"ct_attributes=\"%s\"\n"
 		"name_attributes=\"%.*s\"\n"
-		"duration_usec=%llu\n"
+
 		,dest
 		,szs.size
 		 ,as.db64
@@ -2033,6 +2455,10 @@ static enumError cmd_analyze()
 		 ,as.sha1_course
 		 ,as.sha1_vrcorn
 		 ,as.sha1_minimap
+		 ,as.sha1_kcl_slot
+		 ,as.sha1_kmp_slot
+		 ,as.sha1_kmp_norm_slot
+		 ,as.sha1_minimap_slot
 		,as.valid_track
 		,szs.is_arena
 		,is_arena_name[szs.is_arena]
@@ -2066,14 +2492,17 @@ static enumError cmd_analyze()
 		,CreateSpecialFileInfo(&szs,~(1<<HFM_NONE),true,"")
 		,CreateSpecialFileInfo(&szs,1<<HFM_ORIGINAL,true,"")
 		,CreateSpecialFileInfo(&szs,1<<HFM_MODIFIED,true,"")
+		,CreateSpecialInfoAttrib(szs.have.attrib,true,"")
 		,CreateSpecialInfoKMP(szs.have.kmp,true,"")
 		,CreateSectionInfoLEX(szs.have.lex_sect,true,"")
 		,CreateFeatureInfoLEX(szs.have.lex_feat,true,"")
 		,szs.warn_bits,GetWarnSZSNames(szs.warn_bits,' ')
 		,as.ct_attrib+1
 		,name_attrib_len,name_attrib
-		,as.duration_usec
 		);
+
+	if (texture_info)
+	    PrintScriptVars(&ps,0,"texture_hack=\"%s\"\n",texture_info);
 
 	if ( long_count > 0 )
 	{
@@ -2091,6 +2520,7 @@ static enumError cmd_analyze()
 	    }
 	}
 
+	PrintScriptVars(&ps,0,"duration_usec=%llu\n",duration_usec);
 	PutScriptVars(&ps,2,0);
 
 	if (!script_array)
@@ -2106,6 +2536,74 @@ static enumError cmd_analyze()
     ResetFile(&fo,0);
     ResetAnalyseSZS(&as);
     ResetSZS(&szs);
+    return max_err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			command is-texture		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_is_texture()
+{
+    disable_checks++;
+
+    int max_err = 0;
+    szs_file_t szs;
+    InitializeSZS(&szs);
+    patch_action_log_disabled++;
+
+    uint max_fw = 0;
+    struct { FastBuf_t b; char space[500]; } fbuf;
+    if (long_count)
+	InitializeFastBuf(&fbuf,sizeof(fbuf));
+
+    for ( ParamList_t *param = first_param; param; param = param->next )
+    {
+	NORMALIZE_FILENAME_PARAM(param);
+
+	ResetSZS(&szs);
+	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	if ( err > ERR_WARNING )
+	{
+	    if (long_count)
+	    {
+		AppendFastBuf(&fbuf.b,"-1=err",7);
+		if ( max_fw < 7 )
+		     max_fw = 7;
+	    }
+	    if ( max_err < err )
+		max_err = err;
+	    continue;
+	}
+
+	ccp texture_info = 0;
+	PrepareCheckTextureSZS(&szs);
+	CheckTextureRefSZS(&szs,&texture_info);
+
+	if (long_count)
+	{
+	    ccp x = texture_info ? texture_info : "-1";
+	    const int len = strlen(x);
+	    AppendFastBuf(&fbuf.b,x,len+1);
+	    if ( max_fw < len )
+		 max_fw = len;
+	}
+	else
+	    printf("%s\n", texture_info ? texture_info : "-1" );
+    }
+
+    if (long_count)
+    {
+	ccp par = fbuf.b.buf;
+	for ( ParamList_t *param = first_param; param; param = param->next )
+	{
+	    printf("%-*s : %s\n",max_fw,par,param->arg);
+	    par += strlen(par) + 1;
+	}
+	ResetFastBuf(&fbuf.b);
+    }
+
     return max_err;
 }
 
@@ -5089,6 +5587,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break;
@@ -5185,6 +5684,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 
 	case GO_ESC:		err += ScanEscapeChar(optarg) < 0; break;
 	case GO_SOURCE:		SetSource(optarg); break;
+	case GO_REFERENCE:	SetReference(optarg); break;
 	case GO_DEST:		SetDest(optarg,false); break;
 	case GO_DEST2:		SetDest(optarg,true); break;
 	case GO_OVERWRITE:	opt_overwrite = true; break;
@@ -5383,14 +5883,12 @@ static enumError CheckCommand ( int argc, char ** argv )
     switch ((enumCommands)cmd_ct->id)
     {
 	case CMD_VERSION:	version_exit();
-	case CMD_HELP:		PrintHelp(&InfoUI_wszst,stdout,0,"HELP",0,URI_HOME,
-					first_param ? first_param->arg : 0 ); break;
+	case CMD_HELP:		PrintHelpColor(&InfoUI_wszst); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_INSTALL:	err = cmd_install(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
-	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0);
-				break;
+	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0); break;
 	case CMD_ERROR:		err = cmd_error(); break;
 	case CMD_FILETYPE:	err = cmd_filetype(); break;
 	case CMD_FILEATTRIB:	err = cmd_fileattrib(); break;
@@ -5408,6 +5906,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_TRACKS:	err = cmd_tracks(); break;
 	case CMD_SCANCACHE:	err = cmd_scancache(); break;
 	case CMD_EXPORT:	err = cmd_export(); break;
+	case CMD_SIZEOF:	err = cmd_sizeof(); break;
 	case CMD_CODE:		err = cmd_code(); break;
 	case CMD_RECODE:	err = cmd_recode(); break;
 	case CMD_SUBFILE:	err = cmd_subfile(); break;
@@ -5433,6 +5932,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_MEMORY_A:	set_all(1); err = cmd_memory(); break;
 	case CMD_SHA1:		err = cmd_sha1(); break;
 	case CMD_ANALYZE:	err = cmd_analyze(); break;
+	case CMD_IS_TEXTURE:	err = cmd_is_texture(); break;
 	case CMD_FEATURES:	err = cmd_features(); break;
 	case CMD_DISTRIBUTION:	err = cmd_distribution(); break;
 	case CMD_DIFF:		err = cmd_diff(); break;

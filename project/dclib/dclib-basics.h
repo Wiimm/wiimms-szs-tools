@@ -14,16 +14,16 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
+ *   This library is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
+ *   This library is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
  *   GNU General Public License for more details.                          *
@@ -39,6 +39,7 @@
 
 #include <sys/types.h>
 #include <arpa/inet.h>
+#include <sys/un.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -65,8 +66,13 @@
 #define SIZEOFRANGE(type,a,b) \
 	( offsetof(type,b) + sizeof(((type*)0)->b) - offsetof(type,a) )
 
-#define PTR_DISTANCE(a,b) ( (u8*)(a) - (u8*)(b) )
-#define PTR_DISTANCE_INT(a,b) ( (int)( (u8*)(a) - (u8*)(b) ))
+#define END_OF_VAR(v) ((void*)( (char*)(v) + sizeof(v) ))
+
+#define PTR_DISTANCE(a,b) ( (char*)(a) - (char*)(b) )
+#define PTR_DISTANCE_INT(a,b) ( (int)( (char*)(a) - (char*)(b) ))
+
+#define GET_INT_SIGN(type) ({ typeof(type) a=-1; a>0 ? 1 : -1; })
+#define GET_INT_TYPE(type) ((int)sizeof(type)*GET_INT_SIGN(type))
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -79,8 +85,15 @@
 #else
   #define HAVE_CLOCK_GETTIME 0
 #endif
- 
+
+//
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			external types			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct ColorSet_t ColorSet_t;
+typedef struct RestoreState_t RestoreState_t;
+typedef struct LogFile_t LogFile_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -141,6 +154,7 @@ static inline uint Count1Bits64 ( u64 data )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// return -1 if bit not found
 
 int FindLowest0BitBE  ( cvp addr, uint size );
 int FindLowest1BitBE  ( cvp addr, uint size );
@@ -788,6 +802,20 @@ mem_t BehindMem ( const mem_t src, ccp ref );
 
 //-----------------------------------------------------------------------------
 
+// UTF8 support
+
+mem_t MidMem8 ( const mem_t src, int begin, int count );
+mem_t ExtractMem8 ( const mem_t src, int begin, int end );
+mem_t ExtractEndMem8 ( const mem_t src, int begin, int end );
+
+static mem_t LeftMem8 ( const mem_t src, int count )
+	{ return ExtractMem8(src,0,count); }
+
+static mem_t RightMem8 ( const mem_t src, int count )
+	{ return ExtractEndMem8(src,-count,0); }
+
+//-----------------------------------------------------------------------------
+
 // Alloc dest buffer and terminate with 0.
 // If m*.len < 0, then use strlen().
 
@@ -800,7 +828,7 @@ int  CmpMem		( const mem_t s1, const mem_t s2 );
 int  StrCmpMem		( const mem_t mem, ccp str );
 bool LeftStrCmpMemEQ	( const mem_t mem, ccp str );
 
-// free a string if str is not NULL|EmptyString|MinusString
+// free a string if str is !NULL | !EmptyString | !MinusString | !IsCircBuf()
 void FreeString ( ccp str );
 
 static inline void FreeMem ( mem_t *mem )
@@ -886,24 +914,39 @@ static inline exmem_t ExMemByStringE ( ccp str, ccp end )
     return em;
 }
 
-static inline exmem_t ExMemByS ( ccp str, int len )
+static inline exmem_t ExMemByS ( cvp str, int len )
 {
     exmem_t em = { .data={ str, len }, .is_original=true };
     return em;
 }
 
-static inline exmem_t ExMemByE ( ccp str, ccp end )
+static inline exmem_t ExMemByE ( cvp str, cvp end )
 {
-    exmem_t em = { .data={ str, end-str }, .is_original=true };
+    exmem_t em = { .data={ str, (u8*)end-(u8*)str }, .is_original=true };
+    return em;
+}
+
+static inline exmem_t ExMemCalloc ( int size )
+{
+    char *data = CALLOC(size,1);
+    exmem_t em = { .data={ data, size }, .is_original=true, .is_alloced=true };
+    return em;
+}
+
+static inline exmem_t ExMemDup ( cvp src, int size )
+{
+    char *data = MEMDUP(src,size);
+    exmem_t em = { .data={ data, size+1 }, .is_original=true, .is_alloced=true };
     return em;
 }
 
 //-----------------------------------------------------------------------------
 // interface
 
-// 'em' maybe modified ignoring 'const'
-void FreeExMem ( const exmem_t *em );
-void FreeExMemCM ( const exmem_t *em, CopyMode_t copy_mode ); // free if CPM_MOVE
+// 'em' can be modified ignoring 'const'
+void ResetExMem  ( const exmem_t *em );
+void FreeExMem   ( const exmem_t *em );
+void FreeExMemCM ( const exmem_t *em, CopyMode_t copy_mode ); // free on CPM_MOVE
 
 exmem_t AllocExMemS
 (
@@ -917,13 +960,17 @@ exmem_t AllocExMemS
 static inline exmem_t AllocExMemM ( mem_t src, bool try_circ, mem_t orig )
 	{ return AllocExMemS(src.ptr,src.len,try_circ,orig.ptr,orig.len); }
 
-void AssignExMem ( exmem_t *dest, const exmem_t *source, CopyMode_t copy_mode );
+void AssignExMem  ( exmem_t *dest, const exmem_t *source, CopyMode_t copy_mode );
+void AssignExMemS ( exmem_t *dest, cvp source, int slen,  CopyMode_t copy_mode );
+
 static inline exmem_t CopyExMem ( const exmem_t *source, CopyMode_t copy_mode )
 	{ exmem_t em = {{0}}; AssignExMem(&em,source,copy_mode); return em; }
 
-exmem_t CopyExMemS ( ccp string, int slen, CopyMode_t copy_mode );
+static inline exmem_t CopyExMemS ( cvp source, int slen, CopyMode_t copy_mode )
+	{ exmem_t em = {{0}}; AssignExMemS(&em,source,slen,copy_mode); return em; }
+
 static inline exmem_t CopyExMemM ( const mem_t source, CopyMode_t copy_mode )
-	{ return CopyExMemS(source.ptr,source.len,copy_mode); }
+	{ exmem_t em = {{0}}; AssignExMemS(&em,source.ptr,source.len,copy_mode); return em; }
 
 ccp PrintExMem ( const exmem_t * em ); // print to circ-buf
 
@@ -1176,6 +1223,39 @@ uint PurgeCircBuf  ( CircBuf_t *cb );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			PrintMode_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[PrintMode_t]]
+
+typedef struct PrintMode_t
+{
+    FILE	*fout;		// NULL (stdout) or output file
+    const ColorSet_t
+		*cout;		// NULL (no colors) or color set for 'fout'
+
+    FILE	*ferr;		// NULL or error file
+    const ColorSet_t
+		*cerr;		// NULL (no colors) or color set for 'ferr'
+
+    FILE	*flog;		// if NULL: use 'ferr' or 'fout' as fallback
+    const ColorSet_t
+		*clog;		// NULL (no colors) or color set for 'flog'
+				// if 'flog' is copied, use related 'col*'
+
+    ccp		prefix;		// NULL (no prefix) or line prefix
+    ccp		eol;		// NULL (LF) or end-of-line string
+    int		indent;		// indention after prefix
+    int		debug;		// debug level (ignored if <=0)
+
+    int		mode;		// user defined print mode
+    bool	compact;	// TRUE: print compact (e.g. no empty lines for readability)
+}
+PrintMode_t;
+
+void SetupPrintMode ( PrintMode_t * pm );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			split strings			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1280,6 +1360,7 @@ extern const char Slash200[201];	// 200 * '/' + NULL
 
 // UTF-8 => 3 bytes per char
 extern const char ThinLine300_3[901];	// 300 * '─' (U+2500) + NULL
+extern const char DoubleLine300_3[901];	// 300 * '═' (U+2550) + NULL
 
 //-----------------------------------------------------------------------------
 
@@ -1336,9 +1417,14 @@ char * StringCat3E  ( char * buf, ccp buf_end, ccp src1, ccp src2, ccp src3 );
 char * StringCat2A  ( ccp src1, ccp src2 );
 char * StringCat3A  ( ccp src1, ccp src2, ccp src3 );
 
-static inline char * StringCopySMem ( char * buf, size_t bufsize, mem_t mem )
+// center string
+ccp StringCenterE ( char * buf, ccp buf_end, ccp src, int width );
+static inline ccp StringCenterS ( char *buf, size_t bufsize, ccp src, int width )
+	{ return StringCenterE(buf,buf+bufsize,src,width); }
+
+static inline char * StringCopySMem ( char *buf, size_t bufsize, mem_t mem )
 	{ return StringCopySM(buf,bufsize,mem.ptr,mem.len); }
-static inline char * StringCopyEMem ( char * buf, ccp buf_end, mem_t mem )
+static inline char * StringCopyEMem ( char *buf, ccp buf_end, mem_t mem )
 	{ return StringCopyEM(buf,buf_end,mem.ptr,mem.len); }
 
 char * StringLowerS ( char * buf, size_t bufsize, ccp src );
@@ -1356,6 +1442,12 @@ int StrNumCmp ( ccp a, ccp b );
 
 // count the number of equal bytes and return a value of 0 to SIZE
 uint CountEqual ( cvp m1, cvp m2, uint size );
+
+// skip ESC & well known escape sequences (until noc-escape)
+char * SkipEscapes  ( ccp str );
+char * SkipEscapesE ( ccp str, ccp end );
+char * SkipEscapesS ( ccp str, int size );
+mem_t  SkipEscapesM ( mem_t mem );
 
 // Concatenate path + path, return pointer to buf
 // Return pointer to   buf  or  path1|path2|buf  or  alloced string
@@ -1495,11 +1587,13 @@ char * PrintID
 ///////////////			    circ buf			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-#define CIRC_BUF_MAX_ALLOC 0x0400  // request limit
-#define CIRC_BUF_SIZE      0x4000  // internal buffer size
+#define CIRC_BUF_MAX_ALLOC	0x0400  // request limit
+#define CIRC_BUF_SIZE		0x4000  // internal buffer size
 
 // returns true if 'ptr' points into circ buffer => ignored by FreeString()
 bool IsCircBuf ( cvp ptr );
+
+//-----------------------------------------------------------------------------
 
 char * GetCircBuf
 (
@@ -1509,6 +1603,21 @@ char * GetCircBuf
 				// if buf_size > CIRC_BUF_MAX_ALLOC:
 				//  ==> ERROR0(ERR_OUT_OF_MEMORY)
 );
+
+static inline wchar_t * GetCircBufW
+(
+    // Never returns NULL, but always ALIGN(4)
+
+    u32		buf_size	// wanted buffer size (wchar elements),
+				// caller must add 1 for NULL-term
+				// if final buf_size > CIRC_BUF_MAX_ALLOC:
+				//  ==> ERROR0(ERR_OUT_OF_MEMORY)
+)
+{
+    return (wchar_t*)GetCircBuf(buf_size*sizeof(wchar_t));
+}
+
+//-----------------------------------------------------------------------------
 
 char * CopyCircBuf
 (
@@ -1560,6 +1669,28 @@ void ReleaseCircBuf
     ccp	    end_buf,		// pointer to end of previous alloced buffer
     uint    release_size	// number of bytes to give back from end
 );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			get line by list		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetLineByListHelper ( const int *list, ccp beg, ccp mid, ccp end, ccp line );
+
+static inline ccp GetTopLineByList ( const int *list )
+{
+    return GetLineByListHelper(list,"┌","┬","┐","─");
+}
+
+static inline ccp GetMidLineByList ( int *list )
+{
+    return GetLineByListHelper(list,"├","┼","┤","─");
+}
+
+static inline ccp GetBottomLineByList ( int *list )
+{
+    return GetLineByListHelper(list,"└","┴","┘","─");
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1631,6 +1762,75 @@ ccp GetIntModeName ( IntMode_t mode );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			    lt/eq/gt			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[compare_operator_t]]
+
+typedef enum compare_operator_t
+{
+    COP_LT	= 1,
+    COP_EQ	= 2,
+    COP_GT	= 4,
+
+    COP_NE	= COP_LT | COP_GT,
+    COP_LE	= COP_LT | COP_EQ,
+    COP_GE	= COP_GT | COP_EQ,
+
+    COP_FALSE	= 0,
+    COP_TRUE	= COP_LT | COP_EQ | COP_GT,
+}
+__attribute__ ((packed)) compare_operator_t;
+
+//-----------------------------------------------------------------------------
+
+char * ScanCompareOp ( compare_operator_t *dest_op, ccp arg );
+ccp GetCompareOpName ( compare_operator_t op );
+
+static inline compare_operator_t NegateCompareOp ( compare_operator_t op )
+	{ return op ^ COP_TRUE; }
+
+bool CompareByOpStat ( int stat, compare_operator_t op );
+bool CompareByOpINT  ( int a,    compare_operator_t op, int b );
+bool CompareByOpUINT ( uint a,   compare_operator_t op, uint b );
+bool CompareByOpI64  ( s64 a,    compare_operator_t op, s64 b );
+bool CompareByOpU64  ( u64 a,    compare_operator_t op, u64 b );
+bool CompareByOpFLT  ( float a,  compare_operator_t op, float b );
+bool CompareByOpDBL  ( double a, compare_operator_t op, double b );
+
+static inline bool CompareByOpS ( ccp a, compare_operator_t op, ccp b )
+	{ return CompareByOpStat(strcmp(a,b),op); }
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			LOWER/AUTO/UPPER		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[LowerUpper_t]]
+
+typedef enum LowerUpper_t
+{
+    LOUP_ERROR	= -99,
+    LOUP_LOWER	=  -1,
+    LOUP_AUTO	=   0,
+    LOUP_UPPER	=   1,
+}
+LowerUpper_t;
+
+extern const KeywordTab_t KeyTab_LOWER_AUTO_UPPER[];
+
+int ScanKeywordLowerAutoUpper
+(
+    // returns one of LOUP_*
+
+    ccp			arg,		// argument to scan
+    int			on_empty,	// return this value on empty
+    uint		max_num,	// >0: additionally accept+return number <= max_num
+    ccp			object		// NULL (silent) or object for error messages
+);
+
+ccp GetKeywordLowerAutoUpper ( LowerUpper_t value );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct FastBuf_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[FastBuf_t]]
@@ -1682,6 +1882,7 @@ ccp GetFastBufStatus	( const FastBuf_t *fb );
 int ReserveSpaceFastBuf ( FastBuf_t *fb, uint size );
 char * GetSpaceFastBuf	( FastBuf_t *fb, uint size );
 
+// if size<0: use strlen(source) instead
 uint   InsertFastBuf	( FastBuf_t *fb, int index,   cvp source, int size );
 char * AppendFastBuf	( FastBuf_t *fb,              cvp source, int size );
 char * WriteFastBuf	( FastBuf_t *fb, uint offset, cvp source, int size );
@@ -1833,39 +2034,152 @@ int ScanSplitArg
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			arg_manager_t			///////////////
+///////////////			PointerList_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[arg_manager_t]]
+// [[PointerList_t]]
 
-typedef struct arg_manager_t
+typedef struct PointerList_t
 {
-    char	**argv;	// list of strings
-    int		argc;	// number of used elements in 'argv'
-    uint	size;	// >0: 'argv' is alloced to store # elements
-			// last NULL element is not counted here
+    void **list;	// 0 terminated list, 1 longer than size
+    uint used;		// num of used elements of 'list'
+    uint size;		// num of alloced elements of 'list'
+    int  grow;		// list grows by 1.5*size + grow (at least by 10)
 }
-arg_manager_t;
+PointerList_t;
 
 //-----------------------------------------------------------------------------
 
-void ResetArgManager  ( arg_manager_t *am );
-void SetupArgManager  ( arg_manager_t *am, int argc, char ** argv, bool clone );
-void AttachArgManager ( arg_manager_t *am, int argc, char ** argv );
-void CloneArgManager  ( arg_manager_t *am, int argc, char ** argv );
+static inline void InitializePointerMgr ( PointerList_t *pl, int grow )
+	{ DASSERT(pl); memset(pl,0,sizeof(*pl)); pl->grow = grow; }
 
-void AddSpaceArgManager ( arg_manager_t *am, int needed_space );
+void ResetPointerMgr ( PointerList_t *pl );
 
-void CopyArgManager ( arg_manager_t *dest, const arg_manager_t *src );
-void MoveArgManager ( arg_manager_t *dest,        arg_manager_t *src );
+// if n_elem<0: add until NULL pointer
+void AddToPointerMgr ( PointerList_t *pl, const void *info );
+void AddListToPointerMgr ( PointerList_t *pl, const void **list, int n_elem );
 
-void PrepareEditArgManager ( arg_manager_t *am, int needed_space );
+// reset==true: call ResetPointerMgr() after duplicating
+void ** DupPointerMgr ( PointerList_t *pl, bool reset );
 
-uint AppendArgManager ( arg_manager_t *am,          ccp arg1, ccp arg2, bool move_arg );
-uint InsertArgManager ( arg_manager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg );
-uint ReplaceArgManager( arg_manager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg );
-uint RemoveArgManager ( arg_manager_t *am, int pos, int count );
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			ArgManager_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[ArgManager_t]]
 
-void DumpArgManager ( FILE *f, int indent, const arg_manager_t *am, ccp title );
+typedef struct ArgManager_t
+{
+    LowerUpper_t force_case;	// change case?
+    char	**argv;		// list of strings
+    int		argc;		// number of used elements in 'argv'
+    uint	size;		// >0: 'argv' is alloced to store # elements
+				// last NULL element is not counted here
+}
+ArgManager_t;
+
+//-----------------------------------------------------------------------------
+
+void ResetArgManager  ( ArgManager_t *am );
+void SetupArgManager  ( ArgManager_t *am, LowerUpper_t force_case,
+					  int argc, char ** argv, bool clone );
+void AttachArgManager ( ArgManager_t *am, int argc, char ** argv );
+void CloneArgManager  ( ArgManager_t *am, int argc, char ** argv );
+
+void AddSpaceArgManager ( ArgManager_t *am, int needed_space );
+
+void CopyArgManager ( ArgManager_t *dest, const ArgManager_t *src );
+void MoveArgManager ( ArgManager_t *dest,        ArgManager_t *src );
+
+void PrepareEditArgManager ( ArgManager_t *am, int needed_space );
+
+// return the pos behind last insert arguments
+uint AppendArgManager ( ArgManager_t *am,          ccp arg1, ccp arg2, bool move_arg );
+uint InsertArgManager ( ArgManager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg );
+uint ReplaceArgManager( ArgManager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg );
+
+// return the pos at removed argument
+uint RemoveArgManager ( ArgManager_t *am, int pos, int count );
+
+uint ScanSimpleArgManager ( ArgManager_t *am, ccp src );
+uint ScanQuotedArgManager ( ArgManager_t *am, ccp src, bool is_utf8 );
+
+// NULL if for both params accepted
+bool CheckFilterArgManager ( const ArgManager_t *filter, ccp name );
+
+void DumpArgManager ( FILE *f, int indent, const ArgManager_t *am, ccp title );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			sizeof_info_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[sizeof_info_t]]
+
+#define SIZEOF_INFO_TITLE(t)	{ -1, t },
+#define SIZEOF_INFO_ENTRY(e)	{ sizeof(e), #e },
+#define SIZEOF_INFO_SEP()	{ -2, 0 },
+#define SIZEOF_INFO_TERM()	{ -9, 0 },
+
+typedef struct sizeof_info_t
+{
+    int size;
+    ccp name;
+}
+__attribute__ ((packed)) sizeof_info_t;
+
+//-----------------------------------------------------------------------------
+
+// basic lists
+extern const sizeof_info_t sizeof_info_linux[];		// C and Linux types
+extern const sizeof_info_t sizeof_info_dclib[];		// dcLib types
+
+// default list of lists for GCMD_Sizeof(), terminated by 0
+extern const sizeof_info_t *sizeof_info_default[];
+extern PointerList_t SizeofInfoMgr;
+
+static inline void AddDefaultToSizeofInfoMgr(void)
+	{ AddListToPointerMgr(&SizeofInfoMgr,(cvpp)sizeof_info_default,-1); }
+
+static inline void AddInfoToSizeofInfoMgr ( const sizeof_info_t *info )
+	{ AddToPointerMgr(&SizeofInfoMgr,info); }
+
+static inline void AddListToSizeofInfoMgr ( const sizeof_info_t **list )
+	{ AddListToPointerMgr(&SizeofInfoMgr,(cvpp)list,-1); }
+
+static inline const sizeof_info_t ** GetSizeofInfoMgrList(void)
+	{ return SizeofInfoMgr.used ? (const sizeof_info_t**)SizeofInfoMgr.list : 0; }
+
+///////////////////////////////////////////////////////////////////////////////
+// [[sizeof_info_order_t]]
+
+typedef enum sizeof_info_order_t
+{
+    SIZEOF_ORDER_NONE,		// don't sort output, but print categories
+    SIZEOF_ORDER_NAME,		// Sort the output by name (case-insensitive)
+				// and suppress output of categories.
+    SIZEOF_ORDER_SIZE,		// Sort the output by size and suppress output of categories.
+}
+sizeof_info_order_t;
+
+//-----------------------------------------------------------------------------
+
+void ListSizeofInfo
+(
+    const PrintMode_t	*p_pm,		// NULL or print mode
+    const sizeof_info_t	**si_list,	// list of list of entries
+    ArgManager_t	*p_filter,	// NULL or filter arguments, LOUP_LOWER recommended
+    sizeof_info_order_t	order		// kind of order
+);
+
+static inline void ListSizeofInfoMgr
+(
+    const PrintMode_t	*p_pm,		// NULL or print mode
+    PointerList_t	*mgr,		// valid PointerList_t
+    ArgManager_t	*p_filter,	// NULL or filter arguments, LOUP_LOWER recommended
+    sizeof_info_order_t	order		// kind of order
+)
+{
+     ListSizeofInfo(p_pm,(const sizeof_info_t**)mgr->list,p_filter,order);
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2369,7 +2683,7 @@ extern ccp TableDecode64default, TableEncode64default;
 
 uint GetEscapedSize
 (
-    // returns the needed buffer size for PrintEscapedString() 
+    // returns the needed buffer size for PrintEscapedString()
 
     ccp		source,		// NULL or string to print
     int		src_len,	// length of string. if -1, str is null terminated
@@ -2465,7 +2779,7 @@ uint EncodeBase64
     // returns the number of scanned bytes of 'source'
 
     char	*buf,			// valid destination buffer
-    uint	buf_size,		// size of 'buf', >= 4
+    uint	buf_size,		// size of 'buf' >= 4
     const void	*source,		// NULL or data to encode
     int		source_len,		// length of 'source'; if <0: use strlen(source)
     const char	encode64[64+1],		// encoding table; if NULL: use TableEncode64default
@@ -2496,7 +2810,7 @@ uint EncodeBase64ml // ml: multi line
     // returns the number of scanned bytes of 'source'
 
     char	*buf,			// valid destination buffer
-    uint	buf_size,		// size of 'buf', >= 4
+    uint	buf_size,		// size of 'buf' >= 4
     const void	*source,		// NULL or data to encode
     int		source_len,		// length of 'source'; if <0: use strlen(source)
     const char	encode64[64+1],		// encoding table; if NULL: use TableEncode64default
@@ -2644,7 +2958,7 @@ uint EncodeByMode
     // returns the number of valid bytes in 'buf'. Result is NULL-terminated.
 
     char		*buf,		// valid destination buffer
-    uint		buf_size,	// size of 'buf', >= 4
+    uint		buf_size,	// size of 'buf' >= 4
     ccp			source,		// string to encode
     int			slen,		// length of string. if -1, str is null terminated
     EncodeMode_t	emode		// encoding mode
@@ -2748,6 +3062,45 @@ static inline char * QuoteBashCircM ( mem_t src, cvp if_null, CharMode_t cm )
 
 static char * QuoteBashCircS ( ccp src, cvp if_null, CharMode_t cm )
 	{ return EscapeString(src,-1,if_null,EmptyQuote,cm,'$',true,0); }
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			struct Escape_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[EscapeStat_t]]
+
+typedef enum EscapeStat_t
+{
+    ESCST_NONE,	// nothing scanned (data incomplete)
+    ESCST_CHAR,	// single char scanned (char behind '\e')
+    ESCST_FE,	// FE scanned (single byte)
+    ESCST_SS2,	// SS2 scanned ('N' + single byte), code := second char
+    ESCST_SS3,	// SS3 scanned ('O' + single byte) , code := second char
+    ESCST_CSI,	// 'Control Sequence Introduce' based string scanned, code := final char
+    ESCST_OSC,	// 'Operating System Command' based string scanned
+
+    ESCST__N
+}
+EscapeStat_t;
+
+extern const char ecape_stat_name[ESCST__N+1][5];
+
+///////////////////////////////////////////////////////////////////////////////
+// [[Escape_t]]
+
+typedef struct Escape_t
+{
+    EscapeStat_t status;	// one of EscapeStat_t
+    int		scanned_len;	// number of scanned chars
+    u32		code;		// depends on 'status', see enum EscapeStat_t
+    mem_t	esc;		// if status==2: pointer+len to escape string;  else (0,0)
+}
+Escape_t;
+
+//-----------------------------------------------------------------------------
+
+// returns esc->status
+EscapeStat_t CheckEscape ( Escape_t *esc, cvp source, cvp end, bool check_esc );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2974,35 +3327,6 @@ static inline int ScanKeywordOffAutoOn( ccp arg, int on_empty, uint max_num, ccp
 	{ return ScanKeywordOffAutoOnEx(0,arg,on_empty,max_num,object); }
 
 ccp GetKeywordOffAutoOn ( OffOn_t value );
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			LOWER/AUTO/UPPER		///////////////
-///////////////////////////////////////////////////////////////////////////////
-// [[LowerUpper_t]]
-
-typedef enum LowerUpper_t
-{
-    LOUP_ERROR	= -99,
-    LOUP_LOWER	=  -1,
-    LOUP_AUTO	=   0,
-    LOUP_UPPER	=   1,
-}
-LowerUpper_t;
-
-extern const KeywordTab_t KeyTab_LOWER_AUTO_UPPER[];
-
-int ScanKeywordLowerAutoUpper
-(
-    // returns one of LOUP_*
-
-    ccp			arg,		// argument to scan
-    int			on_empty,	// return this value on empty
-    uint		max_num,	// >0: additionally accept+return number <= max_num
-    ccp			object		// NULL (silent) or object for error messages
-);
-
-ccp GetKeywordLowerAutoUpper ( LowerUpper_t value );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -3280,14 +3604,15 @@ unsigned long long int str2ull ( const char *nptr, char **endptr, int base );
 typedef enum sizeform_mode_t
 {
     DC_SFORM_ALIGN	= 0x01,	// aligned output
-    DC_SFORM_NARROW	= 0x02,	// suppress space between number and unit
-    DC_SFORM_UNIT1	= 0x04,	// limit unit to 1 character (space for bytes)
-    DC_SFORM_INC	= 0x08,	// increment to next factor if no fraction is lost
-    DC_SFORM_PLUS	= 0x10,	// on signed output: print PLUS sign for values >0
-    DC_SFORM_DASH	= 0x20,	// on NULL: print only a dash (minus sign)
+    DC_SFORM_CENTER	= 0x02,	// aligned and centered output
+    DC_SFORM_NARROW	= 0x04,	// suppress space between number and unit
+    DC_SFORM_UNIT1	= 0x08,	// limit unit to 1 character (space for bytes)
+    DC_SFORM_INC	= 0x10,	// increment to next factor if no fraction is lost
+    DC_SFORM_PLUS	= 0x20,	// on signed output: print PLUS sign for values >0
+    DC_SFORM_DASH	= 0x40,	// on NULL: print only a dash (minus sign)
 
-    DC_SFORM__MASK	= 0x3f,	// mask of above
-    DC_SFORM__AUTO	= 0x40,	// hint for some functions to decide by themself
+    DC_SFORM__MASK	= 0x7f,	// mask of above
+    DC_SFORM__AUTO	= 0x80,	// hint for some functions to decide by themself
 
     DC_SFORM_TINY	= DC_SFORM_NARROW | DC_SFORM_UNIT1,
 }
@@ -3302,6 +3627,13 @@ double RoundD7bytes ( double d );
 
 ///////////////////////////////////////////////////////////////////////////////
 
+// Parameters:
+//	char	*buf,		// result buffer
+//				// NULL: use a local circulary static buffer
+//	size_t	buf_size,	// size of 'buf', ignored if buf==NULL
+//	*	num,		// number to print
+//	sizeform_mode_t mode	// any of DC_SFORM_ALIGN, DC_SFORM_DASH[not *D*()]
+
 char * PrintNumberU4 ( char *buf, size_t buf_size, u64 num, sizeform_mode_t mode );
 char * PrintNumberU5 ( char *buf, size_t buf_size, u64 num, sizeform_mode_t mode );
 char * PrintNumberU6 ( char *buf, size_t buf_size, u64 num, sizeform_mode_t mode );
@@ -3314,13 +3646,6 @@ char * PrintNumberS7 ( char *buf, size_t buf_size, s64 num, sizeform_mode_t mode
 char * PrintNumberD5 ( char *buf, size_t buf_size, double num, sizeform_mode_t mode );
 char * PrintNumberD6 ( char *buf, size_t buf_size, double num, sizeform_mode_t mode );
 char * PrintNumberD7 ( char *buf, size_t buf_size, double num, sizeform_mode_t mode );
-
-// Parameters:
-//	char	*buf,		// result buffer
-//				// NULL: use a local circulary static buffer
-//	size_t	buf_size,	// size of 'buf', ignored if buf==NULL
-//	*	num,		// number to print
-//	sizeform_mode_t mode	// any of DC_SFORM_ALIGN, DC_SFORM_DASH[not *D*()]
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -3475,6 +3800,24 @@ u64 GetSizeU64	( ccp src, char **end, int force_base );
 double GetSizeD	( ccp src, char **end, int force_base );
 
 //-----------------------------------------------------------------------------
+// [[range_opt_t]]
+
+typedef enum range_opt_t
+{
+    RAOPT_COLON		= 0x01,  // allow ':' as from/to separator
+    RAOPT_MINUS		= 0x02,  // allow '-' as from/to separator
+    RAOPT_HASH		= 0x04,  // allow '#' as from/size separator
+    RAOPT_COMMA		= 0x08,  // allow ',' as from/size separator
+    RAOPT_NEG		= 0x10,  // accept negative numbers as index relative to max_value
+    RAOPT_ASSUME_0	= 0x20,	 // allow ':-#,' as first char and assume 0 as first value
+    RAOPT_F_FORCE	= 0x40,  // flag to avoid value 0 as default alias
+    RAOPT__ALL		= 0x7f,  // all possible bits
+
+    RAOPT__DEFAULT = RAOPT_COLON | RAOPT_HASH,
+}
+range_opt_t;
+
+//-----------------------------------------------------------------------------
 
 char * ScanSizeRange
 (
@@ -3487,7 +3830,8 @@ char * ScanSizeRange
     u64		default_factor,		// use this factor if number hasn't one
     u64		default_factor_add,	// use this factor for summands
     int		force_base,		// if 1000|1024: force multiple of this
-    double	max_value		// >0: max value for open ranges
+    double	max_value,		// >0: max value for open ranges
+    range_opt_t	opt			// options, if 0 then use RAOPT__DEFAULT
 );
 
 char * ScanSizeRangeU32
@@ -3501,7 +3845,23 @@ char * ScanSizeRangeU32
     u64		default_factor,		// use this factor if number hasn't one
     u64		default_factor_add,	// use this factor for summands
     int		force_base,		// if 1000|1024: force multiple of this
-    u32		max_value		// >0: max value for open ranges
+    u32		max_value,		// >0: max value for open ranges
+    range_opt_t	opt			// options, if 0 then use RAOPT__DEFAULT
+);
+
+char * ScanSizeRangeS32
+(
+    int		*stat,			// if not NULL: store result
+					//	0:none, 1:single, 2:range
+    s32		*num1,			// not NULL: store 'from' result
+    s32		*num2,			// not NULL: store 'to' result
+
+    ccp		source,			// source text
+    u64		default_factor,		// use this factor if number hasn't one
+    u64		default_factor_add,	// use this factor for summands
+    int		force_base,		// if 1000|1024: force multiple of this
+    s32		max_value,		// >0: max value for open ranges
+    range_opt_t	opt			// options, if 0 then use RAOPT__DEFAULT
 );
 
 char * ScanSizeRangeU64
@@ -3515,7 +3875,23 @@ char * ScanSizeRangeU64
     u64		default_factor,		// use this factor if number hasn't one
     u64		default_factor_add,	// use this factor for summands
     int		force_base,		// if 1000|1024: force multiple of this
-    u64		max_value		// >0: max value for open ranges
+    u64		max_value,		// >0: max value for open ranges
+    range_opt_t	opt			// options, if 0 then use RAOPT__DEFAULT
+);
+
+char * ScanSizeRangeS64
+(
+    int		*stat,			// if not NULL: store result
+					//	0:none, 1:single, 2:range
+    s64		*num1,			// not NULL: store 'from' result
+    s64		*num2,			// not NULL: store 'to' result
+
+    ccp		source,			// source text
+    u64		default_factor,		// use this factor if number hasn't one
+    u64		default_factor_add,	// use this factor for summands
+    int		force_base,		// if 1000|1024: force multiple of this
+    s64		max_value,		// >0: max value for open ranges
+    range_opt_t	opt			// options, if 0 then use RAOPT__DEFAULT
 );
 
 //-----------------------------------------------------------------------------
@@ -3531,7 +3907,8 @@ char * ScanSizeRangeList
     u64		default_factor,		// use this factor if number hasn't one
     u64		default_factor_add,	// use this factor for summands
     int		force_base,		// if 1000|1024: force multiple of this
-    double	max_value		// >0: max value for open ranges
+    double	max_value,		// >0: max value for open ranges
+    range_opt_t	opt			// options, if 0 then use RAOPT__DEFAULT
 );
 
 char * ScanSizeRangeListU32
@@ -3545,7 +3922,8 @@ char * ScanSizeRangeListU32
     u32		default_factor,		// use this factor if number hasn't one
     u32		default_factor_add,	// use this factor for summands
     int		force_base,		// if 1000|1024: force multiple of this
-    u32		max_value		// >0: max value for open ranges
+    u32		max_value,		// >0: max value for open ranges
+    range_opt_t	opt			// options, if 0 then use RAOPT__DEFAULT
 );
 
 char * ScanSizeRangeListU64
@@ -3559,7 +3937,8 @@ char * ScanSizeRangeListU64
     u64		default_factor,		// use this factor if number hasn't one
     u64		default_factor_add,	// use this factor for summands
     int		force_base,		// if 1000|1024: force multiple of this
-    u64		max_value		// >0: max value for open ranges
+    u64		max_value,		// >0: max value for open ranges
+    range_opt_t	opt			// options, if 0 then use RAOPT__DEFAULT
 );
 
 //-----------------------------------------------------------------------------
@@ -3610,78 +3989,49 @@ enumError ScanSizeOptU32
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			Scan Duration			///////////////
-///////////////////////////////////////////////////////////////////////////////
-// [[ScanDuration_t]]
-
-typedef enum ScanDuration_t
-{
-    SDUMD_SKIP_BLANKS		= 0x01,  // skip leading blanks
-    SDUMD_ALLOW_COLON		= 0x02,  // allow 'H:M' and 'H:M:S'
-    SDUMD_ALLOW_DIV		= 0x04,  // allow fraction 'n/d' as number
-
-    SDUMD_ALLOW_LIST		= 0x10,  // allow lists like '9h12m'
-     SDUMD_ALLOW_SPACE_SEP	= 0x20,  //  lists: allow spaces as list separator
-     SDUMD_ALLOW_PLUS_SEP	= 0x40,  //  lists: allow '+' as list separator
-     SDUMD_ALLOW_MINUS_SEP	= 0x80,  //  lists: allow '-' as list separator
-
-    SDUMD_M_ALL			= 0xf7,
-}
-ScanDuration_t;
-
-//-----------------------------------------------------------------------------
-
-char * ScanDuration
-(
-    double		*num,		// not NULL: store result
-    ccp			source,		// source text
-    double		default_factor,	// default factor if no SI unit found
-    ScanDuration_t	mode
-);
-
-double GetDurationFactor ( char ch );
-
-char * ScanSIFactor
-(
-    // returns end of scanned string
-
-    double	*num,			// not NULL: store result
-    ccp		source,			// source text
-    double	default_factor		// return this if no factor found
-);
-
-//
-///////////////////////////////////////////////////////////////////////////////
 ///////////////			time & timer			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 //--- conversion factors
 
-#define SEC_PER_MIN	60
-#define SEC_PER_HOUR	3600
-#define SEC_PER_DAY	86400
-#define SEC_PER_WEEK	604800
+#define SEC_PER_MIN	      60
+#define SEC_PER_HOUR	    3600
+#define SEC_PER_DAY	   86400
+#define SEC_PER_WEEK	  604800
+#define SEC_PER_MONTH	 2629746  // 365.2425 * SEC_PER_DAY / 12
+#define SEC_PER_QUARTER	 7889238  // 365.2425 * SEC_PER_DAY /  4
+#define SEC_PER_YEAR	31556952  // 365.2425 * SEC_PER_DAY
 
-#define MSEC_PER_SEC	1000ull
-#define MSEC_PER_MIN	(60*MSEC_PER_SEC)
-#define MSEC_PER_HOUR	(3600*MSEC_PER_SEC)
-#define MSEC_PER_DAY	(SEC_PER_DAY*MSEC_PER_SEC)
-#define MSEC_PER_WEEK	(SEC_PER_WEEK*MSEC_PER_SEC)
+#define MSEC_PER_SEC	1000ll
+#define MSEC_PER_MIN	 (MSEC_PER_SEC*SEC_PER_MIN)
+#define MSEC_PER_HOUR	 (MSEC_PER_SEC*SEC_PER_HOUR)
+#define MSEC_PER_DAY	 (MSEC_PER_SEC*SEC_PER_DAY)
+#define MSEC_PER_WEEK	 (MSEC_PER_SEC*SEC_PER_WEEK)
+#define MSEC_PER_MONTH	 (MSEC_PER_SEC*SEC_PER_MONTH)
+#define MSEC_PER_QUARTER (MSEC_PER_SEC*SEC_PER_QUARTER)
+#define MSEC_PER_YEAR	 (MSEC_PER_SEC*SEC_PER_YEAR)
 
-#define USEC_PER_MSEC	1000ull
-#define USEC_PER_SEC	1000000ull
-#define USEC_PER_MIN	(60*USEC_PER_SEC)
-#define USEC_PER_HOUR	(3600*USEC_PER_SEC)
-#define USEC_PER_DAY	(SEC_PER_DAY*USEC_PER_SEC)
-#define USEC_PER_WEEK	(SEC_PER_WEEK*USEC_PER_SEC)
+#define USEC_PER_MSEC	   1000ll
+#define USEC_PER_SEC	1000000ll
+#define USEC_PER_MIN	 (USEC_PER_SEC*SEC_PER_MIN)
+#define USEC_PER_HOUR	 (USEC_PER_SEC*SEC_PER_HOUR)
+#define USEC_PER_DAY	 (USEC_PER_SEC*SEC_PER_DAY)
+#define USEC_PER_WEEK	 (USEC_PER_SEC*SEC_PER_WEEK)
+#define USEC_PER_MONTH	 (USEC_PER_SEC*SEC_PER_MONTH)
+#define USEC_PER_QUARTER (USEC_PER_SEC*SEC_PER_QUARTER)
+#define USEC_PER_YEAR	 (USEC_PER_SEC*SEC_PER_YEAR)
 
-#define NSEC_PER_USEC	1000ull
-#define NSEC_PER_MSEC	1000000ull
-#define NSEC_PER_SEC	1000000000ull
-#define NSEC_PER_MIN	(60*NSEC_PER_SEC)
-#define NSEC_PER_HOUR	(3600*NSEC_PER_SEC)
-#define NSEC_PER_DAY	(SEC_PER_DAY*NSEC_PER_SEC)
-#define NSEC_PER_WEEK	(SEC_PER_WEEK*NSEC_PER_SEC)
+#define NSEC_PER_USEC	      1000ll
+#define NSEC_PER_MSEC	   1000000ll
+#define NSEC_PER_SEC	1000000000ll
+#define NSEC_PER_MIN	 (NSEC_PER_SEC*SEC_PER_MIN)
+#define NSEC_PER_HOUR	 (NSEC_PER_SEC*SEC_PER_HOUR)
+#define NSEC_PER_DAY	 (NSEC_PER_SEC*SEC_PER_DAY)
+#define NSEC_PER_WEEK	 (NSEC_PER_SEC*SEC_PER_WEEK)
+#define NSEC_PER_MONTH	 (NSEC_PER_SEC*SEC_PER_MONTH)
+#define NSEC_PER_QUARTER (NSEC_PER_SEC*SEC_PER_QUARTER)
+#define NSEC_PER_YEAR	 (NSEC_PER_SEC*SEC_PER_YEAR)
+
 
 //--- time types
 
@@ -3694,6 +4044,19 @@ typedef s64  s_usec_t;	//   signed type to store time as microseconds
 typedef u64  u_nsec_t;	// unsigned type to store time as nanoseconds
 typedef s64  s_nsec_t;	//   signed type to store time as nanoseconds
 
+
+//--- max values time types
+
+#define S_SEC_MAX	S32_MAX
+#define U_SEC_MAX	U32_MAX
+#define S_MSEC_MAX	S64_MAX
+#define U_MSEC_MAX	U64_MAX
+#define S_USEC_MAX	S64_MAX
+#define U_USEC_MAX	U64_MAX
+#define S_NSEC_MAX	S64_MAX
+#define U_NSEC_MAX	U64_MAX
+
+//-----------------------------------------------------------------------------
 // [[DayTime_t]]
 typedef struct DayTime_t
 {
@@ -3716,6 +4079,14 @@ extern int timezone_adjust_isdst;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+extern ccp micro_second_char; // default = "u"
+
+static inline void SetMicroSecondChar ( bool use_micro )
+	{ micro_second_char = use_micro ? "µ" : "u"; }
+
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SetupTimezone ( bool force );
 int GetTimezoneAdjust ( time_t tim );
 
@@ -3727,17 +4098,55 @@ u_msec_t	GetTimeMSec  ( bool localtime );
 u_usec_t	GetTimeUSec  ( bool localtime );
 u_nsec_t	GetTimeNSec  ( bool localtime );
 
+struct timespec	GetClockTimer(void);
+u_sec_t  GetTimerSec(void);
 u_msec_t GetTimerMSec(void);
 u_usec_t GetTimerUSec(void);
 u_nsec_t GetTimerNSec(void);
 
-static inline u64 double2msec ( double d ) { return d>0.0 ? (u64)trunc( 1e3*d+0.5 ) : 0; }
-static inline u64 double2usec ( double d ) { return d>0.0 ? (u64)trunc( 1e6*d+0.5 ) : 0; }
-static inline u64 double2nsec ( double d ) { return d>0.0 ? (u64)trunc( 1e9*d+0.5 ) : 0; }
+//-----------------------------------------------------------------------------
 
-static inline double msec2double ( u64 num ) { return num * 1e-3; }
-static inline double usec2double ( u64 num ) { return num * 1e-6; }
-static inline double nsec2double ( u64 num ) { return num * 1e-9; }
+static inline u_sec_t Time2TimerSec ( u_sec_t tim, bool localtime )
+	{ return tim - GetTimeSec(localtime) + GetTimerSec(); }
+
+static inline u_msec_t Time2TimerMSec ( u_msec_t tim, bool localtime )
+	{ return tim - GetTimeMSec(localtime) + GetTimerMSec(); }
+
+static inline u_usec_t Time2TimerUSec ( u_usec_t tim, bool localtime )
+	{ return tim - GetTimeUSec(localtime) + GetTimerUSec(); }
+
+static inline u_nsec_t Time2TimerNSec ( u_nsec_t tim, bool localtime )
+	{ return tim - GetTimeNSec(localtime) + GetTimerNSec(); }
+
+
+static inline u_sec_t Timer2TimeSec ( u_sec_t tim, bool localtime )
+	{ return tim - GetTimerSec() + GetTimeSec(localtime); }
+
+static inline u_msec_t Timer2TimeMSec ( u_msec_t tim, bool localtime )
+	{ return tim - GetTimerMSec() + GetTimeMSec(localtime); }
+
+static inline u_usec_t Timer2TimeUSec ( u_usec_t tim, bool localtime )
+	{ return tim - GetTimerUSec() + GetTimeUSec(localtime); }
+
+static inline u_nsec_t Timer2TimeNSec ( u_nsec_t tim, bool localtime )
+	{ return tim - GetTimerNSec() + GetTimeNSec(localtime); }
+
+//-----------------------------------------------------------------------------
+
+static inline u_sec_t  double2sec  ( double d ) { return d>0.0 ? (u_msec_t)trunc(     d+0.5 ) : 0; }
+static inline u_msec_t double2msec ( double d ) { return d>0.0 ? (u_msec_t)trunc( 1e3*d+0.5 ) : 0; }
+static inline u_usec_t double2usec ( double d ) { return d>0.0 ? (u_usec_t)trunc( 1e6*d+0.5 ) : 0; }
+static inline u_nsec_t double2nsec ( double d ) { return d>0.0 ? (u_nsec_t)trunc( 1e9*d+0.5 ) : 0; }
+
+static inline s_sec_t  double2ssec  ( double d ) { return (s_sec_t)  floor(     d+0.5 ); }
+static inline s_msec_t double2smsec ( double d ) { return (s_msec_t) floor( 1e3*d+0.5 ); }
+static inline s_usec_t double2susec ( double d ) { return (s_usec_t) floor( 1e6*d+0.5 ); }
+static inline s_nsec_t double2snsec ( double d ) { return (s_nsec_t) floor( 1e9*d+0.5 ); }
+
+static inline double sec2double  ( s_sec_t  num ) { return num; }
+static inline double msec2double ( s_msec_t num ) { return num * 1e-3; }
+static inline double usec2double ( s_usec_t num ) { return num * 1e-6; }
+static inline double nsec2double ( s_nsec_t num ) { return num * 1e-9; }
 
 //--- another epoch: Monday, 2001-01-01
 
@@ -3747,13 +4156,57 @@ static inline double nsec2double ( u64 num ) { return num * 1e-9; }
 #define EPOCH_2001_NSEC (EPOCH_2001_SEC*NSEC_PER_SEC)
 
 ///////////////////////////////////////////////////////////////////////////////
+// [[CurrentTime_t]]
+
+typedef struct CurrentTime_t
+{
+    u_sec_t	sec;
+    u_msec_t	msec;
+    u_usec_t	usec;
+}
+CurrentTime_t;
+
+//-----------------------------------------------------------------------------
+
+CurrentTime_t GetCurrentTime ( bool localtime );
+
+extern CurrentTime_t current_time;
+static inline void UpdateCurrentTime(void)
+	{ current_time = GetCurrentTime(false); }
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// PrintRefTime*() return temporary buffer by GetCircBuf(), field width 10
+// Formats:
+//	±10h: "  %k:%M:%S"
+//	±12d: " %e. %k:%M"
+//	   *: "%F"
+
+ccp PrintRefTime
+(
+
+    u_sec_t		tim,		// seconds since epoch; 0 is replaced by time()
+    u_sec_t		*ref_tim	// NULL or ref_tim; if *ref_tim==0: write current time
+					// it is used to select format
+);
+
+ccp PrintRefTimeUTC
+(
+
+    u_sec_t		tim,		// seconds since epoch; 0 is replaced by time()
+    u_sec_t		*ref_tim	// NULL or ref_tim; if *ref_tim==0: write current time
+					// it is used to select format
+);
+
+//-----------------------------------------------------------------------------
 
 ccp PrintTimeByFormat
 (
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-    time_t		tim		// seconds since epoch; 0 is replaced by time()
+    u_sec_t		tim		// seconds since epoch; 0 is replaced by time()
 );
 
 ccp PrintTimeByFormatUTC
@@ -3761,7 +4214,7 @@ ccp PrintTimeByFormatUTC
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-    time_t		tim		// seconds since epoch; 0 is replaced by time()
+    u_sec_t		tim		// seconds since epoch; 0 is replaced by time()
 );
 
 //-----------------------------------------------------------------------------
@@ -3784,6 +4237,24 @@ ccp PrintNSecByFormatUTC
 					// 1-9 '@' in row replaced by digits of 'nsec'
     time_t		tim,		// seconds since epoch
     uint		nsec		// nanosecond of second
+);
+
+ccp PrintNTimeByFormat
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    u_nsec_t		ntime
+);
+
+ccp PrintNTimeByFormatUTC
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    u_nsec_t		ntime
 );
 
 //-----------------------------------------------------------------------------
@@ -3813,6 +4284,70 @@ static inline ccp PrintUSecByFormatUTC
 {
     return PrintNSecByFormatUTC(format,tim,usec*NSEC_PER_USEC);
 }
+
+ccp PrintUTimeByFormat
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    u_usec_t		utime
+);
+
+ccp PrintUTimeByFormatUTC
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    u_usec_t		utime
+);
+
+//-----------------------------------------------------------------------------
+
+static inline ccp PrintMSecByFormat
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    time_t		tim,		// seconds since epoch
+    uint		msec		// millisecond of second
+)
+{
+    return PrintNSecByFormat(format,tim,msec*NSEC_PER_MSEC);
+}
+
+static inline ccp PrintMSecByFormatUTC
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    time_t		tim,		// seconds since epoch
+    uint		msec		// millisecond of second
+)
+{
+    return PrintNSecByFormatUTC(format,tim,msec*NSEC_PER_MSEC);
+}
+
+ccp PrintMTimeByFormat
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    u_msec_t		mtime
+);
+
+ccp PrintMTimeByFormatUTC
+(
+    // returns temporary buffer by GetCircBuf();
+
+    ccp			format,		// format string for strftime()
+					// 1-9 '@' in row replaced by digits of 'usec'
+    u_msec_t		mtime
+);
 
 //-----------------------------------------------------------------------------
 
@@ -3926,7 +4461,7 @@ ccp PrintTimer3 // helper function
     u64			sec,		// seconds to print
     int			usec,		// 0...999999: usec fraction,
 					// otherwise suppress ms/us output
-    bool		aligned		// true: print aligned 3 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
 );
 
 static inline ccp PrintTimerSec3
@@ -3935,10 +4470,10 @@ static inline ccp PrintTimerSec3
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_sec_t		sec,		// seconds to print
-    bool		aligned		// true: print aligned 3 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
 )
 {
-    return PrintTimer3(buf,buf_size,sec,-1,aligned);
+    return PrintTimer3(buf,buf_size,sec,-1,mode);
 }
 
 static inline ccp PrintTimerMSec3
@@ -3947,10 +4482,10 @@ static inline ccp PrintTimerMSec3
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_msec_t		msec,		// microseconds to print
-    bool		aligned		// true: print aligned 3 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
 )
 {
-    return PrintTimer3(buf,buf_size,msec/1000,msec%1000*1000,aligned);
+    return PrintTimer3(buf,buf_size,msec/1000,msec%1000*1000,mode);
 }
 
 static inline ccp PrintTimerUSec3
@@ -3959,10 +4494,10 @@ static inline ccp PrintTimerUSec3
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_usec_t		usec,		// microseconds to print
-    bool		aligned		// true: print aligned 3 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
 )
 {
-    return PrintTimer3(buf,buf_size,usec/1000000,usec%1000000,aligned);
+    return PrintTimer3(buf,buf_size,usec/1000000,usec%1000000,mode);
 }
 
 //-----------------------------------------------------------------------------
@@ -3975,7 +4510,7 @@ ccp PrintTimer4 // helper function
     u64			sec,		// seconds to print
     int			usec,		// 0...999999: usec fraction,
 					// otherwise suppress ms/us output
-    bool		aligned		// true: print aligned 4 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
 );
 
 static inline ccp PrintTimerSec4
@@ -3984,10 +4519,10 @@ static inline ccp PrintTimerSec4
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_sec_t		sec,		// seconds to print
-    bool		aligned		// true: print aligned 4 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
 )
 {
-    return PrintTimer4(buf,buf_size,sec,-1,aligned);
+    return PrintTimer4(buf,buf_size,sec,-1,mode);
 }
 
 static inline ccp PrintTimerMSec4
@@ -3996,10 +4531,10 @@ static inline ccp PrintTimerMSec4
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_msec_t		msec,		// microseconds to print
-    bool		aligned		// true: print aligned 4 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
 )
 {
-    return PrintTimer4(buf,buf_size,msec/1000,msec%1000*1000,aligned);
+    return PrintTimer4(buf,buf_size,msec/MSEC_PER_SEC,msec%MSEC_PER_SEC*USEC_PER_SEC,mode);
 }
 
 static inline ccp PrintTimerUSec4
@@ -4008,23 +4543,36 @@ static inline ccp PrintTimerUSec4
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_usec_t		usec,		// microseconds to print
-    bool		aligned		// true: print aligned 4 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
 )
 {
-    return PrintTimer4(buf,buf_size,usec/1000000,usec%1000000,aligned);
+    return PrintTimer4(buf,buf_size,usec/USEC_PER_SEC,usec%USEC_PER_SEC,mode);
+}
+
+static inline ccp PrintTimerNSec4
+(
+    char		* buf,		// result buffer (>4 bytes)
+					// If NULL, a local circulary static buffer is used
+    size_t		buf_size,	// size of 'buf', ignored if buf==NULL
+    u_nsec_t		nsec,		// nanoseconds to print
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_DASH
+)
+{
+    const u_usec_t usec = nsec / NSEC_PER_USEC;
+    return PrintTimer4(buf,buf_size,usec/USEC_PER_SEC,usec%USEC_PER_SEC,mode);
 }
 
 //-----------------------------------------------------------------------------
 
-ccp PrintTimer6 // helper function
+ccp PrintTimer6N // helper function
 (
     char		* buf,		// result buffer (>6 bytes)
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u64			sec,		// seconds to print
-    int			usec,		// 0...999999: usec fraction,
-					// otherwise suppress ms/us output
-    bool		aligned		// true: print aligned 6 character output
+    int			nsec,		// 0...999999999: nsec fraction,
+					//    otherwise suppress ms/us/ns output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_CENTER | DC_SFORM_DASH
 );
 
 static inline ccp PrintTimerSec6
@@ -4033,10 +4581,10 @@ static inline ccp PrintTimerSec6
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_sec_t		sec,		// seconds to print
-    bool		aligned		// true: print aligned 6 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_CENTER | DC_SFORM_DASH
 )
 {
-    return PrintTimer6(buf,buf_size,sec,-1,aligned);
+    return PrintTimer6N(buf,buf_size,sec,-1,mode);
 }
 
 static inline ccp PrintTimerMSec6
@@ -4045,10 +4593,11 @@ static inline ccp PrintTimerMSec6
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_msec_t		msec,		// microseconds to print
-    bool		aligned		// true: print aligned 6 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_CENTER | DC_SFORM_DASH
 )
 {
-    return PrintTimer6(buf,buf_size,msec/1000,msec%1000*1000,aligned);
+    return PrintTimer6N( buf, buf_size,
+		msec/MSEC_PER_SEC, msec%MSEC_PER_SEC*NSEC_PER_MSEC, mode );
 }
 
 static inline ccp PrintTimerUSec6
@@ -4057,10 +4606,24 @@ static inline ccp PrintTimerUSec6
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     u_usec_t		usec,		// microseconds to print
-    bool		aligned		// true: print aligned 6 character output
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_CENTER | DC_SFORM_DASH
 )
 {
-    return PrintTimer6(buf,buf_size,usec/1000000,usec%1000000,aligned);
+    return PrintTimer6N( buf, buf_size,
+		usec/USEC_PER_SEC, usec%USEC_PER_SEC*NSEC_PER_USEC, mode );
+}
+
+static inline ccp PrintTimerNSec6
+(
+    char		* buf,		// result buffer (>6 bytes)
+					// If NULL, a local circulary static buffer is used
+    size_t		buf_size,	// size of 'buf', ignored if buf==NULL
+    u_nsec_t		nsec,		// nanoseconds to print
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_CENTER | DC_SFORM_DASH
+)
+{
+    return PrintTimer6N( buf, buf_size,
+		nsec/NSEC_PER_SEC, nsec%NSEC_PER_SEC, mode );
 }
 
 //-----------------------------------------------------------------------------
@@ -4071,8 +4634,20 @@ ccp PrintTimerUSec4s
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     s_usec_t		usec,		// microseconds to print
-    sizeform_mode_t	mode		// support of DC_SFORM_ALIGN, DC_SFORM_PLUS
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_PLUS | DC_SFORM_DASH
 );
+
+static inline ccp PrintTimerNSec4s
+(
+    char		* buf,		// result buffer (>4 bytes)
+					// If NULL, a local circulary static buffer is used
+    size_t		buf_size,	// size of 'buf', ignored if buf==NULL
+    s_nsec_t		nsec,		// nanoseconds to print
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_PLUS | DC_SFORM_DASH
+)
+{
+    return PrintTimerUSec4s(buf,buf_size,nsec/NSEC_PER_USEC,mode);
+}
 
 static inline ccp PrintTimerMSec4s
 (
@@ -4080,10 +4655,10 @@ static inline ccp PrintTimerMSec4s
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     s_msec_t		msec,		// milliseconds to print
-    sizeform_mode_t	mode		// support of DC_SFORM_ALIGN, DC_SFORM_PLUS
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_PLUS | DC_SFORM_DASH
 )
 {
-    return PrintTimerUSec4s(buf,buf_size,1000*msec,mode);
+    return PrintTimerUSec4s(buf,buf_size,msec*USEC_PER_MSEC,mode);
 }
 
 static inline ccp PrintTimerSec4s
@@ -4092,7 +4667,7 @@ static inline ccp PrintTimerSec4s
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     int			sec,		// seconds to print
-    sizeform_mode_t	mode		// support of DC_SFORM_ALIGN, DC_SFORM_PLUS
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_PLUS | DC_SFORM_DASH
 )
 {
     return PrintTimerUSec4s(buf,buf_size,1000000ll*sec,mode);
@@ -4100,13 +4675,22 @@ static inline ccp PrintTimerSec4s
 
 //-----------------------------------------------------------------------------
 
+ccp PrintTimerNSec7s
+(
+    char		* buf,		// result buffer (>7 bytes)
+					// If NULL, a local circulary static buffer is used
+    size_t		buf_size,	// size of 'buf', ignored if buf==NULL
+    s_nsec_t		nsec,		// nanoseconds to print
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_PLUS | DC_SFORM_DASH
+);
+
 ccp PrintTimerUSec7s
 (
     char		* buf,		// result buffer (>7 bytes)
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     s_usec_t		usec,		// microseconds to print
-    sizeform_mode_t	mode		// support of DC_SFORM_ALIGN, DC_SFORM_PLUS
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_PLUS | DC_SFORM_DASH
 );
 
 static inline ccp PrintTimerMSec7s
@@ -4115,7 +4699,7 @@ static inline ccp PrintTimerMSec7s
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     s_msec_t		msec,		// milliseconds to print
-    sizeform_mode_t	mode		// support of DC_SFORM_ALIGN, DC_SFORM_PLUS
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_PLUS | DC_SFORM_DASH
 )
 {
     return PrintTimerUSec7s(buf,buf_size,1000*msec,mode);
@@ -4127,11 +4711,168 @@ static inline ccp PrintTimerSec7s
 					// If NULL, a local circulary static buffer is used
     size_t		buf_size,	// size of 'buf', ignored if buf==NULL
     int			sec,		// seconds to print
-    sizeform_mode_t	mode		// support of DC_SFORM_ALIGN, DC_SFORM_PLUS
+    sizeform_mode_t	mode		// DC_SFORM_ALIGN | DC_SFORM_PLUS | DC_SFORM_DASH
 )
 {
     return PrintTimerUSec7s(buf,buf_size,1000000ll*sec,mode);
 }
+
+//-----------------------------------------------------------------------------
+
+ccp PrintAge3Sec
+(
+    u_sec_t		now,		// NULL or current time by GetTimeSec(false)
+    u_sec_t		time		// time to print
+);
+
+ccp PrintAge4Sec
+(
+    u_sec_t		now,		// NULL or current time by GetTimeSec(false)
+    u_sec_t		time		// time to print
+);
+
+ccp PrintAge6Sec
+(
+    u_sec_t		now,		// NULL or current time by GetTimeSec(false)
+    u_sec_t		time		// time to print
+);
+
+ccp PrintAge7Sec
+(
+    u_sec_t		now,		// NULL or current time by GetTimeSec(false)
+    u_sec_t		time		// time to print
+);
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			Scan Duration			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[ScanDuration_t]]
+
+typedef enum ScanDuration_t
+{
+    SDUMD_SKIP_BLANKS		= 0x01,  // skip leading blanks
+    SDUMD_ALLOW_COLON		= 0x02,  // allow 'H:M' and 'H:M:S'
+    SDUMD_ALLOW_DIV		= 0x04,  // allow fraction 'n/d' as number
+    SDUMD_ALLOW_CAPITALS	= 0x08,  // allow upper case letters
+
+    SDUMD_ALLOW_LIST		= 0x10,  // allow lists like '9h12m'
+     SDUMD_ALLOW_SPACE_SEP	= 0x20,  //  lists: allow spaces as list separator
+     SDUMD_ALLOW_PLUS_SEP	= 0x40,  //  lists: allow '+' as list separator
+     SDUMD_ALLOW_MINUS_SEP	= 0x80,  //  lists: allow '-' as list separator
+
+    SDUMD_M_DEFAULT		= 0xf7,
+    SDUMD_M_ALL			= 0xff,
+}
+ScanDuration_t;
+
+//-----------------------------------------------------------------------------
+
+char * ScanDuration
+(
+    // Returns a pointer to the the first not used character.
+    // On error, it is 'source' and '*seconds' is set to 0.0.
+
+    double		*seconds,	// not NULL: store result (number of seconds)
+    ccp			source,		// source text
+    double		default_factor,	// default factor if no SI unit found
+    ScanDuration_t	mode		// flags
+);
+
+double GetDurationFactor ( char ch );
+
+char * ScanSIFactor
+(
+    // returns end of scanned string
+
+    double	*num,			// not NULL: store result
+    ccp		source,			// source text
+    double	default_factor		// return this if no factor found
+);
+
+//-----------------------------------------------------------------------------
+
+// simple interfaces to ScanDuration(), SDUMD_M_DEFAULT is used as mode
+double str2duration ( ccp src, char **endptr, double default_factor );
+
+
+static inline u_sec_t str2sec ( ccp src, char **endptr )
+	{ return double2sec(str2duration(src,endptr,1.0)); }
+
+static inline u_msec_t str2msec ( ccp src, char **endptr )
+	{ return double2msec(str2duration(src,endptr,1.0)); }
+
+static inline u_usec_t str2usec ( ccp src, char **endptr )
+	{ return double2usec(str2duration(src,endptr,1.0)); }
+
+static inline u_nsec_t str2nsec ( ccp src, char **endptr )
+	{ return double2nsec(str2duration(src,endptr,1.0)); }
+
+
+static inline s_sec_t str2ssec ( ccp src, char **endptr )
+	{ return double2ssec(str2duration(src,endptr,1.0)); }
+
+static inline s_msec_t str2smsec ( ccp src, char **endptr )
+	{ return double2smsec(str2duration(src,endptr,1.0)); }
+
+static inline s_usec_t str2susec ( ccp src, char **endptr )
+	{ return double2susec(str2duration(src,endptr,1.0)); }
+
+static inline s_nsec_t str2snsec ( ccp src, char **endptr )
+	{ return double2snsec(str2duration(src,endptr,1.0)); }
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			Signals & Sleep			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+extern volatile int SIGINT_level;
+extern volatile int SIGHUP_level;
+extern volatile int SIGALRM_level;
+extern volatile int SIGCHLD_level;
+extern volatile int SIGPIPE_level;
+extern volatile int SIGUSR1_level;
+extern volatile int SIGUSR2_level;
+
+// no timout for SIGPIPE
+extern u_sec_t SIGINT_sec;
+extern u_sec_t SIGHUP_sec;
+extern u_sec_t SIGALRM_sec;
+extern u_sec_t SIGCHLD_sec;
+extern u_sec_t SIGUSR1_sec;
+extern u_sec_t SIGUSR2_sec;
+
+extern int  SIGINT_level_max;
+extern bool ignore_SIGINT;
+extern bool ignore_SIGHUP;
+
+extern int  redirect_signal_pid;
+extern LogFile_t log_signal_file;
+
+
+extern volatile int SIGINT_level;
+extern volatile int SIGHUP_level;
+extern volatile int SIGALRM_level;
+extern volatile int SIGPIPE_level;
+
+extern int  SIGINT_level_max;
+extern bool ignore_SIGINT;
+extern bool ignore_SIGHUP;
+
+void SetupSignalHandler ( int max_sigint_level, FILE *log_file );
+
+//-----------------------------------------------------------------------------
+
+int SleepNSec ( s_nsec_t nsec );
+
+static inline int SleepUSec ( s_usec_t usec )
+	{ return SleepNSec( usec * NSEC_PER_USEC ); }
+
+static inline int SleepMSec ( s_msec_t msec )
+	{ return SleepNSec( msec * NSEC_PER_MSEC ); }
+
+static inline int SleepSec ( s_sec_t sec )
+	{ return SleepNSec( sec * NSEC_PER_SEC ); }
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -4362,13 +5103,383 @@ static inline ccp year2text
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			usage counter			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#if IS_DEVELOP
+  #define TEST_USAGE_COUNT 0
+  #define USAGE_COUNT_ENABLED 0
+#else
+  #define TEST_USAGE_COUNT 0
+  #define USAGE_COUNT_ENABLED 0
+#endif
+
+#if TEST_USAGE_COUNT
+  #define USAGE_COUNT_ENTRIES	11	// number of entries
+#else
+  #define USAGE_COUNT_ENTRIES	30	// number of entries
+#endif
+
+#define USAGE_COUNT_FIRST_ADD	 8	// first entry where values wil be added
+#define USAGE_COUNT_NEXT_MIN(v)	(15*(v)/8)
+
+//-----------------------------------------------------------------------------
+//  [[UsageParam_t]]
+
+typedef struct UsageParam_t
+{
+    uint	used;			// number of used entries
+    bool	enabled;		// TRUE: statistics are enabled
+    bool	is_active;		// TRUE: counter is active (set by framework)
+
+    //--- not saved/restored
+
+    bool	dirty;			// TRUE: record needs an update @ 'update_nsec'
+    u_nsec_t	update_nsec;		// next update, based on GetTimerNSec()
+    u_nsec_t	force_update_nsec;	// force next update, based on GetTimerNSec()
+}
+UsageParam_t;
+
+//-----------------------------------------------------------------------------
+// [[UsageCountEntry_t]]
+
+typedef struct UsageCountEntry_t
+{
+    u64		count;		// counter
+    u_nsec_t	elapsed_nsec;	// elapsed time, by GetTimerNSec()
+    u_sec_t	time_sec;	// time of record, by GetTimeSec(false)
+    float	top1s;		// = 100.0*(utime+stime)/elapsed for 1s
+    float	top5s;		// = 100.0*(utime+stime)/elapsed for 5s
+}
+__attribute__ ((packed)) UsageCountEntry_t;
+
+//-----------------------------------------------------------------------------
+//  [[UsageCount_t]]
+
+typedef struct UsageCount_t
+{
+    UsageParam_t	par;				// base parameters
+    UsageCountEntry_t	ref;				// reference with absolute values
+ #if TEST_USAGE_COUNT
+    UsageCountEntry_t	entry[USAGE_COUNT_ENTRIES+1];	// list of entries with delta values
+ #else
+    UsageCountEntry_t	entry[USAGE_COUNT_ENTRIES];	// list of entries with delta values
+ #endif
+}
+UsageCount_t;
+
+//-----------------------------------------------------------------------------
+
+extern int usage_count_enabled;
+
+void EnableUsageCount(void);
+static inline void DisableUsageCount(void) { usage_count_enabled--; }
+
+//-----------------------------------------------------------------------------
+
+// n_rec<0: clear from end, n_rec>=0: clear from index
+void ClearUsageCount ( UsageCount_t *uc, int count );
+
+// NOW_NSEC: 0 or GetTimerNSec(), but not GetTime*()
+void UpdateUsageCount ( UsageCount_t *uc, u_nsec_t now_nsec );
+void UpdateUsageCountIncrement ( UsageCount_t *uc );
+void UpdateUsageCountAdd ( UsageCount_t *uc, int add );
+static inline void UsageCountIncrement ( UsageCount_t *uc )
+	{ UpdateUsageCountAdd(uc,1); }
+
+// stat about last 'nsec' nanoseconds
+UsageCountEntry_t GetUsageCount ( const UsageCount_t *uc, s_nsec_t nsec );
+
+void AddUsageCountEntry ( UsageCountEntry_t *dest, const UsageCountEntry_t *add );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			wait counter			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[UsageDurationEntry_t]]
+
+typedef struct UsageDurationEntry_t
+{
+    u_nsec_t	elapsed_nsec;	// elapsed time, by GetTimerNSec()
+    u_nsec_t	total_nsec;	// total waiting time
+    u_nsec_t	top_nsec;	// top waiting time
+    u64		count;		// number of events
+    u_sec_t	time_sec;	// time of record, by GetTimeSec(false)
+    float	top_cnt_1s;	// top number of counts in 1 sec
+    float	top_cnt_5s;	// top number of counts in 5 sec
+}
+__attribute__ ((packed)) UsageDurationEntry_t;
+
+//-----------------------------------------------------------------------------
+//  [[UsageDuration_t]]
+
+typedef struct UsageDuration_t
+{
+    UsageParam_t	 par;				// base parameters
+    UsageDurationEntry_t ref;				// reference with absolute values
+ #if TEST_USAGE_COUNT
+    UsageDurationEntry_t entry[USAGE_COUNT_ENTRIES+1];	// list of entries with delta values
+ #else
+    UsageDurationEntry_t entry[USAGE_COUNT_ENTRIES];	// list of entries with delta values
+ #endif
+}
+UsageDuration_t;
+
+//-----------------------------------------------------------------------------
+
+// n_rec<0: clear from end, n_rec>=0: clear from index
+void ClearUsageDuration ( UsageDuration_t *ud, int count );
+
+// NOW_NSEC: 0 or GetTimerNSec(), but not GetTime*()
+void UpdateUsageDuration ( UsageDuration_t *ud, u_nsec_t now_nsec );
+void UpdateUsageDurationAdd ( UsageDuration_t *ud, int add, u_nsec_t wait_nsec, u_nsec_t top_nsec );
+void UpdateUsageDurationIncrement ( UsageDuration_t *ud, u_nsec_t wait_nsec );
+void UsageDurationIncrement ( UsageDuration_t *ud, u_nsec_t wait_nsec );
+
+// stat about last 'nsec' nanoseconds
+UsageDurationEntry_t GetUsageDuration ( const UsageDuration_t *ud, s_nsec_t nsec );
+
+void AddUsageDurationEntry ( UsageDurationEntry_t *dest, const UsageDurationEntry_t *add );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			usage counter mgr		///////////////
+///////////////////////////////////////////////////////////////////////////////
+//  [[ListUsageFunc]]
+
+typedef struct UsageCtrl_t UsageCtrl_t;
+
+enum
+{
+    LUC_PM_STANDARD,	// standard view
+    LUC_PM_RAW,		// raw values, not supported by ListUsageCount()
+    LUC_PM_SUMMARY,	// summary
+    LUC_PM__USER	// base value for user defined modes
+};
+
+typedef void (*ListUsageFunc)
+(
+    PrintMode_t		*pm,		// valid print mode
+    const UsageCtrl_t	*uci,		// valid object to list
+    int			print_mode,	// see LUC_PM_*
+    s_nsec_t		limit_nsec	// >0: limit output until # is reached
+);
+
+//-----------------------------------------------------------------------------
+
+typedef void (*UpdateUsageFunc)
+(
+    const UsageCtrl_t	*uci,		// valid object to update
+    u_nsec_t		now_usec	// NULL or current time by GetTimerNSec()
+);
+
+//-----------------------------------------------------------------------------
+// [[UsageCtrl_t]]
+
+typedef struct UsageCtrl_t
+{
+    UsageParam_t	*par;		// higher prioritiy than uc->par and ud->par
+    UsageCount_t	*uc;		// not NULL for usage counters
+    UsageDuration_t	*ud;		// not NULL for wait counters
+
+    UpdateUsageFunc	update_func;	// not NULL: Call this function to update
+    ListUsageFunc	list_func;	// not NULL: Call this function to list
+
+    ccp			title;		// NULL or title
+    ccp			key1;		// first key, upper case
+    ccp			key2;		// NULL or second key, upper case
+
+    ccp			srt_load;	// NULL or prefix vor SRT reading to allow prefix changes
+    ccp			srt_prefix;	// NULL prefix or SRT reading + writing
+					//   If NULL: don't save/restore
+					//   'srt_load' is scanned before 'srt_prefix'
+
+    float		*color_val;	// 6 values for mark,info,gint,warn,err,bad
+					// if NULL then use system list
+    u_nsec_t		*color_dur;	// 6 values for mark,info,gint,warn,err,bad
+					// if NULL then use system list
+}
+UsageCtrl_t;
+
+//-----------------------------------------------------------------------------
+
+extern PointerList_t usage_count_mgr;
+
+// NOW_NSEC: 0 or GetTimerNSec(), but not GetTime*()
+u_nsec_t MaintainUsageByMgr ( u_nsec_t now_nsec );
+void UpdateByUCI ( const UsageCtrl_t *uci, u_nsec_t now_nsec );
+void UpdateUsageByMgr ( u_nsec_t now_nsec );
+void AddToUsageMgr ( const UsageCtrl_t *uci );
+
+void ListUsageCount
+(
+    PrintMode_t		*p_pm,		// NULL or print mode
+    const UsageCtrl_t	*uci,		// NULL or object to list
+    int			print_mode,	// see LUC_PM_*
+    s_nsec_t		limit_nsec	// >0: limit output until # is reached
+);
+
+void ListUsageDuration
+(
+    PrintMode_t		*p_pm,		// NULL or print mode
+    const UsageCtrl_t	*uci,		// NULL or object to list
+    int			print_mode,	// see LUC_PM_*
+    s_nsec_t		limit_nsec	// >0: limit output until # is reached
+);
+
+static inline UsageParam_t * GetUsageParam ( const UsageCtrl_t *uci )
+	{ DASSERT(uci); return uci->par ? uci->par : uci->uc ? &uci->uc->par : uci->ud ? &uci->ud->par : 0; }
+
+static inline char GetUsageTypeChar ( const UsageCtrl_t *uci )
+	{ return !uci ? '-' : uci->uc ? 'C' : uci->ud ? 'D' : uci->par ? 'x' : '?'; }
+
+void SaveCurrentStateByUsageCountMgr ( FILE *f, uint fw_name );
+void RestoreStateByUsageCountMgr ( RestoreState_t *rs );
+
+///////////////////////////////////////////////////////////////////////////////
+// [[IntervalInfo_t]]
+
+typedef struct IntervalInfo_t
+{
+    u_nsec_t	nsec;
+    u_usec_t	usec;
+    ccp		name;
+}
+IntervalInfo_t;
+
+extern const IntervalInfo_t interval_info[];
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			    cpu usage			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#if TEST_USAGE_COUNT
+  #define CPU_USAGE_ENTRIES	11	// number of entries
+#else
+  #define CPU_USAGE_ENTRIES	30	// number of entries
+#endif
+
+#if IS_DEVELOP
+  #define CPU_USAGE_ENABLED	0	// initial value for cpu_usage.par.enabled
+#else
+  #define CPU_USAGE_ENABLED	0	// initial value for cpu_usage.par.enabled
+#endif
+
+#define CPU_USAGE_FIRST_ADD	 8	// first entry where values wil be added
+#define CPU_USAGE_NEXT_MIN(v)	(15*(v)/8)
+
+//-----------------------------------------------------------------------------
+// [[CpuUsageEntry_t]]
+
+typedef struct CpuUsageEntry_t
+{
+    u_usec_t	elapsed_usec;	// elapsed time, by GetTimerUSec()
+    u_usec_t	utime_usec;	// user CPU time used
+    u_usec_t	stime_usec;	// system CPU time used
+    u_sec_t	time_sec;	// time of record, by GetTimeUSec(false)
+    float	top1s;		// = 100.0*(utime+stime)/elapsed for 1s
+    float	top5s;		// = 100.0*(utime+stime)/elapsed for 5s
+    u32		n_wait;		// number of waits (poll() or select())
+    float	topw1s;		// top number of waits in 1 sec
+    float	topw5s;		// top number of waits in 5 sec
+}
+__attribute__ ((packed)) CpuUsageEntry_t;
+
+//-----------------------------------------------------------------------------
+//  [[CpuUsage_t]]
+
+typedef struct CpuUsage_t
+{
+    UsageParam_t	par;				// base parameters
+    CpuUsageEntry_t	ref;				// reference with absolute values
+ #if TEST_USAGE_COUNT
+    CpuUsageEntry_t	entry[CPU_USAGE_ENTRIES+1];	// list of entries with delta values
+ #else
+    CpuUsageEntry_t	entry[CPU_USAGE_ENTRIES];	// list of entries with delta values
+ #endif
+}
+CpuUsage_t;
+
+//-----------------------------------------------------------------------------
+
+extern CpuUsage_t cpu_usage;
+extern const UsageCtrl_t cpu_usage_ctrl;
+
+void UpdateCpuUsage(void);
+void UpdateCpuUsageByUCI ( const UsageCtrl_t *, u_nsec_t ); // both params ignored
+void UpdateCpuUsageIncrement(void);
+
+void ListCpuUsage
+(
+    PrintMode_t		*p_pm,		// NULL or print mode
+    const UsageCtrl_t	*uci,		// ignored!
+    int			print_mode,	// see LUC_PM_*
+    s_nsec_t		limit_nsec	// >0: limit output until # is reached
+);
+
+// stat about last 'usec' microseconds
+CpuUsageEntry_t GetCpuUsage ( s_usec_t usec );
+uint GetCpuUsagePercent ( s_usec_t usec );
+
+void AddCpuEntry ( CpuUsageEntry_t *dest, const CpuUsageEntry_t *add );
+
+static inline uint GetCpuEntryPercent ( const CpuUsageEntry_t *entry )
+{
+    DASSERT(entry);
+    return entry->elapsed_usec
+	? 100 * ( entry->utime_usec + entry->stime_usec + entry->elapsed_usec/200 )
+		/ entry->elapsed_usec
+	: 0;
+}
+
+static inline double GetCpuEntryRatio ( const CpuUsageEntry_t *entry )
+{
+    DASSERT(entry);
+    return entry->elapsed_usec
+	? (double)(entry->utime_usec + entry->stime_usec ) / entry->elapsed_usec
+	: 0.0;
+}
+
+//-----------------------------------------------------------------------------
+
+// get percent, returns previuis valus if delay is <10ms
+double get_rusage_percent (void);
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			sockaddr support		///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[sockaddr_t]] [[sockaddr_in_t]] [[sockaddr_un_t]] [[sockaddr_info_t]]
+// [[sockaddr_in46_t]]
 
-typedef struct sockaddr sockaddr_t;
-typedef struct sockaddr_in sockaddr_in_t;
-typedef struct sockaddr_un sockaddr_un_t;
+typedef struct sockaddr_in46_t
+{
+    union
+    {
+	sa_family_t	family; // is first member of each sockaddr_* structure
+	sockaddr_in4_t	in4;
+	sockaddr_in6_t	in6;
+    };
+}
+sockaddr_in46_t;
+
+//-----------------------------------------------------------------------------
+// [[sockaddr_dclib_t]]
+
+typedef struct sockaddr_dclib_t
+{
+    union
+    {
+	sa_family_t	family; // is first member of each sockaddr_* structure
+	sockaddr_in4_t	in4;
+	sockaddr_in6_t	in6;
+	sockaddr_un_t	un;
+    };
+}
+sockaddr_dclib_t;
+
+//-----------------------------------------------------------------------------
+// [[sockaddr_info_t]]
 
 typedef struct sockaddr_info_t
 {
@@ -4377,7 +5488,7 @@ typedef struct sockaddr_info_t
 }
 sockaddr_info_t;
 
-//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
 
 // [[doxygen]]
 static inline sockaddr_info_t CreateSockaddrInfo ( cvp sa, uint size )
@@ -4402,24 +5513,95 @@ static inline void SetupSockaddrInfo ( sockaddr_info_t *sai, cvp sa, uint size )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			ScanIP4				///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[ipv4_class_t]]
+
+typedef enum ipv4_class_t
+{
+    CIP4_ERROR	= -1,	// error
+    CIP4_INVALID = 0,	// not an IPv4
+    CIP4_NUMERIC,	// 32 bit number only
+    CIP4_ABBREV,	// abbreviated IPv4 (trailing point)
+    CIP4_CLASS_A,	// IPv4 in class-A notation
+    CIP4_CLASS_B,	// IPv4 in class-B notation
+    CIP4_CLASS_C,	// IPv4 in class-C notation
+}
+ipv4_class_t;
+
+//-----------------------------------------------------------------------------
+
+ipv4_class_t ScanIP4
+(
+    ipv4_t	*ret_ip4,	// not NULL: return numeric IPv4 here
+    ccp		addr,		// address to analyze
+    int		addr_len	// length of addr; if <0: use strlen(addr)
+);
+
+//-----------------------------------------------------------------------------
+
+char * NormalizeIP4
+(
+    // Return a pointer to dest if valid IPv4,
+    // Otherwise return 0 and buf is not modifieid.
+
+    char	*buf,		// result buffer, can be 'addr'
+				// if NULL: use a local circulary static buffer
+    size_t	buf_size,	// size of 'buf', ignored if buf==NULL
+    bool	c_notation,	// TRUE: force lass-C notation (a.b.c.d)
+
+    ccp		addr,		// address to analyze
+    int		addr_len	// length of addr; if <0: use strlen(addr)
+);
+
+//-----------------------------------------------------------------------------
+
+static inline ipv4_class_t CheckIP4
+(
+    ccp		addr,		// address to analyze
+    int		addr_len	// length of addr; if <0: use strlen(addr)
+)
+{
+    return ScanIP4(0,addr,addr_len);
+}
+
+//-----------------------------------------------------------------------------
+
+int dclib_aton ( ccp addr, struct in_addr *inp );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			PrintIP4*()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+#define FW_IPV4_N 10	// 4294967295
 #define FW_IPV4_A 12	// 255.16777215
 #define FW_IPV4_B 13	// 255.255.65535
 #define FW_IPV4_C 15	// 255.255.255.255
 
 #define FW_IPV4_PORT 5  // 65535
 
+#define FW_IPV4_N_PORT (FW_IPV4_N+1+FW_IPV4_PORT)
 #define FW_IPV4_A_PORT (FW_IPV4_A+1+FW_IPV4_PORT)
 #define FW_IPV4_B_PORT (FW_IPV4_B+1+FW_IPV4_PORT)
 #define FW_IPV4_C_PORT (FW_IPV4_C+1+FW_IPV4_PORT)
 
 //-----------------------------------------------------------------------------
 
+char * PrintIP4N
+(
+    // print as unsigned number (CIP4_NUMERIC)
+
+    char	*buf,		// result buffer
+				// NULL: use a local circulary static buffer
+    size_t	buf_size,	// size of 'buf', ignored if buf==NULL
+    u32		ip4,		// IP4 to print
+    s32		port		// 0..0xffff: add ':port'
+);
+
 char * PrintIP4A
 (
-    // print in A-notation
+    // print in A-notation (CIP4_CLASS_A)
 
     char	*buf,		// result buffer
 				// NULL: use a local circulary static buffer
@@ -4430,7 +5612,7 @@ char * PrintIP4A
 
 char * PrintIP4B
 (
-    // print in A-notation
+    // print in B-notation (CIP4_CLASS_B)
 
     char	*buf,		// result buffer
 				// NULL: use a local circulary static buffer
@@ -4480,6 +5662,20 @@ char * PrintAlignedIP4
 );
 
 //-----------------------------------------------------------------------------
+// print by enum ipv4_class_t
+
+char * PrintIP4ByMode
+(
+    char	 *buf,		// result buffer
+				// NULL: use a local circulary static buffer
+    size_t	 buf_size,	// size of 'buf', ignored if buf==NULL
+    u32		 ip4,		// IP4 to print
+    ipv4_class_t mode,		// CIP4_NUMERIC | CIP4_CLASS_A | CIP4_CLASS_B:
+				// force numeric or class-A/B output; otherwise class-C output
+    s32		 port		// 0..0xffff: add ':port'
+);
+
+//-----------------------------------------------------------------------------
 struct sockaddr_in;
 
 static inline char * PrintIP4sa
@@ -4491,9 +5687,10 @@ static inline char * PrintIP4sa
     const struct sockaddr_in *sa // socket address
 )
 {
-    DASSERT(sa);
-    return PrintIP4(buf,buf_size,
-		ntohl(sa->sin_addr.s_addr), ntohs(sa->sin_port) );
+    return sa
+	? PrintIP4(buf,buf_size,
+		ntohl(sa->sin_addr.s_addr), ntohs(sa->sin_port) )
+	: "-";
 }
 
 static inline char * PrintRightIP4sa
@@ -4790,7 +5987,8 @@ exmem_key_t * AppendEML  ( exmem_list_t * eml, ccp key, CopyMode_t cm_key,
 					const exmem_t *data, CopyMode_t cm_data );
 
 // Return true if item found and removed
-bool RemoveEML ( exmem_list_t * eml, ccp key );
+bool RemoveByIndexEML ( exmem_list_t * eml, int index );
+bool RemoveByKeyEML ( exmem_list_t * eml, ccp key );
 
 
 // find first pattern that matches
@@ -4805,6 +6003,55 @@ uint ResolveAllSymbolsEML ( exmem_list_t * eml );
 
 // add symbols 'home', 'etc', 'install' = 'prog' and 'cwd'
 void AddStandardSymbolsEML ( exmem_list_t * eml, bool overwrite );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			MultiColumn			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[MultiColumn_t]]
+
+typedef struct MultiColumn_t
+{
+    FILE	*f;		// NULL or output file
+    const ColorSet_t
+		*colset;	// NULL or color set for the frame
+    ccp		prefix;		// NULL or line prefix
+    int		indent;		// indention after prefix
+    ccp		sep;		// NULL or separator for frame_mode 0 and 1
+    ccp		eol;		// NULL or end-of-line string
+
+    int		fw;		// max field width
+    int		min_rows;	// minimal number of rows before MC
+    int		max_cols;	// >0: maximal number columns
+
+    int		frame_mode;	// 0:ASCII, 1:single line, 2:double line
+    bool	print_header;	// TRUE: print column header
+    bool	print_footer;	// TRUE: print footer line
+
+    ccp		head_key;	// NULL or name of key column, default="Name"
+    ccp		head_val;	// NULL or name of value column, default="Value"
+
+    int		debug;		// >0: print basic debug info
+				// >1: be verbose
+
+    exmem_list_t list;		// list of parameters to print
+}
+MultiColumn_t;
+
+//-----------------------------------------------------------------------------
+
+void ResetMultiColumn ( MultiColumn_t *mc );
+
+// return the number of printed lines including header and footer, or -1 on error
+int PrintMultiColumn ( const MultiColumn_t *mc );
+
+// Wrapper for short definition lines
+//  opt == 0 align right value
+//  opt >= 1 align left and try field width of # for value
+
+exmem_key_t * PutLineMC ( MultiColumn_t *mc, uint opt, ccp key, ccp value, CopyMode_t cm_value );
+exmem_key_t * PrintLineMC ( MultiColumn_t *mc, uint opt, ccp key, ccp format, ... )
+	__attribute__ ((__format__(__printf__,4,5)));
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -5122,6 +6369,7 @@ uint DropDataBuf
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////		ResizeElement_t, ResizeHelper_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[ResizeElement_t]]
 
 typedef struct ResizeElement_t
 {
@@ -5131,6 +6379,7 @@ typedef struct ResizeElement_t
 ResizeElement_t;
 
 //-----------------------------------------------------------------------------
+// [[ResizeHelper_t]]
 
 typedef struct ResizeHelper_t
 {
@@ -5393,6 +6642,11 @@ typedef enum SaveRestoreType_t
 
     SRT_DEF_ARRAY,	// define/end an array of structs
 
+    SRT_MODE__BEGIN,	//--- begin of modes
+    SRT_MODE_ASSIGN,	// load option: assign numeric values (default)
+    SRT_MODE_ADD,	// load option: add numeric values
+    SRT_MODE__END,	//--- end of modes
+
     SRT__IS_LIST,	//----- from here: print lists; also used as separator
 
     SRT_STRING_FIELD,	// var is StringField_t
@@ -5411,10 +6665,18 @@ typedef struct SaveRestoreTab_t
     uint	offset;	// offset of variable
     uint	size;	// sizeof( var or string )
     ccp		name;	// name in configuration file
-    s16		n_elem;	// >0: is array with N elements
-			// <0: is array with -N elements, use last SRT_COUNT
-    u8		type;	// SaveRestoreType_t
-    u8		emode;	// EncodeMode_t
+
+    union
+    {
+	struct
+	{
+	    s16		n_elem;	// >0: is array with N elements
+				// <0: is array with -N elements, use last SRT_COUNT
+	    u8		type;	// SaveRestoreType_t
+	    u8		emode;	// EncodeMode_t
+	};
+	//struct SaveRestoreTab_t *ref;
+    };
 }
 __attribute__ ((packed)) SaveRestoreTab_t;
 
@@ -5424,7 +6686,8 @@ __attribute__ ((packed)) SaveRestoreTab_t;
 // 	#undef  SRT_NAME
 //	#define SRT_NAME name_of_the_struct
 
-#define DEF_SRT_VAR(v,ne,n,t,e)		{offsetof(SRT_NAME,v),sizeof(((SRT_NAME*)0)->v),n,ne,t,e}
+#define DEF_SRT_VAR(v,ne,n,t,e)		{offsetof(SRT_NAME,v),sizeof(((SRT_NAME*)0)->v),n, \
+					.n_elem=ne,.type=t,.emode=e}
 
 #define DEF_SRT_BOOL(v,n)		DEF_SRT_VAR(v,1,n,SRT_BOOL,0)
 #define DEF_SRT_UINT(v,n)		DEF_SRT_VAR(v,1,n,SRT_UINT,0)
@@ -5458,7 +6721,7 @@ __attribute__ ((packed)) SaveRestoreTab_t;
 
 #define DEF_SRT_ARRAY(v,n,t,e)		\
 	{offsetof(SRT_NAME,v), sizeof(((SRT_NAME*)0)->v[0]), n, \
-	 sizeof(((SRT_NAME*)0)->v)/sizeof(*((SRT_NAME*)0)->v), t, e }
+	 .n_elem=sizeof(((SRT_NAME*)0)->v)/sizeof(*((SRT_NAME*)0)->v), .type=t, .emode=e }
 
 #define DEF_SRT_BOOL_A(v,n)		DEF_SRT_ARRAY(v,n,SRT_BOOL,0)
 #define DEF_SRT_UINT_A(v,n)		DEF_SRT_ARRAY(v,n,SRT_UINT,0)
@@ -5475,7 +6738,7 @@ __attribute__ ((packed)) SaveRestoreTab_t;
 
 #define DEF_SRT_ARRAY_C(v,n,t,e)		\
 	{offsetof(SRT_NAME,v), sizeof(((SRT_NAME*)0)->v[0]), n, \
-	 -(s16)(sizeof(((SRT_NAME*)0)->v)/sizeof(*((SRT_NAME*)0)->v)), t, e }
+	 .n_elem=-(s16)(sizeof(((SRT_NAME*)0)->v)/sizeof(*((SRT_NAME*)0)->v)), .type=t, .emode=e }
 
 #define DEF_SRT_BOOL_AC(v,n)		DEF_SRT_ARRAY_C(v,n,SRT_BOOL,0)
 #define DEF_SRT_UINT_AC(v,n)		DEF_SRT_ARRAY_C(v,n,SRT_UINT,0)
@@ -5492,29 +6755,34 @@ __attribute__ ((packed)) SaveRestoreTab_t;
 
 #define DEF_SRT_ARRAY_FL(f,l) \
 	{offsetof(SRT_NAME,f), sizeof(((SRT_NAME*)0)->f), 0, \
-	 (offsetof(SRT_NAME,l)-offsetof(SRT_NAME,f))/sizeof(((SRT_NAME*)0)->f)+1, \
-	 SRT_DEF_ARRAY, 0 }
+	 .n_elem=(offsetof(SRT_NAME,l)-offsetof(SRT_NAME,f))/sizeof(((SRT_NAME*)0)->f)+1, \
+	 .type=SRT_DEF_ARRAY }
 
 #define DEF_SRT_ARRAY_FLC(f,l) \
 	{offsetof(SRT_NAME,f), sizeof(((SRT_NAME*)0)->f), 0, \
-	 -(s16)((offsetof(SRT_NAME,l)-offsetof(SRT_NAME,f)) \
-		/sizeof(((SRT_NAME*)0)->f)+1), SRT_DEF_ARRAY, 0 }
+	 .n_elem=-(s16)((offsetof(SRT_NAME,l)-offsetof(SRT_NAME,f)) \
+		/sizeof(((SRT_NAME*)0)->f)+1), .type=SRT_DEF_ARRAY }
 
 #define DEF_SRT_ARRAY_N(v,ne)		DEF_SRT_VAR(v[0],ne,0,SRT_DEF_ARRAY,0)
 #define DEF_SRT_ARRAY_A(v)		DEF_SRT_ARRAY(v,0,SRT_DEF_ARRAY,0)
 #define DEF_SRT_ARRAY_AC(v)		DEF_SRT_ARRAY_C(v,0,SRT_DEF_ARRAY,0)
-#define DEF_SRT_ARRAY_END()		{0,0,0,0,SRT_DEF_ARRAY,0}
+#define DEF_SRT_ARRAY_END()		{0,0,0,.type=SRT_DEF_ARRAY}
 
 //--- global array of structs
 
-#define DEF_SRT_ARRAY_GN(ne)		{0,sizeof(SRT_NAME),0,ne,SRT_DEF_ARRAY,0}
-#define DEF_SRT_ARRAY_GA(v)		{0,sizeof(*v),0,sizeof(v)/sizeof(*v),SRT_DEF_ARRAY,0}
+#define DEF_SRT_ARRAY_GN(ne)		{0,sizeof(SRT_NAME),0,.n_elem=ne,.type=SRT_DEF_ARRAY}
+#define DEF_SRT_ARRAY_GA(v)		{0,sizeof(*v),0,.n_elem=sizeof(v)/sizeof(*v),.type=SRT_DEF_ARRAY}
+
+//--- modes
+
+#define DEF_SRT_MODE_ASSIGN()		{0,0,0,.type=SRT_MODE_ASSIGN}
+#define DEF_SRT_MODE_ADD()		{0,0,0,.type=SRT_MODE_ADD}
 
 //--- special
 
-#define DEF_SRT_SEPARATOR()		{0,0,0,0,SRT__IS_LIST,0}
-#define DEF_SRT_COMMENT(c)		{0,0,c,0,SRT__IS_LIST,0}
-#define DEF_SRT_TERM()			{0,0,0,0,SRT__TERM,0}
+#define DEF_SRT_SEPARATOR()		{0,0,0,.type=SRT__IS_LIST}
+#define DEF_SRT_COMMENT(c)		{0,0,c,.type=SRT__IS_LIST}
+#define DEF_SRT_TERM()			{0,0,0,.type=SRT__TERM}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -5548,6 +6816,13 @@ void RestoreStateByTable
 			*srt,	// list of variables
     ccp		prefix		// NULL or prefix for names
 );
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+extern const SaveRestoreTab_t SRT_UsageCount[];
+extern const SaveRestoreTab_t SRT_UsageDuration[];
+extern const SaveRestoreTab_t SRT_CpuUsage[];
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -5811,11 +7086,13 @@ extern int opt_new; // default 0
 float double2float ( double d ); // reduce precision
 
 uint CreateUniqueIdN ( int range );
-static inline uint CreateUniqueId()	{ return CreateUniqueIdN(1); }
-static inline uint CreateUniqueIdNBO() 	{ return htonl(CreateUniqueIdN(1)); }
+static inline uint CreateUniqueId(void)	   { return CreateUniqueIdN(1); }
+static inline uint CreateUniqueIdNBO(void) { return htonl(CreateUniqueIdN(1)); }
 
 void Sha1Hex2Bin ( sha1_hash_t bin, ccp src, ccp end );
 void Sha1Bin2Hex ( sha1_hex_t hex, cvp bin );
+
+// return CircBuf()
 ccp GetSha1Hex ( cvp bin );
 
 ///////////////////////////////////////////////////////////////////////////////

@@ -14,16 +14,16 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
+ *   This library is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
+ *   This library is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
  *   GNU General Public License for more details.                          *
@@ -92,6 +92,317 @@ bool EnableSingleCharInput()
     tios.c_lflag &= ~(ICANON|ECHO);
     tcsetattr(0,TCSANOW,&tios);
     return true;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			    log helpers			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+LogFile_t GlobalLogFile = {0};
+
+///////////////////////////////////////////////////////////////////////////////
+
+FILE * TryOpenFile ( FILE *f, ccp fname, ccp mode )
+{
+    if ( f == TRY_OPEN_FILE )
+	f = fopen(fname,mode);
+    else if (f)
+    {
+	rewind(f);
+	fflush(f);
+    }
+    return f;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int GetLogTimestamp ( char *buf, uint buf_size, TimestampMode_t ts_mode )
+{
+    DASSERT(buf);
+    DASSERT(buf_size>2);
+
+    uint len;
+    if ( ts_mode >= TSM_USEC )
+    {
+	const u64 usec = GetTimeUSec(false);
+	const uint sec = usec/1000000 % SEC_PER_DAY;
+	len = snprintf(buf,buf_size,
+		"%02u:%02u:%02u.%06llu ",
+		sec / 3600,
+		sec / 60 % 60,
+		sec % 60,
+		usec % 1000000 );
+    }
+    else if ( ts_mode >= TSM_MSEC )
+    {
+	const u64 msec = GetTimeMSec(false);
+	const uint sec = msec/USEC_PER_MSEC % SEC_PER_DAY;
+	len = snprintf(buf,buf_size,
+		"%02u:%02u:%02u.%03llu ",
+		sec / 3600,
+		sec / 60 % 60,
+		sec % 60,
+		msec % 1000 );
+    }
+    else if ( ts_mode >= TSM_SEC )
+    {
+	const uint sec = GetTimeSec(false) % SEC_PER_DAY;
+	len = snprintf(buf,buf_size,
+		"%02u:%02u:%02u ",
+		sec / 3600,
+		sec / 60 % 60,
+		sec % 60 );
+    }
+    else
+    {
+	*buf = 0;
+	len = 0;
+    }
+
+    if ( len >= buf_size )
+    {
+	len = buf_size - 1;
+	buf[len] = 0;
+    }
+    return len;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int PrintLogTimestamp ( LogFile_t *lf )
+{
+    DASSERT(lf);
+    DASSERT(lf->log);
+
+    int stat = 0;
+    if ( lf && lf->log )
+    {
+	char buf[50];
+	stat = GetLogTimestamp(buf,sizeof(buf),lf->ts_mode);
+	if ( stat > 0 )
+	    fwrite(buf,stat,1,lf->log);
+    }
+    return stat;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int PutLogFile ( LogFile_t *lf, ccp text, int text_len )
+{
+    if (!lf)
+	lf = &GlobalLogFile;
+
+    if ( !lf->log || !text )
+	return 0;
+
+    //--- collect data first to have a single print
+
+    char buf[2000];
+    char *dest = buf + GetLogTimestamp( buf, sizeof(buf), lf->ts_mode );
+    dest = StringCopyEMem( dest, buf+sizeof(buf), lf->tag );
+    dest = StringCopyEM( dest, buf+sizeof(buf), text,
+				text_len < 0 ? strlen(text) : text_len );
+
+    const int len = dest - buf;
+    fwrite(buf,len,1,lf->log);
+    if (lf->flush)
+	fflush(lf->log);
+    if ( lf->log == stdout )
+	stdout_seq_count++;
+    return len;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int PrintArgLogFile ( LogFile_t *lf, ccp format, va_list arg )
+{
+    int stat = 0;
+    if (format)
+    {
+	char buf[2000];
+	int len = vsnprintf(buf,sizeof(buf),format,arg);
+	if ( len >= 0 )
+	{
+	    if ( len >= sizeof(buf)-1 )
+	    {
+		len = sizeof(buf)-1;
+		buf[sizeof(buf)-1] = 0;
+	    }
+	    stat = PutLogFile(lf,buf,len);
+	}
+    }
+    return stat;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int PrintLogFile ( LogFile_t *lf, ccp format, ... )
+{
+    va_list arg;
+    va_start(arg,format);
+    const int stat = PrintArgLogFile(lf,format,arg);
+    va_end(arg);
+    return stat;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			search tool			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t SearchToolByPATH ( ccp tool )
+{
+    exmem_t dest = {};
+    if ( tool && *tool )
+    {
+	char fname[PATH_MAX];
+	if (strchr(tool,'/'))
+	{
+	    struct stat st;
+	    if ( !stat(tool,&st) && st.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH) )
+		AssignExMemS(&dest,tool,-1,CPM_COPY);
+	}
+	else
+	{
+	    ccp path = getenv("PATH");
+	    for(;;)
+	    {
+		while ( *path == ':' )
+		    path++;
+		ccp start = path;
+		while ( *path && *path != ':' )
+		    path++;
+		const int len = path - start;
+		if (!len)
+		    break;
+
+		const int flen = snprintf(fname,sizeof(fname),"%.*s/%s",len,start,tool);
+		struct stat st;
+		if ( !stat(fname,&st) && st.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH) )
+		{
+		    AssignExMemS(&dest,fname,flen,CPM_COPY);
+		    break;
+		}
+	    }
+	}
+    }
+    return dest;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t SearchToolByList ( ccp * list, int max )
+{
+    exmem_t dest = {};
+
+    if (list)
+    {
+	if ( max < 0 )
+	{
+	    max = 0;
+	    for ( ccp *ptr = list; *ptr; ptr++ )
+		max++;
+	}
+
+	while ( max-- > 0 )
+	{
+	    ccp arg = *list++;
+	    if (arg)
+	    {
+		if ( *arg == '>' )
+		{
+		    ccp env = getenv(arg+1);
+		    if ( env && *env )
+		    {
+			AssignExMemS(&dest,env,-1,CPM_LINK);
+			break;
+		    }
+		}
+		else
+		{
+		    dest = SearchToolByPATH(arg);
+		    if (dest.data.len)
+			break;
+		}
+	    }
+	}
+    }
+    return dest;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			pipe to pager			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static FILE *pager_file = 0;
+
+///////////////////////////////////////////////////////////////////////////////
+
+FILE * OpenPipeToPager()
+{
+    static bool done = false;
+
+    if (!done)
+    {
+	done = true;
+
+	static ccp search_tab[] =
+	{
+	    ">DC_PAGER",
+	    ">DC_PAGER1",
+	    ">DC_PAGER2",
+	    ">PAGER",
+	    "less",
+	    "more",
+	    0
+	};
+
+	exmem_t pager = SearchToolByList(search_tab,-1);
+	if (pager.data.ptr)
+	    pager_file = popen(pager.data.ptr,"we");
+	FreeExMem(&pager);
+    }
+
+    return pager_file;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ClosePagerFile()
+{
+    if (pager_file)
+    {
+	pclose(pager_file);
+	pager_file = 0;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool StdoutToPager()
+{
+    FILE *f = OpenPipeToPager();
+    if (f)
+    {
+	fflush(stdout);
+	stdout = f;
+	return true;
+    }
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void CloseStdoutToPager()
+{
+    if ( pager_file && pager_file == stdout )
+    {
+	ClosePagerFile();
+	stdout = 0;
+    }
 }
 
 //
@@ -3246,6 +3557,69 @@ uint NumberedFilename
     return index;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static char * GetBlockDeviceHolderHelper
+	( char *buf, char *endbuf, ccp name, ccp sep, int *level )
+{
+    DASSERT(buf);
+    DASSERT(endbuf);
+    DASSERT(level);
+
+    char path[200];
+    snprintf(path,sizeof(path),"/sys/class/block/%s/holders",name);
+    if (IsDirectory(path,0))
+    {
+	DIR *fdir = opendir(path);
+	if (fdir)
+	{
+	    for(;;)
+	    {
+		struct dirent *dent = readdir(fdir);
+		if (!dent)
+		    break;
+		if ( dent->d_name[0] != '.' )
+		{
+		    buf = GetBlockDeviceHolderHelper(buf,endbuf,dent->d_name,sep,level);
+		    (*level)++;
+		    break;
+		}
+	    }
+	    closedir(fdir);
+	}
+    }
+
+    return StringCat2E(buf,endbuf,sep,name);
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetBlockDeviceHolder ( ccp name, ccp sep, int *ret_level )
+{
+    static ParamField_t db = { .free_data = true };
+
+    bool old_found;
+    ParamFieldItem_t *item = FindInsertParamField(&db,name,false,0,&old_found);
+    DASSERT(item)
+    if (!old_found)
+    {
+	int level = 0;
+	char buf[1000];
+	ccp end = GetBlockDeviceHolderHelper(buf,buf+sizeof(buf)-strlen(sep)-1,name,sep,&level);
+	ccp beg = buf + strlen(sep);
+	if ( beg < end )
+	{
+	    item->num  = level;
+	    item->data = MEMDUP(beg,end-beg+1);
+	}
+    }
+
+    if (ret_level)
+	*ret_level = item->num;
+    return item->data;
+}
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			normalize filenames		///////////////
@@ -3305,13 +3679,13 @@ char * NormalizeFileName
 		if ( isalnum(ch)
 			|| ( is_utf8
 				? ch >= 0x80
-				:    ch == 0xe4 // ä
-				  || ch == 0xf6 // ö
-				  || ch == 0xfc // ü
-				  || ch == 0xdf // ß
-				  || ch == 0xc4 // Ä
-				  || ch == 0xd6 // Ö
-				  || ch == 0xdc // Ü
+				:    ch == 0xe4 // Ã¤
+				  || ch == 0xf6 // Ã¶
+				  || ch == 0xfc // Ã¼
+				  || ch == 0xdf // ÃŸ
+				  || ch == 0xc4 // Ã„
+				  || ch == 0xd6 // Ã–
+				  || ch == 0xdc // Ãœ
 			    )
 			|| strchr("_+-=%'\"$%&#,.!()[]{}<>",ch)
 			)
@@ -3439,7 +3813,7 @@ uint NormalizeFilenameCygwin
 	}
 	else
 	    dest = buf;
- #else // 
+ #else //
 	*dest++ = '/';
 	src += 2;
 	if (*src)
@@ -3623,7 +3997,7 @@ static int add_search
     // returns 0 if !stop_if_found, 2 if added+found, 1 if added, 0 else
 
     search_file_list_t *sfl,	// valid data
-    ccp		config_fname,	// default filename (without path) of config file 
+    ccp		config_fname,	// default filename (without path) of config file
     ccp		*list,		// NULL or list of filenames
     int		n_list,		// num of 'list' elements, -1:null terminated list
     ccp		prefix,		// prefix for relative filenames
@@ -3659,7 +4033,7 @@ static int add_search
 	search_file_t *sf = AppendSearchFile( sfl, res.data.ptr,
 				res.is_alloced ? CPM_MOVE : CPM_COPY, config_fname );
 	if (sf)
-	{    
+	{
 	    sf->hint |= hint;
 	    if ( sf->itype == INTY_REG && stop_if_found > 0 )
 		return 2;
@@ -3755,6 +4129,7 @@ void ClearFDList ( FDList_t *fdl )
 
     fdl->now_usec = GetTimeUSec(false);
     fdl->timeout_usec = M1(fdl->timeout_usec);
+    fdl->timeout_nsec = M1(fdl->timeout_nsec);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3815,10 +4190,11 @@ uint AddFDList
 
     FDList_t	*fdl,	// valid socket list
     int		sock,	// socket to add
-    uint	events	// bit field: POLLIN|POLLOUT|POLLERR
+    uint	events	// bit field: POLLIN|POLLPRI|POLLOUT|POLLRDHUP|...
 )
 {
-    if ( sock == -1 || !(events&(POLLIN|POLLOUT|POLLERR)) )
+    events &= ~(POLLERR|POLLHUP|POLLNVAL); // only result!
+    if ( sock == -1 || !events )
 	return ~0;
 
     fdl->n_sock++;
@@ -3840,7 +4216,7 @@ uint AddFDList
 	FD_SET(sock,&fdl->readfds);
     if ( events & POLLOUT )
 	FD_SET(sock,&fdl->writefds);
-    if ( events & POLLERR )
+    if ( events & POLLPRI )
 	FD_SET(sock,&fdl->exceptfds);
     return ~0;
 }
@@ -3849,7 +4225,7 @@ uint AddFDList
 
 uint GetEventFDList
 (
-    // returns bit field: POLLIN|POLLOUT|POLLERR
+    // returns bit field: POLLIN|POLLOUT|POLLERR|...
 
     FDList_t	*fdl,		// valid socket list
     int		sock,		// socket to look for
@@ -3879,11 +4255,51 @@ uint GetEventFDList
     if (FD_ISSET(sock,&fdl->writefds))
 	revents |= POLLOUT;
     if (FD_ISSET(sock,&fdl->exceptfds))
-	revents |= POLLERR;
+	revents |= POLLPRI;
     return revents;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static s_usec_t prepare_wait_fdl ( FDList_t *fdl )
+{
+    DASSERT(fdl);
+    const s_usec_t now_usec = GetTimeUSec(false);
+
+    if (fdl->timeout_nsec)
+    {
+	const u_usec_t wait_until
+	    = ( (s_usec_t)fdl->timeout_nsec - (s_usec_t)GetTimerNSec() )
+			/ NSEC_PER_USEC + now_usec + 1;
+	if ( !fdl->timeout_usec || fdl->timeout_usec > wait_until )
+	     fdl->timeout_usec = wait_until;
+    }
+
+    if ( fdl->min_wait_usec && fdl->timeout_usec )
+    {
+	const u_usec_t wait_until = now_usec + fdl->min_wait_usec;
+	if ( fdl->timeout_usec < wait_until )
+	     fdl->timeout_usec = wait_until;
+    }
+
+    return now_usec;
+}
+
+//-----------------------------------------------------------------------------
+
+static void finish_wait_fdl ( FDList_t *fdl, u_usec_t start_usec )
+{
+    DASSERT(fdl);
+    UpdateCurrentTime();
+    fdl->now_usec	= current_time.usec;
+    fdl->last_wait_usec	= fdl->now_usec - start_usec;
+    fdl->wait_usec	+= fdl->last_wait_usec;
+    fdl->wait_count++;
+
+    UpdateCpuUsageIncrement();
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 int WaitFDList
@@ -3893,49 +4309,75 @@ int WaitFDList
 {
     DASSERT(fdl);
 
-    int stat;
-    u64 now_usec = GetTimeUSec(false);
+    const s_usec_t now_usec = prepare_wait_fdl(fdl);
 
+    int stat;
     if (fdl->use_poll)
     {
 	int timeout;
-	if ( fdl->timeout_usec > now_usec )
+	if ( !fdl->timeout_usec )
+	    timeout = -1;
+	else if ( fdl->timeout_usec > now_usec )
 	{
-	    u64 delta = ( fdl->timeout_usec - now_usec ) / 1000;
-	    timeout = delta > 0x7fffffffull ? -1 : delta;
+	    u_msec_t delta = ( fdl->timeout_usec - now_usec ) / USEC_PER_MSEC;
+	    timeout = delta < 0x7fffffff ? delta : 0x7fffffff;
+	    if (!timeout)
+		timeout = 1;
 	}
 	else
 	    timeout = 0;
 
+	if (fdl->debug_file)
+	{
+	    fprintf(fdl->debug_file,"POLL: timeout=%d\n",timeout);
+	    fflush(fdl->debug_file);
+	}
 	stat = poll( fdl->poll_list, fdl->poll_used, timeout );
     }
     else
     {
 	struct timeval tv, *ptv = &tv;
-	if ( fdl->timeout_usec > now_usec )
+	if ( !fdl->timeout_usec )
+	    ptv = NULL;
+	else if ( fdl->timeout_usec > now_usec )
 	{
-	    const u64 delta = fdl->timeout_usec - now_usec;
-	    if ( delta > 1000000ull * 0x7fffffffull )
-		ptv = NULL;
+	    const u_usec_t delta = fdl->timeout_usec - now_usec;
+	    if ( delta > USEC_PER_YEAR )
+	    {
+		tv.tv_sec  = SEC_PER_YEAR;
+		tv.tv_usec = 0;
+	    }
+	    else if ( delta > USEC_PER_MSEC )
+	    {
+		tv.tv_sec  = delta / USEC_PER_SEC;
+		tv.tv_usec = delta % USEC_PER_SEC;
+	    }
 	    else
 	    {
-		tv.tv_sec  = delta / 1000000;
-		tv.tv_usec = delta % 1000000;
+		tv.tv_sec  = 0;
+		tv.tv_usec = USEC_PER_MSEC;
 	    }
 	}
 	else
 	    tv.tv_sec = tv.tv_usec = 0;
 
-//DEL	fprintf(stderr,"#SELECT %lld: ptv=%d: %lu.%06lu\n",
-//DEL			fdl->timeout_usec-now_usec, ptv!=0, tv.tv_sec, tv.tv_usec );
+	if (fdl->debug_file)
+	{
+	    if (ptv)
+		fprintf(fdl->debug_file,"# SELECT: usec=%lld, Î”now=%lld, timeout=%llu.%06llu\n",
+				fdl->timeout_usec, fdl->timeout_usec - now_usec,
+				(u64)ptv->tv_sec, (u64)ptv->tv_usec );
+	    else
+		fprintf(fdl->debug_file,"# SELECT: usec=%lld, Î”now=%lld, timeout=NULL\n",
+				fdl->timeout_usec, fdl->timeout_usec - now_usec );
+	    fflush(fdl->debug_file);
+	}
+
 	stat = select( fdl->max_fd+1, &fdl->readfds, &fdl->writefds,
 			&fdl->exceptfds, ptv );
     }
 
-    fdl->now_usec = GetTimeUSec(false);
-    fdl->cur_usec = fdl->now_usec - now_usec;
-    fdl->wait_usec += fdl->cur_usec;
-    fdl->wait_count++;
+    finish_wait_fdl(fdl,now_usec);
     return stat;
 }
 
@@ -3943,7 +4385,7 @@ int WaitFDList
 
 int PWaitFDList
 (
-    FDList_t	*fdl,		// valid socket list
+    FDList_t		*fdl,		// valid socket list
     const sigset_t	*sigmask	// NULL or signal mask
 )
 {
@@ -3963,17 +4405,23 @@ int PWaitFDList
     }
  #endif
 
+    const u_usec_t now_usec = prepare_wait_fdl(fdl);
+
     struct timespec ts, *pts = &ts;
-    u64 now_usec = GetTimeUSec(false);
     if ( fdl->timeout_usec > now_usec )
     {
 	const u64 delta = fdl->timeout_usec - now_usec;
 	if ( delta > 1000000ull * 0x7fffffffull )
 	    pts = NULL;
-	else
+	else if ( delta > USEC_PER_MSEC )
 	{
 	    ts.tv_sec  = delta / 1000000;
 	    ts.tv_nsec = delta % 1000000 * 1000;
+	}
+	else
+	{
+	    ts.tv_sec  = 0;
+	    ts.tv_nsec = NSEC_PER_MSEC;
 	}
     }
     else
@@ -3989,10 +4437,7 @@ int PWaitFDList
 				&fdl->exceptfds, pts, sigmask );
  #endif
 
-    fdl->now_usec = GetTimeUSec(false);
-    fdl->cur_usec = fdl->now_usec - now_usec;
-    fdl->wait_usec += fdl->cur_usec;
-    fdl->wait_count++;
+    finish_wait_fdl(fdl,now_usec);
     return stat;
 }
 
@@ -5391,6 +5836,8 @@ void RestoreStateByTable
     uint aelem_count	= 0;
     uint aelem_offset	= 0;
 
+    bool mode_add = false;
+
     for ( ; srt->type != SRT__TERM; srt++ )
     {
       if ( srt->type == SRT_DEF_ARRAY )
@@ -5404,6 +5851,16 @@ void RestoreStateByTable
 	}
 	else
 	    aelem_count = srt->n_elem;
+	continue;
+      }
+
+      if ( srt->type >= SRT_MODE__BEGIN && srt->type <= SRT_MODE__END )
+      {
+	switch (srt->type)
+	{
+	    case SRT_MODE_ASSIGN: mode_add = false; break;
+	    case SRT_MODE_ADD:    mode_add = true;  break;
+	}
 	continue;
       }
 
@@ -5456,13 +5913,22 @@ void RestoreStateByTable
 		    if ( !i && srt->type == SRT_COUNT && num <= UINT_MAX )
 			last_count = num;
 
-		    switch(srt->size)
-		    {
-			case 1: *(u8*) val = num; break;
-			case 2: *(u16*)val = num; break;
-			case 4: *(u32*)val = num; break;
-			case 8: *(u64*)val = num; break;
-		    }
+		    if (mode_add)
+			switch(srt->size)
+			{
+			    case 1: *(u8*) val += num; break;
+			    case 2: *(u16*)val += num; break;
+			    case 4: *(u32*)val += num; break;
+			    case 8: *(u64*)val += num; break;
+			}
+		    else
+			switch(srt->size)
+			{
+			    case 1: *(u8*) val = num; break;
+			    case 2: *(u16*)val = num; break;
+			    case 4: *(u32*)val = num; break;
+			    case 8: *(u64*)val = num; break;
+			}
 		    if ( ++i == n_elem )
 			break;
 		    val += elem_off;
@@ -5485,13 +5951,22 @@ void RestoreStateByTable
 		while (*src)
 		{
 		    s64 num = str2ll(src,&src,10);
-		    switch(srt->size)
-		    {
-			case 1: *(s8*) val = num; break;
-			case 2: *(s16*)val = num; break;
-			case 4: *(s32*)val = num; break;
-			case 8: *(s64*)val = num; break;
-		    }
+		    if (mode_add)
+			switch(srt->size)
+			{
+			    case 1: *(s8*) val += num; break;
+			    case 2: *(s16*)val += num; break;
+			    case 4: *(s32*)val += num; break;
+			    case 8: *(s64*)val += num; break;
+			}
+		    else
+			switch(srt->size)
+			{
+			    case 1: *(s8*) val = num; break;
+			    case 2: *(s16*)val = num; break;
+			    case 4: *(s32*)val = num; break;
+			    case 8: *(s64*)val = num; break;
+			}
 		    if ( ++i == n_elem )
 			break;
 		    val += elem_off;
@@ -5514,12 +5989,25 @@ void RestoreStateByTable
 		uint i = 0;
 		while (*src)
 		{
-		    if ( srt->size == sizeof(float) )
-			*(float*)val = strtof(src,&src);
-		    else if ( srt->size == sizeof(double) )
-			*(double*)val = strtod(src,&src);
-		    else if ( srt->size == sizeof(long double) )
-			*(long double*)val = strtold(src,&src);
+		    if (mode_add)
+		    {
+			if ( srt->size == sizeof(float) )
+			    *(float*)val += strtof(src,&src);
+			else if ( srt->size == sizeof(double) )
+			    *(double*)val += strtod(src,&src);
+			else if ( srt->size == sizeof(long double) )
+			    *(long double*)val += strtold(src,&src);
+		    }
+		    else
+		    {
+			if ( srt->size == sizeof(float) )
+			    *(float*)val = strtof(src,&src);
+			else if ( srt->size == sizeof(double) )
+			    *(double*)val = strtod(src,&src);
+			else if ( srt->size == sizeof(long double) )
+			    *(long double*)val = strtold(src,&src);
+		    }
+
 		    if ( ++i == n_elem )
 			break;
 		    val += elem_off;
@@ -6374,6 +6862,192 @@ int PrintScriptVars
 	*buf = 0;
 
     return PutScriptVars(ps,mode,buf);
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			CpuStatus_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+CpuStatus_t GetCpuStatus ( CpuStatus_t * prev_cpuinfo )
+{
+    //--- retrieve static data
+
+    static int n_cpu = -1;
+    static int clock_ticks = 100;
+
+    char buf[1000];
+
+    if ( n_cpu < 0 )
+    {
+	n_cpu = 0;
+	FILE *f = fopen("/proc/cpuinfo","r");
+	if (f)
+	{
+	    while (fgets(buf,sizeof(buf),f))
+		if ( !memcmp(buf,"processor",9) && buf[9] <= ' ' )
+		    n_cpu++;
+	    fclose(f);
+	}
+
+	clock_ticks = sysconf(_SC_CLK_TCK);
+	if ( clock_ticks <= 0 )
+	    clock_ticks = 100;
+    }
+
+
+    //--- retrieve cpu data
+
+    CpuStatus_t current =
+    {
+	.valid		= true,
+	.nsec		= GetTimerNSec(),
+	.n_cpu		= n_cpu,
+	.clock_ticks	= clock_ticks
+    };
+
+
+    // man 5 proc | oo +/proc/loadavg
+    FILE *f_load = fopen("/proc/loadavg","r");
+    if (f_load)
+    {
+	if (fgets(buf,sizeof(buf),f_load))
+	{
+	    char *ptr = buf;
+	    current.loadavg_1m  = strtod(ptr,&ptr);
+	    current.loadavg_5m  = strtod(ptr,&ptr);
+	    current.loadavg_15m = strtod(ptr,&ptr);
+
+	    current.running_proc = strtol(ptr,&ptr,10);
+	    current.total_proc   = strtol(ptr+1,&ptr,10);
+	}
+	fclose(f_load);
+    }
+
+
+    // man 5 proc | oo +/proc/stat
+    FILE * f_stat = fopen("/proc/stat","r");
+    if (f_stat)
+    {
+	while (fgets(buf,sizeof(buf),f_stat))
+	    if ( !memcmp(buf,"cpu ",4) )
+	    {
+		char *ptr	= buf;
+		current.user	= strtol(ptr+4,&ptr,10) * 10000 / clock_ticks;
+		current.nice	= strtol(ptr,&ptr,10)   * 10000 / clock_ticks;
+		current.system	= strtol(ptr,&ptr,10)   * 10000 / clock_ticks;
+		current.idle	= strtol(ptr,&ptr,10)   * 10000 / clock_ticks;
+		break;
+	    }
+	fclose(f_stat);
+    }
+
+    if (!prev_cpuinfo)
+	return current; 
+
+
+    //--- get delta for result
+
+    if (!prev_cpuinfo->valid)
+	*prev_cpuinfo = current;
+
+    CpuStatus_t res = current;
+    res.nsec	-= prev_cpuinfo->nsec;
+    res.user	-= prev_cpuinfo->user;
+    res.nice	-= prev_cpuinfo->nice;
+    res.system	-= prev_cpuinfo->system;
+    res.idle	-= prev_cpuinfo->idle;
+
+    *prev_cpuinfo = current;
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintCpuStatus ( const CpuStatus_t * cpuinfo )
+{
+    if ( !cpuinfo || !cpuinfo->valid )
+	return "INVALID";
+
+    return PrintCircBuf(
+	"ticks=%d, cpus=%d, times=%lld+%lld+%lld+%lld=%lld, avg=%4.2f,%4.2f,%4.2f %u/%u, nsec=%llu",
+	cpuinfo->clock_ticks,
+	cpuinfo->n_cpu,
+	cpuinfo->user, cpuinfo->nice, cpuinfo->system, cpuinfo->idle,
+	cpuinfo->user + cpuinfo->nice + cpuinfo->system + cpuinfo->idle,
+	cpuinfo->loadavg[0], cpuinfo->loadavg[1], cpuinfo->loadavg[2],
+	cpuinfo->running_proc, cpuinfo->total_proc,
+	cpuinfo->nsec );
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			MemoryStatus_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+MemoryStatus_t GetMemoryStatus(void)
+{
+    MemoryStatus_t mem = {0};
+
+    FILE *f = fopen("/proc/meminfo","r");
+    if (f)
+    {
+	char buf[200];
+	int count = 5; // abort, if all 5 params scanned
+
+	while ( count > 0 && fgets(buf,sizeof(buf),f) )
+	{
+	    ccp colon = strchr(buf,':');
+	    if (colon)
+	    {
+		u64 num = strtoul(colon+1,0,10) * 1024;
+		switch (colon-buf)
+		{
+		    case 6:
+			if (!memcmp(buf,"Cached",6)) { count--; mem.cached = num; break; }
+			break;
+
+		    case 7:
+			if (!memcmp(buf,"MemFree",7)) { count--; mem.free = num; break; }
+			if (!memcmp(buf,"Buffers",7)) { count--; mem.buffers = num; break; }
+			break;
+
+		    case 8:
+			if (!memcmp(buf,"MemTotal",8)) { count--; mem.total = num; break; }
+			break;
+
+		    case 12:
+			if (!memcmp(buf,"MemAvailable",12)) { count--; mem.avail = num; break; }
+			break;
+		}
+	    }
+	}
+	fclose(f);
+	mem.used = mem.total - mem.free - mem.buffers - mem.cached;
+    }
+    return mem;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintMemoryStatus ( const MemoryStatus_t * ms )
+{
+    MemoryStatus_t temp;
+    if (!ms)
+    {
+	temp = GetMemoryStatus();
+	ms = &temp;
+    }
+	
+    const sizeform_mode_t mode = DC_SFORM_NARROW;
+    return PrintCircBuf(
+	"tot=%s, free=%s, avail=%s, used=%s, buf=%s, cache=%s\n",
+	PrintNumberU7(0,0,ms->total,mode),
+	PrintNumberU7(0,0,ms->free,mode),
+	PrintNumberU7(0,0,ms->avail,mode),
+	PrintNumberU7(0,0,ms->used,mode),
+	PrintNumberU7(0,0,ms->buffers,mode),
+	PrintNumberU7(0,0,ms->cached,mode) );
 }
 
 //

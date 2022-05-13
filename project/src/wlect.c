@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -60,6 +60,7 @@ static const char autoname[] = "/course.lex";
 
 static void help_exit ( bool xmode )
 {
+    SetupPager();
     fputs( TITLE "\n", stdout );
 
     if (xmode)
@@ -71,6 +72,7 @@ static void help_exit ( bool xmode )
     else
 	PrintHelpCmd(&InfoUI_wlect,stdout,0,0,"HELP",0,URI_HOME);
 
+    ClosePager();
     exit(ERR_OK);
 }
 
@@ -251,11 +253,19 @@ static enumError cmd_dpad()
 	ccp arg = param->arg;
 	while ( *arg && (uint)*arg <= ' ' )
 	    arg++;
+
+	bool hex_scanned = false;
 	u32 num = 0;
 	if ( *arg >= '0' && *arg <= '9' || *arg >= 'a' && *arg <= 'f' || *arg >= 'A' && *arg <= 'F' )
-	    num = str2l(arg,0,16);
-	else
 	{
+	    char *end;
+	    num = str2ul(arg,&end,16);
+	    hex_scanned = num && !*end;
+	}
+
+	if (!hex_scanned)
+	{
+	    num = 0;
 	    while (*arg)
 	    {
 		switch (*arg++)
@@ -959,6 +969,7 @@ static enumError cmd_cat()
 	    if (!testmode)
 	    {
 		InitializeOutputMode(&output_mode);
+		output_mode.lecode = true;
 		err = SaveTextCTCODE(&ctcode,"-",false,&output_mode);
 		fflush(stdout);
 		if ( err > ERR_WARNING )
@@ -1117,6 +1128,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break;
@@ -1159,6 +1171,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_ORDER_ALL:	opt_order_all = true; break;
 
 	case GO_LE_DEFINE:	opt_le_define = optarg; break;
+	case GO_LE_ARENA:	opt_le_arena = optarg; break;
 	case GO_LPAR:		opt_lpar = optarg; break;
 	case GO_ALIAS:		err += ScanOptAlias(optarg); break;
 	case GO_ENGINE:		err += ScanOptEngine(optarg); break;
@@ -1270,8 +1283,7 @@ static enumError CheckCommand ( int argc, char ** argv )
     switch ((enumCommands)cmd_ct->id)
     {
 	case CMD_VERSION:	version_exit();
-	case CMD_HELP:		PrintHelp(&InfoUI_wlect,stdout,0,"HELP",0,URI_HOME,
-					first_param ? first_param->arg : 0 ); break;
+	case CMD_HELP:		PrintHelpColor(&InfoUI_wlect); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;

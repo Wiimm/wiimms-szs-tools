@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -148,6 +148,7 @@ static const KeywordTab_t opt_kcl_tab[] =
 
   { KCLMD_CONV_FACEUP,	"CONV-FACEUP",	"CONVFACEUP",	0 },
   { KCLMD_WEAK_WALLS,	"WEAK-WALLS",	"WEAKWALLS",	0 },
+  { KCLMD_CLR_VISUAL,	"CLR-VISUAL",	"CLRVISUAL",	0 },
 
   { KCLMD_NEW,		"NEW",		0,		0 },
   { KCLMD_SORT,		"SORT",		0,		0 },
@@ -568,40 +569,87 @@ uint n_user_color = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+kcl_flag_t * CreatePatchFlagKCL
+(
+    // returns NULL or N_KCL_FLAG elements
+
+    kcl_mode_t kcl_mode,    // relevant: KCLMD_CLR_VISUAL | KCLMD_WEAK_WALLS
+    SlotMode_t slot_mode,   // relevant: SLOTMD_ICE_TO_WATER | SLOTMD_WATER_TO_ICE
+    bool null_on_orig	    // TRUE: return NULL on no flag modifications
+)
+{
+    kcl_flag_t *flag = MALLOC( N_KCL_FLAG * sizeof(*flag) );
+    for ( int i = 0; i < N_KCL_FLAG; i++ )
+	flag[i] = i;
+
+    if ( opt_slot & (SLOTMD_ICE_TO_WATER|SLOTMD_WATER_TO_ICE) )
+    {
+	const u16 search = opt_slot & SLOTMD_ICE_TO_WATER ? 0x0070 : 0x0030;
+	for ( int i = 0; i < N_KCL_FLAG; i++ )
+	    if ( ( flag[i] & 0x00ff ) == search )
+		flag[i] = flag[i] ^ 0x0040;
+    }
+
+    if ( kcl_mode & KCLMD_WEAK_WALLS )
+    {
+	for ( int i = 0; i < N_KCL_FLAG; i++ )
+	{
+	    const int type = GET_KCL_TYPE(i);
+	    if ( type >= 0 && kcl_type[type].attrib & KCLT_C_WALL )
+		flag[i] |= 0x8000;
+	}
+    }
+
+    if ( kcl_mode & KCLMD_CLR_VISUAL )
+    {
+	static u16 tab[32] =
+	{
+	    0xe01f,0xe01f,0xe01f,0xe01f, 0xe01f,0xe01f,0xe0ff,0xe0ff,
+	    0xe0ff,0xe0ff,0xe01f,0xe0ff, 0x601f,0x60ff,0x60ff,0x601f,
+	    0xe01f,0xe0ff,0xffff,0xe0ff, 0xe01f,0xe0ff,0xe01f,0xe01f,
+	    0x001f,0xffff,0xe01f,0xffff, 0xe0ff,0xe0ff,0x601f,0x60ff,
+	};
+
+	for ( int i = 0; i < N_KCL_FLAG; i++ )
+	    flag[i] &= tab[i&31];
+    }
+
+    if (null_on_orig)
+    {
+	bool have_patch = false;
+	for ( int i = 0; i < N_KCL_FLAG; i++ )
+	    if ( flag[i] != i )
+	    {
+		have_patch = true;
+		break;
+	    }
+	if (!have_patch)
+	{
+	    FREE(flag);
+	    flag = 0;
+	}
+    }
+
+    return flag;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void InitializeKCL ( kcl_t * kcl )
 {
     //--- one time setup
 
     static int done = 0;
-    if (!done)
+    if (!done++)
     {
-	++done;
-	if ( opt_slot & (SLOTMD_ICE_TO_WATER|SLOTMD_WATER_TO_ICE) )
-	{
-	    SetupPatchKclFlag();
-	    const u16 search = opt_slot & SLOTMD_ICE_TO_WATER ? 0x0070 : 0x0030;
-
-	    uint i;
-	    for ( i = 0; i < N_KCL_FLAG; i++ )
-		if ( ( patch_kcl_flag[i] & 0x00ff ) == search )
-		    patch_kcl_flag[i] = patch_kcl_flag[i] ^ 0x0040;
-
-	    PurgePatchKclFlag();
-	}
-
-	if ( KCL_MODE & KCLMD_WEAK_WALLS )
-	{
-	    SetupPatchKclFlag();
-	    uint i;
-	    for ( i = 0; i < N_KCL_FLAG; i++ )
-	    {
-		const int type = GET_KCL_TYPE(i);
-		if ( type >= 0 && kcl_type[type].attrib & KCLT_C_WALL )
-		    patch_kcl_flag[i] |= 0x8000;
-	    }
-	    PurgePatchKclFlag();
-	}
+	SetupPatchKclFlag();
+	kcl_flag_t *flag = CreatePatchFlagKCL(KCL_MODE,opt_slot,false);
+	DASSERT(flag);
+	memcpy(patch_kcl_flag,flag,sizeof(*patch_kcl_flag)*N_KCL_FLAG);
+	FREE(flag);
+	PurgePatchKclFlag();
     }
+
 
     //--- object setup
 
@@ -6767,7 +6815,7 @@ bool TransformKCL
 ///////////////			Patch KCL			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-u16 *patch_kcl_flag = 0; // NULL or 'N_KCL_FLAG' elements
+kcl_flag_t *patch_kcl_flag = 0; // NULL or 'N_KCL_FLAG' elements
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -6810,8 +6858,7 @@ void ResetPatchKclFlag()
 	patch_kcl_flag = MALLOC( N_KCL_FLAG * sizeof(*patch_kcl_flag) );
     }
 
-    uint i;
-    for ( i = 0; i < N_KCL_FLAG; i++ )
+    for ( int i = 0; i < N_KCL_FLAG; i++ )
 	patch_kcl_flag[i] = i;
 }
 
@@ -7614,6 +7661,9 @@ int CheckKCL
 {
     DASSERT(kcl);
     PRINT("CheckKCL(%d)\n",mode);
+
+    if ( disable_checks > 0 )
+	return 0;
 
 
     //--- setup

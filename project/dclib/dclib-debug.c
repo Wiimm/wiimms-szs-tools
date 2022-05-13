@@ -14,16 +14,16 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
+ *   This library is free software; you can redistribute it and/or modify  *
  *   it under the terms of the GNU General Public License as published by  *
  *   the Free Software Foundation; either version 2 of the License, or     *
  *   (at your option) any later version.                                   *
  *                                                                         *
- *   This program is distributed in the hope that it will be useful,       *
+ *   This library is distributed in the hope that it will be useful,       *
  *   but WITHOUT ANY WARRANTY; without even the implied warranty of        *
  *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the         *
  *   GNU General Public License for more details.                          *
@@ -495,8 +495,13 @@ enumError PrintErrorArg ( ccp func, ccp file, unsigned int line,
 	}
 
      #if defined(EXTENDED_ERRORS) && EXTENDED_ERRORS > 1
+      #ifdef SVN_NEXT
+	fprintf(stdwrn,"%s -> %s/%s?annotate=%d#l%d\n",
+		prefix, URI_VIEWVC, file, SVN_NEXT, line );
+      #elif defined(REVISION_NEXT)
 	fprintf(stdwrn,"%s -> %s/%s?annotate=%d#l%d\n",
 		prefix, URI_VIEWVC, file, REVISION_NEXT, line );
+      #endif
      #endif
 
 	fputs(prefix,stdwrn);
@@ -674,14 +679,10 @@ void HexDiff ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
 ///////////////			 trace functions		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-u_msec_t GetTimerMSec();
-
-///////////////////////////////////////////////////////////////////////////////
-
 static void trace_helper ( int print_stderr, ccp format, va_list arg )
 {
     static uint last_day = 0;
-    DayTime_t dt = GetDayTime(true);
+    DayTime_t dt = GetDayTime(false);
 
     if (!TRACE_FILE)
     {
@@ -713,7 +714,7 @@ static void trace_helper ( int print_stderr, ccp format, va_list arg )
     if ( last_day != dt.day )
     {
 	SetupTimezone(true);
-	dt = GetDayTime(true);
+	dt = GetDayTime(false);
 	last_day = dt.day;
 	snprintf(pre,sizeof(pre),
 		"\n#DAY: %s, pid=%d\n%02u:%02u:%02u.%03u ",

@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -62,6 +62,8 @@ typedef struct features_szs_t
     u16	size_be;		// size of features_szs_t in big endian
 				//	== version number
 
+    // ==> see enum features_szs_value_t for following feature values
+
     //--- SZS files (initial list)
 
     u8 f_lex;			// HAVESZS_COURSE_LEX
@@ -77,6 +79,7 @@ typedef struct features_szs_t
 
     //--- KMP features (initial list)
 
+    u8 kmp_goomba_size;		// HAVEKMP_GOOMBA_SIZE
     u8 kmp_woodbox_ht;		// HAVEKMP_WOODBOX_HT
     u8 kmp_mushroom_car;	// HAVEKMP_MUSHROOM_CAR
     u8 kmp_penguin_pos;		// HAVEKMP_PENGUIN_POS
@@ -104,6 +107,7 @@ typedef struct features_szs_t
     u8 lex_item_range;		// HAVELEXF_ITEM_RANGE
     u8 lex_cannon;		// HAVELEXF_CANNON
     u8 lex_hide_pos;		// HAVELEXF_HIDE_POS
+    u8 lex_start_item;		// HAVELEXF_START_ITEM
 
     //--- new files and features will be appended here
 }
@@ -128,10 +132,10 @@ void PrintFeaturesSZS
 (
     PrintScript_t	*ps,		// valid output definition
     const features_szs_t *fs,		// valid source
-    bool		is_lex,		// TRUE: Create output for a LEX file 
+    bool		is_lex,		// TRUE: Create output for a LEX file
     int			comments,	// >0: add extended comments
     int			print_modes,	// >0: append ",MODES"
-    u8			include,	// print only if all bits match 
+    u8			include,	// print only if all bits match
     u8			exclude		// exclude if any bit match
 );
 
@@ -151,24 +155,66 @@ typedef enum features_szs_mode_t
     FZM_RACING		= 0x10, // R: impact on racings
 
     FZM_TIMETRIAL	= 0x20, // T: impact on time trial
-    FZM_OFFLINE		= 0x40, // L: impact on offline battles/races
+    FZM_OFFLINE		= 0x40, // L: impact on local battles/races
     FZM_ONLINE		= 0x80, // O: impact on online battles/races
 
     FZM_M_KIND		= FZM_VISUAL | FZM_GAMEPLAY,
     FZM_M_TYPE		= FZM_BATTLE | FZM_RACING,
     FZM_M_WHERE		= FZM_TIMETRIAL | FZM_OFFLINE | FZM_ONLINE,
-    FZM__MASK		= FZM_SECTION | FZM_M_KIND | FZM_M_TYPE | FZM_M_WHERE,
 
+    FZM__MASK		= FZM_SECTION | FZM_M_KIND | FZM_M_TYPE | FZM_M_WHERE,
 }
 features_szs_mode_t;
+
+//-----------------------------------------------------------------------------
+// [[features_szs_value_t]]
+
+typedef enum features_szs_value_t
+{
+    // values for struct features_szs_t
+
+    FZV_UNDEF,		// feature not defined
+    FZV_NO_IMPACT,	// feature defined but without gameplay impact
+    FZV_MAYBE_IMPACT,	// feature defined, gameplay impact is possible
+    FZV_IMPACT,		// feature defined, with gameplay impact
+
+    // masks for struct features_szs_t
+
+    FZV_M_VALUE		= 7,		// mask for values
+    FZV_M_OPTIONS	= FZM_M_WHERE,	// mask for options
+}
+features_szs_value_t;
 
 //-----------------------------------------------------------------------------
 
 ccp GetFeaturesMode ( features_szs_mode_t mode );
 ccp GetFeaturesEffects ( features_szs_mode_t mode );
 ccp GetFeaturesEffectsByOffset ( uint offset );
+void NormalizeFeatures ( features_szs_t *fs );
 
 const features_szs_t * GetFeaturesModes();
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			check_features_szs_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[check_features_szs_t]]
+
+typedef struct check_features_szs_t
+{
+    bool		have_features;	// true: szs has LEX/FEA0 section
+    bool		need_features;	// true: szs needs a LEX/FEA0 section
+    bool		wrong_features;	// true: 'current' and 'correct' differ
+
+    features_szs_t	current;	// current features
+    features_szs_t	correct;	// correct features
+}
+check_features_szs_t __attribute__((aligned(4)));
+
+//-----------------------------------------------------------------------------
+
+void SetupCheckFeaturesSZS
+	( check_features_szs_t *cfs, const struct szs_have_t *have, bool is_lex );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -209,6 +255,7 @@ typedef enum have_lex_feat_t
     HAVELEXF_ITEM_RANGE,
     HAVELEXF_CANNON,
     HAVELEXF_HIDE_POS,
+    HAVELEXF_START_ITEM,
     //--- add new elements here (order is important)
     HAVELEXF__N
 }
@@ -274,8 +321,11 @@ __attribute__ ((packed)) lex_element_t;
 
 typedef struct lex_set1_t
 {
-    float3	item_factor;		// factor for item positions, always >=1.0
-    u8		test[4];		// 4 test values (TEST1..TEST4)
+ /*00*/ float3	item_factor;		// factor for item positions, always >=1.0
+ /*0c*/ u8	start_item;		// 1: player can get an item before start (hint only)
+ /*0d*/ u8	test_0d;		// reserved
+ /*0e*/ u8	test_0e;		// reserved
+ /*0f*/ u8	test_0f;		// reserved
 }
 __attribute__ ((packed,aligned(4))) lex_set1_t;
 

@@ -507,6 +507,25 @@ szs v2.25a r8443 - 2021-04-24
  - Support of LE-CODE build 29.
 
 
+szs v2.26a r8462 - 2021-05-08
+
+ - wstrt PORT & wstrt WHERE:
+    - Address scanning: If an address starts with letter 'm' or 'M' (main.dol)
+      or 's' or 'S' (staticr.rel), then it is interpreted as file offset.
+      If an address without prefix is exact 6 characters long, then value
+      0x80000000 is added. This makes cut+paste from cheat codes easier.
+    - New option: --no-0x (short: -0): Suppress 0x prefix for hex numbers.
+    - New option: --long (short: -l): Print file offsets too.
+ - wstrt PORT:
+    - Bug fix: Wrong column was highlighted when region order was changed by
+      option --order.
+    - Internal porting database updated.
+    - New option: --port-db=file: Load the specified update file and replace
+      the internal porting database.
+ - wstrt DUMP: More details for StaticR.rel files.
+ - New command: wszst INSTALL: Install files to the shared directory.
+
+
 @@MODULE(last-history.txt)@@
 
 

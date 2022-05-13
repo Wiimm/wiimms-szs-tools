@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -349,8 +349,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_MAX_WIDTH, false, false, false, true, false, 0, "max-width",
 	"maxwidth",
 	"Define the maximum terminal width (number of columns) for help and"
-	" some other messages and disable the automatic detection of the"
-	" terminal width. This option is ignored if --width is set."
+	" some other messages. The default is 120. This option is ignored if"
+	" --width is set."
     },
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
@@ -369,6 +369,16 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
 	0,
 	"This debug option enables the logging of internal lists and maps."
+    },
+
+    {	OPT_WARN, false, false, false, false, false, 'W', "warn",
+	"list",
+	"Enable or disable warnings. Parameter 'list' is a comma separated"
+	" list of keywords. A minus sign before a keyword disables a warning."
+	" Each occurrence of the option will only change entered warning and"
+	" all other warnings are untouched.\n"
+	"  Keyword DEFAULT resets the default settings, OFF disables and ALL"
+	" enables all. The other allowed keywords are: INVALID-OFFSET."
     },
 
     {	OPT_DE, false, false, false, false, false, 0, "de",
@@ -531,7 +541,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 63
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 64
 
 };
 
@@ -660,7 +670,7 @@ static const KeywordTab_t CommandTab[] =
 ///////////////            OptionShort & OptionLong             ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static const char OptionShort[] = "VhqvLc:lHBM:T:A:td:D:E:orupiP:1X";
+static const char OptionShort[] = "VhqvLW:c:lHBM:T:A:td:D:E:orupiP:1X";
 
 static const struct option OptionLong[] =
 {
@@ -677,6 +687,7 @@ static const struct option OptionLong[] =
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
+	{ "warn",		1, 0, 'W' },
 	{ "de",			0, 0, GO_DE },
 	{ "colors",		2, 0, GO_COLORS },
 	{ "no-colors",		0, 0, GO_NO_COLORS },
@@ -803,7 +814,7 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x054 T */	OPT_TRACKS,
 	/* 0x055   */	 0,
 	/* 0x056 V */	OPT_VERSION,
-	/* 0x057   */	 0,
+	/* 0x057 W */	OPT_WARN,
 	/* 0x058 X */	OPT_EXPORT,
 	/* 0x059   */	 0,0,0,0, 0,0,0,0, 0,0,
 	/* 0x063 c */	OPT_CONST,
@@ -1029,6 +1040,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
+	OptionInfo + OPT_WARN,
 	OptionInfo + OPT_DE,
 	OptionInfo + OPT_COLORS,
 	OptionInfo + OPT_NO_COLORS,
@@ -1410,7 +1422,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wbmgt [option]... command [option|parameter|file]...",
 	"Wiimms BMG Tool : Convert and patch raw and text BMG (message) files.",
 	0,
-	25,
+	26,
 	option_tab_tool,
 	0
     },

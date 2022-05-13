@@ -18,7 +18,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -151,6 +151,7 @@ typedef enum have_kmp_obj_t
     HAVEKMP_COOB_R,		// Conditional Out of Bounds by Riidefi
     HAVEKMP_COOB_K,		// Conditional Out of Bounds by kHacker35000vr
     HAVEKMP_UOOB,		// Unconditional Out of Bounds
+    HAVEKMP_GOOMBA_SIZE,	// 0x191:goomba (kuribo) with scale !0 1.00
     HAVEKMP__N
 }
 __attribute__ ((packed)) have_kmp_obj_t;

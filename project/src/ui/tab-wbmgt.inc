@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -219,6 +219,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GM,	"LOGGING",	"L|logging",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GP,	"WARN",		"W|warn",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_G,	"DE",		"de",

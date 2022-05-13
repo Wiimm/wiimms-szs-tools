@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -568,6 +568,8 @@ static const KeywordTab_t opt_kmp_tab[] =
 
   { KMPMD_RM_EMPTY,	"RM-EMPTY",	"RMEMPTY",	0 },
   { KMPMD_MINIMIZE,	"MINIMIZE",	0,		0 },
+
+  { KMPMD_PR_PREV,	"PR-PREV",	"PRPREV",	0 },
 
   { KMPMD_TEST1,	"TEST1",	0,		0 },
   { KMPMD_TEST2,	"TEST2",	0,		0 },
@@ -3647,6 +3649,24 @@ static int sort_gobj ( const sort_gobj_t * a, const sort_gobj_t * b )
 
 //-----------------------------------------------------------------------------
 
+static int sort_gobj_xyz ( const sort_gobj_t * a, const sort_gobj_t * b )
+{
+    int stat = a->rank - b->rank;
+    if (!stat)
+    {
+	stat = a->data.position[0] < b->data.position[0] ? -1
+	     : a->data.position[0] > b->data.position[0] ?  1
+	     : a->data.position[1] < b->data.position[1] ? -1
+	     : a->data.position[1] > b->data.position[1] ?  1
+	     : a->data.position[2] < b->data.position[2] ? -1
+	     : a->data.position[2] > b->data.position[2] ?  1
+	     : a->pos - b->pos;
+    }
+    return stat;
+}
+
+//-----------------------------------------------------------------------------
+
 static int sort_gobj_tiny ( const sort_gobj_t * a, const sort_gobj_t * b )
 {
     int stat = memcmp(	a->data.setting,
@@ -3673,17 +3693,15 @@ static int sort_gobj_tiny ( const sort_gobj_t * a, const sort_gobj_t * b )
 bool SortGOBJ
 (
     kmp_t		* kmp,		// pointer to valid KMP
-    int			sort_mode	// <=0: dont sort
-					//   1: group only
-					//   2: secondary sort by angle
-					//   3: sort for TINY
+    kmp_sort_t		sort_mode	// one of KSORT_OFF, KSORT_GROUP,
+					//   KSORT_ANGLE, KSORT_XYZ or KSORT_TINY
 )
 {
     DASSERT(kmp);
     PRINT("SortGOBJ(%d)\n",sort_mode);
 
     List_t *dlist = kmp->dlist + KMP_GOBJ;
-    if ( sort_mode < 1 || dlist->used < 2 )
+    if ( sort_mode <= KSORT_OFF || dlist->used < 2 )
 	return false;
 
 
@@ -3713,21 +3731,26 @@ bool SortGOBJ
 	const typeof(gobj->obj_id) obj_id = gobj->obj_id;
 	sg->pos  = sg - sg_beg;
 	sg->rank = obj_id < N_KMP_GOBJ ? rank[obj_id] : obj_id;
-	if ( sort_mode == KMP_SORT_ANGLE )
+	if ( sort_mode == KSORT_ANGLE )
 	{
 	    sg->angle = atan2(gobj->position[0],gobj->position[2]) * (180000000/M_PI);
-	    if ( sg->angle < 0)
+	    if ( sg->angle < 0 )
 		sg->angle += 360000000;
 	}
 	memcpy(&sg->data,gobj,sizeof(sg->data));
     }
 
+
     //--- sort data
 
-    if ( sort_mode == KMP_SORT_TINY )
-	qsort( sg_beg, dlist->used, sizeof(*sg_beg), (qsort_func)sort_gobj_tiny );
-    else
-	qsort( sg_beg, dlist->used, sizeof(*sg_beg), (qsort_func)sort_gobj );
+    int (*func) ( const sort_gobj_t * a, const sort_gobj_t * b );
+    switch (sort_mode)
+    {
+	case KSORT_XYZ:	 func = sort_gobj_xyz; break;
+	case KSORT_TINY: func = sort_gobj_tiny; break;
+	default:	 func = sort_gobj; break;
+    }
+    qsort( sg_beg, dlist->used, sizeof(*sg_beg), (qsort_func)func );
 
 
     //--- store sorted data
@@ -5225,7 +5248,7 @@ bool PatchKMP
 	    }
 	}
 
-	SortGOBJ(kmp,KMP_SORT_TINY);
+	SortGOBJ(kmp,KSORT_TINY);
     }
 
 
@@ -5827,7 +5850,7 @@ void ModifyUsedPosObj
 	    obj->allowed.v[i] *= stretch->v[i];
 	}
     }
-    EvaluateUsedPosObj(obj);  
+    EvaluateUsedPosObj(obj);
     obj->useful = useful;
 
     if (src)
@@ -5864,7 +5887,7 @@ ccp GetUsedPosObjSuggestion
 	if (obj->pos_factor_valid)
 	    return PrintCircBuf("@ITEM-POS-FACTOR=v(%4.2f,%4.2f,%4.2f)",
 		obj->pos_factor.x, obj->pos_factor.y, obj->pos_factor.z );
-    }    
+    }
     return return_if_empty;
 }
 
@@ -5881,7 +5904,7 @@ void PrintUsedPosObj ( FILE *f, int indent, const kmp_usedpos_obj_t *obj )
 	"R=%d,%d,%d, P=%d/%1.2f,%1.2f,%1.2f\n",
 	indent,"",
 	obj->valid, obj->useful, obj->shift_active, obj->stretch_active,
-	obj->min.x/1000, obj->min.y/1000, obj->min.z/1000, 
+	obj->min.x/1000, obj->min.y/1000, obj->min.z/1000,
 	obj->max.x/1000, obj->max.y/1000, obj->max.z/1000,
 	obj->allowed.x/1000, obj->allowed.y/1000, obj->allowed.z/1000,
 	obj->shift.x/1000, obj->shift.y/1000, obj->shift.z/1000,
@@ -6106,6 +6129,7 @@ const kmp_obj_info_t have_kmp_info[HAVEKMP__N] =
     { 0, "coob-r",	"Conditional OOB by Riidefi" },		// HAVEKMP_COOB_R
     { 0, "coob-k",	"Conditional OOB by kHacker35000vr" },	// HAVEKMP_COOB_K
     { 0, "uoob",	"Unconditional OOB" },			// HAVEKMP_UOOB
+    { 0, "goomba-sz",	"Goomba with scale other than 1.00" },	// HAVEKMP_GOOMBA_SIZE
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -6161,6 +6185,11 @@ void DetectSpecialKMP
 		    res[HAVEKMP_PENGUIN_POS]++;
 		break;
 
+	      case 0x191: // goomba (kuribo)
+		if ( gobj->scale[0] != 1.0 || gobj->scale[1] != 1.0 || gobj->scale[2] != 1.0 )
+		    res[HAVEKMP_GOOMBA_SIZE]++;
+		break;
+
 	      case 0x1a6: // Epropeller
 		if ( gobj->setting[7] && res[HAVEKMP_EPROP_SPEED] < 0xff )
 		    res[HAVEKMP_EPROP_SPEED]++;
@@ -6213,7 +6242,7 @@ ccp CreateSpecialInfoKMP
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			    CkeckKMP()			///////////////
+///////////////			    CheckKMP()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[check_kmp_t]]
 
@@ -6721,6 +6750,9 @@ int CheckKMP
 {
     DASSERT(kmp);
     PRINT("CheckKMP(%d)\n",mode);
+
+    if ( disable_checks > 0 )
+	return 0;
 
     //--- setup
 

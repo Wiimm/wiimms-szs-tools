@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -40,6 +40,7 @@
 
 #include "lib-std.h"
 #include "lib-xbmg.h"
+#include "lib-mkw.h"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -221,6 +222,19 @@ ctcode_cupref_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////		    struct ctcode_arena_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[ctcode_arena_t]]
+
+typedef struct ctcode_arena_t
+{
+    le_property_t	prop[MKW_N_ARENAS];	// only valid if !=0
+    le_music_t		music[MKW_N_ARENAS];	// only valid if le_prop[]!=0
+}
+ctcode_arena_t;
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct ctcode_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[ctcode_t]]
@@ -250,6 +264,11 @@ typedef struct ctcode_t
     uint		max_battle_cups;// max possible number of battle cups
 
     uint		n_unused_cups;	// number of unused cups
+
+
+    //--- arenas setup fir LE-CODE
+
+    ctcode_arena_t	arena;		// data of section [SETUP-ARENA]
 
 
     //--- track data
@@ -291,7 +310,7 @@ typedef struct ctcode_t
     bool		use_lecode;	// true: enable le-code support
     bool		use_le_flags;	// true: le_flags enabled
     struct le_lpar_t	*lpar;		// NULL or LPAR parameters
-    
+
 
     //--- misc
 
@@ -372,9 +391,23 @@ void PrepareExportCTCODE ( ctcode_t * ctcode );
 void PatchNamesCTCODE ( ctcode_t * ctcode );
 void PrepareSaveCTCODE ( ctcode_t * ctcode );
 
-int MusicID2TrackId ( uint music_id, int no_track, int not_found );
-ccp PrintMusicID ( uint mid, bool force_hex );
-ccp PrintPropertyID ( uint tid, bool force_hex );
+uint NormalizeMusicID ( uint music_id );
+int  MusicID2TrackId ( uint music_id, int no_track, int not_found );
+ccp  PrintMusicID ( uint mid, bool force_hex );
+ccp  PrintPropertyID ( uint tid, bool force_hex );
+ccp  PrintArenaSlot ( uint tid, bool force_hex );
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanSetupArena ( ctcode_arena_t *ca, ScanInfo_t * si );
+
+enumError ScanTextArena
+(
+    ctcode_arena_t	*ca,		// valid data structure
+    ccp			fname,		// NULL or file name for error messages
+    const void		*data,		// data to scan
+    uint		data_size	// size of 'data'
+);
 
 ///////////////////////////////////////////////////////////////////////////////
 

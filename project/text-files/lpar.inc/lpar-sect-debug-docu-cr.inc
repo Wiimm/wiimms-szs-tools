@@ -72,6 +72,14 @@
 # If enabled then print the respawn index defined by the current check point. 
 # This information may help to test all respawn points of a track. 
 
+# ITEM-POINT = 0|1
+#   Output: I=i
+# If enabled print the current item point index of the player.
+
+# KCL-TYPE = 0|1
+#   Output: K=t,v
+# If enabled print current KCL type (t=00-1F) and KCL variant (v=000-7FF).
+
 # LAP-POS = 0|1
 #   Output: L=lap
 # Print the current lap position as floating point value with 3 digits. The

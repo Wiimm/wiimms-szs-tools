@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -5972,7 +5972,7 @@ void CalcExpr
 	    FreeV(dest);
 	    dest->mode = VAR_INT;
 	    dest->i = op_id == OPI_NEQNEQ;
-	    return;  
+	    return;
 
 	  case OPI_EQ:  // S
 	  case OPI_NEQ: // S
@@ -7345,6 +7345,46 @@ enumError ScanUValueSI
 
 	case VAR_STRING:
 	    *num = str2l(var.str,0,10);
+	    break;
+    }
+
+    // only needed to avoid compiler warnings
+    *num = 0;
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanIntValueSI
+(
+    ScanInfo_t		* si,		// valid data
+    int			* num		// return value
+)
+{
+    DASSERT(si);
+    DASSERT(num);
+
+    DEFINE_VAR(var);
+    enumError err = ScanValueSI(si,&var);
+    SkipCharSI(si,',');
+
+    switch(var.mode)
+    {
+	case VAR_UNSET:
+	    *num = 0;
+	    return err;
+
+	case VAR_INT:
+	    *num = var.i;
+	    return err;
+
+	case VAR_DOUBLE:
+	case VAR_VECTOR:
+	    *num = double2int(var.d);
+	    return err;
+
+	case VAR_STRING:
+	    *num = var.str_len ? str2l(var.str,0,10) : 0;
 	    break;
     }
 

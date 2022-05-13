@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -37,6 +37,8 @@
 #include <string.h>
 #include "lib-mkw.h"
 #include "dclib-numeric.h"
+
+#include "lib-mkw-def.c"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -973,7 +975,7 @@ int GetVrDiffByTab ( int diff ) // diff = VR(winner) - VR(loser)
 
     const s16 search = diff;
     int i = 0, j = sizeof(vr_diff_tab) / sizeof(*vr_diff_tab) - 1;
-    
+
     while ( i < j )
     {
 	const int k = (i+j)/2;
@@ -1100,6 +1102,247 @@ ccp GetMkwMusicName3 ( int mid )
     memcpy(dest,buf,len);
     return dest;
 }
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			engines				///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const char mkw_engine_info[MKW_ENGINE__N+1][7] =
+{
+    "50cc",
+    "100cc",
+    "150cc",
+    "mirror",
+    "200cc",
+    "?",
+};
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////		    slots, drivers and vehicles		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetSlotHex ( u8 slot )
+{
+    if (IsMkwSlotValid(slot))
+    {
+	char *dest = GetCircBuf(2);
+	dest[0] = LoDigits[slot];
+	dest[1] = 0;
+	return dest;
+    }
+    return "-";
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetSlotNum ( u8 slot )
+{
+    if (IsMkwSlotValid(slot))
+	return PrintCircBuf("%2u",slot);
+    return " -";
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const mkw_driver_t mkw_driver_attrib[MKW_N_DRIVER+1] =
+{
+	{ 1, 0, "Mari",	"Mari",	"Mario",	"Mario" },		// M0 #0
+	{ 0, 0, "B.Pe",	"B.Pe",	"Baby Peach",	"Baby Peach" },		// S2
+	{ 2, 0, "Walu",	"Walu",	"Waluigi",	"Waluigi" },		// L1
+	{ 2, 0, "Bows",	"Bows",	"Bowser",	"Bowser" },		// L3
+
+	{ 0, 0, "B.Da",	"B.Da",	"Baby Daisy",	"Baby Daisy" },		// S3 #4
+	{ 0, 0, "DBon",	"KnTr",	"Dry Bones",	"Knochentrocken" },	// S7
+	{ 0, 0, "B.Ma",	"B.Ma",	"Baby Mario",	"Baby Mario" },		// S0
+	{ 1, 0, "Luig",	"Luig",	"Luigi",	"Luigi" },		// M1
+
+	{ 0, 0, "Toad",	"Toad",	"Toad",		"Toad" },		// S4 #8
+	{ 2, 0, "Donk",	"Donk",	"Donkey Kong",	"Donkey Kong" },	// L2
+	{ 1, 0, "Yosh",	"Yosh",	"Yoshi",	"Yoshi" },		// M4
+	{ 2, 0, "Wari",	"Wari",	"Wario",	"Wario" },		// L0
+
+	{ 0, 0, "B.Lu",	"B.Lu",	"Baby Luigi",	"Baby Luigi" },		// S1 #12
+	{ 0, 0, "Tdte",	"Tdte",	"Toadette",	"Toadette" },		// S5
+	{ 0, 0, "Koop",	"Koop",	"Koopa Troopa",	"Koopa" },		// S6
+	{ 1, 0, "Dais",	"Dais",	"Daisy",	"Daisy" },		// M3
+
+	{ 1, 0, "Peac",	"Peac",	"Peach",	"Peach" },		// M2 #16
+	{ 1, 0, "Bird",	"Bird",	"Birdo",	"Birdo" },		// M5
+	{ 1, 0, "DidK",	"DidK",	"Diddy Kong",	"Diddy Kong" },		// M6
+	{ 2, 0, "KBoo",	"BuHu",	"King Boo",	"König Buu Huu" },	// L4
+
+	{ 1, 0, "B.Jr",	"B.Jr",	"Bowser Jr.",	"Bowser Jr." },		// M7 #20
+	{ 2, 0, "DBow",	"KnBo",	"Dry Bowser",	"Knochen-Bowser" },	// L7
+	{ 2, 0, "Funk",	"Funk",	"Funky Kong",	"Funky Kong" },		// L6
+	{ 2, 0, "Rosa",	"Rosa",	"Rosalina",	"Rosalina" },		// L5
+
+	{ 0, 1, "MAsm",	"MAkm",	"Mii A (small,male)",	"Mii A (klein,männ)" },	// S8 #24
+	{ 0, 1, "MAsf",	"MAkw",	"Mii A (small,female)",	"Mii A (klein,weib)" },	// S9
+	{ 0, 2, "MBsm",	"MBkm",	"Mii B (small,male)",	"Mii B (klein,männ)" },	// S10
+	{ 0, 2, "MBsf",	"MBkw",	"Mii B (small,female)",	"Mii B (klein,weib)" },	// S11
+	{ 0, 3, "MCsm",	"MCkm",	"Mii C (small,male)",	"Mii C (klein,männ)" },	// 0x11c
+	{ 0, 3, "MCsf",	"MCkw",	"Mii C (small,female)",	"Mii C (klein,weib)" },	// 0x11d
+
+	{ 1, 1, "MAmm",	"MAmm",	"Mii A (medium,male)",	"Mii A (mittel,männ)" },// M8 #30
+	{ 1, 1, "MAmf",	"MAmw",	"Mii A (medium,female)","Mii A (mittel,weib)" },// M9
+	{ 1, 2, "MBmm",	"MBmm",	"Mii B (medium,male)",	"Mii B (mittel,männ)" },// M10
+	{ 1, 2, "MBmf",	"MBmw",	"Mii B (medium,female)","Mii B (mittel,weib)" },// M11
+	{ 1, 3, "MCmm",	"MCmm",	"Mii C (medium,male)",	"Mii C (mittel,männ)" },// 0x122
+	{ 1, 3, "MCmf",	"MCmw",	"Mii C (medium,female)","Mii C (mittel,weib)" },// 0x123
+
+	{ 2, 1, "MAlm",	"MAgm",	"Mii A (large,male)",	"Mii A (groß,männ)" },	// L8 #36
+	{ 2, 1, "MAlf",	"MAgw",	"Mii A (large,female)",	"Mii A (groß,weib)" },	// L9
+	{ 2, 2, "MBlm",	"MBgm",	"Mii B (large,male)",	"Mii B (groß,männ)" },	// L10
+	{ 2, 2, "MBlf",	"MBgw",	"Mii B (large,female)",	"Mii B (groß,weib)" },	// L11
+	{ 2, 3, "MClm",	"MCgm",	"Mii C (large,male)",	"Mii C (groß,männ)" },	// 0x128
+	{ 2, 3, "MClf",	"MCgw",	"Mii C (large,female)",	"Mii C (groß,weib)" },	// 0x129
+
+	{0,0,"","",0,0} // TERM #42
+};
+
+//-----------------------------------------------------------------------------
+
+ccp GetDriverNum ( u8 driver )
+{
+    switch (driver)
+    {
+     case  48: return "  ?";
+     case 254: return "  .";
+     case 255: return "  -";
+    }
+
+    return PrintCircBuf("%3u",driver);
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetDriverName4 ( u8 driver )
+{
+    if ( driver < MKW_N_DRIVER )
+    {
+	ccp res = mkw_driver_attrib[driver].id_en;
+	if (*res)
+	    return res;
+    }
+
+    switch (driver)
+    {
+     case  48: return " ?? ";
+     case 254: return " .. ";
+     case 255: return " -- ";
+    }
+
+    return PrintCircBuf("%3u.",driver);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const mkw_vehicle_t mkw_vehicle_attrib[MKW_N_VEHICLE+1] =
+{
+    { 0,0,1, "Ka-S", "MinK", "Standard Kart S",	"Mini-Kart" },		// SK0 #0
+    { 1,0,1, "Ka-M", "MedK", "Standard Kart M",	"Medi-Kart" },		// MK0
+    { 2,0,1, "Ka-L", "MaxK", "Standard Kart L",	"Maxi-Kart" },		// LK0
+    { 0,0,0, "Boos", "Baby", "Booster Seat",	"Baby-Booster" },	// SK1
+    { 1,0,0, "Drag", "Nost", "Classic Dragster","Nostalgia 1" },	// MK1
+    { 2,0,0, "OffR", "OffR", "Offroader",	"Offroader" },		// LK1
+
+    { 0,0,0, "Mini", "MinB", "Mini Beast",	"Minibiest" },		// SK2 #6
+    { 1,0,0, "Wing", "Wind", "Wild Wing",	"Windschnitte" },	// MK2
+    { 2,0,0, "Flam", "Feue", "Flame Flyer",	"Feuerschleuder" },	// LK2
+    { 0,0,0, "Chep", "BobC", "Cheep Charger",	"Bob-Cheep" },		// SK3
+    { 1,0,0, "Bloo", "Bloo", "Super Blooper",	"Blooper-Bolide" },	// MK3
+    { 2,0,0, "Pira", "PPir", "Piranha Prowler",	"Pistenpiranha" },	// LK3
+
+    { 0,0,0, "Tita", "Monz", "Tiny Titan",	"Monztruck" },		// SK4 #12
+    { 1,0,0, "Dayt", "Cabr", "Daytripper",	"Cabriosa" },		// MK4
+    { 2,0,0, "JetS", "Ster", "Jetsetter",	"Sterngleiter" },	// LK4
+    { 0,0,0, "Falc", "Falc", "Blue Falcon",	"Blue Falcon" },	// SK5
+    { 1,0,0, "Spri", "Glor", "Sprinter",	"Glory" },		// MK5
+    { 2,0,0, "Hony", "Turb", "Honeycoupe",	"Turbetto" },		// LK5
+
+    { 0,1,1, "Bi-S", "MinB", "Standard Bike S",	"Mini-Bike" },		// SB0 #18
+    { 1,1,1, "Bi-M", "MedB", "Standard Bike M",	"Medi-Bike" },		// MB0
+    { 2,1,1, "Bi-L", "MaxB", "Standard Bike L",	"Maxi-Bike" },		// LB0
+    { 0,2,0, "Bull", "Wili", "Bullet Bike",	"Willi-Bike" },		// SB1
+    { 1,2,0, "Mach", "Mach", "Mach Bike",	"Mach-Bike" },		// MB1
+    { 2,2,0, "Flam", "BowB", "Flame Runner",	"Bowser-Bike" },	// LB1
+
+    { 0,1,0, "BitB", "Blit", "Bit Bike",	"Blitzer" },		// SB2 #24
+    { 1,1,0, "Suga", "Bonb", "Sugarscoot",	"Bonbon-Bike" },	// MB2
+    { 2,1,0, "WarB", "WarB", "Wario Bike",	"Wario-Bike" },		// LB2
+    { 0,2,0, "Quac", "Quak", "Quacker",		"Quakquak" },		// SB3
+    { 1,1,0, "ZipZ", "Rapi", "Zip Zip",		"Rapido" },		// MB3
+    { 2,1,0, "Shoo", "Schn", "Shooting Star",	"Schnuppe" },		// LB3
+
+    { 0,2,0, "MKru", "Kame", "Magikruiser",	"Kameknaller" },	// SB4 #30
+    { 1,2,0, "Snea", "Pist", "Sneakster",	"Pistensturm" },	// MB4
+    { 2,2,0, "Spea", "Torp", "Spear",		"Torped" },		// LB4
+    { 0,2,0, "JetB", "JetA", "Jet Bubble",	"Jet-A" },		// SB5
+    { 1,2,0, "Dolp", "Flip", "Dolphin Dasher",	"Flippster" },		// MB5
+    { 2,1,0, "Phan", "Phan", "Phantom",		"Phantom" },		// LB5
+
+    {0,0,0,"","",0,0} // TERM #36
+};
+
+//-----------------------------------------------------------------------------
+
+ccp GetVehicleNum ( u8 vehicle )
+{
+    switch (vehicle)
+    {
+     case  36: return "  ?";
+     case 254: return "  .";
+     case 255: return "  -";
+    }
+
+    return PrintCircBuf("%3u",vehicle);
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetVehicleName4 ( u8 vehicle )
+{
+    if ( vehicle < MKW_N_VEHICLE )
+	return mkw_vehicle_attrib[vehicle].id_en;
+
+    switch (vehicle)
+    {
+     case  36: return " ?? ";
+     case 254: return " .. ";
+     case 255: return " -- ";
+    }
+
+    return PrintCircBuf("%3u.",vehicle);
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			sizeof_info_t: mkw		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[sizeof_info_mkw]]
+
+const sizeof_info_t sizeof_info_mkw[] =
+{
+    SIZEOF_INFO_TITLE("Mario Kart Wii")
+
+	SIZEOF_INFO_ENTRY(mkw_std_pbits1_t)
+	SIZEOF_INFO_ENTRY(mkw_std_pbits2_t)
+	SIZEOF_INFO_ENTRY(mkw_ex_pbits1_t)
+	SIZEOF_INFO_ENTRY(mkw_ex_pbits2_t)
+	SIZEOF_INFO_ENTRY(mkw_pbits1_t)
+	SIZEOF_INFO_ENTRY(mkw_pbits2_t)
+	SIZEOF_INFO_ENTRY(MkwPointInfo_t)
+	SIZEOF_INFO_ENTRY(mkw_engine_t)
+	SIZEOF_INFO_ENTRY(mkw_engine_info)
+	SIZEOF_INFO_ENTRY(mkw_driver_t)
+	SIZEOF_INFO_ENTRY(mkw_driver_attrib)
+	SIZEOF_INFO_ENTRY(mkw_vehicle_t)
+	SIZEOF_INFO_ENTRY(mkw_vehicle_attrib)
+
+    SIZEOF_INFO_TERM()
+};
 
 //
 ///////////////////////////////////////////////////////////////////////////////

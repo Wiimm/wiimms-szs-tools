@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -75,6 +75,10 @@ typedef enum enumOptions
 	OPT_KCL_SCRIPT,
 	OPT_FLAG_FILE,
 	OPT_SLOT,
+	OPT_ID,
+	OPT_BASE64,
+	OPT_DB64,
+	OPT_CODING,
 	OPT_ROUND,
 	OPT_LONG,
 	OPT_NO_HEADER,
@@ -93,7 +97,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 37
+	OPT__N_SPECIFIC, // == 41
 
 	//----- global options -----
 
@@ -108,6 +112,7 @@ typedef enum enumOptions
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_WARN,
 	OPT_DE,
 	OPT_COLORS,
 	OPT_NO_COLORS,
@@ -133,7 +138,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 72
+	OPT__N_TOTAL // == 77
 
 } enumOptions;
 
@@ -167,6 +172,10 @@ typedef enum enumOptions
 //	OB_KCL_SCRIPT		= 1llu << OPT_KCL_SCRIPT,
 //	OB_FLAG_FILE		= 1llu << OPT_FLAG_FILE,
 //	OB_SLOT			= 1llu << OPT_SLOT,
+//	OB_ID			= 1llu << OPT_ID,
+//	OB_BASE64		= 1llu << OPT_BASE64,
+//	OB_DB64			= 1llu << OPT_DB64,
+//	OB_CODING		= 1llu << OPT_CODING,
 //	OB_ROUND		= 1llu << OPT_ROUND,
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
@@ -285,6 +294,9 @@ typedef enum enumOptions
 //				| OB_IGNORE
 //				| OB_FLAG_FILE,
 //
+//	OB_CMD_TYPES		= OB_NO_HEADER
+//				| OB_BRIEF,
+//
 //	OB_CMD_FLAGS		= OB_NO_HEADER
 //				| OB_NO_CHECK
 //				| OB_IGNORE
@@ -327,6 +339,14 @@ typedef enum enumOptions
 //				| OB_NO_CHECK
 //				| OB_IGNORE,
 //
+//	OB_CMD_SHA1		= OB_IGNORE
+//				| OB_ID
+//				| OB_BASE64
+//				| OB_DB64
+//				| OB_CODING
+//				| OB_BRIEF
+//				| OB_GRP_TRANSFORM,
+//
 //	OB_CMD_ANALYZE		= OB_IGNORE
 //				| OB_GRP_TRANSFORM,
 //
@@ -364,6 +384,7 @@ typedef enum enumCommands
 	CMD_ENCODE,
 	CMD_COPY,
 	CMD_CFF,
+	CMD_TYPES,
 	CMD_FLAGS,
 	CMD_DUMP,
 	CMD_DBRIEF,
@@ -372,11 +393,12 @@ typedef enum enumCommands
 	CMD_TRAVERSE,
 	CMD_FALL,
 	CMD_CHECK,
+	CMD_SHA1,
 	CMD_ANALYZE,
 	CMD_BLOW,
 
 
-	CMD__N // == 31
+	CMD__N // == 33
 
 } enumCommands;
 
@@ -400,6 +422,7 @@ typedef enum enumGetOpt
 	GO_NO_PARAM		= 'P',
 	GO_TRACKS		= 'T',
 	GO_VERSION		= 'V',
+	GO_WARN			= 'W',
 
 	GO_CONST		= 'c',
 	GO_DEST			= 'd',
@@ -449,6 +472,10 @@ typedef enum enumGetOpt
 	GO_FLAG_FILE,
 	GO_XTRIDATA,
 	GO_SLOT,
+	GO_ID,
+	GO_BASE64,
+	GO_DB64,
+	GO_CODING,
 	GO_ROUND,
 	GO_NO_ECHO,
 	GO_UTF_8,

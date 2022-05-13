@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -133,6 +133,7 @@ typedef enum enumOptions
 	OPT_ANALYZE,
 	OPT_ANALYZE_MODE,
 	OPT_SOURCE,
+	OPT_REFERENCE,
 	OPT_DEST,
 	OPT_DEST2,
 	OPT_ESC,
@@ -190,7 +191,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 134
+	OPT__N_SPECIFIC, // == 135
 
 	//----- global options -----
 
@@ -205,6 +206,7 @@ typedef enum enumOptions
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_WARN,
 	OPT_DE,
 	OPT_COLORS,
 	OPT_NO_COLORS,
@@ -270,7 +272,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 209
+	OPT__N_TOTAL // == 211
 
 } enumOptions;
 
@@ -362,6 +364,7 @@ typedef enum enumOptions
 //	OB_ANALYZE		= 1llu << OPT_ANALYZE,
 //	OB_ANALYZE_MODE		= 1llu << OPT_ANALYZE_MODE,
 //	OB_SOURCE		= 1llu << OPT_SOURCE,
+//	OB_REFERENCE		= 1llu << OPT_REFERENCE,
 //	OB_DEST			= 1llu << OPT_DEST,
 //	OB_DEST2		= 1llu << OPT_DEST2,
 //	OB_ESC			= 1llu << OPT_ESC,
@@ -625,6 +628,9 @@ typedef enum enumOptions
 //
 //	OB_CMD_EXPORT		= 0,
 //
+//	OB_CMD_SIZEOF		= OB_SORT
+//				| OB_BRIEF,
+//
 //	OB_CMD_CODE		= 0,
 //
 //	OB_CMD_RECODE		= 0,
@@ -713,8 +719,13 @@ typedef enum enumOptions
 //	OB_CMD_ANALYZE		= OB_LONG
 //				| OB_IGNORE
 //				| OB_GRP_SCRIPT
+//				| OB_REFERENCE
 //				| OB_DEST
 //				| OB_DEST2,
+//
+//	OB_CMD_IS_TEXTURE	= OB_IGNORE
+//				| OB_REFERENCE
+//				| OB_LONG,
 //
 //	OB_CMD_FEATURES		= OB_BRIEF
 //				| OB_LONG
@@ -955,6 +966,7 @@ typedef enum enumCommands
 	CMD_TRACKS,
 	CMD_SCANCACHE,
 	CMD_EXPORT,
+	CMD_SIZEOF,
 	CMD_CODE,
 	CMD_RECODE,
 	CMD_SUBFILE,
@@ -980,6 +992,7 @@ typedef enum enumCommands
 
 	CMD_SHA1,
 	CMD_ANALYZE,
+	CMD_IS_TEXTURE,
 	CMD_FEATURES,
 	CMD_DISTRIBUTION,
 
@@ -1018,7 +1031,7 @@ typedef enum enumCommands
 
 	CMD_VEHICLE,
 
-	CMD__N // == 77
+	CMD__N // == 79
 
 } enumCommands;
 
@@ -1047,6 +1060,7 @@ typedef enum enumGetOpt
 	GO_SORT			= 'S',
 	GO_TRACKS		= 'T',
 	GO_VERSION		= 'V',
+	GO_WARN			= 'W',
 	GO_EXPORT		= 'X',
 
 	GO_ALL			= 'a',
@@ -1200,6 +1214,7 @@ typedef enum enumGetOpt
 	GO_STD,
 	GO_NEW,
 	GO_EXTRACT,
+	GO_REFERENCE,
 	GO_NUMBER,
 	GO_REMOVE_SRC,
 	GO_IGNORE_SETUP,

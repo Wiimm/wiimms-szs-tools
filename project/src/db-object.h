@@ -172,10 +172,10 @@ extern const ObjSpec_t ObjSpec[N_OBJ_SPEC+1];
 ///////////////////////////////////////////////////////////////////////////////
 
 #define OBJ_FW_NAME     18
-#define OBJ_FW_INFO    897
+#define OBJ_FW_INFO    908
 #define OBJ_FW_FNAME    46
 #define OBJ_FW_CHAR     55
-#define OBJ_FW_SETTING 330
+#define OBJ_FW_SETTING 280
 
 
 //

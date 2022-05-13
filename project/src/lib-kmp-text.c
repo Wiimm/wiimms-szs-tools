@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1393,14 +1393,26 @@ static enumError GroupPrevGL
     DASSERT(gl);
     DASSERT(si);
 
-    if ( !gl->used)
+    if (!gl->used)
     {
 	GotoEolSI(si);
 	return ERR_OK;
     }
 
     SkipCharSI(si,':');
-    kmp_group_t *grp = gl->group + gl->used - 1;
+    const int idx = gl->used - 1;
+    kmp_group_t *grp = gl->group + idx;
+    grp->have_prev_cmd = true;
+
+ #if 0 // [[auto-prev]]
+    if ( idx < KMP_MAX_GROUP )
+    {
+	kmp_ph_t *ph = grp->ph;
+	if (ph)
+	    ph->gopt[idx].have_prev_cmd = true;
+    }
+ #endif
+
     ScanGroupNames(gl,grp->prev,si);
     //HEXDUMP16(0,0,grp->prev,sizeof(grp->prev));
     return CheckEolSI(si);
@@ -1618,7 +1630,7 @@ static enumError AddGroupGL
     const bool split_group = !strcmp(name,"$SPLIT");
     if (split_group)
     {
-	if ( gl->ph && gl->ph->ac_mode != KMP_AC_PREV )
+	if ( gl->ph && gl->ph->ac_mode != KMP_AC_PREV && gl->ph->ac_mode != KMP_AC_AUTO_PREV )
 	{
 	    si->total_err++;
 	    sf->line_err++;
@@ -1626,7 +1638,7 @@ static enumError AddGroupGL
 	    if (!si->no_warn)
 		ERROR0(ERR_WARNING,
 		    "Command '$SPLIT' only possible if AUTO-CONNECT is set to AC$PREV"
-		    " => ignored [%s @%u].\n", sf->name, sf->line );
+		    " or AC$AUTO_PREV => ignored [%s @%u].\n", sf->name, sf->line );
 	    return ERR_WARNING;
 	}
 
@@ -1843,7 +1855,6 @@ static void TermGL
 
     CheckLevelSI(si);
     ResetRouteLinksKMP(kmp);
-    const bool auto_prev = gl->ph->ac_mode == KMP_AC_PREV;
     memset(gl->ph->gname,0,sizeof(gl->ph->gname));
 
     List_t *list = kmp->dlist + sect_ph;
@@ -1871,9 +1882,24 @@ static void TermGL
     rotate_links = rotate_links <= 0 ? 0 : rotate_links % KMP_MAX_PH_LINK;
     PRINT_IF(rotate_links,"ROTATE-LINKS %d\n",rotate_links);
 
+    kmp_ph_t *ph = gl->ph;
+    DASSERT(ph);
+
     for ( i = 0, grp = gl->group; i < gl->used; i++, grp++ )
     {
 	//--- NEXT links
+
+ // [[auto-prev]]
+ #if 1
+	const bool auto_prev
+		=  gl->ph->ac_mode == KMP_AC_PREV
+		|| gl->ph->ac_mode == KMP_AC_AUTO_PREV && !grp->have_prev_cmd;
+  if (sect_ph==KMP_ENPH) PRINT1("auto_prev=%d ; %s\n",auto_prev,grp->name);
+ #else
+	const bool auto_prev
+		=  gl->ph->ac_mode == KMP_AC_PREV
+		|| gl->ph->ac_mode == KMP_AC_AUTO_PREV;
+ #endif
 
 	uint l;
 	for ( l = 0; l < KMP_MAX_PH_LINK; l++ )
@@ -1917,6 +1943,7 @@ static void TermGL
 			kmp_section_name[gl->ph->sect_pt].name1, grp->name, lname);
 	}
 
+
 	//--- PREV links
 
 	if (!auto_prev)
@@ -1957,9 +1984,6 @@ static void TermGL
 
 
     //--- @AUTO-CONNECT == AC$DISPATCH
-
-    kmp_ph_t *ph = gl->ph;
-    DASSERT(ph);
 
     if ( ph && ph->ac_mode == KMP_AC_DISPATCH
 		&& ( sect_ph == KMP_ENPH || sect_ph == KMP_ITPH ))
@@ -2452,10 +2476,12 @@ const VarMap_t * SetupVarsKMP()
 
 	    { "AC$OFF",			KMP_AC_OFF },
 	    { "AC$PREV",		KMP_AC_PREV },
+	    { "AC$AUTO_PREV",		KMP_AC_AUTO_PREV },
 	    { "AC$DISPATCH",		KMP_AC_DISPATCH },
 	    { "ACF$FIX_PREV",		KMP_ACF_FIX_PREV },
 	    { "ACF$FIX_NEXT",		KMP_ACF_FIX_NEXT },
 	    { "ACF$FIX",		KMP_ACF_FIX },
+	    { "ACF$PR_PREV",		KMP_ACF_PR_PREV },
 
 	    { "AM$OFF",			KMP_AM_OFF },
 	    { "AM$NORM",		KMP_AM_NORM },
@@ -2464,10 +2490,11 @@ const VarMap_t * SetupVarsKMP()
 	    { "AM$SHORT",		KMP_AM_SHORT },
 	    { "AM$UNLIMIT",		KMP_AM_UNLIMIT },
 
-	    { "SORT$OFF",		KMP_SORT_OFF },
-	    { "SORT$GROUPING",		KMP_SORT_GROUPING },
-	    { "SORT$ANGLE",		KMP_SORT_ANGLE },
-	    { "SORT$TINY",		KMP_SORT_TINY },
+	    { "SORT$OFF",		KSORT_OFF },
+	    { "SORT$GROUPING",		KSORT_GROUP },
+	    { "SORT$ANGLE",		KSORT_ANGLE },
+	    { "SORT$XYZ",		KSORT_XYZ },
+	    { "SORT$TINY",		KSORT_TINY },
 
 	    { "DOB$OFF",		KMP_DOB_OFF },
 	    { "DOB$BEGIN",		KMP_DOB_BEGIN },
@@ -3026,7 +3053,7 @@ static enumError ScanText_PT_PH
 	const kmp_enpt_entry_t * prev = GetListElem(ptlist,-1,&temp);
 	if (!ptlist->used) // no previous point available
 	    gl.line.n = 1;
-	else if (  auto_fill >= 1.0
+	else if ( auto_fill >= 1.0
 		&& gl.line.n == 1
 		&& gl.used
 		&& ptlist->used != gl.group[gl.used-1].first_index )
@@ -3626,7 +3653,7 @@ static enumError ScanTextGOBJ
     kcl_fall_t kfall;
     ResetKclFall(&kfall);
 
-    int auto_object_name = 0, sort_objects = 0;
+    int auto_object_name = 0, sort_objects = KSORT_OFF;
     int fix_objdef = 0, sort_objdef = 0;
     int fix_reference = 0, sort_reference = 0;
     uint auto_enemy_item = 0, auto_enemy_index = 32;
@@ -5828,7 +5855,11 @@ static ccp print_kmp_group
 
 	//--- $PREV
 
-	bool print_prev = ph->ac_mode != KMP_AC_PREV;
+ // [[auto-prev]]
+	bool print_prev = ph->ac_mode != KMP_AC_PREV && ph->ac_mode != KMP_AC_AUTO_PREV
+			|| ph->ac_flags & KMP_ACF_PR_PREV
+			|| KMP_MODE & KMPMD_PR_PREV;
+
 	if ( !print_prev && idx < KMP_MAX_LINFO )
 	{
 	    SetupRouteLinksKMP(kmp,ph->sect_ph,false);
@@ -6000,7 +6031,7 @@ static void print_kmp_pt
 
     if ( opt_route_options > OFFON_OFF )
     {
-	ccp ac_mode, ac_fix;
+	ccp ac_mode, ac_fix, ac_pr_prev;
 
 	switch ( ph->ac_flags & KMP_ACF_FIX )
 	{
@@ -6010,22 +6041,26 @@ static void print_kmp_pt
 	    default:			ac_fix = ""; break;
 	}
 
+	ac_pr_prev = ph->ac_flags & KMP_ACF_PR_PREV ? " | ACF$PR_PREV" : "";
+
 	switch( ph->ac_mode )
 	{
 	    case KMP_AC_OFF:		ac_mode = "AC$OFF"; break;
 	    case KMP_AC_PREV:		ac_mode = "AC$PREV"; break;
+	    case KMP_AC_AUTO_PREV:	ac_mode = "AC$AUTO_PREV"; break;
 	    case KMP_AC_DISPATCH:	ac_mode = "AC$DISPATCH"; break;
 
 	    default: // should never happen
 		snprintf(buf,sizeof(buf),"0x%0x",ph->ac_mode|ph->ac_flags);
-		ac_mode = buf;
-		ac_fix  = "";
+		ac_mode    = buf;
+		ac_fix     = "";
+		ac_pr_prev = "";
 	}
 
 	if ( sect_pt == KMP_ENPT )
-	    fprintf(F->f,text_kmp_enpt_ropt_cr, ph->show_options, ac_mode, ac_fix );
+	    fprintf(F->f,text_kmp_enpt_ropt_cr, ph->show_options, ac_mode,ac_fix,ac_pr_prev );
 	else
-	    fprintf(F->f,text_kmp_itpt_ropt_cr, ph->show_options, ac_mode, ac_fix );
+	    fprintf(F->f,text_kmp_itpt_ropt_cr, ph->show_options, ac_mode,ac_fix,ac_pr_prev );
     }
 
     if ( ph->mask[0] != 0xffff || ph->mask[1] != 0xffff )
@@ -6153,6 +6188,7 @@ static void print_kmp_ph
 
     ccp pt_name = kmp_section_name[sect_pt].name1;
     ccp ph_name = kmp_section_name[sect_ph].name1;
+
 
     //--- print data
 
@@ -6501,7 +6537,7 @@ enumError SaveTextKMP
 		"#%.78s\r\n",
 		area->prio,
 		 area->rotation[0], area->rotation[1], area->rotation[2],
-		 PrintU8M1(area->route), PrintU8M1(area->enemy), area->unknown_2e, 
+		 PrintU8M1(area->route), PrintU8M1(area->enemy), area->unknown_2e,
 		area->scale[0], area->scale[1], area->scale[2],
 		Minus300 );
     }
@@ -7126,8 +7162,7 @@ enumError SaveTextKMP
 
 	fputs("\r\n",F.f);
 	double total_len = 0.0, total_tim = 0.0;
-	uint ei;
-	for ( ei = 0; ei < en; ei++, i++, pp++ )
+	for ( uint ei = 0; ei < en; ei++, i++, pp++ )
 	{
 	    fprintf(F.f, "%4u  %11.3f %11.3f %11.3f %5u %5u  #",
 		ei,

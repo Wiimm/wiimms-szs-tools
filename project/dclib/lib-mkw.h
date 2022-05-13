@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2021 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -37,11 +37,11 @@
 #define SZS_LIB_MKWII_H 1
 
 #define _GNU_SOURCE 1
-#include "dclib-basics.h"
+#include "lib-mkw-def.h"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			CTW definitions		/	//////////////
+///////////////			CTW definitions			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 #define CTW_MAX_TRACK_ID 999999
@@ -49,6 +49,10 @@
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			base definitions		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+extern const sizeof_info_t sizeof_info_mkw[];
+
 ///////////////////////////////////////////////////////////////////////////////
 
 enum mkw_consts_t // some constants
@@ -119,10 +123,10 @@ static inline bool IsMkwCustom ( uint tid )
 #endif
 
 // unsigned types, that can hold 1 or 2 bits for each player
-typedef u16 mkw_std_pbits1_t;	// 12 bits needed
-typedef u32 mkw_std_pbits2_t;	// 24 bits needed
-typedef u32 mkw_ex_pbits1_t;	// 24 bits needed
-typedef u64 mkw_ex_pbits2_t;	// 48 bits needed
+typedef u16 mkw_std_pbits1_t;		// 12 bits needed
+typedef u32 mkw_std_pbits2_t;		// 24 bits needed
+typedef u32 mkw_ex_pbits1_t;		// 24 bits needed
+typedef u64 mkw_ex_pbits2_t;		// 48 bits needed
 
 #if SUPPORT_24P
   typedef u32 mkw_pbits1_t;
@@ -137,6 +141,8 @@ typedef u64 mkw_ex_pbits2_t;	// 48 bits needed
 #define MKW_STD_MAX_PLAYER2 ( MKW_STD_MAX_PLAYER * MKW_STD_MAX_PLAYER )
 #define MKW_EX_MAX_PLAYER2  ( MKW_EX_MAX_PLAYER  * MKW_EX_MAX_PLAYER )
 #define MKW_MAX_PLAYER2	    ( MKW_MAX_PLAYER     * MKW_MAX_PLAYER )
+
+#define MAX_ROOM_MEMBERS MKW_MAX_PLAYER
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -156,7 +162,7 @@ typedef u64 mkw_ex_pbits2_t;	// 48 bits needed
 typedef enum MkwPointID
 {
     //--- tables
-    MPI_UNKNOWN,	// no table assigend
+    MPI_UNKNOWN,	// no table assigned
     MPI_NINTENDO,	// original table
 
     MPI_LINEAR,		// 4 linear tables
@@ -198,7 +204,7 @@ MkwPointInfo_t;
 
 //-----------------------------------------------------------------------------
 
-const MkwPointInfo_t MkwPointInfo[MPI__N+1];
+extern const MkwPointInfo_t MkwPointInfo[MPI__N+1];
 
 // [[24P--]] all tables
 
@@ -298,6 +304,90 @@ int GetVrDiffByTab ( int diff ); // diff = VR(winner) - VR(loser)
 
 ccp  GetMkwTrackName3	( int tid );
 ccp  GetMkwMusicName3	( int mid );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			engines				///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+typedef enum mkw_engine_t
+{
+    MKW_ENGINE_50CC,
+    MKW_ENGINE_100CC,
+    MKW_ENGINE_150CC,
+    MKW_ENGINE_MIRROR,
+    MKW_ENGINE_200CC,
+    MKW_ENGINE__N
+}
+__attribute__ ((packed)) mkw_engine_t;
+
+extern const char mkw_engine_info[MKW_ENGINE__N+1][7];
+
+static inline ccp GetMkwEngineInfo ( mkw_engine_t engine )
+{
+    return (uint)engine < MKW_ENGINE__N ? mkw_engine_info[engine] : "?";
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////		    slots, drivers and vehicles		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[mkw_driver_t]]
+
+typedef struct mkw_driver_t
+{
+    u8   weight;	// 0:small, 1:medium, 2:large
+    u8   is_mii;	// 0:no Mii, 1:A, 2:B, 3:B
+    char id_en[5];
+    char id_de[5];
+    ccp  name_en;
+    ccp  name_de;
+}
+mkw_driver_t;
+
+#define MKW_N_DRIVER 42
+extern const mkw_driver_t mkw_driver_attrib[MKW_N_DRIVER+1];
+
+//-----------------------------------------------------------------------------
+// [[mkw_vehicle_t]]
+
+typedef struct mkw_vehicle_t
+{
+    u8   weight;	// 0:small, 1:medium, 2:large
+    u8   is_bike;	// 0:kart, 1:out-bike, 2:in-bike
+    u8   battle;	// 0:not used in battle, 1:used in battle
+    char id_en[5];
+    char id_de[5];
+    ccp  name_en;
+    ccp  name_de;
+}
+mkw_vehicle_t;
+
+#define MKW_N_VEHICLE 36
+extern const mkw_vehicle_t mkw_vehicle_attrib[MKW_N_VEHICLE+1];
+
+//-----------------------------------------------------------------------------
+
+static inline bool IsMkwSlotValid ( uint slot )
+	{ return slot < MAX_ROOM_MEMBERS; }
+
+static inline int GetDriverInt ( u8 driver )
+	{ return driver >= 254 ? (int)driver - 256 : driver; }
+
+static inline int GetVehicleInt ( u8 vehicle )
+	{ return vehicle >= 254 ? (int)vehicle - 256 : vehicle; }
+
+//-----------------------------------------------------------------------------
+
+// for optimization: `colset´ is always valid and never NULL!
+
+ccp GetSlotHex	  ( u8 slot );
+ccp GetSlotNum	  ( u8 slot );
+ccp GetDriverNum  ( u8 driver  );
+ccp GetVehicleNum ( u8 vehicle );
+
+ccp GetDriverName4  ( u8 driver  );
+ccp GetVehicleName4 ( u8 vehicle );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

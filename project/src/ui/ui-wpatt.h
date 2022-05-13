@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2021 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -89,6 +89,7 @@ typedef enum enumOptions
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_WARN,
 	OPT_DE,
 	OPT_COLORS,
 	OPT_NO_COLORS,
@@ -110,7 +111,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 49
+	OPT__N_TOTAL // == 50
 
 } enumOptions;
 
@@ -266,6 +267,7 @@ typedef enum enumGetOpt
 	GO_NO_PARAM		= 'P',
 	GO_TRACKS		= 'T',
 	GO_VERSION		= 'V',
+	GO_WARN			= 'W',
 
 	GO_CONST		= 'c',
 	GO_DEST			= 'd',
