@@ -1,0 +1,25 @@
+###############################
+###  (c) Wiimm, 2021-09-24  ###
+###############################
+
+# Setup
+@def start	= mSec()	# start time, for the status line
+@def rm_count	= 0		# remove counter
+
+# Define a function to test the KCL flag for sound trigger
+@function isSound # flag
+    @pdef t = $1 & 0x1f
+    @return t == 0x18
+@endfunction
+
+# Main loop: Iterate through all triangles
+@for t=0;tri$n()-1
+    @if isSound(tri$flag(t))
+	@def status = tri$remove(t)
+	@def rm_count = rm_count+1
+    @endif
+@endfor
+
+# Print a little status line
+@echo "  - " rm_count " of " tri$n() " triangles removed in " (mSec()-start) " msec."
+
