@@ -19,6 +19,6 @@
 #    included. They are automatically included, if they are differ from the
 #    the standard settings.
 #
-# See http://wiki.tockdom.com/wiki/minigame.kmg for more details.
+# See https://wiki.tockdom.com/wiki/minigame.kmg for more details.
 #
 #------------------------------------------------------------------------------

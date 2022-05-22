@@ -6,7 +6,7 @@
 
 # Here you can find help:
 #   https://szs.wiimm.de/cmd/distribution#desc
-#   http://wiki.tockdom.com/wiki/Wiimm%%27s_Custom_Archive/Distribution
+#   https://wiki.tockdom.com/wiki/Wiimm%%27s_Custom_Archive/Distribution
 
 
 	##############################################

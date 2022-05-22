@@ -6,7 +6,7 @@
 # Sort order: %u
 
 # Cannon characteristics:
-#	http://wiki.tockdom.com/wiki/Template:Cannon_characteristics
+#	https://wiki.tockdom.com/wiki/Template:Cannon_characteristics
 
 #CANN#
 #---------------------------------------------------

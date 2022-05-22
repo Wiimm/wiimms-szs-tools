@@ -17,9 +17,9 @@ I have released [color=#000080]Wiimms SZS Tools v1.40a[/color].
 [*] [url=https://szs.wiimm.de/download.html][color=#000080][b]Download[/b][/color][/url]
 [*] [url=https://szs.wiimm.de/doc/cli][color=#000080][b]Command Line Interface (using the tools)[/b][/color][/url]
 [*] [url=https://szs.wiimm.de/doc/kcl][color=#000080][b]KCL Guide to export and import object files[/b][/color][/url]
-[*] [url=http://wiki.tockdom.com/wiki/Wiimms_SZS_Tools][color=#000080][b]Custom Mario Kart Wiiki[/b][/color][/url]
-[*] [url=http://wiki.tockdom.com/wiki/WU8][color=#000080][b]File Format WU8[/b][/color][/url] (track patch)
-[*] [url=http://wiki.tockdom.com/wiki/WBZ][color=#000080][b]File Format WBZ[/b][/color][/url] (BZIP2 compression)
+[*] [url=https://wiki.tockdom.com/wiki/Wiimms_SZS_Tools][color=#000080][b]Custom Mario Kart Wiiki[/b][/color][/url]
+[*] [url=https://wiki.tockdom.com/wiki/WU8][color=#000080][b]File Format WU8[/b][/color][/url] (track patch)
+[*] [url=https://wiki.tockdom.com/wiki/WBZ][color=#000080][b]File Format WBZ[/b][/color][/url] (BZIP2 compression)
 [*] [url=https://szs.wiimm.de/cgi/mkw/object][color=#000080][b]KMP Object Query[/b][/color][/url]
 [*] [url=https://szs.wiimm.de/cgi/mkw/track-ref][color=#000080][b]MKW Track Cross Reference[/b][/color][/url]
 [/list]

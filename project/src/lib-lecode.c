@@ -3167,6 +3167,8 @@ static enumError ScanTextLPAR_DEBUG
 	{ "SPACE",		SPM_U8,  &debug.space },
 	{ "POSITION",		SPM_U8,  &debug.position },
 	{ "CHECK-POINT",	SPM_U8,  &debug.check_point },
+	{ "ITEM-POINT",		SPM_U8,  &debug.item_point },
+	{ "KCL-TYPE",		SPM_U8,  &debug.kcl_type },
 	{ "RESPAWN",		SPM_U8,  &debug.respawn },
 	{ "LAP-POS",		SPM_U8,  &debug.lap_pos },
 	{ "XPF",		SPM_U8,  &debug.xpf },

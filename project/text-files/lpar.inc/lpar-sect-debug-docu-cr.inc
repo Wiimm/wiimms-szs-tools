@@ -94,4 +94,4 @@
 # If enabled, a short (1) or long (2) information about the usage of extended
 # presence flags is printed, but only if an information is available. The long
 # information is similar to the short one, but with more or extended members.
-# See http://wiki.tockdom.com/wiki/LPAR#XPF for details.
+# See https://wiki.tockdom.com/wiki/LPAR#XPF for details.

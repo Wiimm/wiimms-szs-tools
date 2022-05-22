@@ -30,7 +30,7 @@
 #            A point ('.') is interpreted as Null, and an equal sign ('=')
 #            leaves the value unchanged. Missed parameters are not modified.
 #
-# See http://wiki.tockdom.com/wiki/GeoHitTableItem.bin
-# and http://wiki.tockdom.com/wiki/GeoHitTableItemObj.bin for more details.
+# See https://wiki.tockdom.com/wiki/GeoHitTableItem.bin
+# and https://wiki.tockdom.com/wiki/GeoHitTableItemObj.bin for more details.
 #
 #------------------------------------------------------------------------------

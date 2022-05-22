@@ -52,5 +52,5 @@
 #
 #   CHAT$RESET         : Reset all settings to their defaults.
 #
-# See http://wiki.tockdom.com/wiki/LE-CODE/Distribution_Tutorial#chatmsg
+# See https://wiki.tockdom.com/wiki/LE-CODE/Distribution_Tutorial#chatmsg
 # for more details.

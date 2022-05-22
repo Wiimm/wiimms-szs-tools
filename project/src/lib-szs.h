@@ -36,9 +36,9 @@
  ***************************************************************************/
 
 // all about SZS, YAZ0 and U8 files:
-//	http://wiki.tockdom.de/index.php?title=SZS
-//	http://wiki.tockdom.de/index.php?title=YAZ0
-//	http://wiki.tockdom.de/index.php?title=U8
+//	https://wiki.tockdom.de/index.php?title=SZS
+//	https://wiki.tockdom.de/index.php?title=YAZ0
+//	https://wiki.tockdom.de/index.php?title=U8
 
 ///////////////////////////////////////////////////////////////////////////////
 //

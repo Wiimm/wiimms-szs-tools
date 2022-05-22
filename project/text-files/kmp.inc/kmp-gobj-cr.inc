@@ -27,7 +27,7 @@
 # Definition objects and references
 
 # There is a new kind of presence flags in progress:
-#   http://wiki.tockdom.com/wiki/Extension_of_Presence_Flags
+#   https://wiki.tockdom.com/wiki/Extension_of_Presence_Flags
 # Since v2.11a, the KMP compiler supports this new extension.
 # Here you find some global settings for the new extension:
 

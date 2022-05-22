@@ -55,7 +55,7 @@ szs v2.01a r7798 - 2019-03-16
  - LE-CODE support completed for the moment.
  - Support for new file format LEX (LE-CODE extension).
    Commands for tool wlect: CREATE, CAT, DECODE, ENCODE.
-   See http://wiki.tockdom.com/wiki/LEX for LEX details.
+   See https://wiki.tockdom.com/wiki/LEX for LEX details.
 
 
 szs v2.01b r7802 - 2019-03-21
@@ -269,7 +269,7 @@ szs v2.11a r8074 - 2020-01-18
    for offline tests.
  - New option for commands wkmpt GAMEMODES and wszst DUPLICATE:
    --gamemodes=list: Select game modes for the list.
- - See http://wiki.tockdom.com/wiki/Extension_of_Presence_Flags for details
+ - See https://wiki.tockdom.com/wiki/Extension_of_Presence_Flags for details
    about the new Extension of Presence Flags.
  - Scanning a KMP file now takes into account the new information about the
    length of the file header.
@@ -485,7 +485,7 @@ szs v2.24a r8414 - 2021-04-07
    FRACTION (=1DIGIT), 2DIGITS and 3DIGITS.
  - LE-CODE supports debug output while racing. LPAR parameter DEBUG, LPAR
    sections [DEBUG-*] and wlect option --debug define the output format.
-   See http://wiki.tockdom.com/wiki/LPAR#debug for details.
+   See https://wiki.tockdom.com/wiki/LPAR#debug for details.
  - Wiimm's Item Cheat has been integrated into LE-CODE. It is enabled by a
    LPAR setting and supports Wiimote+Nunchuk, Classic Controller and GCN
    Controller for all 4 regions.
@@ -524,6 +524,29 @@ szs v2.26a r8462 - 2021-05-08
       the internal porting database.
  - wstrt DUMP: More details for StaticR.rel files.
  - New command: wszst INSTALL: Install files to the shared directory.
+
+
+szs v2.27a r8529 - 2022-05-13
+
+ - New parameter for LEX section SET1: START-ITEM: Declare that a player can
+   get an item through an item box before race start.
+ - wszst ANALYSE: LEX:SET1:START-ITEM is recognized and evaluated.
+ - wstrt PORT+WHERE: Use new option --upper (-U) to force upper case digits in
+   hex numbers.
+ - wstrt PORT: Ported cheat codes are always printed with upper case digits
+   and without 0x prefix.
+ - wstrt PORT: Porting database updated. Many false records removed by
+   updated generator script.
+ - Fewer program crashes when reading faulty SZS files.
+ - New section [SETUP-ARENA] for LE-CODE definition files: Define music and
+   property slots for battle arenas.
+ - New global option: --warn=LIST (short -W LIST): Enable or disable warnings.
+ - New command: wkclt SHA1: Print a SHA1 checksum of the KCL for each source.
+   The checksum is calculated after patching.
+ - New command: wkclt TYPES: Scan KCL types from command line in different
+   variants and print the result as flag, type, value and groups W, X, Y & Z.
+ - New command: wszst IS-TEXTURE: Test tracks to see if it's a texture hack.
+ - wszst ANALYZE: Detect goombas with scale other than 1.00.
 
 
 @@MODULE(last-history.txt)@@

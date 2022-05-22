@@ -10,7 +10,7 @@
 #-----------------------------------------------------------------------
 # The next set defines parameters to test the extended conditions
 # (extended presence flags). The settings allow to force special modes.
-# Details: http://wiki.tockdom.com/wiki/Extended_presence_flags
+# Details: https://wiki.tockdom.com/wiki/Extended_presence_flags
 #-----------------------------------------------------------------------
 
 # Force offline or online mode. Use one symbol of: LEX$OO_AUTO (default),

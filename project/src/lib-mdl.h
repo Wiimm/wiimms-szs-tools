@@ -562,7 +562,7 @@ void hton_MDLs2 ( mdl_sect2_t *dest, const mdl_sect2_t *src );
 ///////////////			MDL section 8			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[mdl_sect8_t]]
-// see http://wiki.tockdom.com/wiki/MDL0_%28File_Format%29#Section_8_-_Materials
+// see https://wiki.tockdom.com/wiki/MDL0_%28File_Format%29#Section_8_-_Materials
 
 typedef struct mdl_sect8_t
 {

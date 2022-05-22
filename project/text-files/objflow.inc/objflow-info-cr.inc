@@ -38,6 +38,6 @@
 #       leaves the value unchanged. Missed parameters are not modified.
 #	Commas are optional if expression is not ambiguous.
 #
-# See http://wiki.tockdom.com/wiki/ObjFlow.bin for more details.
+# See https://wiki.tockdom.com/wiki/ObjFlow.bin for more details.
 #
 #------------------------------------------------------------------------------
