@@ -89,7 +89,18 @@
   { T_DEF_CMD,	"ARGTEST",	"ARGTEST",
 		    "wszst ARGTEST ...",
 		"This debug command accepts all kinds of parameters"
-		" and prints one line for each parameter." },
+		" and prints one line for each parameter."
+		" All tools know the ARGTEST command." },
+
+  { T_DEF_CMD,	"EXPAND",	"EXPAND",
+		    "wszst EXPAND ...",
+		"This debug command accepts (like ARGTEST) all kinds of parameters"
+		" and prints one line for each parameter."
+		" After that, the parameter is treated as a filename with wildcards"
+		" and all matching files are searched."
+		" The special parameters '+h' and '/h' enable or disable the search"
+		" for hidden directories and files (files beginning with a point)."
+		" All tools know the EXPAND command." },
 
   { T_DEF_CMD,	"TEST",		"TEST",
 		    "wszst TEST [options]... [ignored]...",
@@ -105,12 +116,14 @@
   { T_DEF_CMD,	"ERROR",	"ERROR|ERR",
 		    "wszst ERROR [error_code]",
 		"Translate an exit code to a message name."
-		" If no exit code is entered, print a table with all error messages." },
+		" If no exit code is entered, print a table with all error messages."
+		" All tools know the ERROR command." },
 
   { T_DEF_CMD,	"FILETYPE",	"FILETYPE|FT",
 		    "wszst FILETYPE file...",
 		"Scan the header of the entered files and print file type"
-		" and path for each file as list." },
+		" and path for each file as list."
+		" All tools know the FILETYPE command." },
 
   { T_DEF_CMD,	"FILEATTRIB",	"FILEATTRIB|FA",
 		    "wszst FILEATTRIB [keyword]...",
@@ -118,7 +131,8 @@
 		" If at least one keyword is entered, only matching file types"
 		" are printed."
 		" A keyword is either a file type (like 'BRRES' or 'BMG')"
-		" or one of the printed keywords (like 'ARCHIVE' or 'EXTRACT')." },
+		" or one of the printed keywords (like 'ARCHIVE' or 'EXTRACT')."
+		" All tools know the FILEATTRIB command." },
 
   { T_DEF_CMD,	"BRSUB",	"BRSUB",
 		    "wszst BRSUB [file]...",
@@ -130,17 +144,20 @@
 
   { T_DEF_CMD,	"SYMBOLS",	"SYMBOLS",
 		    "wszst SYMBOLS",
-		"Print predefined symbols of text parser to standard output." },
+		"Print predefined symbols of text parser to standard output."
+		" Many tools know the SYMBOLS command." },
 
   { T_DEF_CMD,	"FUNCTIONS",	"FUNCTIONS",
 		    "wszst FUNCTIONS [key]...",
 		"Print a list with all parser functions."
 		" If one or more keys entered,"
-		" then only functions that match at least one key are printed." },
+		" then only functions that match at least one key are printed."
+		" Many tools know the FUNCTIONS command." },
 
   { T_DEF_CMD,	"CALCULATE",	"CALCULATE",
 		    "wszst CALCULATE expression...",
-		"Calculate each expression and print the result to standard output." },
+		"Calculate each expression and print the result to standard output."
+		" Many tools know the CALCULATE command." },
 
   { T_DEF_CMD,	"MATRIX",	"MATRIX",
 		    "wszst MATRIX [patch-option]... [vector]...",
@@ -352,6 +369,11 @@
 		    "wszst ANALYZE [source]...",
 		"Analyse track files and print results in machine readable format." },
 
+  { T_DEF_CMD,	"SPLIT",	"SPLIT",
+		    "wszst SPLIT [source]...",
+		"Analyse (file) names and split them into the different parts."
+		" Print the results in machine readable format." },
+
   { T_DEF_CMD,	"IS_TEXTURE",	"IS-TEXTURE|ISTEXTURE",
 		    "wszst IS-TEXTURE --reference reference [source]...",
 		"Test each source to see if it's a texture hack versus a reference file."
@@ -368,7 +390,7 @@
 		    "wszst FEATURES [source]...",
 		"Analyse track files and create a feature list in machine readable format." },
 
-  { T_DEF_CMD,	"DISTRIBUTION",	"DISTRIBUTION|DIST",
+  { T_DEF_CMD,	"DISTRIBUTION",	"DISTRIBUTION|DIS|DISTRIB",
 		    "wszst DISTRIBUTION result source...\n"
 		    "wszst DISTRIBUTION directory [source]...",
 		"Load each @SOURCE@ (SZS, WBZ, U8 or WU8) and calculate a checksum"
@@ -384,7 +406,9 @@
 		"\n "
 		" If file @RESULT@ exists, it is automatically added as last source"
 		" to the list of option --source, but only if not already added."
-		" On scanning of file @result@, parameters are scanned too." },
+		" On scanning of file @result@, parameters are scanned too."
+		"\n "
+		"See »welect DISTRIBUTION« for a new and alternative implementation of this." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -694,6 +718,11 @@
 		" for help and some other messages."
 		" The default is 120. This option is ignored if --width is set." },
 
+  { T_OPT_G|F_IGNORE,
+		"NO_PAGER",	"no-pager|nopager",
+		0,
+		"Forbid the internal usage of a pager." },
+
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0,
 		"Be quiet and print only error messages."
@@ -710,7 +739,13 @@
 
   { T_OPT_GM,	"LOGGING",	"L|logging",
 		0,
-		"This debug option enables the logging of internal lists and maps." },
+		"This debug option enables the logging of internal lists and maps."
+		" Set it up to three times to be more verbose.\n" },
+
+  { T_OPT_GM,	"TIMING",	"timing",
+		0,
+		"Activate the timing of some operations."
+		" Logging level 3 activates them too.\n" },
 
   { T_OPT_GP,	"WARN",		"W|warn",
 		"list",
@@ -764,6 +799,25 @@
 		"Enable LE-CODE and CT-CODE support."
 		" The optional parameter is deprecated and ignored."
 		"\1 See https://szs.wiimm.de/opt/lecode for details." },
+
+  { T_OPT_GP,	"LOAD_PREFIX",	"load-prefix|loadprefix",
+		"file",
+		"Read in a PREFIX file and replace the internal prefix database with the content."
+		" https://ct.wiimm.de/export/prefix is the authoritative source for this." },
+
+  { T_OPT_CP,	"PLUS",		"plus",
+		"chars",
+		"If a name begins with a plus sign, then all characters up to the first space"
+		" are recognized as a plus prefix."
+		" The first part consists of all the plus signs followed by any other characters."
+		" The first character of the second part is used to determine the sort value."
+		" If the second part is empty, then the last plus sign is used instead."
+		"\n "
+		" The higher sorting value is now calculated from the number of plus signs"
+		" in the first part, the more plus signs, the smaller the value."
+		" The first character from the second part determines the lower value."
+		" If it is in parameter CHARS then the position determines the value,"
+		" otherwise the ASCII value to which 500 is added." },
 
   { T_OPT_GMP,	"CHDIR",	"chdir",
 		"dir",
@@ -1531,7 +1585,7 @@
 		0,
 		"Print an ID with 8 characters instead of a SHA-1 sum with"
 		" 40 characters. The SHA-1 sum is used to calculate the ID."
-		" The ID consists of '0'-'9' and 'a'-'w' (32 characters)." },
+		" The ID consists of '0'-'9' and 'a'-'v' (32 different characters)." },
 
   { T_OPT_CO,	"BASE64",	"base64",
 		"[=mode]",
@@ -2578,6 +2632,7 @@
   { T_COPT,	"RM_AIPARAM",	0,0,0 },
   { T_COPY_GRP,	"ALIGN",	0,0,0 },
   { T_COPT,	"LOGGING",	0,0,0 },
+  { T_COPT,	"TIMING",	0,0,0 },
   { T_COPY_GRP,	"ENCODE",	0,0,0 },
   { T_COPT,	"AUTO_ADD",	0,0,0 },
   { T_COPT,	"MIPMAPS",	0,0,0 },
@@ -2663,7 +2718,11 @@
   //---------- COMMAND wszst ARGTEST ----------
 
   { T_CMD_BEG,	"ARGTEST",	0,0,0 },
+  { T_ALL_OPT,	0,		0,0,0 },
 
+  //---------- COMMAND wszst EXPAND ----------
+
+  { T_CMD_BEG,	"EXPAND",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wszst TEST ----------
@@ -2840,6 +2899,7 @@
   { T_COPT,	"BRIEF",	0,0,
 		"Limit output to SZS specific data." },
   { T_COPT,	"LOGGING",	0,0,0 },
+  { T_COPT,	"TIMING",	0,0,0 },
 
   //---------- COMMAND wszst _CODE ----------
 
@@ -3027,6 +3087,19 @@
   { T_COPY_GRP,	"SCRIPT",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"REFERENCE",	0,0,0 },
+  { T_COPT,	"DEST",		0,0,0 },
+  { T_COPT,	"DEST2",	0,0,0 },
+
+  //---------- COMMAND wszst SPLIT ----------
+
+  { T_CMD_BEG,	"SPLIT",	0,0,0 },
+  { T_COPT,	"LOAD_PREFIX",	0,0,0 },
+  { T_COPT,	"PLUS",		0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"SCRIPT",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"DEST",		0,0,0 },
   { T_COPT,	"DEST2",	0,0,0 },
 
@@ -3247,6 +3320,7 @@
   { T_COPT,	"IGNORE_SETUP",	0,0,0 },
   { T_COPY_GRP,	"ALIGN",	0,0,0 },
   { T_COPT,	"LOGGING",	0,0,0 },
+  { T_COPT,	"TIMING",	0,0,0 },
   { T_COPY_GRP,	"ENCODE",	0,0,0 },
   { T_COPT,	"MIPMAPS",	0,0,0 },
   { T_COPT,	"NO_MIPMAPS",	0,0,0 },

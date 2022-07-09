@@ -2216,6 +2216,51 @@ char NextCharSI
 
 ///////////////////////////////////////////////////////////////////////////////
 
+bool IsSectionOrEotSI
+(
+    // Call NextCharSI() and check for new section or EOT (return true if found)
+    // Section name is stored in 'last_index_name' (upper case)
+
+    ScanInfo_t		* si,		// valid data
+    bool		skip_lines	// true: skip empty lines
+)
+{
+    DASSERT(si);
+
+    *last_index_name = 0;
+    char ch = NextCharSI(si,skip_lines);
+    if (!ch)
+	return true;
+	
+    if ( ch == '[' )
+    {
+	ScanFile_t *sf = si->cur_file;
+	DASSERT(sf);
+	ccp beg = sf->ptr + 1;
+    	ccp eol = beg;
+	while ( eol < sf->end && *eol != '\n' )
+	    eol++;
+	eol--;
+	while ( eol > beg && (uchar)*eol <= ' ' )
+	    eol--;
+
+	if ( *eol == ']' )
+	{
+	    int len = eol - beg;
+	    if ( len > 0 && !memchr(beg,'[',len) && !memchr(beg,']',len) )
+	    {
+		mem_t name = { .ptr = beg, .len = len };
+		SetIndexNameM(name);
+		return true;
+	    }
+	}
+    }
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 char SkipCharSI
 (
     // return next non skipped character
@@ -2368,6 +2413,25 @@ enumError CheckLevelSI
     }
 
     return stat;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetEolSI
+(
+    ScanInfo_t		* si		// valid data
+)
+{
+    DASSERT(si);
+    ScanFile_t *sf = si->cur_file;
+    DASSERT(sf);
+
+    ccp ptr = sf->ptr, prev = sf->prev_ptr;
+    GotoEolSI(si);
+    ccp eol	 = sf->ptr;
+    sf->ptr	 = ptr;
+    sf->prev_ptr = prev;
+    return eol;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2647,11 +2711,13 @@ uint ScanNameSI
 enumError ConcatStringsSI
 (
     ScanInfo_t		* si,		// valid data
-    char		** dest_str,	// store string here, use FREE + MALLOC
+    char		** dest_str,	// not NULL: store string here, use FREE + MALLOC
     uint		* ret_len	// not NULL: store length of return string here
 )
 {
     DASSERT(si);
+
+    //-- clear result
 
     if (dest_str)
     {
@@ -2660,6 +2726,9 @@ enumError ConcatStringsSI
     }
     if (ret_len)
 	*ret_len = 0;
+
+
+    //-- scan string
 
 // [[var-string-]] support of dynamic buffer
     char buf[5000];
@@ -2710,6 +2779,8 @@ enumError ConcatStringsSI
 		break;
 	}
     }
+
+    //-- store result
 
     const uint len = dest - buf;
     if (ret_len)
@@ -2781,10 +2852,10 @@ enumError ScanStringSI
 
 char last_index_name[VARNAME_SIZE+1] = {0};
 
-//-----------------------------------------------------------------------------
-
 int ScanIndexSI
 (
+    // varname is stored in 'last_index_name' (upper case)
+
     ScanInfo_t		* si,		// valid data
     enumError		* err,		// return value: error code
     int			index,		// index to define if name
@@ -2805,6 +2876,7 @@ int ScanIndexSI
     char ch = NextCharSI(si,false);
     if (IsNum(ch,0))
     {
+	*last_index_name = 0;
 	u32 num;
 	*err = ScanU32SI(si,&num,1,0);
 	if (il)
@@ -2872,16 +2944,18 @@ int ScanIndexSI
 
 //-----------------------------------------------------------------------------
 
+#if 0 // [[2do]] [[obsolete]]
 void SetIndexName ( ccp name )
 {
     if (!name)
 	name = "";
     char *dest = last_index_name;
-    char *end  = dest + sizeof(last_index_name) -1 ;
-    while ( dest < end && *name )
+    char *endbuf  = dest + sizeof(last_index_name) -1 ;
+    while ( dest < endbuf && *name )
 	*dest++ = toupper((int)*name++);
     *dest = 0;
 }
+#endif
 
 //-----------------------------------------------------------------------------
 

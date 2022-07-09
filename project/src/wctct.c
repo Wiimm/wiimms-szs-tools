@@ -36,6 +36,7 @@
  ***************************************************************************/
 
 #include "lib-ctcode.h"
+#include "lib-ledis.h"
 #include "lib-szs.h"
 #include "lib-xbmg.h"
 #include "lib-bzip2.h"
@@ -363,7 +364,7 @@ static enumError cmd_decode()
 
 	char dest[PATH_MAX];
 	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
-			GetExtFF(FF_CT_TEXT,0),false);
+			GetExtFF(FF_CTDEF,0),false);
 
 	if ( verbose >= 0 || testmode )
 	{
@@ -371,7 +372,7 @@ static enumError cmd_decode()
 			verbose > 0 ? "\n" : "",
 			testmode ? "WOULD " : "",
 			GetNameFF(raw.fform,0), raw.fname,
-			GetNameFF(FF_CT_TEXT,0), dest );
+			GetNameFF(FF_CTDEF,0), dest );
 	    fflush(stdlog);
 	}
 
@@ -586,7 +587,7 @@ static enumError cmd_create()
 	case CTS_LIST:
 	case CTS_REF:
 	case CTS_FULL:
-	    dest_ff2  = FF_CT_TEXT;
+	    dest_ff2  = FF_CTDEF;
 	    def_path = "\1P/\1F\1?T";
 	    break;
     }
@@ -602,7 +603,7 @@ static enumError cmd_create()
     for ( ; param; param = param->next )
     {
 	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,FF_CT_TEXT);
+	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,FF_CTDEF);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -748,16 +749,18 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
 	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
+	case GO_NO_PAGER:	opt_no_pager = true; break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_TIMING:		log_timing++; break;
 	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
 
 	case GO_CT_CODE:	ctcode_enabled = true; break;
-	case GO_LE_CODE:	lecode_enabled = true; break;
+	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
 	case GO_OLD_SPINY:	old_spiny = true; break;
 	case GO_CRS1:		err += ScanOptCRS1(optarg); break;
 
@@ -770,6 +773,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_TEST:		testmode++; break;
 	case GO_FORCE:		force_count++; break;
 	case GO_REPAIR_MAGICS:	err += ScanOptRepairMagic(optarg); break;
+	case GO_CREATE_DISTRIB:	EnableLDUMP(optarg); break;
 
  #if OPT_OLD_NEW
 	case GO_OLD:		opt_new = opt_new>0 ? -1 : opt_new-1; break;
@@ -898,6 +902,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_HELP:		PrintHelpColor(&InfoUI_wctct); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
+	case CMD_EXPAND:	err = cmd_expand(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0); break;
 	case CMD_ERROR:		err = cmd_error(); break;
@@ -942,6 +947,15 @@ static enumError CheckCommand ( int argc, char ** argv )
     int main ( int argc, char ** argv )
 #endif
 {
+ #if !SZS_WRAPPER
+    ArgManager_t am = {0};
+    SetupArgManager(&am,LOUP_AUTO,argc,argv,false);
+    ExpandAtArgManager(&am,AMXM_SHORT,10,false);
+    argc = am.argc;
+    argv = am.argv;
+ #endif
+
+    tool_name = "wctct";
     print_title_func = print_title;
     SetupLib(argc,argv,WCTCT_SHORT,VERSION,TITLE);
     ctcode_enabled = true;
@@ -968,6 +982,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 
     if (SIGINT_level)
 	err = ERROR0(ERR_INTERRUPT,"Program interrupted by user.");
+    ClosePager();
     return err;
 }
 

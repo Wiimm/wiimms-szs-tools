@@ -1,7 +1,21 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Bug fix for scanning DEBUG-* sections of LPAR.txt: Parameters ITEM-POINT and
-   KCL-TYPE were not recognized.
+ - There is a new property for parsing the command line. In a preliminary
+   step, the options "-@FILENAME" (1 argument) and "-@ FILENAME" (2 arguments)
+   are searched. Each occurrence is replaced by the contents of file FILENAME,
+   which again may contain "-@...". The maximum recursion depth is 10.
+   Wildcard patterns are not resolved.
+ - New command for all tools: EXPAND: All parameters are treated as a filename
+   with wildcards and all matching files are searched.
+ - New command: wszst SPLIT: Analyse (file) names and split them into the
+   different parts. Print the results in machine readable format.
+ - Command wlect CREATE re-implemented. Type 'wlect create help' for details.
+ - New command: wlect DISTRIBUTION: The command manages data for LE-CODE track
+   distributions. It reads any number of source files with different file
+   types, collects the data and creates any number of files with different
+   file types. Type 'wlect distribution' without arguments to get details.
+ - New file formats to support wlect DISTRIBUTION: LE-DEF, LE-DIS, LE-REF,
+   LE-STR, SHA1REF and PREFIX.
 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it

@@ -270,7 +270,7 @@ enumError CreateBREFF
 
     SortSubFilesSZS(szs,SORT_BREFF);
 
-    if ( logging > 1 )
+    if ( logging >= 2 )
     {
 	printf("\nsorted file list:\n");
 	int i;

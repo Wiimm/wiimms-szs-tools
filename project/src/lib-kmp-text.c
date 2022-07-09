@@ -1894,7 +1894,7 @@ static void TermGL
 	const bool auto_prev
 		=  gl->ph->ac_mode == KMP_AC_PREV
 		|| gl->ph->ac_mode == KMP_AC_AUTO_PREV && !grp->have_prev_cmd;
-  if (sect_ph==KMP_ENPH) PRINT1("auto_prev=%d ; %s\n",auto_prev,grp->name);
+  //if (sect_ph==KMP_ENPH) PRINT1("auto_prev=%d ; %s\n",auto_prev,grp->name);
  #else
 	const bool auto_prev
 		=  gl->ph->ac_mode == KMP_AC_PREV
@@ -5696,7 +5696,7 @@ enumError ScanTextKMP
 		    break;
 
 		default:
-		    // ignore all other section without any warnings
+		    // ignore all other sections without any warnings
 		    break;
 	    }
 

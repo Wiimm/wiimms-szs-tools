@@ -74,6 +74,9 @@
 #define GET_INT_SIGN(type) ({ typeof(type) a=-1; a>0 ? 1 : -1; })
 #define GET_INT_TYPE(type) ((int)sizeof(type)*GET_INT_SIGN(type))
 
+// free a string if str is !NULL | !EmptyString | !MinusString | !IsCircBuf()
+void FreeString ( ccp str );
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    HAVE_*			///////////////
@@ -671,11 +674,26 @@ void * CopyData
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void FreeData
+char * CopyString
+(
+    ccp			string,		// string to copy/move/link
+    CopyMode_t		mode,		// copy mode
+    bool		*res_alloced	// not NULL:
+					//   store true, if data must be freed
+					//   otherwise store false
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+static inline void FreeData
 (
     const void		*data,		// data to free
     CopyMode_t		mode		// copy mode
-);
+)
+{
+    if ( mode != CPM_LINK )
+	FreeString(data);
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -692,6 +710,20 @@ mem_t;
 
 extern mem_t EmptyMem;	// mem_t(EmptyString,0)
 extern mem_t NullMem;	// mem_t(0,0)
+
+//-----------------------------------------------------------------------------
+// [[mem_src_t]]
+
+typedef struct mem_src_t
+{
+    const mem_t	*src;		// list of sources
+    int		n_src;		// number of sources; if <0: first NULL ptr terminates list
+    bool	allow_write;	// TRUE: allow to write n_src & src->len if <0
+}
+mem_src_t;
+
+uint GetMemSrcN ( const mem_src_t *src ); // NULL allowed
+uint GetMemSrcLen ( mem_t sep, const mem_src_t *src ); // NULL allowed
 
 //-----------------------------------------------------------------------------
 
@@ -822,14 +854,14 @@ static mem_t RightMem8 ( const mem_t src, int count )
 mem_t MemCat2A ( const mem_t m1, const mem_t m2 );
 mem_t MemCat3A ( const mem_t m1, const mem_t m2, const mem_t m3 );
 
+mem_t MemCatSep2A ( const mem_t sep, const mem_t m1, const mem_t m2 );
+mem_t MemCatSep3A ( const mem_t sep, const mem_t m1, const mem_t m2, const mem_t m3 );
+
 //-----------------------------------------------------------------------------
 
 int  CmpMem		( const mem_t s1, const mem_t s2 );
 int  StrCmpMem		( const mem_t mem, ccp str );
 bool LeftStrCmpMemEQ	( const mem_t mem, ccp str );
-
-// free a string if str is !NULL | !EmptyString | !MinusString | !IsCircBuf()
-void FreeString ( ccp str );
 
 static inline void FreeMem ( mem_t *mem )
 {
@@ -877,6 +909,21 @@ exmem_t;
 
 extern exmem_t EmptyExMem;	// mem_t(EmptyString,0),false,false
 extern exmem_t NullExMem;	// mem_t(0,0),false,false
+
+//-----------------------------------------------------------------------------
+// [[exmem_dest_t]]
+
+typedef struct exmem_dest_t
+{
+    char	*buf;		// Dest buffer. If NULL then alloc buffer.
+    uint	buf_size;	// Size of 'buf'. If too small then alloc buffer.
+    bool	try_circ;	// TRUE: Use circ-buffer, if result is small enough.
+}
+exmem_dest_t;
+
+// Get a buffer by settings. The returned buffer is always large enough
+// to store len+1 bytes. If dest==NULL: Force MALLOC()
+exmem_t GetExmemDestBuf ( const exmem_dest_t * dest, uint len );
 
 //-----------------------------------------------------------------------------
 // constructors
@@ -939,6 +986,32 @@ static inline exmem_t ExMemDup ( cvp src, int size )
     exmem_t em = { .data={ data, size+1 }, .is_original=true, .is_alloced=true };
     return em;
 }
+
+//-----------------------------------------------------------------------------
+
+exmem_t ExMemCat
+(
+    exmem_dest_t	*dest,	// kind of destination, if NULL then MALLOC()
+    mem_t		sep,	// insert separators between sources with len>0
+    const mem_src_t	*src	// sources. NULL allowed
+);
+
+exmem_t ExMemCat2
+(
+    exmem_dest_t	*dest,	// kind of destination, if NULL then MALLOC()
+    mem_t		sep,	// insert separators between sources with len>0
+    mem_t		src1,	// first source
+    mem_t		src2	// second source
+);
+
+exmem_t ExMemCat3
+(
+    exmem_dest_t	*dest,	// kind of destination, if NULL then MALLOC()
+    mem_t		sep,	// insert separators between sources with len>0
+    mem_t		src1,	// first source
+    mem_t		src2,	// second source
+    mem_t		src3	// third source
+);
 
 //-----------------------------------------------------------------------------
 // interface
@@ -1340,7 +1413,7 @@ static inline uint GetGoodAllocSizeA ( uint need, uint align )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////		some basic string functions		///////////////
+///////////////			basic string functions		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 extern const char EmptyQuote[];		// »""«		  Ignored by FreeString()
@@ -1399,23 +1472,32 @@ int GetProgramPath
 
 //-----
 
-// StringCopy(), StringCopyE(), StringCat*()
+// StringCopyS(), StringCopyE(), StringCat*()
 //	RESULT: end of copied string pointing to a NULL character.
 //	'src*' may be a NULL pointer.
+// if max_copy<0: ignore it!
 
-char * StringCopyS  ( char * buf, size_t bufsize, ccp src );
-char * StringCopySM ( char * buf, size_t bufsize, ccp src, size_t max_copy );
-char * StringCat2S  ( char * buf, size_t bufsize, ccp src1, ccp src2 );
-char * StringCat3S  ( char * buf, size_t bufsize, ccp src1, ccp src2, ccp src3 );
+char * StringCopyS  ( char *buf, size_t bufsize, ccp src );
+char * StringCopySM ( char *buf, size_t bufsize, ccp src, ssize_t max_copy );
+char * StringCat2S  ( char *buf, size_t bufsize, ccp src1, ccp src2 );
+char * StringCat3S  ( char *buf, size_t bufsize, ccp src1, ccp src2, ccp src3 );
 
-char * StringCopyE  ( char * buf, ccp buf_end, ccp src );
-char * StringCopyEM ( char * buf, ccp buf_end, ccp src, size_t max_copy );
-char * StringCat2E  ( char * buf, ccp buf_end, ccp src1, ccp src2 );
-char * StringCat3E  ( char * buf, ccp buf_end, ccp src1, ccp src2, ccp src3 );
+char * StringCopyE  ( char *buf, ccp buf_end, ccp src );
+char * StringCopyEM ( char *buf, ccp buf_end, ccp src, ssize_t max_copy );
+char * StringCat2E  ( char *buf, ccp buf_end, ccp src1, ccp src2 );
+char * StringCat3E  ( char *buf, ccp buf_end, ccp src1, ccp src2, ccp src3 );
 
 // alloc space and return
 char * StringCat2A  ( ccp src1, ccp src2 );
 char * StringCat3A  ( ccp src1, ccp src2, ccp src3 );
+
+// like above, but cat with separators
+char * StringCatSep2S ( char *buf, size_t bufsize, ccp sep, ccp src1, ccp src2 );
+char * StringCatSep3S ( char *buf, size_t bufsize, ccp sep, ccp src1, ccp src2, ccp src3 );
+char * StringCatSep2E ( char *buf, ccp buf_end,    ccp sep, ccp src1, ccp src2 );
+char * StringCatSep3E ( char *buf, ccp buf_end,    ccp sep, ccp src1, ccp src2, ccp src3 );
+char * StringCatSep2A ( ccp sep, ccp src1, ccp src2 );
+char * StringCatSep3A ( ccp sep, ccp src1, ccp src2, ccp src3 );
 
 // center string
 ccp StringCenterE ( char * buf, ccp buf_end, ccp src, int width );
@@ -1485,7 +1567,7 @@ char * PathCombineFast ( char *dest_buf, uint buf_size, ccp path, ccp base_path 
 //	If ext==NULL or emtpy: remove only
 //	'ext' may start with '.'. If not, a additional '.' is included
 //	If 'path' is NULL or path==buf: Inplace job using 'buf' as source.
-char * NewFileExtE ( char * buf, ccp buf_end, ccp path, ccp ext );
+char * NewFileExtE ( char * buf, ccp buf_end,    ccp path, ccp ext );
 char * NewFileExtS ( char * buf, size_t bufsize, ccp path, ccp ext );
 
 // eliminate leading './' before comparing
@@ -1586,6 +1668,7 @@ char * PrintID
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    circ buf			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[CircBuf]]
 
 #define CIRC_BUF_MAX_ALLOC	0x0400  // request limit
 #define CIRC_BUF_SIZE		0x4000  // internal buffer size
@@ -1957,7 +2040,10 @@ mem_t  MoveFromFastBufMem    ( FastBuf_t *fb );
 ///////////////			 MatchPattern()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-#define PATTERN_WILDCARDS "*# ?[{"
+#define PATTERN_WILDCARDS "*#\t?[{"
+
+bool HaveWildcards ( mem_t str );
+char * FindFirstWildcard ( mem_t str );
 
 bool MatchPatternFull
 (
@@ -1977,8 +2063,8 @@ char * MatchRuleLine
     // returns a pointer to the first non scanned char
 
     int		*status,	// not NULL: return match status here
-				//   -2: no prefix found  (no ruile found)
-				//   -1: empty line (no ruile found)
+				//   -2: no prefix found  (no rule found)
+				//   -1: empty line (no rule found)
 				//    0: rule found, but don't match
 				//    1: rule found and match
     ccp		src,		// source line, scanned untilCONTROL
@@ -2088,14 +2174,15 @@ void CloneArgManager  ( ArgManager_t *am, int argc, char ** argv );
 void AddSpaceArgManager ( ArgManager_t *am, int needed_space );
 
 void CopyArgManager ( ArgManager_t *dest, const ArgManager_t *src );
-void MoveArgManager ( ArgManager_t *dest,        ArgManager_t *src );
+void MoveArgManager ( ArgManager_t *dest,       ArgManager_t *src );
 
 void PrepareEditArgManager ( ArgManager_t *am, int needed_space );
 
 // return the pos behind last insert arguments
-uint AppendArgManager ( ArgManager_t *am,          ccp arg1, ccp arg2, bool move_arg );
-uint InsertArgManager ( ArgManager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg );
-uint ReplaceArgManager( ArgManager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg );
+uint AppendArgManager    ( ArgManager_t *am,          ccp arg1, ccp arg2,     bool move_arg );
+uint ReplaceArgManager   ( ArgManager_t *am, int pos, ccp arg1, ccp arg2,     bool move_arg );
+uint InsertArgManager    ( ArgManager_t *am, int pos, ccp arg1, ccp arg2,     bool move_arg );
+uint InsertListArgManager( ArgManager_t *am, int pos, int argc, char ** argv, bool move_arg );
 
 // return the pos at removed argument
 uint RemoveArgManager ( ArgManager_t *am, int pos, int count );
@@ -2107,6 +2194,50 @@ uint ScanQuotedArgManager ( ArgManager_t *am, ccp src, bool is_utf8 );
 bool CheckFilterArgManager ( const ArgManager_t *filter, ccp name );
 
 void DumpArgManager ( FILE *f, int indent, const ArgManager_t *am, ccp title );
+
+enumError ScanFileArgManager
+(
+    ArgManager_t	*am,		// valid arg-manager
+    int			pos,		// insert position, relative to end if <0
+    ccp			fname,		// filename to open
+    int			silent,		// 0: print all error messages
+					// 1: suppress file size warning
+					// 2: suppress all error messages
+    int			*n_added
+);
+
+//-----------------------------------------------------------------------------
+
+typedef enum arg_expand_mode_t
+{
+    // AMXM = ArgManager eXpand Mode
+    // P = parameters, S = short options, L = long options
+    // 1 = single arg, 2 = double arg
+
+    AMXM_P1	= 0x01,	    // expand "@file"
+    AMXM_P2	= 0x02,	    // expand "@ file"
+    AMXM_S1	= 0x04,	    // expand "-@file"
+    AMXM_S2	= 0x08,	    // expand "-@ file"
+    AMXM_L1	= 0x10,	    // expand "--@=file"  watch out '='
+    AMXM_L2	= 0x20,	    // expand "--@ file"
+
+    AMXM_PARAM	= AMXM_P1 | AMXM_P2,
+    AMXM_SHORT	= AMXM_S1 | AMXM_S2,
+    AMXM_LONG	= AMXM_L1 | AMXM_L2,
+
+    AMXM_ALL	= AMXM_PARAM | AMXM_SHORT | AMXM_LONG,
+}
+arg_expand_mode_t;
+
+enumError ExpandAtArgManager
+(
+    ArgManager_t	*am,		// valid arg-manager
+    arg_expand_mode_t	expand_mode,	// objects to be replaced
+    int			recursion,	// maximum recursion depth
+    int			silent		// 0: print all error messages
+					// 1: suppress file size warning
+					// 2: suppress all error messages
+);
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2617,9 +2748,12 @@ typedef enum CharMode_t // select encodig/decoding method
 {
     CHMD_UTF8		= 0x01,  // UTF8 support enabled (compatible with legacy bool)
     CHMD_ESC		= 0x02,  // escape ESC by \e
+    CHMD_PIPE		= 0x04,  // escape pipes '|' to '\!'
+    CHMD_IF_REQUIRED	= 0x08,  // check for special chars and encode only if required
+     CHMD__ALL		= 0x0f,
 
     CHMD__MODERN	= CHMD_UTF8 | CHMD_ESC,
-    CHMD__ALL		= CHMD_UTF8 | CHMD_ESC,
+    CHMD__PIPE8		= CHMD__MODERN | CHMD_PIPE | CHMD_IF_REQUIRED,
 }
 __attribute__ ((packed)) CharMode_t;
 
@@ -2631,11 +2765,14 @@ typedef enum EncodeMode_t // select encodig/decoding method
     ENCODE_OFF,		// no encoding (always 0)
     ENCODE_STRING,	// ScanEscapedString(ANSI), byte mode
     ENCODE_UTF8,	// ScanEscapedString(UTF8), force UTF8 on decoding
+    ENCODE_PIPE,	// analyse and use ENCODE_OFF|ENCODE_STRING, escape '|' too
+    ENCODE_PIPE8,	// analyse and use ENCODE_OFF|ENCODE_UTF8, escape '|' too
     ENCODE_BASE64,	// Base64
     ENCODE_BASE64URL,	// Base64.URL (=) / decoder detects Standard + URL + STAR
     ENCODE_BASE64STAR,	// Base64.URL (*) / decoder detects Standard + URL + STAR
     ENCODE_BASE64XML,	// Base64 with XML name tokens / decoder detects Standard + XML (name+id)
     ENCODE_JSON,	// JSON string encoding
+    ENCODE_HEX,		// Use hex-string without quotes
 
     ENCODE__N		// number of encoding modes
 }
@@ -2681,9 +2818,11 @@ extern ccp TableDecode64default, TableEncode64default;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint GetEscapedSize
+uint GetEscapeLen
 (
-    // returns the needed buffer size for PrintEscapedString()
+    // returns the extra size needed for escapes.
+    // Add 'src_len' to get the escaped string size.
+    // Add 'additionally 4 to get a good buffer size.
 
     ccp		source,		// NULL or string to print
     int		src_len,	// length of string. if -1, str is null terminated
@@ -2717,9 +2856,26 @@ uint ScanEscapedString
     ccp		source,		// string to scan
     int		len,		// length of string. if -1, str is null terminated
     bool	utf8,		// true: source and output is UTF-8
-    int		quote,		// 0:none, -1:auto, >0: quotation char
+    int		quote,		// -1:auto, 0:none, >0: quotation char
     uint	*scanned_len	// not NULL: Store number of scanned 'source' bytes here
 );
+
+//-----------------------------------------------------------------------------
+// escan string from tabels with pipe separator (UTF8 only)
+
+static inline uint ScanEscapedStringPipe
+(
+    // returns the number of valid bytes in 'buf' (NULL term added but not counted)
+
+    char	*buf,		// valid destination buffer, maybe source
+    uint	buf_size,	// size of 'buf'
+    ccp		source,		// string to scan
+    uint	*scanned_len	// not NULL: Store number of scanned 'source' bytes here
+)
+{
+    return ScanEscapedString(buf,buf_size,source,-1,true,
+		source && *source == '"' ? '"' : '|', scanned_len );
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -2845,7 +3001,7 @@ static inline uint DecodeJSON
     uint	buf_size,	// size of 'buf', >= 3
     ccp		source,		// NULL or string to decode
     int		source_len,	// length of 'source'. If -1, str is NULL terminated
-    int		quote,		// 0:none, -1:auto, >0: quotation char
+    int		quote,		// -1:auto, 0:none, >0: quotation char
     uint	*scanned_len	// not NULL: Store number of scanned 'str' bytes here
 )
 {
@@ -2862,7 +3018,7 @@ mem_t DecodeJSONCirc
 
     ccp		source,		// NULL or string to decode
     int		source_len,	// length of 'source'. If -1, str is NULL terminated
-    int		quote		// 0:none, -1:auto, >0: quotation char
+    int		quote		// -1:auto, 0:none, >0: quotation char
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2903,6 +3059,60 @@ mem_t QuoteJSONCirc
 					//	<=0: never
 					//	>=1: if source == NULL
 					//	>=2: if source_len == 0
+);
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+uint DecodeHex
+(
+    // returns the number of valid bytes in 'buf'
+
+    char	*buf,		// valid destination buffer
+    uint	buf_size,	// size of 'buf', >= 3
+    ccp		source,		// NULL or string to decode
+    int		source_len,	// length of 'source'. If -1, str is NULL terminated
+    int		quote,		// -1:auto, 0:none, >0: quotation char
+    uint	*scanned_len	// not NULL: Store number of scanned 'str' bytes here
+);
+
+//-----------------------------------------------------------------------------
+
+mem_t DecodeHexCirc
+(
+    // Returns a buffer alloced by GetCircBuf()
+    // with valid pointer and null terminated.
+    // If result is too large (>CIRC_BUF_MAX_ALLOC) then (0,0) is returned.
+
+    ccp		source,		// NULL or string to decode
+    int		source_len,	// length of 'source'. If -1, str is NULL terminated
+    int		quote		// -1:auto, 0:none, >0: quotation char
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+uint EncodeHex
+(
+    // returns the number of valid bytes in 'buf'. Result is NULL-terminated.
+
+    char	*buf,			// valid destination buffer
+    uint	buf_size,		// size of 'buf', >2 and 2 bytes longer than needed
+    const void	*source,		// NULL or data to encode
+    int		source_len,		// length of 'source'; if <0: use strlen(source)
+    ccp		digits			// digits to use, eg. LoDigits[] (=fallback) or HiDigits[]
+);
+
+//-----------------------------------------------------------------------------
+
+mem_t EncodeHexCirc
+(
+    // Returns a buffer alloced by GetCircBuf()
+    // with valid pointer and null terminated.
+    // If result is too large (>CIRC_BUF_MAX_ALLOC) then (0,0) is returned.
+
+    const void	*source,		// NULL or data to encode
+    int		source_len,		// length of 'source'; if <0: use strlen(source)
+    ccp		digits			// digits to use, eg. LoDigits[] (=fallback) or HiDigits[]
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3003,6 +3213,22 @@ ccp GetShiftJISStatistics(void);
 ///////////////		escape/quote strings, alloc space	///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+exmem_t EscapeStringEx
+(
+    // Returns an exmem_t struct. If not quoted (CHMD_IF_REQUIRED) it returns 'src'
+    // Use FreeExMem(&result) to free possible alloced result.
+
+    cvp		src,			// NULL or source
+    int		src_len,		// size of 'src'. If -1: Use strlen(src)
+    cvp		return_if_null,		// return this, if 'src==NULL'
+    cvp		return_if_empty,	// return this, if src is empty (have no chars)
+    CharMode_t	char_mode,		// how to escape (CHMD_*)
+    char	quote,			// quoting character: "  or  '  or  $ (for $'...')
+    bool	try_circ		// use circ-buffer, if result is small enough
+);
+
+//-----------------------------------------------------------------------------
+
 char * EscapeString
 (
     // Returns a pointer.
@@ -3062,6 +3288,23 @@ static inline char * QuoteBashCircM ( mem_t src, cvp if_null, CharMode_t cm )
 
 static char * QuoteBashCircS ( ccp src, cvp if_null, CharMode_t cm )
 	{ return EscapeString(src,-1,if_null,EmptyQuote,cm,'$',true,0); }
+
+
+//-----------------------------------------------------------------------------
+// Escape strings for tables with pipe separator (UTF8 only).
+// Use FreeExMem(result) to free possible alloced result.
+
+static inline exmem_t EscapeStringPipeM ( mem_t src )
+	{ return EscapeStringEx(src.ptr,src.len,EmptyString,EmptyString,CHMD__PIPE8,'"',false); }
+
+static exmem_t EscapeStringPipeS ( ccp src )
+	{ return EscapeStringEx(src,-1,EmptyString,EmptyString,CHMD__PIPE8,'"',false); }
+
+static inline exmem_t EscapeStringPipeCircM ( mem_t src )
+	{ return EscapeStringEx(src.ptr,src.len,EmptyString,EmptyString,CHMD__PIPE8,'"',true); }
+
+static exmem_t EscapeStringPipeCircS ( ccp src )
+	{ return EscapeStringEx(src,-1,EmptyString,EmptyString,CHMD__PIPE8,'"',false); }
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -3229,6 +3472,17 @@ s64 ScanKeywordListMask
 );
 
 //-----------------------------------------------------------------------------
+
+ccp GetKeywordError
+(
+    // return circ-buf
+
+    const KeywordTab_t	* key_tab,	// NULL or pointer to command table
+    ccp			key_arg,	// analyzed command
+    int			key_stat,	// status of ScanKeyword()
+    ccp			object		// NULL or object for error messages
+					//	default= 'command'
+);
 
 enumError PrintKeywordError
 (
@@ -5927,6 +6181,13 @@ uint FindParamFieldHelper ( const ParamField_t * pf, bool * found, ccp key );
 
 // find first pattern that matches
 ParamFieldItem_t * MatchParamField ( const ParamField_t * pf, ccp key );
+
+//-----------------------------------------------------------------------------
+// get values and set marker by 'num |= mark'
+
+ccp GetParamFieldStr	( ParamField_t *pf, uint mark, ccp key, ccp def );
+int GetParamFieldInt	( ParamField_t *pf, uint mark, ccp key, int def );
+int GetParamFieldIntMM	( ParamField_t *pf, uint mark, ccp key, int def, int min, int max );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

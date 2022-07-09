@@ -36,11 +36,13 @@
  ***************************************************************************/
 
 #include "dclib-xdump.h"
-#include "lib-lecode.h"
+#include "lib-ledis.h"
 #include "lib-std.h"
 #include "lib-mkw.h"
 #include "lib-szs.h"
+#include "lib-bzip2.h"
 #include "lpar.inc"
+#include "lecode.inc"
 
 #include <stddef.h>
 
@@ -49,11 +51,11 @@
 ///////////////			    vars			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp	opt_le_define		= 0;
 ccp	opt_le_arena		= 0;
 ccp	opt_lpar		= 0;
 ccp	opt_track_dest		= 0;
 ParamField_t opt_track_source	= {0};
+int	opt_szs_mode		= TFMD_LINK;
 
 ccp	opt_le_alias		= 0;
 bool	opt_engine_valid	= false;
@@ -77,21 +79,67 @@ uint GetNextRacingTrackLE ( uint tid )
     if ( ++tid == 0xff )
 	tid++;
 
-    if ( tid > MKW_N_TRACKS && tid < LE_FIRST_LOWER_CT_SLOT )
-	tid = LE_FIRST_LOWER_CT_SLOT;
+    if ( tid > MKW_N_TRACKS && tid < LE_FIRST_CT_SLOT )
+	tid = LE_FIRST_CT_SLOT;
     return tid;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int ScanOptTrackSource ( ccp arg, int mode )
+int ScanOptTrackSource ( ccp arg, int arg_len, int mode )
 {
-    if ( arg && *arg )
+    static ccp last_key = ""; // for optimization if scanning path/*.szs
+
+    if (arg)
     {
-	if (!opt_track_source.field)
-	    InitializeParamField(&opt_track_source);
-	AppendParamField(&opt_track_source,arg,false,mode,0);
+	if ( arg_len < 0 )
+	    arg_len = strlen(arg);
+	if ( arg_len > 0 )
+	{
+	    char path[PATH_MAX];
+	    StringCopySM(path,sizeof(path),arg,arg_len);
+	    if ( path[arg_len-1] == '/' )
+		path[--arg_len] = 0;
+
+	    if	(  arg_len > 0
+		&& strcmp(last_key,path)
+		&& !FindParamField(&opt_track_source,path)
+		)
+	    {
+		PRINT("APPEND TRACK_SOURCE: 0x%03x %s\n",mode,path);
+		if (!opt_track_source.field)
+		    InitializeParamField(&opt_track_source);
+		ParamFieldItem_t *it
+		    = AppendParamField(&opt_track_source,path,false,mode,0);
+		if (it)
+		    last_key = it->key;
+	    }
+	}
     }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptSzsMode ( ccp arg )
+{
+    const KeywordTab_t keytab[] =
+    {
+     { 0,		"OFF",		0,	0 },
+     { TFMD_COPY,	"COPY",		"CP",	0 },
+     { TFMD_MOVE,	"MOVE",		"MV",	0 },
+     { TFMD_MOVE1,	"MOVE1",	"MV1",	0 },
+     { TFMD_LINK,	"LINK",		"LN",	0 },
+     { 0,0,0,0 }
+    };
+
+    int abbrev_count;
+    const KeywordTab_t *cmd = ScanKeyword(&abbrev_count,arg,keytab);
+    if (!cmd)
+	return 1;
+
+    opt_szs_mode = cmd->id;
+    PRINT1("SZS-MODE=%d\n",opt_szs_mode);
     return 0;
 }
 
@@ -210,6 +258,7 @@ ccp GetLecodeSpeedoName ( speedo_mode_t mode )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 ccp GetLecodeDebugName ( le_debug_mode_t mode )
 {
@@ -284,16 +333,16 @@ int ScanOptDebug ( ccp arg )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-
 #if 0
-int ScanOptReserved_1bb ( ccp arg )
-{
+
+ int ScanOptReserved_1bb ( ccp arg )
+ {
     opt_reserved_1bb = str2l(arg,0,10);
     PRINT("RESERVED_1BB=%d\n",opt_reserved_1bb);
     return 0;
-}
-#endif
+ }
 
+#endif
 ///////////////////////////////////////////////////////////////////////////////
 
 int ScanOptAlias ( ccp arg )
@@ -356,7 +405,7 @@ int ScanOptEngine ( ccp arg )
 	return ERROR0(ERR_SYNTAX,
 		"Invalid argument for option --engine, »a,b,c« expected: %s",arg);
 
-    if  (sum > 0.0 )
+    if  ( sum > 0.0 )
     {
 	sum = 100/sum;
 	uint total = 100;
@@ -420,12 +469,50 @@ const VarMap_t * SetupVarsLECODE()
 	    { "SPEEDO$2",		SPEEDO_FRACTION2 },
 	    { "SPEEDO$3",		SPEEDO_FRACTION3 },
 
+	    { "BT",			LTTY_ARENA },
+	    { "VS",			LTTY_TRACK },
+	    { "FILL",			-1 },
+
+	    { "RALL",			MKW_LE_RANDOM_BEG+0 },
+	    { "RORIG",			MKW_LE_RANDOM_BEG+1 },
+	    { "RCUST",			MKW_LE_RANDOM_BEG+2 },
+	    { "RNEW",			MKW_LE_RANDOM_BEG+3 },
+
+	    { "LE$STRING_LIST_ENABLED",	LE_STRING_LIST_ENABLED },
+	    { "LE$STRING_SET_ENABLED",	LE_STRING_SET_ENABLED },
+	    { "LE$TYPE_MARKERS_ENABLED",LE_TYPE_MARKERS_ENABLED },
+
 	    {0,0}
 	};
 
 	const struct inttab_t * ip;
 	for ( ip = inttab; ip->name; ip++ )
 	    DefineIntVar(&vm,ip->name,ip->val);
+
+	char name[20];
+	ccp prefix = GetNameLTTY(LTTY_ARENA);
+	for ( int slot = MKW_ARENA_BEG; slot < MKW_ARENA_END; slot++ )
+	{
+	    snprintf(name,sizeof(name),"%s%u",prefix,slot);
+	    StringUpperS(name,sizeof(name),name);
+	    DefineIntVar(&vm,name,slot);
+	}
+
+	prefix = GetNameLTTY(LTTY_TRACK);
+	for ( int slot = MKW_TRACK_BEG; slot < MKW_TRACK_END; slot++ )
+	{
+	    snprintf(name,sizeof(name),"%s%u",prefix,slot);
+	    StringUpperS(name,sizeof(name),name);
+	    DefineIntVar(&vm,name,slot);
+	}
+
+	prefix = GetNameLTTY(LTTY_RANDOM|LTTY_TRACK);
+	for ( int slot = MKW_LE_RANDOM_BEG; slot < MKW_LE_RANDOM_END; slot++ )
+	{
+	    snprintf(name,sizeof(name),"%s%u",prefix,slot);
+	    StringUpperS(name,sizeof(name),name);
+	    DefineIntVar(&vm,name,slot);
+	}
     }
     return &vm;
 }
@@ -667,6 +754,148 @@ bool SetupLecodeDebugIfEmptyLPAR ( le_lpar_t *lpar )
     SetupLecodeDebugLPAR(lpar,2,PREDEBUG_VERTICAL,0);
 
     return true;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			enum le_region_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+le_region_t GetLEREG ( char ch )
+{
+    switch (ch)
+    {
+      case 'p': case 'P': return LEREG_PAL;
+      case 'u': case 'U': return LEREG_USA;
+      case 'j': case 'J': return LEREG_JAP;
+      case 'k': case 'K': return LEREG_KOR;
+    }
+    return LEREG_UNKNOWN;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetNameLEREG ( le_region_t lereg, ccp return_on_invalid )
+{
+    switch (lereg)
+    {
+	case LEREG_PAL: return "PAL";
+	case LEREG_USA: return "USA";
+	case LEREG_JAP: return "JAP";
+	case LEREG_KOR:	return "KOR";
+	default:	return return_on_invalid;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// replace last '@' by region name.
+// returns either NULL on error or 'name' or 'buf'. If !buf or to small, then use circ-buf.
+
+ccp PatchNameLEREG ( char *buf, uint bufsize, ccp name, le_region_t lereg )
+{
+    if (!name)
+	return 0;
+
+    ccp at  = strrchr(name,'@');
+    ccp reg = GetNameLEREG(lereg,0);
+    if ( !at || !reg )
+	return name;
+
+    const uint pos = at - name;
+    const uint need = strlen(name)+ 3; // includes term-0
+
+    if ( ( !buf || !bufsize ) && need <= CIRC_BUF_MAX_ALLOC )
+    {
+	buf = GetCircBuf(need);
+	bufsize = need;
+    }
+
+    if ( buf && bufsize >= need )
+    {
+	memcpy(buf,name,pos);
+	memcpy(buf+pos,reg,3);
+	strcpy(buf+pos+3,at+1);
+	return buf;
+    }
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const mem_t GetLecodeLEREG ( le_region_t reg )
+{
+    BZ2Manager_t *lm;
+    switch (reg)
+    {
+	case LEREG_PAL:  lm = &lecode_pal_bin_mgr; break;
+	case LEREG_USA:	 lm = &lecode_usa_bin_mgr; break;
+	case LEREG_JAP:	 lm = &lecode_jap_bin_mgr; break;
+	case LEREG_KOR:  lm = &lecode_kor_bin_mgr; break;
+	default:	 return NullMem;
+    }
+
+    DecodeBZIP2Manager(lm);
+    mem_t res = { .ptr = (ccp)lm->data, .len = lm->size };
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetLecodeBuildLEREG ( le_region_t reg )
+{
+    return GetBuildLECODE(GetLecodeLEREG(reg));
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetBuildLECODE ( mem_t lecode )
+{
+    if ( !lecode.ptr || lecode.len < sizeof(le_binary_head_v4_t) )
+	return "?";
+
+    const le_binary_head_v4_t *head = (le_binary_head_v4_t*)lecode.ptr;
+    return ntohl(head->version) < 4
+	? PrintCircBuf("%u",ntohl(head->build_number))
+	: PrintCircBuf("%u (%.10s)",ntohl(head->build_number),head->timestamp);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetLecodeInfoLEREG ( le_region_t reg )
+{
+    return GetInfoLECODE(GetLecodeLEREG(reg));
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetInfoLECODE ( mem_t lecode )
+{
+    if ( !lecode.ptr || lecode.len < sizeof(le_binary_head_v4_t) )
+	return "?";
+
+    const le_binary_head_v4_t *head = (le_binary_head_v4_t*)lecode.ptr;
+    ccp region	= head->region == 'P' ? "PAL"
+		: head->region == 'E' ? "USA"
+		: head->region == 'J' ? "JAP"
+		: head->region == 'K' ? "KOR"
+		: "?";
+    ccp debug	= head->debug == 'D' ? "/debug" : "";
+
+    return ntohl(head->version) < 4
+	? PrintCircBuf("%s%s v%u, build %u, %u bytes",
+			region, debug,
+			ntohl(head->version),
+			ntohl(head->build_number),
+			ntohl(head->size) )
+	: PrintCircBuf("%s%s v%u, build %u (%s UTC), %u bytes",
+			region, debug,
+			ntohl(head->version),
+			ntohl(head->build_number),
+			head->timestamp,
+			ntohl(head->size) );
 }
 
 //
@@ -938,12 +1167,16 @@ static void NormalizeLPAR ( le_lpar_t * lp )
     if ( sum != 0 && sum != 100 )
     {
 	double factor = 100.0/sum;
-	lp->engine[0] = lp->engine[0] * factor;
-	lp->engine[1] = lp->engine[1] * factor;
+	lp->engine[0] = double2int( lp->engine[0] * factor );
+	lp->engine[1] = double2int( lp->engine[1] * factor );
 	sum = lp->engine[0] + lp->engine[1];
 	if ( sum > 100 )
 	    lp->engine[1] -= sum-100;
 	lp->engine[2] = 100 - lp->engine[0] - lp->engine[1];
+	PRINT0("NORM ENGINE: %u + %u + %u = %u [200cc=%d])\n",
+		lp->engine[0], lp->engine[1], lp->engine[2],
+		lp->engine[0] + lp->engine[1] + lp->engine[2],
+		lp->enable_200cc );
     }
 
     if ( lp->thcloud_frames < 1 || lp->thcloud_frames > 0x7fff )
@@ -1047,33 +1280,52 @@ enumError SaveTextLPAR
     DASSERT(fname);
     PRINT("SaveTextLPAR(%s,%d)\n",fname,set_time);
 
-
-    //--- open file
-
     File_t F;
     enumError err = CreateFileOpt(&F,true,fname,testmode,fname);
     if ( err > ERR_WARNING || !F.f )
 	return err;
 
+    err = SaveTextFileLPAR(lpar,F.f,true);
+
+    ResetFile(&F,set_time);
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError SaveTextFileLPAR
+(
+    le_lpar_t		*lpar,		// LE-CODE parameters
+    FILE		*f,		// open file
+    bool		print_full	// true: print ehader + append section [END]
+)
+{
+    DASSERT(lpar);
+    DASSERT(f);
+    PRINT("SaveTextFileLPAR(%s,%d)\n",fname,set_time);
+
 
     //--- print header + syntax info
 
-    if ( print_header && !brief_count && !export_count )
-	fprintf(F.f,text_lpar_head_cr);
-    else
-	fprintf(F.f,"%s\r\n",LE_LPAR_MAGIC);
+    if (print_full)
+    {
+	if ( print_header && !brief_count && !export_count )
+	    fprintf(f,text_lpar_head_cr);
+	else
+	    fprintf(f,"%s\r\n",LE_LPAR_MAGIC);
+    }
 
 
     //--- print section
 
     SetupLecodeDebugIfEmptyLPAR(lpar);
-    err = WriteSectionLPAR(F.f,lpar);
+    enumError err = WriteSectionLPAR(f,lpar);
 
 
     //--- print footer
 
-    fputs(section_end,F.f);
-    ResetFile(&F,set_time);
+    if (print_full)
+	fputs(section_end,f);
     return err;
 }
 
@@ -1394,6 +1646,7 @@ enumError AnalyseLEBinary
 
     ana->valid		= LE_HEAD_FOUND;
     ana->version	= head->phase;
+    ana->region		= GetLEREG(head->region);
     ana->data		= data;
     ana->size		= data_size;
     ana->head		= head;
@@ -1646,6 +1899,24 @@ enumError AnalyseLEBinary
 
 ///////////////////////////////////////////////////////////////////////////////
 
+le_region_t GetLERegion ( const le_analyse_t *ana )
+{
+    if (ana->valid)
+    {
+	const le_binary_head_t *h = ana->head;
+	switch (h->region)
+	{
+	    case 'P': return LEREG_PAL;
+	    case 'E': return LEREG_USA;
+	    case 'J': return LEREG_JAP;
+	    case 'K': return LEREG_KOR;
+	}
+    }
+    return LEREG_UNKNOWN;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void CalculateStatsLE ( le_analyse_t *ana )
 {
     ResetLEAnalyseUsage(ana);
@@ -1659,7 +1930,7 @@ void CalculateStatsLE ( le_analyse_t *ana )
 		  ? ana->max_property : ana->max_music;
     if ( ana->max_slot > ana->max_flags )
 	 ana->max_slot = ana->max_flags;
-    if ( ana->max_slot < LE_FIRST_LOWER_CT_SLOT )
+    if ( ana->max_slot < LE_FIRST_CT_SLOT )
 	return;
 
 
@@ -1673,7 +1944,7 @@ void CalculateStatsLE ( le_analyse_t *ana )
 	    used++;
     }
 
-    for ( slot = LE_FIRST_LOWER_CT_SLOT; slot < ana->n_slot; slot++ )
+    for ( slot = LE_FIRST_CT_SLOT; slot < ana->n_slot; slot++ )
     {
 	total++;
 	if (IsLESlotUsed(ana,slot))
@@ -1704,7 +1975,7 @@ const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc )
     if ( force_recalc && ana->usage )
 	ResetLEAnalyseUsage(ana);
 
-    if ( ana->usage || ana->max_slot < LE_FIRST_LOWER_CT_SLOT )
+    if ( ana->usage || ana->max_slot < LE_FIRST_CT_SLOT )
 	return ana->usage;
 
     ana->usage_size = ana->n_slot > 0x100 ? ana->n_slot : 0x100;
@@ -1734,7 +2005,7 @@ const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc )
 	usage[slot] = IsLESlotUsed(ana,slot)
 			? LEU_S_TRACK|LEU_F_ONLINE : LEU_F_ONLINE;
 
-    for ( slot = LE_FIRST_LOWER_CT_SLOT; slot < ana->usage_size; slot++ )
+    for ( slot = LE_FIRST_CT_SLOT; slot < ana->usage_size; slot++ )
     {
 	if (IsLESlotUsed(ana,slot))
 	{
@@ -1904,7 +2175,7 @@ static ccp GetSlotInfo
 	ccp music1 = "", music0 = "";
 	const int music = ana->music ? ana->music[tid] : -1;
 	ccp musicx = GetMkwMusicName3(music);
-	if ( tid < MKW_ORIGINAL_END || tid >= LE_FIRST_LOWER_CT_SLOT )
+	if ( tid < MKW_ORIGINAL_END || tid >= LE_FIRST_CT_SLOT )
 	{
 	    if ( music < MKW_MUSIC_MIN_ID || music > MKW_MUSIC_MAX_ID )
 	    {
@@ -2029,7 +2300,7 @@ static void DumpLETracks
 
     //--- battle cups
 
-    if ( ana->n_cup_track && ana->cup_track )
+    if ( ana->n_cup_arena && ana->cup_arena )
     {
 	fprintf(f,"\n%*s%s" "%u cup%s with battle tracks (%s):%s\n",
 		indent-2,"", col->heading,
@@ -2042,7 +2313,7 @@ static void DumpLETracks
 	{
 	    if ( cp[0] || cp[1] || cp[2] || cp[3] || cp[4] )
 	    {
-		fprintf(f,"%*s" "Cup %2u:",indent,"",cup);
+		fprintf(f,"%*s" "Cup %3u:",indent,"",cup);
 		uint warnings;
 		DumpLECup(f,ana,cp,5,col,CHECK_ARENA,&warnings,done);
 		if (warnings)
@@ -2075,7 +2346,7 @@ static void DumpLETracks
 	{
 	    if ( cp[0] || cp[1] || cp[2] || cp[3] )
 	    {
-		fprintf(f,"%*s" "Cup %2u:",indent,"",cup);
+		fprintf(f,"%*s" "Cup %3u:",indent,"",cup);
 		uint warnings;
 		DumpLECup(f,ana,cp,4,col,CHECK_TRACK,&warnings,done);
 		if (warnings)
@@ -2176,7 +2447,7 @@ static void DumpLETracks
 
 	uint first_unused_slot = max_used_slot + 1;
 	if (!IsRacingTrackLE(first_unused_slot))
-	    first_unused_slot = LE_FIRST_LOWER_CT_SLOT;
+	    first_unused_slot = LE_FIRST_CT_SLOT;
 	const int unused_slots = ana->n_slot - first_unused_slot;
 	if ( unused_slots > 0 )
 	    fprintf(f,"%*s  > %u slot%s beginning with slot %u (%x/hex) are not used.\n",
@@ -2332,7 +2603,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 	const le_binary_head_v4_t *h = ana->head_v4;
 	DASSERT(h);
 	fprintf(f,
-		"%*s" "Timestamp:         %s\n"
+		"%*s" "Timestamp:         %s UTC\n"
 		,indent,"", h->timestamp
 		);
       }
@@ -2351,7 +2622,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 	const le_binary_param_t *h = ana->param;
 	DASSERT(h);
 	fprintf(f,
-		"\n%*s%s" "Parameters:%s\n"
+		"\n%*s%s" "Parameters (LPAR):%s\n"
 		"%*s" "Magic:             %.4s\n"
 		"%*s" "Version:           %u\n"
 		"%*s" "Param size:        %x/hex = %u bytes\n"
@@ -2612,7 +2883,8 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 ///////////////			copy track files		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void CopyTrackFile ( uint tid, ccp name )
+void TransferTrackFile
+	( LogFile_t *log, uint dest_slot, ccp src_name, TransferMode_t flags )
 {
     if ( opt_track_dest
 	&& IsDirectory(opt_track_dest,false)
@@ -2620,27 +2892,54 @@ void CopyTrackFile ( uint tid, ccp name )
     {
 	char src[PATH_MAX];
 	char dest[PATH_MAX];
+	flags &= TFMD_M_FLAGS;
 
 	ParamFieldItem_t *ptr = opt_track_source.field, *end;
 	for ( end = ptr + opt_track_source.used; ptr < end; ptr++ )
 	{
-	    PathCatBufPPE(src,sizeof(src),ptr->key,name,".szs");
+	    PathCatBufPPE(src,sizeof(src),ptr->key,src_name,".szs");
 
 	    struct stat st;
 	    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
 	    {
-		snprintf(dest,sizeof(dest),"%s/%03x.szs",opt_track_dest,tid);
-		if (!TransferFile(src,dest,ptr->num,0666))
+		snprintf(dest,sizeof(dest),"%s/%03x.szs",opt_track_dest,dest_slot);
+		if (!TransferFile(log,dest,src,ptr->num|flags,0666))
 		{
-		    PathCatBufPPE(src,sizeof(src),ptr->key,name,"_d.szs");
+		    PathCatBufPPE(src,sizeof(src),ptr->key,src_name,"_d.szs");
 		    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
 		    {
-			snprintf(dest,sizeof(dest),"%s/%03x_d.szs",opt_track_dest,tid);
-			TransferFile(src,dest,ptr->num,0666);
+			snprintf(dest,sizeof(dest),"%s/%03x_d.szs",opt_track_dest,dest_slot);
+			TransferFile(log,dest,src,ptr->num|flags,0666);
 		    }
 		}
 		break;
 	    }
+	}
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void TransferTrackBySlot
+	( LogFile_t *log, uint dest_slot, uint src_slot, TransferMode_t flags )
+{
+    if	(  IsValidLecodeSlot(dest_slot)
+	&& IsValidLecodeSlot(src_slot)
+	&& opt_track_dest
+	&& IsDirectory(opt_track_dest,false)
+	)
+    {
+	flags &= TFMD_M_FLAGS;
+
+	char dest[PATH_MAX], src[PATH_MAX];
+	snprintf( dest, sizeof(dest), "%s/%03x.szs", opt_track_dest, dest_slot );
+	snprintf( src,  sizeof(src),  "%s/%03x.szs", opt_track_dest, src_slot  );
+
+	if (!TransferFile(log,dest,src,TFMD_LINK|flags,0666))
+	{
+	    snprintf( dest, sizeof(dest), "%s/%03x_d.szs", opt_track_dest, dest_slot );
+	    snprintf( src,  sizeof(src),  "%s/%03x_d.szs", opt_track_dest, src_slot  );
+	    TransferFile(log,dest,src,TFMD_LINK|flags,0666);
 	}
     }
 }
@@ -2674,7 +2973,7 @@ const ctcode_t * LoadLEFile ( uint le_phase )
     {
 	PRINT("le=%d, ctm=%d[%s]\n",
 			le_phase, ct_mode, GetCtModeNameBMG(ct_mode,true) );
-	if ( logging > 1 )
+	if ( logging >= 2 )
 	    fprintf(stdlog,"Load LE definition (%s)\n",
 			GetCtModeNameBMG(ct_mode,true) );
 
@@ -2731,8 +3030,8 @@ enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode )
 
     if ( prop && music && flags )
     {
-	const uint max	= ana->max_slot < LE_FIRST_LOWER_CT_SLOT
-			? ana->max_slot : LE_FIRST_LOWER_CT_SLOT;
+	const uint max	= ana->max_slot < LE_FIRST_CT_SLOT
+			? ana->max_slot : LE_FIRST_CT_SLOT;
 	uint tid;
 	for ( tid = 0; tid < max; tid++ )
 	{
@@ -2754,7 +3053,7 @@ enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode )
     {
 	uint cup_idx, max = ctcode->n_racing_cups;
 	if ( max > ana->max_cup_track )
-	     max = ana->max_cup_track ;
+	     max = ana->max_cup_track;
 
 	for ( cup_idx = 0; cup_idx < max; cup_idx++, cup++ )
 	{
@@ -2832,6 +3131,9 @@ enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode )
 
     //--- copy/move/link track files
 
+    LogFile_t log0 = { .log = stdlog };
+    LogFile_t *log = logging >= 3 ? &log0 : 0;
+
     char buf[500];
     const bmg_item_t * bi = ctcode->track_file.item;
     const bmg_item_t * bi_end = bi + ctcode->track_file.item_used;
@@ -2839,7 +3141,7 @@ enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode )
     {
 	PrintString16BMG( buf, sizeof(buf), bi->text, bi->len,
 					BMG_UTF8_MAX, 0, true );
-	CopyTrackFile(bi->mid - ctcode->ctb.track_name1.beg,buf);
+	TransferTrackFile(log,bi->mid - ctcode->ctb.track_name1.beg,buf,0);
     }
 
     CalculateStatsLE(ana);
@@ -2863,7 +3165,7 @@ bool DefineAliasLE ( le_analyse_t * ana, uint slot, uint alias )
     for(;;)
     {
 	if ( alias >= ana->n_slot
-		|| alias >= MKW_ARENA_BEG && alias < LE_FIRST_LOWER_CT_SLOT )
+		|| alias >= MKW_ARENA_BEG && alias < LE_FIRST_CT_SLOT )
 	{
 	    printf("ALIAS: Invalid alias: %x = %x\n",slot,alias);
 	    return false;
@@ -3040,7 +3342,6 @@ static enumError ScanTextLPAR_CHAT
 )
 {
     PRINT(">> ScanTextLPAR_CHAT(pass=%u)\n",is_pass2+1);
-    // [[2do]] ???
 
 
     //--- setup data
@@ -3356,7 +3657,7 @@ enumError ScanTextLPAR
 		    break;
 
 		default:
-		    // ignore all other section without any warnings
+		    // ignore all other sections without any warnings
 		    break;
 	    }
 

@@ -217,6 +217,11 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" --width is set."
     },
 
+    {	OPT_NO_PAGER, false, false, false, true, false, 0, "no-pager",
+	0,
+	"Forbid the internal usage of a pager."
+    },
+
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
 	"Be quiet and print only error messages. Multiple usage is possible."
@@ -232,7 +237,14 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
 	0,
-	"This debug option enables the logging of internal lists and maps."
+	"This debug option enables the logging of internal lists and maps. Set"
+	" it up to three times to be more verbose.\n"
+    },
+
+    {	OPT_TIMING, false, false, false, false, false, 0, "timing",
+	0,
+	"Activate the timing of some operations. Logging level 3 activates"
+	" them too.\n"
     },
 
     {	OPT_WARN, false, false, false, false, false, 'W', "warn",
@@ -403,7 +415,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 50
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 52
 
 };
 
@@ -504,6 +516,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_HELP,		"?",		0,		0 },
     { CMD_CONFIG,	"CONFIG",	0,		0 },
     { CMD_ARGTEST,	"ARGTEST",	0,		0 },
+    { CMD_EXPAND,	"EXPAND",	0,		0 },
     { CMD_TEST,		"TEST",		0,		0 },
     { CMD_COLORS,	"COLORS",	0,		0 },
     { CMD_ERROR,	"ERROR",	"ERR",		0 },
@@ -540,9 +553,12 @@ static const struct option OptionLong[] =
 	{ "width",		1, 0, GO_WIDTH },
 	{ "max-width",		1, 0, GO_MAX_WIDTH },
 	 { "maxwidth",		1, 0, GO_MAX_WIDTH },
+	{ "no-pager",		0, 0, GO_NO_PAGER },
+	 { "nopager",		0, 0, GO_NO_PAGER },
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
+	{ "timing",		0, 0, GO_TIMING },
 	{ "warn",		1, 0, 'W' },
 	{ "de",			0, 0, GO_DE },
 	{ "colors",		2, 0, GO_COLORS },
@@ -658,26 +674,28 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x083   */	OPT_COMPATIBLE,
 	/* 0x084   */	OPT_WIDTH,
 	/* 0x085   */	OPT_MAX_WIDTH,
-	/* 0x086   */	OPT_DE,
-	/* 0x087   */	OPT_COLORS,
-	/* 0x088   */	OPT_NO_COLORS,
-	/* 0x089   */	OPT_CT_CODE,
-	/* 0x08a   */	OPT_LE_CODE,
-	/* 0x08b   */	OPT_CHDIR,
-	/* 0x08c   */	OPT_ROUND,
-	/* 0x08d   */	OPT_NO_ECHO,
-	/* 0x08e   */	OPT_PAT,
-	/* 0x08f   */	OPT_UTF_8,
-	/* 0x090   */	OPT_NO_UTF_8,
-	/* 0x091   */	OPT_FORCE,
-	/* 0x092   */	OPT_REPAIR_MAGICS,
-	/* 0x093   */	OPT_OLD,
-	/* 0x094   */	OPT_STD,
-	/* 0x095   */	OPT_NEW,
-	/* 0x096   */	OPT_EXTRACT,
-	/* 0x097   */	OPT_NUMBER,
-	/* 0x098   */	OPT_SECTIONS,
-	/* 0x099   */	 0,0,0,0, 0,0,0,
+	/* 0x086   */	OPT_NO_PAGER,
+	/* 0x087   */	OPT_TIMING,
+	/* 0x088   */	OPT_DE,
+	/* 0x089   */	OPT_COLORS,
+	/* 0x08a   */	OPT_NO_COLORS,
+	/* 0x08b   */	OPT_CT_CODE,
+	/* 0x08c   */	OPT_LE_CODE,
+	/* 0x08d   */	OPT_CHDIR,
+	/* 0x08e   */	OPT_ROUND,
+	/* 0x08f   */	OPT_NO_ECHO,
+	/* 0x090   */	OPT_PAT,
+	/* 0x091   */	OPT_UTF_8,
+	/* 0x092   */	OPT_NO_UTF_8,
+	/* 0x093   */	OPT_FORCE,
+	/* 0x094   */	OPT_REPAIR_MAGICS,
+	/* 0x095   */	OPT_OLD,
+	/* 0x096   */	OPT_STD,
+	/* 0x097   */	OPT_NEW,
+	/* 0x098   */	OPT_EXTRACT,
+	/* 0x099   */	OPT_NUMBER,
+	/* 0x09a   */	OPT_SECTIONS,
+	/* 0x09b   */	 0,0,0,0, 0,
 	/* 0x0a0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0b0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -715,67 +733,72 @@ static u8 option_allowed_cmd_ARGTEST[18] = // cmd #4
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1
 };
 
-static u8 option_allowed_cmd_TEST[18] = // cmd #5
+static u8 option_allowed_cmd_EXPAND[18] = // cmd #5
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1
 };
 
-static u8 option_allowed_cmd_COLORS[18] = // cmd #6
+static u8 option_allowed_cmd_TEST[18] = // cmd #6
+{
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1
+};
+
+static u8 option_allowed_cmd_COLORS[18] = // cmd #7
 {
     0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_ERROR[18] = // cmd #7
+static u8 option_allowed_cmd_ERROR[18] = // cmd #8
 {
     0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,1
 };
 
-static u8 option_allowed_cmd_FILETYPE[18] = // cmd #8
+static u8 option_allowed_cmd_FILETYPE[18] = // cmd #9
 {
     0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[18] = // cmd #9
+static u8 option_allowed_cmd_FILEATTRIB[18] = // cmd #10
 {
     0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_SYMBOLS[18] = // cmd #10
+static u8 option_allowed_cmd_SYMBOLS[18] = // cmd #11
 {
     0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_FUNCTIONS[18] = // cmd #11
+static u8 option_allowed_cmd_FUNCTIONS[18] = // cmd #12
 {
     0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_CALCULATE[18] = // cmd #12
+static u8 option_allowed_cmd_CALCULATE[18] = // cmd #13
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_FLOAT[18] = // cmd #13
+static u8 option_allowed_cmd_FLOAT[18] = // cmd #14
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_EXPORT[18] = // cmd #14
+static u8 option_allowed_cmd_EXPORT[18] = // cmd #15
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_CAT[18] = // cmd #15
+static u8 option_allowed_cmd_CAT[18] = // cmd #16
 {
     0,0,0,1,1, 0,1,1,0,0,  0,0,0,0,0, 0,1,0
 };
 
-static u8 option_allowed_cmd_DECODE[18] = // cmd #16
+static u8 option_allowed_cmd_DECODE[18] = // cmd #17
 {
     0,0,0,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,1,0
 };
 
-static u8 option_allowed_cmd_ENCODE[18] = // cmd #17
+static u8 option_allowed_cmd_ENCODE[18] = // cmd #18
 {
     0,0,0,0,0, 0,1,1,1,1,  1,1,1,1,1, 1,1,0
 };
@@ -796,9 +819,11 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_COMPATIBLE,
 	OptionInfo + OPT_WIDTH,
 	OptionInfo + OPT_MAX_WIDTH,
+	OptionInfo + OPT_NO_PAGER,
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
+	OptionInfo + OPT_TIMING,
 	OptionInfo + OPT_WARN,
 	OptionInfo + OPT_DE,
 	OptionInfo + OPT_COLORS,
@@ -846,6 +871,12 @@ static const InfoOption_t * option_tab_cmd_CONFIG[] =
 };
 
 static const InfoOption_t * option_tab_cmd_ARGTEST[] =
+{
+
+	0
+};
+
+static const InfoOption_t * option_tab_cmd_EXPAND[] =
 {
 
 	0
@@ -1000,7 +1031,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wpatt [option]... command [option|parameter|file]...",
 	"Wiimms PAT Tool : Decode raw PAT and encode text PAT files.",
 	0,
-	24,
+	26,
 	option_tab_tool,
 	0
     },
@@ -1066,11 +1097,30 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wpatt ARGTEST ...",
 	"This debug command accepts all kinds of parameters and prints one"
-	" line for each parameter.",
+	" line for each parameter. All tools know the ARGTEST command.",
 	0,
 	0,
 	option_tab_cmd_ARGTEST,
 	option_allowed_cmd_ARGTEST
+    },
+
+    {	CMD_EXPAND,
+	false,
+	false,
+	false,
+	"EXPAND",
+	0,
+	"wpatt EXPAND ...",
+	"This debug command accepts (like ARGTEST) all kinds of parameters and"
+	" prints one line for each parameter. After that, the parameter is"
+	" treated as a filename with wildcards and all matching files are"
+	" searched. The special parameters '+h' and '/h' enable or disable the"
+	" search for hidden directories and files (files beginning with a"
+	" point). All tools know the EXPAND command.",
+	0,
+	0,
+	option_tab_cmd_EXPAND,
+	option_allowed_cmd_EXPAND
     },
 
     {	CMD_TEST,
@@ -1112,7 +1162,8 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"ERR",
 	"wpatt ERROR [error_code]",
 	"Translate an exit code to a message name. If no exit code is entered,"
-	" print a table with all error messages.",
+	" print a table with all error messages. All tools know the ERROR"
+	" command.",
 	0,
 	4,
 	option_tab_cmd_ERROR,
@@ -1127,7 +1178,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"FT",
 	"wpatt FILETYPE file...",
 	"Scan the header of the entered files and print file type and path for"
-	" each file as list.",
+	" each file as list. All tools know the FILETYPE command.",
 	0,
 	2,
 	option_tab_cmd_FILETYPE,
@@ -1144,7 +1195,8 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Print a table with attributes for all known file types. If at least"
 	" one keyword is entered, only matching file types are printed. A"
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the"
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT').",
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the"
+	" FILEATTRIB command.",
 	0,
 	1,
 	option_tab_cmd_FILEATTRIB,
@@ -1189,7 +1241,8 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"CALCULATE",
 	0,
 	"wpatt CALCULATE expression...",
-	"Calculate each expression and print the result to standard output.",
+	"Calculate each expression and print the result to standard output."
+	" Many tools know the CALCULATE command.",
 	0,
 	1,
 	option_tab_cmd_CALCULATE,

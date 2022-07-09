@@ -1197,9 +1197,11 @@ ccp GetEncodingName ( EncodeMode_t em )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint GetEscapedSize
+uint GetEscapeLen
 (
-    // returns the needed buffer size for PrintEscapedString()
+    // returns the extra size needed for escapes.
+    // Add 'src_len' to get the escaped string size.
+    // Add 'additionally 4 to get a good buffer size.
 
     ccp		source,		// NULL or string to print
     int		src_len,	// length of string. if -1, str is null terminated
@@ -1208,14 +1210,15 @@ uint GetEscapedSize
 )
 {
     const CharMode_t utf8	= char_mode & CHMD_UTF8;
-    const CharMode_t allow_e	= char_mode & CHMD_ESC;
+    const int esc_size		= char_mode & CHMD_ESC  ? 1 : 3;
+    const int pipe_size		= char_mode & CHMD_PIPE ? 1 : 0;
 
     if ( !source || !*source )
-	return 1;
+	return 0;
     ccp str = source;
     ccp end = src_len < 0 ? 0 : str + src_len;
 
-    uint size = 4; // +4 for escapes at end; +1 for NULL terminator
+    uint size = 0;
     while ( !end || str < end )
     {
 	const u8 ch = (u8)*str++;
@@ -1224,7 +1227,7 @@ uint GetEscapedSize
 	    case 0:
 		if (!end)
 		    return size;
-		size += 4;
+		size += 3;
 		break;
 
 	    case '\\':
@@ -1235,20 +1238,22 @@ uint GetEscapedSize
 	    case '\r':
 	    case '\t':
 	    case '\v':
-		size += 2;
+		size++;
 		break;
 
 	    case '\033':
-		size += allow_e ? 2 : 4;
+		size += esc_size;
+		break;
+
+	    case '|':
+		size += pipe_size;
 		break;
 
 	    default:
 		if ( ch == quote )
-		    size += 2;
-		else if ( ch < ' ' || !utf8 && (ch&0x7f) < ' ' || (ch&0x7f) == 0x7f )
-		    size += 4;
-		else
 		    size++;
+		else if ( ch < ' ' || !utf8 && (ch&0x7f) < ' ' || (ch&0x7f) == 0x7f )
+		    size += 3;
 	}
     }
     return size;
@@ -1269,15 +1274,16 @@ char * PrintEscapedString
     uint	*dest_len	// not NULL: Store length of result here
 )
 {
-    /////////////////////////////////////////////////////////
-    /////  Update GetEscapedSize() on modifications!!   /////
-    /////////////////////////////////////////////////////////
+    ///////////////////////////////////////////////////////
+    /////  Update GetEscapeLen() on modifications!!   /////
+    ///////////////////////////////////////////////////////
 
     DASSERT(buf);
     DASSERT(buf_size>=10);
 
     const CharMode_t utf8	= char_mode & CHMD_UTF8;
     const CharMode_t allow_e	= char_mode & CHMD_ESC;
+    const CharMode_t esc_pipe	= char_mode & CHMD_PIPE;
 
     char *dest = buf;
     char *dest_end = dest + buf_size - 4;
@@ -1325,6 +1331,16 @@ char * PrintEscapedString
 		}
 		break;
 
+	    case '|':
+		if (esc_pipe)
+		{
+		    *dest++ = '\\';
+		    *dest++ = '!';
+		}
+		else
+		    *dest++ = '|';
+		break;
+
 	    default:
 		if ( ch == quote )
 		{
@@ -1360,7 +1376,7 @@ uint ScanEscapedString
     ccp		source,		// string to scan
     int		len,		// length of string. if -1, str is null terminated
     bool	utf8,		// true: source and output is UTF-8
-    int		quote,		// 0:none, -1:auto, >0: quotation char
+    int		quote,		// -1:auto, 0:none, >0: quotation char
     uint	*scanned_len	// not NULL: Store number of scanned 'source' bytes here
 )
 {
@@ -1380,6 +1396,8 @@ uint ScanEscapedString
 	quote = *src++;
 	have_quote = true;
     }
+    else if ( have_quote && *src == quote )
+	src++;
 
     while ( dest < dest_end && src < src_end )
     {
@@ -1947,7 +1965,7 @@ mem_t DecodeJSONCirc
 
     ccp		source,		// NULL or string to decode
     int		source_len,	// length of 'source'. If -1, str is NULL terminated
-    int		quote		// 0:none, -1:auto, >0: quotation char
+    int		quote		// -1:auto, 0:none, >0: quotation char
 )
 {
     char buf[CIRC_BUF_MAX_ALLOC+10];
@@ -1962,6 +1980,160 @@ mem_t DecodeJSONCirc
     }
     return mem;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[hex]]
+
+uint EncodeHex
+(
+    // returns the number of valid bytes in 'buf'. Result is NULL-terminated.
+
+    char	*buf,			// valid destination buffer
+    uint	buf_size,		// size of 'buf', >2 and 2 bytes longer than needed
+    const void	*source,		// NULL or data to encode
+    int		source_len,		// length of 'source'; if <0: use strlen(source)
+    ccp		digits			// digits to use, eg. LoDigits[] (=fallback) or HiDigits[]
+)
+{
+    DASSERT(buf);
+    DASSERT(buf_size>2);
+
+    if (!digits)
+	digits = LoDigits;
+
+    char *dest = buf;
+    char *dest_end = dest + buf_size - 1;
+
+    if (!source)
+	source = "";
+    ccp str = source;
+    ccp end = str + ( source_len < 0 ? strlen(str) : source_len );
+
+    while ( dest < dest_end && str < end )
+    {
+	const u8 ch = (u8)*str++;
+	*dest++ = digits[ch>>4];
+	*dest++ = digits[ch&15];
+    }
+    *dest = 0;
+    return dest - buf;
+}
+
+//-----------------------------------------------------------------------------
+// [[hex]]
+
+mem_t EncodeHexCirc
+(
+    // Returns a buffer alloced by GetCircBuf()
+    // with valid pointer and null terminated.
+    // If result is too large (>CIRC_BUF_MAX_ALLOC) then (0,0) is returned.
+
+    const void	*source,		// NULL or data to encode
+    int		source_len,		// length of 'source'; if <0: use strlen(source)
+    ccp		digits			// digits to use, eg. LoDigits[] (=fallback) or HiDigits[]
+)
+{
+    char buf[CIRC_BUF_MAX_ALLOC+10];
+    mem_t mem;
+    mem.len = EncodeHex(buf,sizeof(buf),source,source_len,digits);
+    if ( mem.len < CIRC_BUF_MAX_ALLOC )
+	mem.ptr = CopyCircBuf(buf,mem.len+1);
+    else
+    {
+	mem.ptr = 0;
+	mem.len = 0;
+    }
+    return mem;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// [[hex]]
+
+uint DecodeHex
+(
+    // returns the number of valid bytes in 'buf'
+
+    char	*buf,		// valid destination buffer
+    uint	buf_size,	// size of 'buf', >= 3
+    ccp		source,		// NULL or string to decode
+    int		source_len,	// length of 'source'. If -1, str is NULL terminated
+    int		quote,		// -1:auto, 0:none, >0: quotation char
+    uint	*scanned_len	// not NULL: Store number of scanned 'str' bytes here
+)
+{
+    DASSERT(buf);
+    DASSERT(buf_size>3);
+    DASSERT(source);
+
+    char *dest = buf;
+    char *dest_end = dest + buf_size - 1;
+
+    ccp src = source;
+    ccp src_end = src + ( source_len < 0 ? strlen(src) : source_len );
+
+    bool have_quote = quote > 0;
+    if ( quote == -1 && src < src_end && ( *src == '"' || *src == '\'' ))
+    {
+	quote = *src++;
+	have_quote = true;
+    }
+
+    while ( dest < dest_end && src < src_end )
+    {
+	u8 hi = TableNumbers[(u8)*src];
+	if ( hi >= 16 )
+	    break;
+	hi <<= 4;
+
+	u8 lo = ++src < src_end ? TableNumbers[(u8)*src] : 0;
+	if ( lo >= 16 )
+	{
+	    *dest++ = hi;
+	    break;
+	}
+	*dest++ = hi | lo;
+	src++;
+    }
+
+    if (scanned_len)
+    {
+	if ( have_quote && src < src_end && *src == quote )
+	    src++;
+	*scanned_len = src - source;
+    }
+
+    *dest = 0;
+    return dest - buf;
+}
+
+//-----------------------------------------------------------------------------
+// [[hex]]
+
+mem_t DecodeHexCirc
+(
+    // Returns a buffer alloced by GetCircBuf()
+    // with valid pointer and null terminated.
+    // If result is too large (>CIRC_BUF_MAX_ALLOC) then (0,0) is returned.
+
+    ccp		source,		// NULL or string to decode
+    int		source_len,	// length of 'source'. If -1, str is NULL terminated
+    int		quote		// -1:auto, 0:none, >0: quotation char
+)
+{
+    char buf[CIRC_BUF_MAX_ALLOC+10];
+    mem_t mem;
+    mem.len = DecodeHex(buf,sizeof(buf),source,source_len,quote,0);
+    if ( mem.len < CIRC_BUF_MAX_ALLOC )
+	mem.ptr = CopyCircBuf(buf,mem.len+1);
+    else
+    {
+	mem.ptr = 0;
+	mem.len = 0;
+    }
+    return mem;
+}
+
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -1996,10 +2168,12 @@ uint DecodeByMode
     switch (emode)
     {
       case ENCODE_STRING:
+      case ENCODE_PIPE:
 	len = ScanEscapedString(buf,buf_size,source,slen,false,-1,scanned_len);
 	break;
 
       case ENCODE_UTF8:
+      case ENCODE_PIPE8:
 	len = ScanEscapedString(buf,buf_size,source,slen,true,-1,scanned_len);
 	break;
 
@@ -2018,6 +2192,10 @@ uint DecodeByMode
 
       case ENCODE_JSON:
 	len = DecodeJSON(buf,buf_size,source,slen,-1,scanned_len);
+	break;
+
+      case ENCODE_HEX:
+	len = DecodeHex(buf,buf_size,source,slen,-1,scanned_len);
 	break;
 
       default:
@@ -2066,6 +2244,8 @@ mem_t DecodeByModeMem
     {
       case ENCODE_STRING:
       case ENCODE_UTF8:
+      case ENCODE_PIPE:
+      case ENCODE_PIPE8:
 	need = slen + 5;
 	break;
 
@@ -2074,6 +2254,10 @@ mem_t DecodeByModeMem
       case ENCODE_BASE64STAR:
       case ENCODE_BASE64XML:
 	need = ( 3*slen ) / 4 + 12;
+	break;
+
+      case ENCODE_HEX:
+	need = (slen+3)/2;
 	break;
 
       //case ENCODE_JSON: // [[json]]
@@ -2215,7 +2399,15 @@ uint EncodeByMode
 	break;
 
       case ENCODE_UTF8:
-	PrintEscapedString(buf,buf_size,source,slen,CHMD__ALL,0,&len);
+	PrintEscapedString(buf,buf_size,source,slen,CHMD__MODERN,0,&len);
+	break;
+
+      case ENCODE_PIPE:
+	PrintEscapedString(buf,buf_size,source,slen,CHMD_IF_REQUIRED|CHMD_PIPE,0,&len);
+	break;
+
+      case ENCODE_PIPE8:
+	PrintEscapedString(buf,buf_size,source,slen,CHMD__MODERN|CHMD_IF_REQUIRED|CHMD_PIPE,0,&len);
 	break;
 
       case ENCODE_BASE64:
@@ -2240,6 +2432,10 @@ uint EncodeByMode
 
       case ENCODE_JSON:
 	len = EncodeJSON(buf,buf_size,source,slen);
+	break;
+
+      case ENCODE_HEX:
+	len = EncodeHex(buf,buf_size,source,slen,0);
 	break;
 
       default:
@@ -2284,6 +2480,8 @@ mem_t EncodeByModeMem
     {
       case ENCODE_STRING:
       case ENCODE_UTF8:
+      case ENCODE_PIPE:
+      case ENCODE_PIPE8:
 	need = slen * 4 + 5;
 	break;
 
@@ -2292,6 +2490,10 @@ mem_t EncodeByModeMem
       case ENCODE_BASE64STAR:
       case ENCODE_BASE64XML:
 	need = ( 4*slen ) / 3 + 10;
+	break;
+
+      case ENCODE_HEX:
+	need = 2*slen + 1;
 	break;
 
       case ENCODE_JSON: // [[json]]
@@ -2330,6 +2532,79 @@ mem_t EncodeByModeMem
 ///////////////		escape/quote strings, alloc space	///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+exmem_t EscapeStringEx
+(
+    // Returns an exmem_t struct. If not quoted (CHMD_IF_REQUIRED) it returns 'src'
+    // Use FreeExMem(&result) to free possible alloced result.
+
+    cvp		src,			// NULL or source
+    int		src_len,		// size of 'src'. If -1: Use strlen(src)
+    cvp		return_if_null,		// return this, if 'src==NULL'
+    cvp		return_if_empty,	// return this, if src is empty (have no chars)
+    CharMode_t	char_mode,		// how to escape (CHMD_*)
+    char	quote,			// quoting character: "  or  '  or  $ (for $'...')
+    bool	try_circ		// use circ-buffer, if result is small enough
+)
+{
+    if (!src)
+	return ExMemByString((char*)return_if_null);
+
+    if ( src_len < 0 )
+	src_len = strlen(src);
+    if (!src_len)
+	return ExMemByString((char*)return_if_empty);
+
+    char quote_char;
+    uint quote_mode;
+    if ( quote == '$' )
+    {
+	quote_mode = 3;
+	quote_char = '\'';
+    }
+    else if (quote)
+    {
+	quote_mode = 2;
+	quote_char = quote;
+    }
+    else
+    {
+	quote_mode = 0;
+	quote_char = '"';
+    }
+
+    uint size = GetEscapeLen(src,src_len,char_mode,quote_char);
+    if ( !size && char_mode & CHMD_IF_REQUIRED )
+	return ExMemByS(src,src_len);
+
+    size += quote_mode + src_len + 4;
+    const bool use_circ = try_circ && size <= CIRC_BUF_MAX_ALLOC;
+    char *buf = use_circ ? GetCircBuf(size) : MALLOC(size);
+
+    uint len;
+    if ( quote_mode == 3 )
+    {
+	PrintEscapedString(buf+2,size-3,src,src_len,char_mode,quote_char,&len);
+	buf[0] = '$';
+	buf[1] = buf[len+2] = quote_char;
+	buf[len+3] = 0;
+
+    }
+    else if ( quote_mode == 2 )
+    {
+	PrintEscapedString(buf+1,size-2,src,src_len,char_mode,quote_char,&len);
+	buf[0] = buf[len+1] = quote_char;
+	buf[len+2] = 0;
+    }
+    else
+	PrintEscapedString(buf,size,src,src_len,char_mode,quote_char,&len);
+
+    exmem_t res = { .data={ buf, len+quote_mode },
+			.is_circ_buf = use_circ, .is_alloced = !use_circ };
+    return res;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
 char * EscapeString
 (
     // Returns a pointer.
@@ -2353,6 +2628,14 @@ char * EscapeString
     if (!src_len)
 	return (char*)return_if_empty;
 
+ #if 1
+    exmem_t res = EscapeStringEx(src,src_len,return_if_null,return_if_empty,char_mode,quote,try_circ);
+    if (dest_len)
+	*dest_len = res.data.len;
+    return res.is_circ_buf || res.is_alloced
+	? (char*)res.data.ptr
+	: MEMDUP(res.data.ptr,res.data.len);
+ #else // [[2do]] [[obsolete]]
     char quote_char;
     uint quote_mode;
     if ( quote == '$' )
@@ -2371,7 +2654,18 @@ char * EscapeString
 	quote_char = '"';
     }
 
-    uint size = GetEscapedSize(src,src_len,char_mode,quote_char) + quote_mode;
+    uint size = GetEscapeLen(src,src_len,char_mode,quote_char);
+    if ( !size && char_mode & CHMD_IF_REQUIRED )
+    {
+	char *buf = try_circ && size <= CIRC_BUF_MAX_ALLOC ? GetCircBuf(src_len+1) : MALLOC(src_len+1);
+	memcpy(buf,src,src_len);
+	buf[src_len] = 0;
+	if (dest_len)
+	    *dest_len = src_len;
+	return buf;
+    }
+
+    size += quote_mode + src_len + 4;
     char *buf = try_circ && size <= CIRC_BUF_MAX_ALLOC ? GetCircBuf(size) : MALLOC(size);
 
     uint len;
@@ -2395,6 +2689,7 @@ char * EscapeString
     if (dest_len)
 	*dest_len = len + quote_mode;
     return buf;
+ #endif
 };
 
 //
@@ -6630,6 +6925,7 @@ char * ScanEscape
 	case 'r':  code = '\r'; break;
 	case 't':  code = '\t'; break;
 	case 'v':  code = '\v'; break;
+	case '!':  code = '|'; break;
 
 	case 'x':
 	    src = ScanNumber(&code,src,src_end,16,2);
@@ -8223,7 +8519,8 @@ char * ScanSizeRange
     {
 	have_d1	=  *source == ':' && opt & RAOPT_COLON
 		|| *source == '#' && opt & RAOPT_HASH
-		|| *source == ',' && opt & RAOPT_COMMA;
+		|| *source == ',' && opt & RAOPT_COMMA
+		|| *source == '-' && (opt & (RAOPT_COMMA|RAOPT_NEG)) == RAOPT_COMMA;
     }
 
     char *end = have_d1 ? (char*)source
@@ -8242,7 +8539,7 @@ char * ScanSizeRange
 				|| *end == '-' && opt & RAOPT_MINUS;
 	const bool have_size	=  *end == '#' && opt & RAOPT_HASH
 				|| *end == ',' && opt & RAOPT_COMMA;
-
+	PRINT0("have_d1=%d, have_range=%d, have_size=%d, %.0g:%.0g |%s|\n",have_d1,have_range,have_size,d1,d2,end);
 	if ( have_range || have_size )
 	{
 	    if ( d1 < 0 && max_value > 0 && opt & RAOPT_NEG )
@@ -9484,6 +9781,40 @@ float double2float ( double d )
 {
     // reduce precision
     return d;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+u64 MulDivU64 ( u64 factor1, u64 factor2, u64 divisor )
+{
+ #if HAVE_INT128
+
+    return (u128)factor1 * (u128)factor2 / divisor;
+
+ #else
+
+    if ( !factor1 || !factor2 )
+	return 0;
+
+    const double product = (double)factor1 * (double)factor2;
+    return product < 0xfffffffffffffff0
+	? factor1 * factor2 / divisor
+	: (u64) trunc( product / divisor );
+
+ #endif
+}
+
+//-----------------------------------------------------------------------------
+
+s64 MulDivS64 ( s64 factor1, s64 factor2, s64 divisor )
+{
+    bool neg = false;
+    if ( factor1 < 0 ) { factor1 = -factor1; neg = !neg; }
+    if ( factor2 < 0 ) { factor2 = -factor2; neg = !neg; }
+    if ( divisor < 0 ) { divisor = -divisor; neg = !neg; }
+    s64 r = MulDivU64(factor1,factor2,divisor);
+    return neg ? -r : r;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

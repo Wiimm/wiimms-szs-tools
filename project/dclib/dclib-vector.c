@@ -1059,9 +1059,9 @@ u64 N_MatrixD_inverse = 0;  // total number of inverse transformations
 void InitializeMatrixD ( MatrixD_t * mat )
 {
     DASSERT(mat);
-    const uint seqnum = mat->valid ? mat->sequence_number : 0;
+//    const uint seqnum = mat->valid ? mat->sequence_number : 0;
     memset(mat,0,sizeof(*mat));
-    mat->sequence_number = seqnum;
+//    mat->sequence_number = seqnum;
 
     mat->scale.x	= mat->scale.y		= mat->scale.z		= 1.0;
     mat->scale_origin.x	= mat->scale_origin.y	= mat->scale_origin.z	= 0.0;

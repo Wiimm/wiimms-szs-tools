@@ -450,7 +450,7 @@ enumError ScanTextGEOHIT
 		    break;
 
 		default:
-		    // ignore all other section without any warnings
+		    // ignore all other sections without any warnings
 		    break;
 	    }
 

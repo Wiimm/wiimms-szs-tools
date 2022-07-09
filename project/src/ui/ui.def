@@ -43,7 +43,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wszst ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wszst EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wszst TEST [options]... [ignored]...", \
@@ -59,19 +68,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wszst ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wszst FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wszst FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "BRSUB", "BRSUB", \
 	"wszst BRSUB [file]...", \
@@ -82,16 +93,19 @@
 
 #:def_cmd( "SYMBOLS", "SYMBOLS", \
 	"wszst SYMBOLS", \
-	"Print predefined symbols of text parser to standard output." )
+	"Print predefined symbols of text parser to standard output. Many" \
+	" tools know the SYMBOLS command." )
 
 #:def_cmd( "FUNCTIONS", "FUNCTIONS", \
 	"wszst FUNCTIONS [key]...", \
 	"Print a list with all parser functions. If one or more keys entered," \
-	" then only functions that match at least one key are printed." )
+	" then only functions that match at least one key are printed. Many" \
+	" tools know the FUNCTIONS command." )
 
 #:def_cmd( "CALCULATE", "CALCULATE", \
 	"wszst CALCULATE expression...", \
-	"Calculate each expression and print the result to standard output." )
+	"Calculate each expression and print the result to standard output." \
+	" Many tools know the CALCULATE command." )
 
 #:def_cmd( "MATRIX", "MATRIX", \
 	"wszst MATRIX [patch-option]... [vector]...", \
@@ -252,6 +266,11 @@
 	"wszst ANALYZE [source]...", \
 	"Analyse track files and print results in machine readable format." )
 
+#:def_cmd( "SPLIT", "SPLIT", \
+	"wszst SPLIT [source]...", \
+	"Analyse (file) names and split them into the different parts. Print" \
+	" the results in machine readable format." )
+
 #:def_cmd( "IS_TEXTURE", "IS-TEXTURE|ISTEXTURE", \
 	"wszst IS-TEXTURE --reference reference [source]...", \
 	"Test each source to see if it's a texture hack versus a reference" \
@@ -262,7 +281,7 @@
 	" CAME has been intentionally left out. Section ENPT is only checked" \
 	" if KCL contains a least one face of type force-recalculation." )
 
-#:def_cmd( "DISTRIBUTION", "DISTRIBUTION|DIST", \
+#:def_cmd( "DISTRIBUTION", "DISTRIBUTION|DIS|DISTRIB", \
 	"wszst DISTRIBUTION result source...\n" \
 	"wszst DISTRIBUTION directory [source]...", \
 	"Load each @SOURCE@ (SZS, WBZ, U8 or WU8) and calculate a checksum of" \
@@ -275,7 +294,9 @@
 	" directory, it is used as first source too.\n" \
 	"  If file @RESULT@ exists, it is automatically added as last source" \
 	" to the list of option --source, but only if not already added. On" \
-	" scanning of file @result@, parameters are scanned too." )
+	" scanning of file @result@, parameters are scanned too.\n" \
+	" See »welect DISTRIBUTION« for a new and alternative implementation" \
+	" of this." )
 
 #:def_cmd( "DIFF", "DIFF|CMP", \
 	"wszst DIFF source1 source2\n" \
@@ -537,6 +558,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -550,7 +575,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -591,6 +622,25 @@
 	"[=param]", \
 	"Enable LE-CODE and CT-CODE support. The optional parameter is" \
 	" deprecated and ignored." )
+
+#:def_opt( "LOAD_PREFIX", "load-prefix|loadprefix", "GP", \
+	"file", \
+	"Read in a PREFIX file and replace the internal prefix database with" \
+	" the content. https://ct.wiimm.de/export/prefix is the authoritative" \
+	" source for this." )
+
+#:def_opt( "PLUS", "plus", "CP", \
+	"chars", \
+	"If a name begins with a plus sign, then all characters up to the" \
+	" first space are recognized as a plus prefix. The first part consists" \
+	" of all the plus signs followed by any other characters. The first" \
+	" character of the second part is used to determine the sort value. If" \
+	" the second part is empty, then the last plus sign is used instead.\n" \
+	"  The higher sorting value is now calculated from the number of plus" \
+	" signs in the first part, the more plus signs, the smaller the value." \
+	" The first character from the second part determines the lower value." \
+	" If it is in parameter CHARS then the position determines the value," \
+	" otherwise the ASCII value to which 500 is added." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -1224,7 +1274,7 @@
 	"", \
 	"Print an ID with 8 characters instead of a SHA-1 sum with 40" \
 	" characters. The SHA-1 sum is used to calculate the ID. The ID" \
-	" consists of '0'-'9' and 'a'-'w' (32 characters)." )
+	" consists of '0'-'9' and 'a'-'v' (32 different characters)." )
 
 #:def_opt( "BASE64", "base64", "CO", \
 	"[=mode]", \
@@ -2264,6 +2314,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SIZEOF", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SUBFILE", "DEST", \
 	"", \
 	"" )
@@ -2410,6 +2464,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "TIMING", \
 	"", \
 	"" )
 
@@ -2606,6 +2664,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_L", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_L", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -2796,6 +2858,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LL", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "TIMING", \
 	"", \
 	"" )
 
@@ -2992,6 +3058,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LLL", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LLL", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -3185,6 +3255,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_A", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_A", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -3375,6 +3449,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LA", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "TIMING", \
 	"", \
 	"" )
 
@@ -3582,6 +3660,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -3760,6 +3842,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST_L", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "TIMING", \
 	"", \
 	"" )
 
@@ -3944,6 +4030,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LL", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LL", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -4125,6 +4215,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_A", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_A", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -4303,6 +4397,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST_LA", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "TIMING", \
 	"", \
 	"" )
 
@@ -4495,6 +4593,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -4684,6 +4786,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY_A", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY_A", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -4841,6 +4947,10 @@
 	"" )
 
 #:def_cmd_opt( "DUMP", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "TIMING", \
 	"", \
 	"" )
 
@@ -5017,6 +5127,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SHA1", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SHA1", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -5182,6 +5296,67 @@
 	"" )
 
 #:def_cmd_opt( "ANALYZE", "DEST2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "LOAD_PREFIX", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "PLUS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "SECTIONS", \
+	"", \
+	"Dump info using configuration or section syntax. Use {--var name} as" \
+	" prefix." )
+
+#:def_cmd_opt( "SPLIT", "SH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "BASH", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "JSON", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "PHP", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "MAKEDOC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "VAR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "ARRAY", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "AVAR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "CASE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "DEST", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "DEST2", \
 	"", \
 	"" )
 
@@ -5368,6 +5543,10 @@
 	"" )
 
 #:def_cmd_opt( "DISTRIBUTION", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "TIMING", \
 	"", \
 	"" )
 
@@ -5600,6 +5779,10 @@
 	"" )
 
 #:def_cmd_opt( "CHECK", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "TIMING", \
 	"", \
 	"" )
 
@@ -5941,6 +6124,10 @@
 	"" )
 
 #:def_cmd_opt( "SLOTS", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "TIMING", \
 	"", \
 	"" )
 
@@ -8225,6 +8412,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "TIMING", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "ENCODE_ALL", \
 	"", \
 	"" )
@@ -8587,6 +8778,10 @@
 	"" )
 
 #:def_cmd_opt( "CREATE", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "TIMING", \
 	"", \
 	"" )
 
@@ -11245,7 +11440,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wbmgt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wbmgt EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wbmgt TEST [options]... [ignored]...", \
@@ -11261,19 +11465,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wbmgt ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wbmgt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wbmgt FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "POINTS", "POINTS|PTS", \
 	"wbmgt POINTS [--points=list]", \
@@ -11407,6 +11613,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -11420,7 +11630,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -12516,7 +12732,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wctct ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wctct EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wctct TEST [options]... [ignored]...", \
@@ -12532,19 +12757,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wctct ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wctct FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wctct FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "SYMBOLS", "SYMBOLS", \
 	"wctct SYMBOLS", \
@@ -12559,7 +12786,8 @@
 
 #:def_cmd( "CALCULATE", "CALCULATE", \
 	"wctct CALCULATE expression...", \
-	"Calculate each expression and print the result to standard output." )
+	"Calculate each expression and print the result to standard output." \
+	" Many tools know the CALCULATE command." )
 
 #:def_cmd( "FLOAT", "FLOAT", \
 	"wctct FLOAT number...", \
@@ -12668,6 +12896,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -12681,7 +12913,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -12899,6 +13137,11 @@
 	" files. Keyword @FNAME@ can be appended (separated by a comma) to" \
 	" give filename scanning the highest priority.\n" \
 	">>> THE RESULT MAY BE INVALID OUTPUT FILES! <<<" )
+
+#:def_opt( "CREATE_DISTRIB", "create-distrib|createdistrib", "GP", \
+	"file", \
+	"Create a LE-CODE distribution dump with a track list and more info" \
+	" about the current distribution. Store the dump info a file." )
 
 #:def_opt( "LIST", "list", "C", \
 	"", \
@@ -13909,7 +14152,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wimgt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wimgt EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wimgt TEST [options]... [ignored]...", \
@@ -13925,19 +14177,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wimgt ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wimgt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wimgt FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "LIST", "LIST|LS", \
 	"wimgt LIST [source]...", \
@@ -14030,6 +14284,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -14043,7 +14301,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -14810,7 +15074,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wkclt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wkclt EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wkclt TEST [options]... [ignored]...", \
@@ -14826,19 +15099,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wkclt ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wkclt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wkclt FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "SYMBOLS", "SYMBOLS", \
 	"wkclt SYMBOLS", \
@@ -14853,7 +15128,8 @@
 
 #:def_cmd( "CALCULATE", "CALCULATE", \
 	"wkclt CALCULATE expression...", \
-	"Calculate each expression and print the result to standard output." )
+	"Calculate each expression and print the result to standard output." \
+	" Many tools know the CALCULATE command." )
 
 #:def_cmd( "MATRIX", "MATRIX", \
 	"wkclt MATRIX [patch-option]... [vector]...", \
@@ -15035,6 +15311,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -15048,7 +15328,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -15337,7 +15623,7 @@
 	"", \
 	"Print an ID with 8 characters instead of a SHA-1 sum with 40" \
 	" characters. The SHA-1 sum is used to calculate the ID. The ID" \
-	" consists of '0'-'9' and 'a'-'w' (32 characters)." )
+	" consists of '0'-'9' and 'a'-'v' (32 different characters)." )
 
 #:def_opt( "BASE64", "base64", "CO", \
 	"[=mode]", \
@@ -17322,7 +17608,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wkmpt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wkmpt EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wkmpt TEST [options]... [ignored]...", \
@@ -17338,19 +17633,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wkmpt ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wkmpt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wkmpt FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "SYMBOLS", "SYMBOLS", \
 	"wkmpt SYMBOLS", \
@@ -17365,7 +17662,8 @@
 
 #:def_cmd( "CALCULATE", "CALCULATE", \
 	"wkmpt CALCULATE expression...", \
-	"Calculate each expression and print the result to standard output." )
+	"Calculate each expression and print the result to standard output." \
+	" Many tools know the CALCULATE command." )
 
 #:def_cmd( "MATRIX", "MATRIX", \
 	"wkmpt MATRIX [patch-option]... [vector]...", \
@@ -17542,6 +17840,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -17555,7 +17857,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -19442,7 +19750,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wlect ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wlect EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wlect TEST [options]... [ignored]...", \
@@ -19458,19 +19775,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wlect ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wlect FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wlect FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "SYMBOLS", "SYMBOLS", \
 	"wlect SYMBOLS", \
@@ -19485,7 +19804,8 @@
 
 #:def_cmd( "CALCULATE", "CALCULATE", \
 	"wlect CALCULATE expression...", \
-	"Calculate each expression and print the result to standard output." )
+	"Calculate each expression and print the result to standard output." \
+	" Many tools know the CALCULATE command." )
 
 #:def_cmd( "FLOAT", "FLOAT", \
 	"wlect FLOAT number...", \
@@ -19536,15 +19856,21 @@
 	" standard output if no other destination is defined." )
 
 #:def_cmd( "CREATE", "CREATE|CR", \
-	"wlect CREATE [keyword]", \
-	"Create a file and print it to standard output. The kind of file is" \
-	" defined by KEYWORD. Use command without keywords to get a list of" \
-	" possible keywords.\n" \
-	"  The following keywords are possible: @LEX@ for a LEX text file with" \
-	" all known sections except @TEST@. @LEX+@ for a LEX text file with" \
-	" all known sections including @TEST@. @SET1, CANN, HIPT@ and @TEST@" \
-	" (section names) for a LEX text file with 1 section only. @LPAR@ for" \
-	" an example LE-CODE parameter file." )
+	"wlect CREATE [keyword] ...", \
+	"Create a file and print it to standard output. Options {--dest} and" \
+	" {--DEST} can forc another destination. The kind of file is defined" \
+	" by KEYWORD. The command can create LEX files, a LPAR file or a track" \
+	" listing.\n" \
+	"  Use the command without keyword to get an extended description." )
+
+#:def_cmd( "DISTRIBUTION", "DISTRIBUTION|DIS|DISTRIB", \
+	"wlect DISTRIBUTION [argument]...", \
+	"This command manages data for LE-CODE track distributions. It reads" \
+	" any number of source files with different file types, collects the" \
+	" data and creates any number of files with different file types.\n" \
+	"  Use the command without keyword to get an extended description.\n" \
+	" This command is still under development. Its use is therefore" \
+	" EXPERIMENTAL!" )
 
 #:def_cmd( "CAT", "CAT", \
 	"wlect CAT [source]...", \
@@ -19611,6 +19937,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -19624,7 +19954,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -19665,6 +20001,25 @@
 	"[=param]", \
 	"This option is completely ignored by wlect. It only exists due to" \
 	" compatibility with the other tools." )
+
+#:def_opt( "LOAD_PREFIX", "load-prefix|loadprefix", "GP", \
+	"file", \
+	"Read in a PREFIX file and replace the internal prefix database with" \
+	" the content. https://ct.wiimm.de/export/prefix is the authoritative" \
+	" source for this." )
+
+#:def_opt( "PLUS", "plus", "CP", \
+	"chars", \
+	"If a name begins with a plus sign, then all characters up to the" \
+	" first space are recognized as a plus prefix. The first part consists" \
+	" of all the plus signs followed by any other characters. The first" \
+	" character of the second part is used to determine the sort value. If" \
+	" the second part is empty, then the last plus sign is used instead.\n" \
+	"  The higher sorting value is now calculated from the number of plus" \
+	" signs in the first part, the more plus signs, the smaller the value." \
+	" The first character from the second part determines the lower value." \
+	" If it is in parameter CHARS then the position determines the value," \
+	" otherwise the ASCII value to which 500 is added." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -19792,6 +20147,11 @@
 	" give filename scanning the highest priority.\n" \
 	">>> THE RESULT MAY BE INVALID OUTPUT FILES! <<<" )
 
+#:def_opt( "CREATE_DISTRIB", "create-distrib|createdistrib", "CP", \
+	"file", \
+	"Create a LE-CODE distribution dump with a track list and more info" \
+	" about the current distribution. Store the dump info a file." )
+
 #:def_opt( "LE_DEFINE", "le-define|ledefine", "CP", \
 	"file", \
 	"Use this file as definition file to patch LE-CODE. The file format" \
@@ -19891,6 +20251,15 @@
 	"Define a search directory for all included tracks. Files found in" \
 	" this directory are linked to the directory specified by option" \
 	" {--track-dir}. If linking fails, the file is copied." )
+
+#:def_opt( "SZS_MODE", "szs-mode|szsmode", "CP", \
+	"mode", \
+	"If a track is inserted via the SZS file, then the associated" \
+	" directory is automatically included in the list of search" \
+	" directories for option {--track-dir}. This option now sets the" \
+	" transfer mode. @OFF@ turns this feature off. The values @COPY@," \
+	" @MOVE@, @MOVE1@ and @LINK@ define one of the 4 modes. Default mode" \
+	" is @LINK@." )
 
 #:def_opt( "COMPLETE", "C|complete", "C", \
 	"", \
@@ -20162,6 +20531,10 @@
 	"", \
 	"For LE-CODE binaries: If set, print a track slot usage table." )
 
+#:def_cmd_opt( "DUMP", "CREATE_DISTRIB", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DL", "LE_DEFINE", \
 	"", \
 	"" )
@@ -20215,6 +20588,10 @@
 	"", \
 	"For LE-CODE binaries: If set, print a track slot usage table." )
 
+#:def_cmd_opt( "DL", "CREATE_DISTRIB", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DLL", "LE_DEFINE", \
 	"", \
 	"" )
@@ -20267,6 +20644,10 @@
 #:def_cmd_opt( "DLL", "VERBOSE", \
 	"", \
 	"For LE-CODE binaries: If set, print a track slot usage table." )
+
+#:def_cmd_opt( "DLL", "CREATE_DISTRIB", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "BIN_DIFF", "QUIET", \
 	"", \
@@ -20369,6 +20750,10 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "CREATE_DISTRIB", \
 	"", \
 	"" )
 
@@ -20548,6 +20933,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "LE_DEFINE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "LOAD_BMG", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CREATE", "ENGINE", \
 	"", \
 	"" )
@@ -20573,6 +20966,86 @@
 	"" )
 
 #:def_cmd_opt( "CREATE", "DEBUG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "LOAD_PREFIX", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "PLUS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "TRACK_DIR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "COPY_TRACKS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "MOVE_TRACKS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "MOVE1_TRACKS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "LINK_TRACKS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "SZS_MODE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "NO_HEADER", \
+	"", \
+	"Suppress the syntax information section in LE text files." )
+
+#:def_cmd_opt( "DISTRIBUTION", "BRIEF", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "EXPORT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "DEST", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "DEST2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "ESC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "OVERWRITE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "NUMBER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "REMOVE_DEST", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "UPDATE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "PRESERVE", \
 	"", \
 	"" )
 
@@ -20737,7 +21210,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wmdlt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wmdlt EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wmdlt TEST [options]... [ignored]...", \
@@ -20753,19 +21235,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wmdlt ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wmdlt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wmdlt FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "SYMBOLS", "SYMBOLS", \
 	"wmdlt SYMBOLS", \
@@ -20780,7 +21264,8 @@
 
 #:def_cmd( "CALCULATE", "CALCULATE", \
 	"wmdlt CALCULATE expression...", \
-	"Calculate each expression and print the result to standard output." )
+	"Calculate each expression and print the result to standard output." \
+	" Many tools know the CALCULATE command." )
 
 #:def_cmd( "MATRIX", "MATRIX", \
 	"wmdlt MATRIX [patch-option]... [vector]...", \
@@ -20882,6 +21367,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -20895,7 +21384,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -22025,7 +22520,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wpatt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wpatt EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wpatt TEST [options]... [ignored]...", \
@@ -22041,19 +22545,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wpatt ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wpatt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wpatt FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "SYMBOLS", "SYMBOLS", \
 	"wpatt SYMBOLS", \
@@ -22068,7 +22574,8 @@
 
 #:def_cmd( "CALCULATE", "CALCULATE", \
 	"wpatt CALCULATE expression...", \
-	"Calculate each expression and print the result to standard output." )
+	"Calculate each expression and print the result to standard output." \
+	" Many tools know the CALCULATE command." )
 
 #:def_cmd( "FLOAT", "FLOAT", \
 	"wpatt FLOAT number...", \
@@ -22147,6 +22654,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -22160,7 +22671,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -22616,7 +23133,16 @@
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wstrt ARGTEST ...", \
 	"This debug command accepts all kinds of parameters and prints one" \
-	" line for each parameter." )
+	" line for each parameter. All tools know the ARGTEST command." )
+
+#:def_cmd( "EXPAND", "EXPAND", \
+	"wstrt EXPAND ...", \
+	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
+	" prints one line for each parameter. After that, the parameter is" \
+	" treated as a filename with wildcards and all matching files are" \
+	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" search for hidden directories and files (files beginning with a" \
+	" point). All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wstrt TEST [options]... [ignored]...", \
@@ -22632,19 +23158,21 @@
 #:def_cmd( "ERROR", "ERROR|ERR", \
 	"wstrt ERROR [error_code]", \
 	"Translate an exit code to a message name. If no exit code is entered," \
-	" print a table with all error messages." )
+	" print a table with all error messages. All tools know the ERROR" \
+	" command." )
 
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wstrt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list." )
+	" each file as list. All tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wstrt FILEATTRIB [keyword]...", \
 	"Print a table with attributes for all known file types. If at least" \
 	" one keyword is entered, only matching file types are printed. A" \
 	" keyword is either a file type (like 'BRRES' or 'BMG') or one of the" \
-	" printed keywords (like 'ARCHIVE' or 'EXTRACT')." )
+	" printed keywords (like 'ARCHIVE' or 'EXTRACT'). All tools know the" \
+	" FILEATTRIB command." )
 
 #:def_cmd( "DUMP", "DUMP", \
 	"wstrt DUMP file...", \
@@ -22772,6 +23300,10 @@
 	" some other messages. The default is 120. This option is ignored if" \
 	" --width is set." )
 
+#:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
+	"", \
+	"Forbid the internal usage of a pager." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple usage is possible." \
@@ -22785,7 +23317,13 @@
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
-	"This debug option enables the logging of internal lists and maps." )
+	"This debug option enables the logging of internal lists and maps. Set" \
+	" it up to three times to be more verbose.\n" )
+
+#:def_opt( "TIMING", "timing", "GM", \
+	"", \
+	"Activate the timing of some operations. Logging level 3 activates" \
+	" them too.\n" )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -23411,6 +23949,10 @@
 	"" )
 
 #:def_cmd_opt( "HEXDUMP", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HEXDUMP", "TIMING", \
 	"", \
 	"" )
 

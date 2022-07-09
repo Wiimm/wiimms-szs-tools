@@ -819,6 +819,11 @@ static inline s64 double2int64 ( double d ) { return (s64) trunc (d+0.5); }
 
 ///////////////////////////////////////////////////////////////////////////////
 
+u64 MulDivU64 ( u64 factor1, u64 factor2, u64 divisor );
+s64 MulDivS64 ( s64 factor1, s64 factor2, s64 divisor );
+
+///////////////////////////////////////////////////////////////////////////////
+
 // all values are multiple of 26*26*100 = 67600 = 0x00010810
 #define GOOD_MAX_NICE4_5      67600  //     1 * 67600
 #define GOOD_MAX_NICE4_6     946400  //    14 * 67600

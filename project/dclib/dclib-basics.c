@@ -418,11 +418,13 @@ char * StringCopyE ( char * buf, ccp buf_end, ccp src )
 
     DASSERT(buf);
     DASSERT(buf<buf_end);
-    buf_end--;
 
     if (src)
+    {
+	buf_end--;
 	while( buf < buf_end && *src )
 	    *buf++ = *src++;
+    }
 
     *buf = 0;
     return buf;
@@ -432,12 +434,22 @@ char * StringCopyE ( char * buf, ccp buf_end, ccp src )
 
 char * StringCopyS ( char * buf, size_t buf_size, ccp src )
 {
-    return StringCopyE(buf,buf+buf_size,src);
+    DASSERT(buf);
+    if ( buf_size <= 0 )
+	return buf;
+
+    DASSERT(buf_size>=0);
+
+    if (src)
+	while( --buf_size > 0 && *src )
+	    *buf++ = *src++;
+    *buf = 0;
+    return buf;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-char * StringCopyEM ( char * buf, ccp buf_end, ccp src, size_t max_copy )
+char * StringCopyEM ( char * buf, ccp buf_end, ccp src, ssize_t max_copy )
 {
     // RESULT: end of copied string pointing to NULL
     // 'src' may be a NULL pointer.
@@ -458,7 +470,7 @@ char * StringCopyEM ( char * buf, ccp buf_end, ccp src, size_t max_copy )
 
 //-----------------------------------------------------------------------------
 
-char * StringCopySM ( char * buf, size_t buf_size, ccp src, size_t max_copy )
+char * StringCopySM ( char * buf, size_t buf_size, ccp src, ssize_t max_copy )
 {
     return StringCopyEM(buf,buf+buf_size,src,max_copy);
 }
@@ -491,6 +503,47 @@ char * StringCat2E ( char * buf, ccp buf_end, ccp src1, ccp src2 )
 char * StringCat2S ( char * buf, size_t buf_size, ccp src1, ccp src2 )
 {
     return StringCat2E(buf,buf+buf_size,src1,src2);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+char * StringCatSep2E ( char * buf, ccp buf_end, ccp sep, ccp src1, ccp src2 )
+{
+    // RESULT: end of copied string pointing to NULL
+    // 'src*' may be a NULL pointer.
+
+    DASSERT(buf);
+    DASSERT(buf<buf_end);
+
+    if ( !sep || !*sep )
+	return StringCat2E(buf,buf_end,src1,src2);
+
+    char *buf0 = buf;
+    buf_end--;
+
+    if (src1)
+	while( buf < buf_end && *src1 )
+	    *buf++ = *src1++;
+
+    if (src2)
+    {
+	if ( buf > buf0 )
+	    while ( buf < buf_end && *sep )
+		*buf++ = *sep++;
+
+	while( buf < buf_end && *src2 )
+	    *buf++ = *src2++;
+    }
+
+    *buf = 0;
+    return buf;
+}
+
+//-----------------------------------------------------------------------------
+
+char * StringCatSep2S ( char * buf, size_t buf_size, ccp sep, ccp src1, ccp src2 )
+{
+    return StringCatSep2E(buf,buf+buf_size,sep,src1,src2);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -529,6 +582,62 @@ char * StringCat3S ( char * buf, size_t buf_size, ccp src1, ccp src2, ccp src3 )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+char * StringCatSep3E
+	( char * buf, ccp buf_end, ccp sep, ccp src1, ccp src2, ccp src3 )
+{
+    // RESULT: end of copied string pointing to NULL
+    // 'src*' may be a NULL pointer.
+
+    DASSERT(buf);
+    DASSERT(buf<buf_end);
+
+    if ( !sep || !*sep )
+	return StringCat3E(buf,buf_end,src1,src2,src3);
+
+    buf_end--;
+    char *buf0 = buf;
+
+    if (src1)
+	while( buf < buf_end && *src1 )
+	    *buf++ = *src1++;
+
+    if (src2)
+    {
+	if ( buf > buf0 )
+	{
+	    ccp ptr = sep;
+	    while ( buf < buf_end && *ptr )
+		*buf++ = *ptr++;
+	}
+
+	while( buf < buf_end && *src2 )
+	    *buf++ = *src2++;
+    }
+
+    if (src3)
+    {
+	if ( buf > buf0 )
+	    while ( buf < buf_end && *sep )
+		*buf++ = *sep++;
+
+	while( buf < buf_end && *src3 )
+	    *buf++ = *src3++;
+    }
+
+    *buf = 0;
+    return buf;
+}
+
+//-----------------------------------------------------------------------------
+
+char * StringCatSep3S
+	( char * buf, size_t buf_size, ccp sep, ccp src1, ccp src2, ccp src3 )
+{
+    return StringCatSep3E(buf,buf+buf_size,sep,src1,src2,src3);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 char * StringCat2A ( ccp src1, ccp src2 )
 {
     mem_t mem = MemCat2A( MemByString0(src1), MemByString0(src2) );
@@ -540,6 +649,27 @@ char * StringCat2A ( ccp src1, ccp src2 )
 char * StringCat3A ( ccp src1, ccp src2, ccp src3 )
 {
     mem_t mem = MemCat3A( MemByString0(src1), MemByString0(src2), MemByString0(src3) );
+    return (char*)mem.ptr;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+char * StringCatSep2A ( ccp sep, ccp src1, ccp src2 )
+{
+    mem_t mem = MemCatSep2A( MemByString0(sep), 
+			     MemByString0(src1),
+			     MemByString0(src2) );
+    return (char*)mem.ptr;
+}
+
+//-----------------------------------------------------------------------------
+
+char * StringCatSep3A ( ccp sep, ccp src1, ccp src2, ccp src3 )
+{
+    mem_t mem = MemCatSep3A( MemByString0(sep),
+			     MemByString0(src1),
+			     MemByString0(src2),
+			     MemByString0(src3) );
     return (char*)mem.ptr;
 }
 
@@ -583,7 +713,7 @@ ccp StringCenterE
 
     while ( *src && dest < buf_end )
 	*dest++ = *src++;
-	
+
     while ( n2-- > 0 && dest < buf_end )
 	*dest++ = ' ';
 
@@ -1853,6 +1983,7 @@ char * PrintID
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    circ buf			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[CircBuf]]
 
 static __thread char circ_buf[CIRC_BUF_SIZE];
 static __thread char *circ_ptr = 0;
@@ -2924,7 +3055,7 @@ static char ** insert_arg_manager
 
 	if ( am->force_case == LOUP_LOWER || am->force_case == LOUP_UPPER )
 	{
-	    ccp end = arg + strlen(arg) + 1;
+	    char * end = arg + strlen(arg) + 1;
 	    if (am->force_case == LOUP_LOWER)
 		StringLowerE(arg,end,arg);
 	    else
@@ -2940,6 +3071,7 @@ static char ** insert_arg_manager
 uint InsertArgManager
 	( ArgManager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg )
 {
+    DASSERT(am);
     PRINT("InsertArgManager(,%d,%s,%s,%d)\n",pos,arg1,arg2,move_arg);
 
     pos = CheckIndex1(am->argc,pos);
@@ -2959,6 +3091,34 @@ uint InsertArgManager
 	am->argv[am->argc] = 0;
     }
     return pos+n;
+}
+
+//-----------------------------------------------------------------------------
+
+uint InsertListArgManager
+	( ArgManager_t *am, int pos, int argc, char ** argv, bool move_arg )
+{
+    DASSERT(am);
+
+    pos = CheckIndex1(am->argc,pos);
+    if ( argc > 0 )
+    {
+	PrepareEditArgManager(am,argc);
+	DASSERT( pos>=0 && pos <= am->argc );
+	char **dest = am->argv + pos;
+	if ( pos < am->argc )
+	    memmove( dest+argc, dest, (u8*)(am->argv+am->argc) - (u8*)dest );
+	pos += argc;
+	am->argc += argc;
+	am->argv[am->argc] = 0;
+
+	if ( move_arg && am->force_case == LOUP_AUTO )
+	    memcpy( dest, argv, argc*sizeof(*dest) );
+	else
+	    while ( argc-- > 0 ) 
+		dest = insert_arg_manager(am,dest,*argv++,move_arg);
+    }
+    return pos;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3063,7 +3223,7 @@ uint ScanQuotedArgManager ( ArgManager_t *am, ccp src, bool is_utf8 )
 
 	for(;;)
 	{
-	    while ( *src == ' ' || *src == '\t' )
+	    while (isspace(*src))
 		src++;
 	    if (!*src)
 		break;
@@ -3079,15 +3239,14 @@ uint ScanQuotedArgManager ( ArgManager_t *am, ccp src, bool is_utf8 )
 		}
 		else
 		{
-		    while ( dest < bufend && *src && *src != ' ' && *src != '\t'
-				&& *src != '\'' && *src != '\"' )
+		    while ( dest < bufend && !isspace(*src) && *src != '\'' && *src != '\"' )
 		    {
 			if ( *src == '\\' && src[1] )
 			    src++;
 			*dest++ = *src++;
 		    }
 		}
-		if ( !*src || *src == ' ' || *src == '\t' )
+		if (isspace(*src))
 		    break;
 	    }
 	    ccp arg = MEMDUP(buf,dest-buf);
@@ -3096,6 +3255,155 @@ uint ScanQuotedArgManager ( ArgManager_t *am, ccp src, bool is_utf8 )
     }
     return count;
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanFileArgManager
+(
+    ArgManager_t	*am,		// valid arg-manager
+    int			pos,		// insert position, relative to end if <0
+    ccp			fname,		// filename to open
+    int			silent,		// 0: print all error messages
+					// 1: suppress file size warning
+					// 2: suppress all error messages
+    int			*n_added
+)
+{
+    if (n_added)
+	*n_added = 0;
+    pos = CheckIndex1(am->argc,pos);
+
+    u8 *data;
+    size_t size;
+    enumError err = LoadFileAlloc(fname,0,0,&data,&size,0,silent,0,0);
+
+    if (!err)
+    {
+	if (memchr(data,0,size))
+	{
+	    if ( silent < 2 )
+		ERROR0(ERR_WARNING,"Binary file ignored: %s\n",fname);
+	    err = ERR_WARNING;
+	}
+	else
+	{
+	    ArgManager_t temp = { .force_case = am->force_case };
+	    ScanQuotedArgManager(&temp,(ccp)data,true);
+	    uint newpos = InsertListArgManager(am,pos,temp.argc,temp.argv,true);
+	    if (n_added)
+		*n_added = newpos - pos;
+	    FREE(temp.argv);
+	}
+    }
+
+    FREE(data);
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ExpandAtArgManager
+(
+    ArgManager_t	*am,		// valid arg-manager
+    arg_expand_mode_t	expand_mode,	// objects to be replaced
+    int			recursion,	// maximum recursion depth
+    int			silent		// 0: print all error messages
+					// 1: suppress file size warning
+					// 2: suppress all error messages
+)
+{
+    if (!am)
+	return ERR_MISSING_PARAM;
+
+    expand_mode &= AMXM_ALL;
+    if (!expand_mode)
+	return ERR_OK;
+
+    enumError max_err = ERR_OK;
+
+    for ( int try = 0;; try++ )
+    {
+	bool dirty = false;
+
+	int pos = 0;
+	while ( pos < am->argc )
+	{
+	    ccp arg = am->argv[pos];
+	    if (arg)
+	    {
+		int n_rm = 0;
+		ccp fname = 0;
+		int len = strlen(arg);
+
+		if ( len >= 1 && *arg == '@' )
+		{
+		    if ( len > 1 && expand_mode & AMXM_P1 )
+		    {
+			n_rm = 1;
+			fname = arg+1;
+		    }
+		    else if ( len == 1 && expand_mode & AMXM_P2 && pos+1 < am->argc )
+		    {
+			n_rm = 2;
+			fname = am->argv[pos+1];
+		    }
+		}
+		else if ( len >= 2 && !memcmp(arg,"-@",2) )
+		{
+		    if ( len > 2 && expand_mode & AMXM_S1 )
+		    {
+			n_rm = 1;
+			fname = arg+2;
+		    }
+		    else if ( len == 2 && expand_mode & AMXM_S2 && pos+1 < am->argc )
+		    {
+			n_rm = 2;
+			fname = am->argv[pos+1];
+		    }
+		}
+		else if ( len >= 3 && !memcmp(arg,"--@",3) )
+		{
+		    if ( len > 3 && arg[3] == '=' && expand_mode & AMXM_L1 )
+		    {
+			n_rm = 1;
+			fname = arg+4;
+		    }
+		    else if ( len == 3 && expand_mode & AMXM_L2 && pos+1 < am->argc )
+		    {
+			n_rm = 2;
+			fname = am->argv[pos+1];
+		    }
+		}
+
+		if (n_rm)
+		{
+		    PRINT1("rm @%u %d, file=%s\n",pos,n_rm,fname);
+		    int n_added;
+		    enumError err = ScanFileArgManager(am,pos,fname,silent,&n_added);
+		    if ( max_err < err )
+			 max_err = err;
+		    if (n_added)
+		    {
+			pos += n_added;
+			dirty = true;
+		    }
+
+		    // remove after insert to keep fname valid!
+		    PRINT1("rm @%u %d\n",pos,n_rm);
+		    RemoveArgManager(am,pos,n_rm);
+		}
+		else
+		    pos++;
+
+	    } // if (arg)
+	} // while
+
+	if ( !dirty || try >= recursion )
+	    break;
+    }
+
+    return max_err;
+}    
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3321,6 +3629,100 @@ mem_t MemCat3A ( const mem_t m1, const mem_t m2, const mem_t m3 )
     if (len3)
 	memcpy(dest+len1+len2,m3.ptr,len3);
 
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+mem_t MemCatSep2A ( const mem_t sep, const mem_t m1, const mem_t m2 )
+{
+    const uint slen = sep.len >= 0 ? sep.len : strlen(sep.ptr);
+    if (!slen)
+	return MemCat2A(m1,m2);
+
+    const uint len1 = m1.len >= 0 ? m1.len : strlen(m1.ptr);
+    const uint len2 = m2.len >= 0 ? m2.len : strlen(m2.ptr);
+
+    char *dest;
+    mem_t res;
+    res.len = len1 + len2;
+    if ( len1 && len2 )
+	res.len += slen;
+
+    res.ptr = dest = MALLOC(res.len+1);
+    dest[res.len] = 0;
+
+    if (len1)
+    {
+	memcpy(dest,m1.ptr,len1);
+	dest += len1;
+    }
+
+    if (len2)
+    {
+	if (len1)
+	{
+	    memcpy(dest,sep.ptr,slen);
+	    dest += slen;
+	}
+
+	memcpy(dest,m2.ptr,len2);
+    }
+
+    return res;
+}
+
+//-----------------------------------------------------------------------------
+
+mem_t MemCatSep3A ( const mem_t sep, const mem_t m1, const mem_t m2, const mem_t m3 )
+{
+    const uint slen = sep.len >= 0 ? sep.len : strlen(sep.ptr);
+    if (!slen)
+	return MemCat3A(m1,m2,m3);
+
+    const uint len1 = m1.len >= 0 ? m1.len : strlen(m1.ptr);
+    const uint len2 = m2.len >= 0 ? m2.len : strlen(m2.ptr);
+    const uint len3 = m3.len >= 0 ? m3.len : strlen(m3.ptr);
+
+    char *dest;
+    mem_t res;
+    res.len = len1 + len2 + len3
+		+ ( (len1>0) + (len2>0) + (len3>0) - 1 ) * slen;
+
+    res.ptr = dest = MALLOC(res.len+1);
+
+    if (len1)
+    {
+	memcpy(dest,m1.ptr,len1);
+	dest += len1;
+    }
+
+    if (len2)
+    {
+	if ( dest > res.ptr )
+	{
+	    memcpy(dest,sep.ptr,slen);
+	    dest += slen;
+	}
+
+	memcpy(dest,m2.ptr,len2);
+	dest += len2;
+    }
+
+    if (len3)
+    {
+	if ( dest > res.ptr )
+	{
+	    memcpy(dest,sep.ptr,slen);
+	    dest += slen;
+	}
+
+	memcpy(dest,m3.ptr,len3);
+	dest += len3;
+    }
+
+    *dest = 0;
+    ASSERT( dest == res.ptr + res.len );
     return res;
 }
 
@@ -3603,6 +4005,155 @@ ccp PrintExMem ( const exmem_t * em ) // print to circ-buf
 	em->is_original		? 'O' : '-',
 	em->attrib,
 	len, em->data.len, ebuf );
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+uint GetMemSrcN ( const mem_src_t *src )
+{
+    if (!src)
+	return 0;
+
+    if ( src->n_src >= 0 )
+	return src->n_src;
+
+    const mem_t *ptr = src->src;
+    while ( ptr->ptr )
+	ptr++;
+    const uint n_src = ptr - src->src;
+
+    if ( src->allow_write )
+	*(uint*)&src->n_src = n_src;
+    return n_src;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+uint GetMemSrcLen ( mem_t sep, const mem_src_t *src )
+{
+    if ( !src || src->n_src <= 0 )
+	return 0;
+
+    int n_valid_src = 0, sum_len = 0;
+    int n_src = GetMemSrcN(src);
+    for ( const mem_t *ptr = src->src; n_src > 0; ptr++, n_src-- )
+    {
+	int slen = ptr->len;
+	if ( slen < 0 )
+	{
+	    slen = ptr->ptr ? strlen(ptr->ptr) : 0;
+	    if (src->allow_write)
+		*(int*)&ptr->len = slen;
+	}
+	if ( slen > 0 )
+	{
+	    n_valid_src++;
+	    sum_len += slen;
+	}
+    }
+
+    if ( n_valid_src > 1 )
+	sum_len += (n_valid_src-1)*sep.len;
+    return sum_len;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t GetExmemDestBuf ( const exmem_dest_t * dest, uint len )
+{
+    exmem_t res = { .data.len = len };
+    len++; // for additional 0-term 
+
+    if (!dest)
+	goto malloc;
+    else if ( dest->buf && len <= dest->buf_size )
+    {
+	res.data.ptr = dest->buf;
+    }
+    else if ( dest->try_circ && len <= CIRC_BUF_MAX_ALLOC )
+    {
+	res.is_circ_buf = true;
+	res.data.ptr = GetCircBuf(len);
+    }
+    else
+    {
+     malloc:;
+	res.is_alloced = true;
+	res.data.ptr = MALLOC(len);
+    }
+
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t ExMemCat
+(
+    exmem_dest_t	*dest,	// kind of destination, if NULL then MALLOC()
+    mem_t		sep,	// insert separators between sources with len>0
+    const mem_src_t	*src	// sources. NULL allowed
+)
+{
+    const uint total_size = GetMemSrcLen(sep,src);
+    exmem_t res = GetExmemDestBuf(dest,total_size);
+    char *bufdest = (char*)res.data.ptr; 
+
+    int n_src = GetMemSrcN(src);
+    for ( const mem_t *ptr = src->src; n_src > 0; ptr++, n_src-- )
+    {
+	int slen = ptr->len;
+	if ( slen < 0 )
+	    slen = ptr->ptr ? strlen(ptr->ptr) : 0;
+	if ( slen > 0 )
+	{
+	    if ( sep.len && bufdest > res.data.ptr )
+	    {
+		memcpy(bufdest,sep.ptr,sep.len);
+		bufdest += sep.len;
+	    }
+
+	    memcpy(bufdest,ptr->ptr,slen);
+	    bufdest += slen;
+	    ASSERT( bufdest <= res.data.ptr + res.data.len );
+	}
+    }
+    ASSERT( bufdest == res.data.ptr + res.data.len );
+    *bufdest = 0;
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t ExMemCat2
+(
+    exmem_dest_t	*dest,	// kind of destination, if NULL then MALLOC()
+    mem_t		sep,	// insert separators between sources with len>0
+    mem_t		src1,	// first source
+    mem_t		src2	// second source
+)
+{
+    mem_t list[] = { src1, src2 };
+    mem_src_t src = { .src = list, .n_src = 2, true };
+    return ExMemCat(dest,sep,&src);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t ExMemCat3
+(
+    exmem_dest_t	*dest,	// kind of destination, if NULL then MALLOC()
+    mem_t		sep,	// insert separators between sources with len>0
+    mem_t		src1,	// first source
+    mem_t		src2,	// second source
+    mem_t		src3	// third source
+)
+{
+    mem_t list[] = { src1, src2, src3 };
+    mem_src_t src = { .src = list, .n_src = 3, true };
+    return ExMemCat(dest,sep,&src);
 }
 
 //
@@ -4160,7 +4711,6 @@ void * MemDupMemPool ( MemPool_t *mp, cvp source, uint size )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    CircBuf_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[CircBuf_t]]
 
 void InitializeCircBuf ( CircBuf_t *cb, uint size )
 {
@@ -4337,6 +4887,8 @@ void * CopyData
 )
 {
     DASSERT( data || !size );
+    DASSERT( mode == CPM_COPY || mode == CPM_MOVE || mode == CPM_LINK );
+
     if ( !data || !size )
     {
 	if (res_alloced)
@@ -4347,21 +4899,33 @@ void * CopyData
     if (res_alloced)
 	*res_alloced = mode != CPM_LINK;
 
-    return mode == CPM_MOVE || mode == CPM_LINK
-		? (void*)data
-		: MEMDUP(data,size);
+    return mode == CPM_COPY ? MEMDUP(data,size) : (void*)data;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void FreeData
+char * CopyString
 (
-    const void		*data,		// data to free
-    CopyMode_t		mode		// copy mode
+    ccp			string,		// string to copy/move/link
+    CopyMode_t		mode,		// copy mode
+    bool		*res_alloced	// not NULL:
+					//   store true, if data must be freed
+					//   otherwise store false
 )
 {
-    if ( mode != CPM_LINK && data != EmptyString )
-	FREE((void*)data);
+    DASSERT( mode == CPM_COPY || mode == CPM_MOVE || mode == CPM_LINK );
+
+    if ( !string || !*string )
+    {
+	if (res_alloced)
+	    *res_alloced = false;
+	return string ? (char*)EmptyString : 0;
+    }
+
+    if (res_alloced)
+	*res_alloced = mode != CPM_LINK;
+
+    return mode == CPM_COPY ? STRDUP(string) : (char*)string;
 }
 
 //
@@ -5024,6 +5588,35 @@ uint SplitByTextMemList
 ///////////////			 MatchPattern()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+bool HaveWildcards ( mem_t str )
+{
+    if (!str.ptr)
+	return false;
+    if ( str.len < 0 )
+	str.len = strlen(str.ptr);
+
+    for ( ccp w = PATTERN_WILDCARDS; *w; w++ )
+	if (memchr(str.ptr,*w,str.len))
+	    return true;
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+char * FindFirstWildcard ( mem_t str )
+{
+    if (!str.len)
+	return 0;
+
+    ccp end = str.ptr + str.len; 
+    for ( ccp ptr = str.ptr; ptr < end; ptr++ )
+	if (strchr(PATTERN_WILDCARDS,*ptr))
+	    return (char*)ptr;
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 static ccp AnalyseBrackets
 (
     ccp		pattern,
@@ -5154,7 +5747,7 @@ static bool MatchPatternHelper
 			    return true;
 		return false;
 
-	    case ' ':
+	    case '\t':
 		if ( *text < 1 || * text > ' ' )
 		    return false;
 		text++;
@@ -5388,8 +5981,8 @@ char * MatchRuleLine
     // returns a pointer to the first non scanned char
 
     int		*status,	// not NULL: return match status here
-				//   -2: no prefix found  (no ruile found)
-				//   -1: empty line (no ruile found)
+				//   -2: no prefix found  (no rule found)
+				//   -1: empty line (no rule found)
 				//    0: rule found, but don't match
 				//    1: rule found and match
     ccp		src,		// source line, scanned until CONTROL
@@ -5816,6 +6409,73 @@ uint CollectAmbiguousKeywords
 
 ///////////////////////////////////////////////////////////////////////////////
 
+ccp GetKeywordError
+(
+    const KeywordTab_t	* key_tab,	// NULL or pointer to command table
+    ccp			key_arg,	// analyzed command
+    int			key_stat,	// status of ScanKeyword()
+    ccp			object		// NULL or object for error messages
+					//	default= 'command'
+)
+{
+    DASSERT(key_arg);
+
+    if ( !object || !*object )
+	object = "command";
+
+    if ( key_stat <= 0 )
+	return PrintCircBuf("Unknown %s: %s",object,key_arg);
+
+    char buf[1000], *dest = buf;
+    if (key_tab)
+    {
+	int n = 0;
+	char *buf_end = buf + sizeof(buf) - 2;
+	const int arg_len = strlen(key_arg);
+	const KeywordTab_t *ct;
+	int last_id = -1;
+
+	for ( ct = key_tab; ct->name1 && dest < buf_end; ct++ )
+	{
+	    if ( ct->id != last_id )
+	    {
+		ccp ok = 0;
+		if (!strncasecmp(key_arg,ct->name1,arg_len))
+		    ok = ct->name1;
+		else if ( ct->name2 && !strncasecmp(key_arg,ct->name2,arg_len))
+		    ok = ct->name2;
+		if (ok)
+		{
+		    if (!n++)
+		    {
+			*dest++ = ' ';
+			*dest++ = '[';
+		    }
+		    else if ( n > 5 )
+		    {
+			dest = StringCopyE(dest,buf_end,",...");
+			break;
+		    }
+		    else
+			*dest++ = ',';
+		    dest = StringCopyE(dest,buf_end,ok);
+		    last_id = ct->id;
+		}
+	    }
+	}
+	if ( dest > buf+1 )
+	    *dest++ = ']';
+	else
+	    dest = buf;
+    }
+    *dest = 0;
+
+    return PrintCircBuf("%c%s abbreviation is ambiguous: %s%s",
+		toupper((int)*object), object+1, key_arg, buf );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 enumError PrintKeywordError
 (
     const KeywordTab_t	* key_tab,	// NULL or pointer to command table
@@ -5839,7 +6499,7 @@ enumError PrintKeywordError
     if (key_tab)
     {
 	int n = 0;
-	ccp buf_end = buf + sizeof(buf) - 2;
+	char *buf_end = buf + sizeof(buf) - 2;
 	const int arg_len = strlen(key_arg);
 	const KeywordTab_t *ct;
 	int last_id = -1;
@@ -6680,7 +7340,7 @@ void AppendUniqueStringField ( StringField_t * sf, ccp key, bool move_key )
 	return;
 
     ccp * src = sf->field;
-    ccp * end = sf->field + sf->used;
+    ccp * end = src + sf->used;
     while ( src < end )
 	if (!strcmp(*src++,key))
 	{
@@ -7235,6 +7895,51 @@ uint FindParamFieldHelper ( const ParamField_t * pf, bool * p_found, ccp key )
     if (p_found)
 	*p_found = false;
     return beg;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetParamFieldStr ( ParamField_t *pf, uint mark, ccp key, ccp def )
+{
+    DASSERT(pf);
+    DASSERT(key);
+
+    ParamFieldItem_t *it = FindParamField(pf,key);
+    if ( it && it->data )
+    {
+	it->num |= mark;
+	return (ccp)it->data;
+    }
+    return def;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int GetParamFieldInt ( ParamField_t *pf, uint mark, ccp key, int def )
+{
+    DASSERT(pf);
+    DASSERT(key);
+
+    ParamFieldItem_t *it = FindParamField(pf,key);
+    if ( it && it->data )
+    {
+	it->num |= mark;
+	char *end;
+	const int num = str2l((ccp)it->data,&end,10);
+	if (!*end)
+	    return num;
+    }
+    return def;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int GetParamFieldIntMM
+	( ParamField_t *pf, uint mark, ccp key, int def, int min, int max )
+{
+    const int num = GetParamFieldInt(pf,mark,key,def);
+    return num >= min && num <= max ? num : def;
 }
 
 //

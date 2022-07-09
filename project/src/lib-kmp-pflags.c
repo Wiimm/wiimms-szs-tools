@@ -1468,7 +1468,7 @@ void AnalysePFlagScenarios
     }
 
  #if defined(TEST) || defined(HAVE_WIIMM_EXT)
-    if ( logging > 1 )
+    if ( logging >= 2 )
     {
 	XDump_t xd;
 	InitializeXDump(&xd);
@@ -1869,7 +1869,7 @@ static uint DiffXPF ( xpf_mode1_info_t *l1, xpf_mode1_info_t *l2, int loop )
 
     //--- logging
 
-    if ( logging > 1 )
+    if ( logging >= 2 )
     {
 	LogListXPF(l1,1,"patching list",loop,max_eval);
 	LogListXPF(l2,2,"reference list",loop,max_eval);
@@ -1951,7 +1951,7 @@ enumError RepairXPF ( kmp_t *kmp )
     while (DiffXPF(kinfo,rinfo,loop))
 	loop++;
 
-    if ( logging > 1 )
+    if ( logging >= 2 )
 	fputc('\n',stdlog);
 
     FREE(rinfo);

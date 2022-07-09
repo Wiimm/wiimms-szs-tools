@@ -17,6 +17,9 @@
 
 // [[TrackInfo_t]] (generic code)
 
+#define TI_SHA1_IS_D	1
+#define TI_SHA1_NORM	2
+
 typedef struct TrackInfo_t
 {
     u16		bmg_mid;	// standard message id for BMG files
@@ -31,6 +34,9 @@ typedef struct TrackInfo_t
     ccp		track_fname;	// track file name
     ccp		sound_n_fname;	// file name of normal sound
     ccp		sound_f_fname;	// file name of fast sound
+
+    u8		sha1[4][24];	// SHA1+size, compatible to sha1_size_t
+				// ... ORIG, ORIG_D, NORM, NORM_D
 
 } TrackInfo_t;
 

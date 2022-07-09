@@ -117,9 +117,11 @@ typedef enum enumOptions
 	OPT_COMPATIBLE,
 	OPT_WIDTH,
 	OPT_MAX_WIDTH,
+	OPT_NO_PAGER,
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_TIMING,
 	OPT_WARN,
 	OPT_DE,
 	OPT_COLORS,
@@ -155,7 +157,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 94
+	OPT__N_TOTAL // == 96
 
 } enumOptions;
 
@@ -266,6 +268,8 @@ typedef enum enumOptions
 //				| OB_LONG,
 //
 //	OB_CMD_ARGTEST		= ~(u64)0,
+//
+//	OB_CMD_EXPAND		= ~(u64)0,
 //
 //	OB_CMD_TEST		= ~(u64)0,
 //
@@ -382,6 +386,7 @@ typedef enum enumCommands
 	CMD_HELP,
 	CMD_CONFIG,
 	CMD_ARGTEST,
+	CMD_EXPAND,
 	CMD_TEST,
 	CMD_COLORS,
 	CMD_ERROR,
@@ -411,7 +416,7 @@ typedef enum enumCommands
 	CMD_WIM0,
 
 
-	CMD__N // == 31
+	CMD__N // == 32
 
 } enumCommands;
 
@@ -459,6 +464,8 @@ typedef enum enumGetOpt
 	GO_COMPATIBLE,
 	GO_WIDTH,
 	GO_MAX_WIDTH,
+	GO_NO_PAGER,
+	GO_TIMING,
 	GO_DE,
 	GO_COLORS,
 	GO_NO_COLORS,

@@ -632,13 +632,22 @@ typedef enum TransferMode_t
 {
     //--- jobs
 
-    TFMD_J_MOVE		= 0x01,  // move file
-    TFMD_J_MOVE1	= 0x02,  // move file, but only if not linked (ignore TFMD_J_MOVE)
-    TFMD_J_RM_DEST	= 0x04,  // remove dest before TFMD_J_LINK and TFMD_J_COPY
-    TFMD_J_LINK		= 0x08,  // link file
-    TFMD_J_COPY		= 0x10,  // copy file
-    TFMD_J_RM_SRC	= 0x20,  // remove source after TFMD_J_COPY
-//  TFMD_J_TOUCH	= 0x40,  // touch destination => not supported yet
+    TFMD_J_MOVE		= 0x001,  // move file
+    TFMD_J_MOVE1	= 0x002,  // move file, but only if not linked (ignore TFMD_J_MOVE)
+    TFMD_J_RM_DEST	= 0x004,  // remove dest before TFMD_J_LINK and TFMD_J_COPY
+    TFMD_J_LINK		= 0x008,  // link file
+    TFMD_J_COPY		= 0x010,  // copy file
+    TFMD_J_RM_SRC	= 0x020,  // remove source after TFMD_J_COPY
+//  TFMD_J_TOUCH	= 0x040,  // touch destination => not supported yet
+
+    //--- flags
+
+    TFMD_F_TEST		= 0x100,  // testmode, don't touch files
+
+    //--- masks
+
+    TFMD_M_JOBS		= 0x03f,  // mask for jobs
+    TFMD_M_FLAGS	= 0x100,  // mask for flags
 
     //--- modes
 
@@ -648,7 +657,7 @@ typedef enum TransferMode_t
     TFMD_COPY	=	 	 TFMD_J_RM_DEST | TFMD_J_COPY,
     TFMD_CAT	=				  TFMD_J_COPY,
 }
-__attribute__ ((packed)) TransferMode_t;
+TransferMode_t;
 
 //-----------------------------------------------------------------------------
 
@@ -662,8 +671,9 @@ __attribute__ ((packed)) TransferMode_t;
 
 enumError TransferFile
 (
-    ccp			src,		// source path
+    LogFile_t		*log,		// not NULL: log activities
     ccp			dest,		// destination path
+    ccp			src,		// source path
     TransferMode_t	tfer_mode,	// transfer mode
     mode_t		open_mode	// mode for CopyFile*() -> open()
 );
@@ -947,6 +957,9 @@ int ExistDirectory
 
 bool IsSameFilename ( ccp fn1, ccp fn2 );
 
+// convert type get by readdir() to of struct stat.st_mode
+uint ConvertDType2STMode ( uint d_type );
+
 ///////////////////////////////////////////////////////////////////////////////
 // [[FindConfigFile_t]]
 
@@ -1005,6 +1018,43 @@ int SearchFiles
 				// if empty: extract from combined path
     SearchFilesFunc	func,	// callback function, never NULL
     void		*param	// third parameter of func()
+);
+
+///////////////////////////////////////////////////////////////////////////////
+// [[search_paths_stat_t]]
+
+typedef struct search_paths_stat_t
+{
+    bool		abort;		// true: abort search
+    enumError		max_err;	// max found error
+
+    uint		dir_count;	// number of scanned directories
+    uint		func_count;	// number of func() calls
+    uint		hit_count;	// number of hits (!ERR_JOB_IGNORED)
+}
+search_paths_stat_t;
+
+//-----------------------------------------------------------------------------
+
+// error codes < 0 mean: abort.
+// return ERR_JOB_IGNORED if path finally not match
+
+typedef enumError (*SearchPathsFunc)
+(
+    mem_t	path,		// full path of existing file, never NULL
+    uint	st_mode,	// copy of struct stat.st_mode, see "man 2 stat"
+    void	*param		// user defined parameter
+);
+
+//-----------------------------------------------------------------------------
+
+search_paths_stat_t SearchPaths
+(
+    ccp			path1,		// not NULL: part #1 of base path
+    ccp			path2,		// not NULL: part #2 of base path
+    bool		allow_hidden,	// allow hiddent directories and files
+    SearchPathsFunc	func,		// callback function, never NULL
+    void		*param		// last param for func()
 );
 
 ///////////////////////////////////////////////////////////////////////////////

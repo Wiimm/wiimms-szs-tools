@@ -1542,8 +1542,8 @@ enumError ScanLEXFunc
 	default:
 	    AppendElementLEX(lex,magic,data,size,true);
 	 #if HAVE_PRINT0
-	    if (logging>1)
-		DumpElementsLEX(stdout,lex,logging>2);
+	    if ( logging >= 2 )
+		DumpElementsLEX(stdout, lex, logging >= 3 );
 	 #endif
     }
     return ERR_OK;
@@ -1582,8 +1582,8 @@ enumError ScanRawLEX
     else
 	UpdateLEX(lex,opt_complete,false);
 
-    if (logging>0)
-	DumpElementsLEX(stdout,lex,logging>2);
+    if ( logging >= 1 )
+	DumpElementsLEX( stdout, lex, logging >= 3 );
     return err;
 }
 

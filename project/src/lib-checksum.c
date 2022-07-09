@@ -59,8 +59,10 @@ void CreateSSChecksum ( char *buf, uint bufsize, const sha1_size_t *ss )
     if (opt_db64)
     {
 	PRINT("TAB64=%.65s\n",TableEncode64BySetup);
-	EncodeBase64(buf,bufsize,ss,sizeof(*ss),
-			TableEncode64BySetup, false,0,0 );
+	const int coding = opt_coding64 == ENCODE_OFF ? ENCODE_BASE64URL : opt_coding64;
+	EncodeByMode(buf,bufsize,(ccp)ss,sizeof(*ss),coding);
+//DEL	EncodeBase64(buf,bufsize,ss,sizeof(*ss),
+//DEL			TableEncode64BySetup, false,0,0 );
     }
     else if (opt_base64)
     {
@@ -113,7 +115,9 @@ void CreateSSChecksumDB ( char *buf, uint bufsize, const sha1_size_t *ss )
     DASSERT(bufsize>CHECKSUM_DB_SIZE);
     DASSERT(ss);
 
-    EncodeBase64(buf,bufsize,ss,sizeof(*ss),TableEncode64url,false,0,0);
+    const int coding = opt_coding64 == ENCODE_OFF ? ENCODE_BASE64URL : opt_coding64;
+    EncodeByMode(buf,bufsize,(ccp)ss,sizeof(*ss),coding);
+//DEL    EncodeBase64(buf,bufsize,ss,sizeof(*ss),TableEncode64url,false,0,0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -170,492 +174,59 @@ enumError GetSSByFile ( sha1_size_t *ss, ccp path1, ccp path2 )
     return err;
 }
 
-//
 ///////////////////////////////////////////////////////////////////////////////
-///////////////		    struct DistributionInfo_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void InitializeDistributionInfo
-	( DistributionInfo_t * dinf, bool add_default_param )
+int IsSSChecksum ( sha1_size_t *res, ccp source, int slen )
 {
-    DASSERT(dinf);
-    memset(dinf,0,sizeof(*dinf));
-    InitializeParamField(&dinf->translate);
-    dinf->translate.free_data = true;
-    InitializeParamField(&dinf->param);
-    dinf->param.free_data = true;
+    // slen < 0 => strlen(source)
+    // returns: 0:fail, 1:SHA1, 2:DB64
 
-    uint slot;
-    for ( slot = 0; slot < MAX_DISTRIBUTION_ARENA; slot++ )
+    ccp end = source + ( slen < 0 ? strlen(source) : slen );
+
+    // skip leading controls
+    while ( source < end && (uchar)*source <= ' ' )
+	source++;
+
+    ccp start = source;
+    while ( source < end && (uchar)*source > ' ' )
+	source++;
+
+    sha1_size_t temp;
+    if (!res)
+	res = &temp;
+
+    const uint len = source - start;
+    if ( len == 40 )
     {
-	ParamField_t *pf = dinf->arena + slot;
-	InitializeParamField(pf);
-	pf->free_data = true;
-    }
-
-    for ( slot = 0; slot < MAX_DISTRIBUTION_TRACK; slot++ )
-    {
-	ParamField_t *pf = dinf->track + slot;
-	InitializeParamField(pf);
-	pf->free_data = true;
-    }
-
-    if (add_default_param)
-	AddParamDistributionInfo(dinf,true);
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void ResetDistributionInfo ( DistributionInfo_t * dinf )
-{
-    if (dinf)
-    {
-	ResetParamField(&dinf->translate);
-	ResetParamField(&dinf->param);
-
-	uint slot;
-	for ( slot = 0; slot < MAX_DISTRIBUTION_ARENA; slot++ )
-	    ResetParamField(dinf->arena+slot);
-	for ( slot = 0; slot < MAX_DISTRIBUTION_TRACK; slot++ )
-	    ResetParamField(dinf->track+slot);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void AddParamDistributionInfo ( DistributionInfo_t * dinf, bool overwrite )
-{
-    DASSERT(dinf);
-
-    char buf[100];
-
-    //-- UUID
-
-    uuid_buf_t uuid;
-    bool create_uuid = overwrite;
-    if (!create_uuid)
-    {
-	const ParamFieldItem_t *it = FindParamField(&dinf->param,"UUID");
-	if ( !it || !it->data || ScanUUID(uuid,(ccp)it->data) == (ccp)it->data )
-	    create_uuid = true;
-    }
-
-    if (create_uuid)
-    {
-	CreateTextUUID(buf,sizeof(buf));
-	ReplaceParamField(&dinf->param,"UUID",false,0,STRDUP(buf));
-    }
-
-
-    //-- time stamps
-
-    time_t tim = time(0);
-    struct tm *tm = localtime(&tim);
-    strftime(buf,sizeof(buf),"%F %T %z",tm);
-
-    if ( overwrite || !FindParamField(&dinf->param,"FIRST-CREATION") )
-	ReplaceParamField(&dinf->param,"FIRST-CREATION",false,0,STRDUP(buf));
-    ReplaceParamField(&dinf->param,"LAST-UPDATE",false,0,STRDUP(buf));
-}
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			slot translation		///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-char * ScanSlot ( uint *res_slot, ccp source, bool need_point )
-{
-    DASSERT(res_slot);
-    DASSERT(source);
-    *res_slot = 0;
-
-    char *end;
-    uint slot = strtoul(source,&end,10);
-    if ( !need_point
-	&& slot >= MIN_DISTRIBUTION_SLOT
-	&& slot <  MAX_DISTRIBUTION_TRACK
-	&& (uchar)*end <= ' '
-	&& ( end-source == 2 || end-source == 3 ))
-    {
-	*res_slot = slot;
-	return end;
-    }
-
-    slot *= 10;
-    if ( slot < MIN_DISTRIBUTION_SLOT || slot >= MAX_DISTRIBUTION_TRACK || *end != '.' )
-	return (char*)source;
-
-    uint track = strtoul(end+1,&end,10);
-    slot += track;
-    if ( track < 1 || track > 9 || slot >= MAX_DISTRIBUTION_TRACK )
-	return (char*)source;
-
-    *res_slot = slot;
-    while ( *end == ' ' || *end == '\t' )
-	end++;
-    return end;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void NormalizeSlotTranslation ( char *buf, uint bufsize, ccp name,
-			char ** p_first_para, char ** p_first_brack )
-{
-    DASSERT(buf);
-    DASSERT(bufsize>10);
-
-    if (!name)
-	name = "";
-
-    char *dest = buf, *buf_end = buf + bufsize - 4;
-    char *first_para = 0;
-    char *first_brack = 0;
-
-    uint have_space = 0;
-    while ( *name && dest < buf_end )
-    {
-	int ch = (uchar)*name++;
-	switch(ch)
+	ccp ptr;
+	for ( ptr = start; ptr < source; ptr++ )
 	{
-	    case ' ':
-	    case '_':
-	    case '-':
-	    case '+':
-		have_space++;
-		break;
-
-	    case '\'':
-		break; // ignore
-
-	    case '[':
-		if (!first_brack)
-		    first_brack = dest;
-		goto bracket;
-
-	    case '(':
-		if (!first_para)
-		    first_para = dest;
-		// fall through
-
-	    case '{':
-	    bracket:
-		ch = '(';
-		// fall through
-
-	    case '.':
-		if (have_space)
-		{
-		    have_space = 0;
-		    *dest++ = ' ';
-		}
-		*dest++ = ch;
-		break;
-
-	    case '}':
-	    case ')':
-	    case ']':
-		*dest++ = ')';
-		break;
-
-	    default:
-		ch = tolower(ch);
-		if ( ch >= 'a' && ch <= 'z' || ch >= '0' && ch <= '9' )
-		{
-		    if (have_space)
-		    {
-			have_space = 0;
-			*dest++ = ' ';
-		    }
-		    *dest++ = ch;
-		}
+	    const u8 type = TableNumbers[(u8)*ptr];
+	    if ( type >= 16 )
 		break;
 	}
-    }
 
-    if ( dest > buf )
-    {
-	if ( dest > buf+4 && !memcmp(dest-4,".szs",4) || !memcmp(dest-4,".wbz",4) )
-	    dest -= 4;
-	if ( dest > buf+2 && !memcmp(dest-2,"_d",2) )
-	    dest -= 2;
-	*dest = 0;
-
-	if ( first_brack)
+	if ( ptr == source )
 	{
-	    if ( first_brack >= dest )
-		first_brack = 0;
-	    else
-		dest = first_brack;
+	    Sha1Hex2Bin(res->hash,start,source);
+	    return 1;
 	}
-
-	if ( first_para >= dest )
-	    first_para = 0;
     }
-    else
-	first_para = first_brack = 0;
-
-    if (p_first_para)
-	*p_first_para = first_para;
-    if (p_first_brack)
-	*p_first_brack = first_brack;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-uint DefineSlotTranslation
-	( ParamField_t *translate, bool is_arena, uint slot, ccp name )
-{
-    DASSERT(translate);
-    if (!name)
-	return 0;
-
-    if (is_arena)
+    else if ( len == CHECKSUM_DB_SIZE )
     {
-	if ( slot >= MAX_DISTRIBUTION_ARENA )
-	    slot = 0;
-	else
-	    slot += DISTRIBUTION_ARENA_DELTA;
-    }
-    else
-    {
-	if ( slot >= MAX_DISTRIBUTION_TRACK )
-	    slot = 0;
-    }
-
-    char buf[1000];
-    char *first_para = 0, *first_brack = 0;
-    NormalizeSlotTranslation(buf,sizeof(buf),name,&first_para,&first_brack);
-
-    uint count = 0;
-    if (*buf)
-    {
-	ReplaceParamField(translate,buf,false,slot,0);
-	count++;
-
-	if (first_brack)
+	char buf[sizeof(sha1_size_t)+12];
+	uint len64 = DecodeBase64(buf,sizeof(buf),start,len,TableDecode64url,false,0);
+	if ( len64 == sizeof(sha1_size_t) )
 	{
-	    *first_brack = 0;
-	    ReplaceParamField(translate,buf,false,slot,0);
-	    count++;
-	}
-
-	if (first_para)
-	{
-	    *first_para = 0;
-	    ReplaceParamField(translate,buf,false,slot,0);
-	    count++;
+	    memcpy(res,buf,sizeof(*res));
+	    return 2;
 	}
     }
 
-    return count;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-#undef EARLY_NUM_SLOT
-#define EARLY_NUM_SLOT 1
-
-int FindSlotByTranslation ( const ParamField_t *translate, ccp fname, ccp sha1 )
-{
-    DASSERT(translate);
-    ccp slash = strrchr(fname,'/');
-    if (slash)
-	fname = slash+1;
-
- #if EARLY_NUM_SLOT
-    uint slot;
-    ScanSlot(&slot,fname,false);
-    if (slot)
-	return slot;
- #endif
-
-    char buf[1000];
-
-    char *first_para = 0, *first_brack = 0;
-    NormalizeSlotTranslation(buf,sizeof(buf),fname,&first_para,&first_brack);
-    const ParamFieldItem_t *it = FindParamField(translate,buf);
-    if ( !it && first_brack )
-    {
-	*first_brack = 0;
-	it = FindParamField(translate,buf);
-    }
-
-    if ( !it && first_para )
-    {
-	*first_para = 0;
-	it = FindParamField(translate,buf);
-    }
-
-    if ( !it && sha1 )
-	it = FindParamField(translate,sha1);
-
-
- #if EARLY_NUM_SLOT
-    return it ? it->num : 0;
- #else
-    if (it)
-	return it->num;
-
-    uint slot;
-    ScanSlot(&slot,fname,false);
-    return slot;
- #endif
-}
-
-#undef EARLY_NUM_SLOT
-
-///////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////
-
-void ScanSlotTranslation
-	( ParamField_t *translate, ParamField_t *param, ccp fname, bool ignore )
-{
-    DASSERT(translate);
-    DASSERT(fname);
-    PRINT(" - scan translation%s: %s\n", param ? "+param" : "", fname);
-
-    szs_file_t szs;
-    InitializeSZS(&szs);
-    enumError err = LoadSZS(&szs,fname,true,ignore,true);
-    if (err)
-	return;
-
-
-    //--- support for special file formats
-
-    switch((int)szs.fform_arch)
-    {
-	case FF_BMG:
-	    if (verbose>1)
-		printf(" - scan translation [BMG]: %s\n",fname);
-	    ResetSZS(&szs);
-	    return;
-    }
-
-
-    //--- standard text file
-
-    if ( verbose > 1 )
-	printf("Scan translation%s[TEXT/%s]: %s\n",
-		param ? "+param" : "",
-		GetExtFF(szs.fform_file,szs.fform_arch), fname );
-    else if ( verbose >= 0 )
-	printf("Scan %s\n",fname);
-
-    char *eol = (char*)szs.data;
-    char *end = eol + szs.size;
-
-    for(;;)
-    {
-	while ( eol < end && (uchar)*eol <= ' ' )
-	    eol++;
-	if ( eol == end )
-	    break;
-
-	char *src = eol;
-	while ( eol < end && *eol != 0 && *eol != '\r' && *eol != '\n' )
-	    eol++;
-	*eol = 0;
-
-	if ( *src == '#' || *src == '!' )
-	    continue;
-
-
-	//--- manage parameters
-
-	if ( *src == '@' )
-	{
-	    if (!param)
-		continue;
-
-	    char name_buf[100], *name = name_buf;
-	    src++;
-
-	    for(;;)
-	    {
-		const char ch = *src;
-		if ( !isalnum(ch) && ch != '_' && ch != '-' && ch != '.' )
-		    break;
-		src++;
-		if ( name < name_buf + sizeof(name_buf) - 1 )
-		    *name++ = toupper(ch);
-	    }
-
-	    while ( src < eol && (uchar)*src <= ' ' )
-		src++;
-	    if ( src < eol && *src == '=' )
-	    {
-		src++;
-		while ( src < eol && (uchar)*src <= ' ' )
-		    src++;
-	    }
-
-	    if ( name > name_buf )
-	    {
-		//PRINT(" %.*s = |%.*s|\n",(int)(name-name_buf),name_buf,(int)(eol-src),src);
-		ReplaceParamField( param, MEMDUP(name_buf,name-name_buf),
-				true, 0, MEMDUP(src,eol-src) );
-	    }
-	    continue;
-	}
-
-	//PRINTF("LINE: |%.*s|\n",(int)(eol-src),src);
-
-
-	//--- skip "()"  |  detect SHA1 checksum
-
-	char *sha1 = 0;
-	if ( *src == '(' )
-	{
-	    while ( src < eol && *src != ')' )
-		src++;
-	    if ( src++ == eol )
-		continue;
-	}
-	else
-	{
-	    // detect sha1 checksum
-
-	    char *x = src;
-	    while ( x < eol && isalnum((int)*x) )
-		x++;
-	    if ( x < eol && x - src == 40 )
-	    {
-		sha1 = src;
-		src = x;
-	    }
-	}
-
-	while ( src < eol && (uchar)*src <= ' ' )
-	    src++;
-
-	const bool is_arena = *src == 'a' || *src == 'A';
-	if (is_arena)
-	    src++;
-
-	if (!isdigit((int)*src))
-	    continue;
-
-	uint slot;
-	src = ScanSlot(&slot,src,true); // ???
-	if (!slot)
-	    continue;
-
-	char *tab = strrchr(src,'\t');
-	if (tab)
-	    src = tab;
-	while ( src < eol && (uchar)*src <= ' ' )
-	    src++;
-
-	DefineSlotTranslation(translate,is_arena,slot,src);
-	if (sha1)
-	{
-	    sha1[40] = 0;
-	    DefineSlotTranslation(translate,is_arena,slot,sha1);
-	}
-    }
-
-    ResetSZS(&szs);
+    // no a checksum
+    memset(res,0,sizeof(sha1_size_t));
+    return 0;
 }
 
 //

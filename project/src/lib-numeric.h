@@ -112,7 +112,17 @@ enum
 #define LETF_ALIAS	0x08	// use TrackByAliasLE(prop,music)
 				// as alias for another track
 
-#define LETF__ALL	0x0f
+#define LETF__RND	0x06	// both random flags
+#define LETF__ALL	0x0f	// all bits of above
+
+static inline bool IsTitleLETF ( uint flags )
+	{ return (flags&(LETF_RND_HEAD|LETF_RND_GROUP)) == LETF_RND_HEAD; }
+
+static inline bool IsHiddenLETF ( uint flags )
+	{ return (flags&(LETF_RND_HEAD|LETF_RND_GROUP)) == LETF_RND_GROUP; }
+
+static inline bool IsRandomLETF ( uint flags )
+	{ return (flags&(LETF_RND_HEAD|LETF_RND_GROUP)) != 0; }
 
 //-----------------------------------------------------------------------------
 // [[lpar_mode_t]]
@@ -1040,7 +1050,7 @@ enumError ParserCalc ( const VarMap_t * predef );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			scan text			///////////////
+///////////////			scan info			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[TextCommand_t]]
 
@@ -1229,7 +1239,7 @@ typedef struct ScanInfo_t
     //--- init data
 
     ccp			init_data;	// begin of text
-    uint		init_data_size;	// end of text
+    uint		init_data_size;	// total size of text
     ccp			init_name;	// name or file for warnings
     int			init_revision;	// revision number at start
 
@@ -1267,6 +1277,7 @@ typedef struct ScanInfo_t
     struct kmp_t	* kmp;		// for KMP scanning
     struct lex_t	* lex;		// for LEX scanning
     struct mdl_t	* mdl;		// for MDL scanning
+    struct le_distrib_t	* ld;		// for LEDEF scanning
 
 } ScanInfo_t;
 
@@ -1767,6 +1778,17 @@ char NextCharSI
 
 //-----------------------------------------------------------------------------
 
+bool IsSectionOrEotSI
+(
+    // Call NextCharSI() and check for new section or EOT (return true if found)
+    // Section name is stored in 'last_index_name' (upper case)
+
+    ScanInfo_t		* si,		// valid data
+    bool		skip_lines	// true: skip empty lines
+);
+
+//-----------------------------------------------------------------------------
+
 char SkipCharSI
 (
     // return next non skipped character
@@ -1787,6 +1809,13 @@ char NextLineSI
 //-----------------------------------------------------------------------------
 
 enumError CheckLevelSI
+(
+    ScanInfo_t		* si		// valid data
+);
+
+//-----------------------------------------------------------------------------
+
+ccp GetEolSI
 (
     ScanInfo_t		* si		// valid data
 );
@@ -1877,8 +1906,8 @@ uint ScanNameSI
 enumError ConcatStringsSI
 (
     ScanInfo_t		* si,		// valid data
-    char		** dest_str,	// store string here, use FREE + MALLOC
-    uint		* len		// not NULL: store length of return string here
+    char		** dest_str,	// not NULL: store string here, use FREE + MALLOC
+    uint		* ret_len	// not NULL: store length of return string here
 );
 
 //-----------------------------------------------------------------------------
@@ -1891,10 +1920,10 @@ enumError ScanStringSI
 
 //-----------------------------------------------------------------------------
 
-extern char last_index_name[VARNAME_SIZE+1];
-
 int ScanIndexSI
 (
+    // varname is stored in 'last_index_name' (upper case)
+
     ScanInfo_t		* si,		// valid data
     enumError		* err,		// return value: error code
     int			index,		// index to define if name
@@ -1906,7 +1935,13 @@ int ScanIndexSI
 
 //-----------------------------------------------------------------------------
 
-void SetIndexName ( ccp name );
+extern char last_index_name[VARNAME_SIZE+1];
+
+static inline void SetIndexName ( ccp name )
+	{ StringUpperS(last_index_name,sizeof(last_index_name),name); }
+
+static inline void SetIndexNameM ( mem_t name )
+	{ MemUpperS(last_index_name,sizeof(last_index_name),name); }
 
 //-----------------------------------------------------------------------------
 

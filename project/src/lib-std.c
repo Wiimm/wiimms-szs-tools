@@ -75,11 +75,13 @@
 ///////////////////////////////////////////////////////////////////////////////
 
 ccp		opt_config		= 0;
+bool		opt_no_pager		= false;
 ccp		tool_name		= "?";
 ccp		std_share_path		= 0;
 ccp		share_path		= 0;
 volatile int	verbose			= 0;
 volatile int	logging			= 0;
+volatile int	log_timing		= 0;
 bool		allow_all		= false;
 char		escape_char		= '%';
 bool		use_utf8		= true;
@@ -368,6 +370,7 @@ void SetupColors()
 void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
 {
     SetupProgname(argc,argv,tname,tvers,ttitle);
+    ProgInfo.error_level = ERRLEV_HEADING;
 
  #if LOG_PROGINFO
     PRINT1("PROG1: %s | %s | %s\n",ProgInfo.progname,ProgInfo.progdir,ProgInfo.progpath);
@@ -412,284 +415,6 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
     TRACE("BIG_ENDIAN=%d\n",BIG_ENDIAN);
  #endif
 
-    // numeric types
-
-    TRACE("- int\n");
-    TRACE_SIZEOF(bool);
-    TRACE_SIZEOF(short);
-    TRACE_SIZEOF(int);
-    TRACE_SIZEOF(long);
-    TRACE_SIZEOF(long long);
-    TRACE_SIZEOF(size_t);
-    TRACE_SIZEOF(off_t);
-
-    TRACE_SIZEOF(int8_t);
-    TRACE_SIZEOF(int16_t);
-    TRACE_SIZEOF(int32_t);
-    TRACE_SIZEOF(int64_t);
-    TRACE_SIZEOF(uint8_t);
-    TRACE_SIZEOF(uint16_t);
-    TRACE_SIZEOF(uint32_t);
-    TRACE_SIZEOF(uint64_t);
-
-    TRACE_SIZEOF(u8);
-    TRACE_SIZEOF(u16);
-    TRACE_SIZEOF(u32);
-    TRACE_SIZEOF(u64);
-    TRACE_SIZEOF(s8);
-    TRACE_SIZEOF(s16);
-    TRACE_SIZEOF(s32);
-    TRACE_SIZEOF(s64);
-    TRACE_SIZEOF(be16_t);
-    TRACE_SIZEOF(be32_t);
-    TRACE_SIZEOF(be64_t);
-
-    TRACE("- numeric vectors\n");
-    TRACE_SIZEOF(float);
-    TRACE_SIZEOF(float32);
-    TRACE_SIZEOF(float3);
-    TRACE_SIZEOF(float3List_t);
-
-    TRACE_SIZEOF(double);
-    TRACE_SIZEOF(double3);
-    TRACE_SIZEOF(double3List_t);
-
-    TRACE_SIZEOF(float34);
-    TRACE_SIZEOF(double34);
-    TRACE_SIZEOF(MatrixD_t);
-
-    TRACE("- mem\n");
-    TRACE_SIZEOF(mem_t);
-    TRACE_SIZEOF(exmem_t);
-    TRACE_SIZEOF(exmem_key_t);
-    TRACE_SIZEOF(exmem_list_t);
-
-    TRACE("- sha1\n");
-    TRACE_SIZEOF(sha1_hash_t);
-    TRACE_SIZEOF(sha1_hex_t);
-    TRACE_SIZEOF(sha1_type_t);
-    TRACE_SIZEOF(sha1_db_t);
-
-    TRACE("- arch\n");
-    TRACE_SIZEOF(yaz0_header_t);
-    TRACE_SIZEOF(wbz_header_t);
-    TRACE_SIZEOF(szs_subfile_t);
-    TRACE_SIZEOF(szs_subfile_list_t);
-    TRACE_SIZEOF(szs_file_t);
-    TRACE_SIZEOF(szs_extract_t);
-    TRACE_SIZEOF(szs_iterator_t);
-    TRACE_SIZEOF(string_pool_t);
-    TRACE_SIZEOF(u8_header_t);
-    TRACE_SIZEOF(u8_node_t);
-    TRACE_SIZEOF(pack_header_t);
-    TRACE_SIZEOF(pack_metric_t);
-    TRACE_SIZEOF(rarc_file_header_t);
-    TRACE_SIZEOF(rarc_header_t);
-    TRACE_SIZEOF(rarc_node_t);
-    TRACE_SIZEOF(rarc_entry_t);
-
-    TRACE("- sub file system\n");
-    TRACE_SIZEOF(SubDirList_t);
-    TRACE_SIZEOF(SubDir_t);
-    TRACE_SIZEOF(SubFileList_t);
-    TRACE_SIZEOF(SubFile_t);
-
-    TRACE("- brres\n");
-    TRACE_SIZEOF(brres_t);
-    TRACE_SIZEOF(brres_header_t);
-    TRACE_SIZEOF(brres_root_t);
-    TRACE_SIZEOF(brres_group_t);
-    TRACE_SIZEOF(brres_entry_t);
-    TRACE_SIZEOF(brsub_header_t);
-    TRACE_SIZEOF(brsub_list_t);
-    TRACE_SIZEOF(brsub_cut_t);
-    TRACE_SIZEOF(grp_entry_t);
-    TRACE_SIZEOF(tex_info_t);
-
-    TRACE("- breff\n");
-    TRACE_SIZEOF(breff_item_data_t);
-    TRACE_SIZEOF(breff_item_list_t);
-    TRACE_SIZEOF(breff_item_name_t);
-    TRACE_SIZEOF(breff_root_t);
-    TRACE_SIZEOF(breff_root_head_t);
-    TRACE_SIZEOF(breft_image_t);
-
-    TRACE("- bmg\n");
-    TRACE_SIZEOF(bmg_header_t);
-    TRACE_SIZEOF(bmg_section_t);
-    TRACE_SIZEOF(bmg_inf_t);
-    TRACE_SIZEOF(bmg_inf_item_t);
-    TRACE_SIZEOF(bmg_dat_t);
-    TRACE_SIZEOF(bmg_mid_t);
-    TRACE_SIZEOF(bmg_flw_t);
-    TRACE_SIZEOF(bmg_fli_t);
-    TRACE_SIZEOF(bmg_t);
-    TRACE_SIZEOF(bmg_item_t);
-
-    TRACE("- ctcode\n");
-    TRACE_SIZEOF(ctcode_header_t);
-    TRACE_SIZEOF(ctcode_sect_info_t);
-    TRACE_SIZEOF(ctcode_cup1_head_t);
-    TRACE_SIZEOF(ctcode_cup1_data_t);
-    TRACE_SIZEOF(ctcode_crs1_head_t);
-    TRACE_SIZEOF(ctcode_crs1_data_t);
-    TRACE_SIZEOF(ctcode_t);
-
-    TRACE("- kcl\n");
-    TRACE_SIZEOF(kcl_mode_t);
-    TRACE_SIZEOF(kcl_t);
-    TRACE_SIZEOF(kcl_head_t);
-    TRACE_SIZEOF(kcl_triangle_t);
-    TRACE_SIZEOF(kcl_tridata_status_t);
-    TRACE_SIZEOF(kcl_tridata_flt_t);
-    TRACE_SIZEOF(kcl_tridata_dbl_t);
-    TRACE_SIZEOF(kcl_tridata0_t);
-    TRACE_SIZEOF(kcl_tridata1_t);
-    TRACE_SIZEOF(kcl_tridata_t);
-    TRACE_SIZEOF(kcl_tri_param_t);
-    TRACE_SIZEOF(kcl_cube_t);
-    TRACE_SIZEOF(kcl_tri_t);
-
-    TRACE("- kmp\n");
-    TRACE_SIZEOF(kmp_t);
-    TRACE_SIZEOF(kmp_ph_t);
-    TRACE_SIZEOF(kmp_flag_t);
-    TRACE_SIZEOF(kmp_file_mkw_t);
-    TRACE_SIZEOF(kmp_gopt_t);
-    TRACE_SIZEOF(kmp_gopt2_t);
-    TRACE_SIZEOF(kmp_group_t);
-    TRACE_SIZEOF(kmp_group_list_t);
-    TRACE_SIZEOF(kmp_group_name_t);
-    TRACE_SIZEOF(kmp_rtobj_t);
-    TRACE_SIZEOF(kmp_rtobj_list_t);
-    TRACE_SIZEOF(kmp_linfo_mode);
-    TRACE_SIZEOF(kmp_linfo_t);
-
-    TRACE_SIZEOF(kmp_area_entry_t);
-    TRACE_SIZEOF(kmp_came_entry_t);
-    TRACE_SIZEOF(kmp_ckph_entry_t);
-    TRACE_SIZEOF(kmp_ckpt_entry_t);
-    TRACE_SIZEOF(kmp_cnpt_entry_t);
-    TRACE_SIZEOF(kmp_enph_entry_t);
-    TRACE_SIZEOF(kmp_enpt_entry_t);
-    TRACE_SIZEOF(kmp_gobj_entry_t);
-    TRACE_SIZEOF(kmp_itph_entry_t);
-    TRACE_SIZEOF(kmp_itpt_entry_t);
-    TRACE_SIZEOF(kmp_jgpt_entry_t);
-    TRACE_SIZEOF(kmp_ktpt_entry_t);
-    TRACE_SIZEOF(kmp_mspt_entry_t);
-    TRACE_SIZEOF(kmp_poti_group_t);
-    TRACE_SIZEOF(kmp_poti_point_t);
-    TRACE_SIZEOF(kmp_stgi_entry_t);
-
-    TRACE_SIZEOF(pos_param_t);
-    TRACE_SIZEOF(pos_file_t);
-
-    TRACE("- mdl\n");
-    TRACE_SIZEOF(mdl_t);
-    TRACE_SIZEOF(mdl_head_t);
-    TRACE_SIZEOF(mdl_sect0_t);
-    TRACE_SIZEOF(mdl_sect1_t);
-    TRACE_SIZEOF(mdl_sect2_t);
-    TRACE_SIZEOF(mdl_sect8_t);
-    TRACE_SIZEOF(mdl_sect8_layer_t);
-    TRACE_SIZEOF(mdl_sect10_t);
-    TRACE_SIZEOF(mdl_minimap_t);
-
-    TRACE("- pat\n");
-    TRACE_SIZEOF(pat_t);
-    TRACE_SIZEOF(pat_element_t);
-    TRACE_SIZEOF(pat_analyse_t);
-    TRACE_SIZEOF(pat_head_t);
-    TRACE_SIZEOF(pat_s0_bhead_t);
-    TRACE_SIZEOF(pat_s0_belem_t);
-    TRACE_SIZEOF(pat_s0_sref_t);
-    TRACE_SIZEOF(pat_s0_shead_t);
-    TRACE_SIZEOF(pat_s0_selem_t);
-
-    TRACE("- static rel\n");
-    TRACE_SIZEOF(rel_header_t);
-    TRACE_SIZEOF(rel_sect_info_t);
-    TRACE_SIZEOF(rel_imp_t);
-    TRACE_SIZEOF(rel_data_t);
-    TRACE_SIZEOF(rel_type_t);
-
-    TRACE("- tpl, bti\n");
-    TRACE_SIZEOF(tpl_header_t);
-    TRACE_SIZEOF(tpl_imgtab_t);
-    TRACE_SIZEOF(tpl_pal_header_t);
-    TRACE_SIZEOF(tpl_img_header_t);
-    TRACE_SIZEOF(bti_header_t);
-
-    TRACE("- common.szs\n");
-    TRACE_SIZEOF(geohit_bin_t);
-    TRACE_SIZEOF(geohit_t);
-    TRACE_SIZEOF(itemslot_bin_t);
-    TRACE_SIZEOF(itemslot_t);
-    TRACE_SIZEOF(minigame_kmg_head_t);
-    TRACE_SIZEOF(minigame_kmg_t);
-
-    TRACE("---\n");
-    TRACE_SIZEOF(Color_t);
-    TRACE_SIZEOF(KeywordTab_t);
-    TRACE_SIZEOF(Container_t);
-    TRACE_SIZEOF(ContainerData_t);
-    TRACE_SIZEOF(DataContainer_t);
-    TRACE_SIZEOF(File_t);
-    TRACE_SIZEOF(FileAttrib_t);
-    TRACE_SIZEOF(FormatField_t);
-    TRACE_SIZEOF(FormatFieldItem_t);
-    TRACE_SIZEOF(FuncInfo_t);
-    TRACE_SIZEOF(FuncParam_t);
-    TRACE_SIZEOF(Image_t);
-    TRACE_SIZEOF(ImageGeometry_t);
-    TRACE_SIZEOF(iobuf);
-    TRACE_SIZEOF(List_t);
-    TRACE_SIZEOF(MemItem_t);
-    TRACE_SIZEOF(ParamList_t);
-    TRACE_SIZEOF(PatchImage_t);
-    TRACE_SIZEOF(ScanFile_t);
-    TRACE_SIZEOF(ScanInfo_t);
-    TRACE_SIZEOF(ScanLoop_t);
-    TRACE_SIZEOF(ScanMacro_t);
-    TRACE_SIZEOF(ScanParamMode);
-    TRACE_SIZEOF(ScanParam_t);
-    TRACE_SIZEOF(SetupDef_t);
-    TRACE_SIZEOF(ListDef_t);
-    TRACE_SIZEOF(SetupParam_t);
-    TRACE_SIZEOF(StringField_t);
-    TRACE_SIZEOF(SubstString_t);
-    TRACE_SIZEOF(TrackInfo_t);
-    TRACE_SIZEOF(VarMode_t);
-    TRACE_SIZEOF(IntMode_t);
-    TRACE_SIZEOF(Var_t);
-    TRACE_SIZEOF(VarMap_t);
-
-    TRACE("- DbFile\n");
-    TRACE_SIZEOF(DbFile_t);
-    TRACE_SIZEOF(DbFile);
-    TRACE_SIZEOF(UsedFile_t);
-     TRACE_SIZEOF(DbFileSZS_t);
-     TRACE_SIZEOF(DbFileSZS);
-     TRACE_SIZEOF(DbFileRefSZS);
-     TRACE_SIZEOF(UsedFileSZS_t);
-    TRACE_SIZEOF(DbFileSHA1_t);
-    TRACE_SIZEOF(DbFileSHA1);
-    TRACE_SIZEOF(DbFileRefSHA1);
-    TRACE_SIZEOF(UsedFileSHA1_t);
-     TRACE_SIZEOF(DbFileFILE_t);
-     TRACE_SIZEOF(DbFileFILE);
-     TRACE_SIZEOF(DbFileRefFILE);
-     TRACE_SIZEOF(UsedFileFILE_t);
-    TRACE_SIZEOF(DbFileGROUP_t);
-    TRACE_SIZEOF(DbFileGROUP);
-    TRACE_SIZEOF(DbFileRefGROUP);
-    TRACE_SIZEOF(UsedFileGROUP_t);
-
-    TRACE("- DbObject\n");
-    TRACE_SIZEOF(ObjectInfo);
-    TRACE_SIZEOF(UsedObject_t);
-
     // assertions
 
     TRACE("-\n");
@@ -717,7 +442,8 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
 
     TRACE("-\n");
 
-    //----- some assertion
+
+    //----- more assertions
 
     #if HAVE_ASSERT
     {
@@ -740,6 +466,7 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
 	ASSERT( sizeof(mdl_sect1_t) == 0xd0 );
     }
     #endif
+
 
     //----- initialize data structures
 
@@ -769,6 +496,7 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
      #endif
     }
 
+
     //--- misc
 
     SetupStandardSZS();
@@ -787,12 +515,20 @@ void NormalizeOptions
 )
 {
     SetupColors();
+    ProgInfo.error_level = logging > 0 ? ERRLEV_EXTENDED : ERRLEV_HEADING;
+
 
     //--- load configuration
 
     const config_t *config = GetConfig();
     if (config)
 	share_path = config->share_path;
+
+
+    //--- logging & log_timing
+
+    if ( logging >= 3 && !log_timing )
+	log_timing++;
 
 
     //--- diff, delta and minimize
@@ -964,8 +700,9 @@ ccp LibGetErrorText ( int stat, ccp ret_not_found )
 
 void SetupPager()
 {
-    if (isatty(fileno(stdout)))
+    if ( !opt_no_pager && isatty(fileno(stdout)) )
     {
+	fflush(stdout);
 	opt_colorize = 1;
 	SetupColors();
 	StdoutToPager();
@@ -3938,6 +3675,7 @@ void cmd_version_section
 
     if ( verbose > 0 )
     printf(
+	"\n"
  #ifdef _POSIX_C_SOURCE
 	"posix_c_source=%s\n"
  #endif
@@ -4101,9 +3839,52 @@ enumError cmd_argtest ( int argc, char ** argv )
 {
     printf("ARGUMENT TEST: %u arguments:\n",argc);
 
-    int idx;
-    for ( idx = 0; idx < argc; idx++ )
-	printf("%4u.: |%s|\n",idx,argv[idx]);
+    for ( int idx = 0; idx < argc; idx++ )
+	printf("%4u: |%s|\n",idx,argv[idx]);
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			command expand			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError path_found ( mem_t path, uint st_mode, void * param )
+{
+    printf(" > %s%s\n", path.ptr, S_ISDIR(st_mode) ? "/" : "" );
+    return ERR_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+enumError cmd_expand ( int argc, char ** argv )
+{
+    SetupPager();
+    printf("%sExpand %d Argument%s:%s\n",
+	colout->caption,
+	n_param, n_param == 1 ? "" : "s",
+	colout->reset );
+
+    bool allow_hidden = false;
+    for ( ParamList_t *param = first_param; param; param = param->next )
+    {
+	if (!strcmp(param->arg,"/h"))
+	{
+	    allow_hidden = false;
+	    printf("%sIgnore hidden files.%s\n", colout->info, colout->reset );
+	}
+	else if (!strcmp(param->arg,"+h"))
+	{
+	    allow_hidden = true;
+	    printf("%sSearch hidden files too.%s\n", colout->info, colout->reset );
+	}
+	else
+	{
+	    NORMALIZE_FILENAME_PARAM(param);
+	    printf("%s%s%s\n", colout->hint, param->arg, colout->reset );
+	    SearchPaths(param->arg,0,allow_hidden,path_found,0);
+	}
+    }
     return ERR_OK;
 }
 
@@ -4221,16 +4002,16 @@ enumError cmd_filetype()
 
 	if ( long_count > 1 )
 	    printf("\n"
-		   "type   decomp   vers  valid file name\n"
-		   "%.*s\n", max_len + 29, Minus300 );
+		   "type    decomp    vers  valid file name\n"
+		   "%.*s\n", max_len + 31, Minus300 );
 	else if ( long_count )
 	    printf("\n"
-		   "type   decomp   vers  file name\n"
-		   "%.*s\n", max_len + 23, Minus300 );
+		   "type    decomp    vers  file name\n"
+		   "%.*s\n", max_len + 25, Minus300 );
 	else
 	    printf("\n"
-		   "type   file name\n"
-		   "%.*s\n", max_len + 8, Minus300 );
+		   "type    file name\n"
+		   "%.*s\n", max_len + 9, Minus300 );
     }
 
     ParamList_t *param;
@@ -4339,14 +4120,14 @@ enumError cmd_filetype()
 			else
 			    valid = IsValid(buf,written,fatt.size,0,fform2,param->arg);
 		    }
-		    printf("%-6s %-6s %7s %-5s %s\n",
+		    printf("%-7s %-7s %7s %-5s %s\n",
 				stat1, stat2, vbuf, valid_text[valid], param->arg );
 		}
 		else
-		    printf("%-6s %-6s %7s %s\n",stat1,stat2,vbuf,param->arg);
+		    printf("%-7s %-7s %7s %s\n",stat1,stat2,vbuf,param->arg);
 	    }
 	    else
-		printf("%-6s %s\n",stat1,param->arg);
+		printf("%-7s %s\n",stat1,param->arg);
 	}
     }
 
@@ -5199,7 +4980,7 @@ file_format_t RepairMagic
 
     if ( rep->mode == REPMD_ANALYZE && rep->magic_len )
     {
-	if (logging>1)
+	if ( logging >= 2 )
 	    fprintf(stderr,"REPAIR MAGIC: %s -> %s (%s) : %s\n",
 		PrintID(data,rep->magic_len,0),
 		PrintID(rep->magic,rep->magic_len,0),
@@ -6619,7 +6400,7 @@ valid_t IsValidKCL
 
     //--- logging
 
-    if ( logging > 1 )
+    if ( logging >= 2 )
     {
 	fprintf(stdlog,"\nMemory map of KCL sections: %s\n", fname ? fname : "" );
 	PrintMemMap(&mm,stdlog,3,"info");

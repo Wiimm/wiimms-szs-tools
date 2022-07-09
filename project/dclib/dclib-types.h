@@ -362,6 +362,47 @@ typedef float float32; // float as 32 bit binary data, endian is file dependent
 #define S64_MAX  INT64_MAX
 
 ///////////////////////////////////////////////////////////////////////////////
+// int128 support
+
+#undef HAVE_INT128
+#ifdef __SIZEOF_INT128__
+
+    #define HAVE_INT128 1
+
+    typedef __int128_t	s128;
+    typedef __uint128_t	u128;
+
+#else
+
+  #define HAVE_INT128 0
+
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+// [[intx_t]]
+
+typedef union intx_t
+{
+    s8 s8[16];
+    u8 u8[16];
+
+    s16	s16[8];
+    u16	u16[8];
+
+    s32	s32[4];
+    u32	u32[4];
+
+    s64	s64[2];
+    u64 u64[2];
+
+ #if HAVE_INT128
+    s128 s128[1];
+    u128 u128[1];
+ #endif
+}
+intx_t;
+
+///////////////////////////////////////////////////////////////////////////////
 
 #ifndef DCLIB_BASIC_TYPES
   #define DCLIB_BASIC_TYPES 1

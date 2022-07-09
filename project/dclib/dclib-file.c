@@ -260,12 +260,31 @@ exmem_t SearchToolByPATH ( ccp tool )
 	char fname[PATH_MAX];
 	if (strchr(tool,'/'))
 	{
+//PRINT1("SEARCH ABS: %s\n",tool);
 	    struct stat st;
 	    if ( !stat(tool,&st) && st.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH) )
+	    {
+//PRINT1("FOUND ABS: %s\n",tool);
 		AssignExMemS(&dest,tool,-1,CPM_COPY);
+	    }
 	}
 	else
 	{
+	 #ifdef __CYGWINxxx__
+	    if ( ProgInfo.progpath && *ProgInfo.progpath )
+	    {
+		PathCatPP(fname,sizeof(fname),ProgInfo.progpath,tool);
+//PRINT1("SEARCH+: %s\n",fname);
+		struct stat st;
+		if ( !stat(fname,&st) && st.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH) )
+		{
+//PRINT1("FOUND+: %s\n",fname);
+		    AssignExMemS(&dest,fname,-1,CPM_COPY);
+		    return dest;
+		}
+	    }
+	 #endif
+
 	    ccp path = getenv("PATH");
 	    for(;;)
 	    {
@@ -279,9 +298,11 @@ exmem_t SearchToolByPATH ( ccp tool )
 		    break;
 
 		const int flen = snprintf(fname,sizeof(fname),"%.*s/%s",len,start,tool);
+//PRINT1("SEARCH: %s\n",fname);
 		struct stat st;
 		if ( !stat(fname,&st) && st.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH) )
 		{
+//PRINT1("FOUND: %s\n",fname);
 		    AssignExMemS(&dest,fname,flen,CPM_COPY);
 		    break;
 		}
@@ -311,6 +332,7 @@ exmem_t SearchToolByList ( ccp * list, int max )
 	    ccp arg = *list++;
 	    if (arg)
 	    {
+//PRINT1("SEARCH: %s\n",arg);
 		if ( *arg == '>' )
 		{
 		    ccp env = getenv(arg+1);
@@ -324,7 +346,10 @@ exmem_t SearchToolByList ( ccp * list, int max )
 		{
 		    dest = SearchToolByPATH(arg);
 		    if (dest.data.len)
+		    {
+			//AssignExMemS(&dest,arg,-1,CPM_LINK);
 			break;
+		    }
 		}
 	    }
 	}
@@ -344,10 +369,20 @@ static FILE *pager_file = 0;
 FILE * OpenPipeToPager()
 {
     static bool done = false;
-
     if (!done)
     {
 	done = true;
+
+	// first: set less option -R to enable colors
+	ccp less = getenv("LESS");
+	if ( less && *less )
+	{
+	    char buf[200];
+	    snprintf(buf,sizeof(buf),"%s -R",less);
+	    setenv("LESS",buf,1);
+	}
+	else
+	    setenv("LESS","-R",1);
 
 	static ccp search_tab[] =
 	{
@@ -355,6 +390,12 @@ FILE * OpenPipeToPager()
 	    ">DC_PAGER1",
 	    ">DC_PAGER2",
 	    ">PAGER",
+	 #ifdef __CYGWINxxx__
+	    "/usr/bin/less",
+	    "/cygdrive/c/Program Files/Wiimm/SZS/less",
+	    "/usr/bin/more",
+	    "/cygdrive/c/Program Files/Wiimm/SZS/more",
+	 #endif
 	    "less",
 	    "more",
 	    0
@@ -362,7 +403,18 @@ FILE * OpenPipeToPager()
 
 	exmem_t pager = SearchToolByList(search_tab,-1);
 	if (pager.data.ptr)
+	{
+	 #ifdef __CYGWINxxx__
+PRINT1("popen(%s)\n",pager.data.ptr);
+	    char buf[500];
+	    StringCat3S(buf,sizeof(buf),"'",pager.data.ptr,"'");
+PRINT1("popen(%s)\n",buf);
+	    pager_file = popen(buf,"we");
+PRINT_IF1(!pager_file,"popen(%s) FAILED\n",buf);
+	 #else
 	    pager_file = popen(pager.data.ptr,"we");
+	 #endif
+	}
 	FreeExMem(&pager);
     }
 
@@ -375,6 +427,10 @@ void ClosePagerFile()
 {
     if (pager_file)
     {
+	if ( stdout == pager_file ) stdout = 0;
+	if ( stderr == pager_file ) stderr = 0;
+	if ( stdwrn == pager_file ) stdwrn = 0;
+	if ( stdlog == pager_file ) stdlog = 0;
 	pclose(pager_file);
 	pager_file = 0;
     }
@@ -389,6 +445,16 @@ bool StdoutToPager()
     {
 	fflush(stdout);
 	stdout = f;
+
+	if ( stderr && isatty(fileno(stderr)) )
+	    stderr = f;
+
+	if ( stdwrn && isatty(fileno(stdwrn)) )
+	    stdwrn = f;
+
+	if ( stdlog && isatty(fileno(stdlog)) )
+	    stdlog = f;
+
 	return true;
     }
     return false;
@@ -399,10 +465,7 @@ bool StdoutToPager()
 void CloseStdoutToPager()
 {
     if ( pager_file && pager_file == stdout )
-    {
 	ClosePagerFile();
-	stdout = 0;
-    }
 }
 
 //
@@ -1808,7 +1871,7 @@ enumError LoadFile
     bool		fatt_max	// true: store *max* values to 'fatt'
 )
 {
-    ASSERT(data);
+    DASSERT(data);
     if (!size)
 	return ERR_OK;
 
@@ -2222,57 +2285,100 @@ enumError CopyFileTemp
 
 enumError TransferFile
 (
-    ccp			src,		// source path
+    LogFile_t		*log,		// not NULL: log activities
     ccp			dest,		// destination path
+    ccp			src,		// source path
     TransferMode_t	tfer_mode,	// transfer mode
     mode_t		open_mode	// mode for CopyFile*() -> open()
 )
 {
-    if ( !dest || !src || !*dest || !*src )
+    if ( !dest || !*dest || !src || !*src )
 	return ERR_MISSING_PARAM;
 
     if (IsSameFile(src,dest))
 	return ERR_NOTHING_TO_DO;
 
+    const bool testmode = ( tfer_mode & TFMD_F_TEST ) != 0;
+ 
     if ( tfer_mode & TFMD_J_MOVE1 )
     {
 	LOGPRINT("TransferFile(MOVE1) %s -> %s\n",src,dest);
 	struct stat st;
-	if ( !stat(src,&st) && st.st_nlink == 1 && !rename(src,dest) )
+	if ( !stat(src,&st) && st.st_nlink == 1
+		&& ( testmode || !rename(src,dest) ))
+	{
+	    if (log)
+		PrintLogFile(log, "%s:\n\t< %s\n\t> %s\n",
+				testmode ? "Would MOVE" : "MOVED", src, dest );
 	    return ERR_OK;
+	}
     }
     else if ( tfer_mode & TFMD_J_MOVE )
     {
 	LOGPRINT("TransferFile(MOVE) %s -> %s\n",src,dest);
-	if (!rename(src,dest))
+	if ( testmode || !rename(src,dest) )
+	{
+	    if (log)
+		PrintLogFile(log, "%s:\n\t< %s\n\t> %s\n",
+				testmode ? "Would MOVE" : "MOVED", src, dest );
 	    return ERR_OK;
+	}
     }
 
     if ( tfer_mode & TFMD_J_LINK )
     {
 	LOGPRINT("TransferFile(RM_DEST) %s\n",dest);
-	if ( tfer_mode & TFMD_J_RM_DEST )
+	if ( tfer_mode & TFMD_J_RM_DEST && !testmode )
 	    unlink(dest);
 
 	LOGPRINT("TransferFile(LINK) %s -> %s\n",src,dest);
-	if (!link(src,dest))
+	if ( testmode || !link(src,dest) )
+	{
+	    if (log)
+		PrintLogFile(log, "%s:\n\t< %s\n\t> %s\n",
+				testmode ? "Would LINK" : "LINKED", src, dest );
 	    return ERR_OK;
+	}
     }
 
     if ( tfer_mode & TFMD_J_COPY )
     {
 	LOGPRINT("TransferFile(COPY) %s -> %s\n",src,dest);
-	enumError err = tfer_mode & TFMD_J_RM_DEST
-			? CopyFileTemp(src,dest,open_mode)
-			: CopyFile(src,dest,open_mode);
-	if ( err == ERR_OK )
+	if (testmode)
 	{
-	    if ( tfer_mode & TFMD_J_RM_SRC )
+	    if (log)
 	    {
-		PRINT("TransferFile(RM_SRC) %s",src);
-		unlink(src);
+		if ( tfer_mode & TFMD_J_RM_DEST )
+		    PrintLogFile(log, "Would REMOVE DEST: %s\n",dest);
+		PrintLogFile(log, "Would COPY:\n\t< %s\n\t> %s\n",src,dest);
+		if ( tfer_mode & TFMD_J_RM_SRC )
+		    PrintLogFile(log, "Would REMOVE SRC: %s\n",src);
 	    }
 	    return ERR_OK;
+	}
+	else
+	{
+	    enumError err = tfer_mode & TFMD_J_RM_DEST
+				? CopyFileTemp(src,dest,open_mode)
+				: CopyFile(src,dest,open_mode);
+	    if ( err == ERR_OK )
+	    {
+		if (log)
+		{
+		    if ( tfer_mode & TFMD_J_RM_DEST )
+			PrintLogFile(log, "REMOVE DEST: %s\n",dest);
+		    PrintLogFile(log, "COPY:\n\t< %s\n\t> %s\n",src,dest);
+		}
+
+		if ( tfer_mode & TFMD_J_RM_SRC )
+		{
+		    PRINT("TransferFile(RM_SRC) %s",src);
+		    unlink(src);
+		    if (log)
+			PrintLogFile(log, "REMOVE SRC: %s\n",src);
+		}
+		return ERR_OK;
+	    }
 	}
     }
 
@@ -3099,6 +3205,24 @@ bool IsSameFilename ( ccp fn1, ccp fn2 )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+// convert type get by readdir() to of struct stat.st_mode
+uint ConvertDType2STMode ( uint d_type )
+{
+    switch (d_type)
+    {
+	case DT_BLK:	return S_IFBLK;
+	case DT_CHR:	return S_IFCHR;
+	case DT_DIR:	return S_IFDIR;
+	case DT_FIFO:	return S_IFIFO;
+	case DT_LNK:	return S_IFLNK;
+	case DT_REG:	return S_IFREG;
+	case DT_SOCK:	return S_IFSOCK;
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 bool enable_config_search_log = false;
@@ -3622,6 +3746,317 @@ ccp GetBlockDeviceHolder ( ccp name, ccp sep, int *ret_level )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			SearchPaths()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[search_paths_t]]
+
+typedef struct search_paths_t
+{
+    mem_t		source;		// path to analyse, any string outside
+    bool		allow_hidden;	// true: allow hidden dirs and files
+
+    char		*path_buf;	// pointer to complete path, work buffer
+    char		*path_star;	// begin of '**' for search_paths_dir()
+    char		*path_ptr;	// current end of path
+    char		*path_end;	// end of 'path_buf' -1
+
+    SearchPathsFunc	func;		// function to call, never NULL
+    void		*param;		// last param for func()
+
+    search_paths_stat_t	status;		// search status
+}
+search_paths_t;
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void search_paths_hit ( search_paths_t *sp, mem_t path, uint d_type )
+{
+    DASSERT(sp);
+    enumError err = sp->func(path,d_type,sp->param);
+    if ( err < 0 )
+    {
+	err = -err;
+	sp->status.abort = true;
+    }
+
+    if ( err != ERR_JOB_IGNORED )
+    {
+	sp->status.hit_count++;
+	if ( sp->status.max_err < err )
+	     sp->status.max_err = err;
+    }
+
+    sp->status.func_count++;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void search_paths_dir ( search_paths_t *sp, ParamField_t *collect, int min, int max )
+{
+    DASSERT(sp);
+    DASSERT(collect);
+    PRINT0("%s%s** %d - %d%s\n",colerr->debug,sp->path_buf,min,max,colerr->reset);
+
+    search_paths_t local = *sp;
+    char *path_ptr = local.path_ptr;
+
+    DIR *fdir = opendir( *local.path_buf ? local.path_buf: "." );
+    local.status.dir_count++;
+    if (fdir)
+    {
+	for(;;)
+	{
+	    struct dirent *dent = readdir(fdir);
+	    if (!dent)
+		break;
+
+	    if ( dent->d_name[0] == '.'
+		&& (  !local.allow_hidden
+		   || !dent->d_name[1]
+		   || dent->d_name[1] == '.' && !dent->d_name[2] ))
+	    {
+		continue;
+	    }
+
+	    local.path_ptr = StringCopyE(path_ptr,sp->path_end,dent->d_name);
+
+	    uint st_mode = ConvertDType2STMode(dent->d_type);
+	    if (!st_mode)
+	    {
+		struct stat st;
+		if (stat(local.path_buf,&st))
+		    continue;
+		st_mode = st.st_mode;
+	    }
+	    if (!S_ISDIR(st_mode))
+		continue;
+
+	    DASSERT(local.path_star);
+	    DASSERT( local.path_star >= local.path_buf );
+	    DASSERT( local.path_star <= local.path_ptr );
+
+	    PRINT0("FOUND: [t=%d,m:%x,add=%d,r=%d] %s\n",
+			dent->d_type, st_mode, min<=0, max>0, local.path_star );
+	    if ( min <= 0 )
+		InsertParamField(collect,local.path_star,false,st_mode,0);
+	    if ( max > 0 )
+	    {
+		*local.path_ptr++ = '/';
+		*local.path_ptr = 0;
+		search_paths_dir(&local,collect,min-1,max-1);
+	    }
+	}
+	closedir(fdir);
+    }
+
+    sp->status = local.status;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void search_paths_helper ( search_paths_t *sp )
+{
+    ccp wc = FindFirstWildcard(sp->source);
+    if (!wc)
+    {
+	char *end = StringCopyEM(sp->path_ptr,sp->path_end,sp->source.ptr,sp->source.len);
+	struct stat st;
+	if (!stat(sp->path_buf,&st))
+	{
+	    mem_t path = { .ptr = sp->path_buf, .len = end - sp->path_buf };
+	    search_paths_hit(sp,path,st.st_mode);
+	}
+	return;
+    }
+
+    search_paths_t local = *sp;
+
+    ccp pat = memrchr(local.source.ptr,'/',wc-local.source.ptr);
+    pat = pat ? pat+1 : local.source.ptr;
+
+    ccp source_end = local.source.ptr + local.source.len;
+    ccp next = memchr(wc,'/',source_end-wc);
+    if (!next)
+	next = source_end;
+
+    mem_t pattern;
+    pattern.len = next - pat;
+    pattern.ptr = MEMDUP(pat,pattern.len);
+    const bool allow_hidden = local.allow_hidden || pattern.ptr[0] == '.';
+
+    char *path_ptr = StringCopyEM(local.path_ptr,local.path_end,local.source.ptr,pat-local.source.ptr);
+    local.path_ptr = path_ptr;
+
+    local.source.ptr = next;
+    local.source.len = source_end - next;
+    const bool want_dir = local.source.len && local.source.ptr[0] == '/';
+
+    PRINT0("SPLIT: %s  %s%s%s  %.*s  [want_dir=%d]\n",
+		 local.path_buf,
+		 colerr->highlight, pattern.ptr, colerr->reset,
+		 local.source.len, local.source.ptr, want_dir );
+
+    ParamField_t collect;
+    InitializeParamField(&collect);
+    collect.func_cmp = strcasecmp;
+
+
+    //--- check for **...
+
+    if ( pattern.ptr[0] == '*' && pattern.ptr[1] == '*' )
+    {
+	u32 n1 = 0, n2 = 100;
+	char *ptr = (char*)pattern.ptr+2;
+	if (*ptr)
+	{
+	    if (isdigit(*ptr))
+		n1 = str2ul(ptr,&ptr,10);
+	    if (*ptr)
+	    {
+		if ( *ptr != '-' )
+		    goto terminate;
+		if ( *++ptr )
+		{
+		    n2 = str2ul(ptr,&ptr,10);
+		    if (*ptr)
+			goto terminate;
+		}
+	    }
+	    else
+		n2 = n1;
+	    if ( n2 > 100 )
+		n2 = 100;
+	    if ( n1 > n2 )
+		goto terminate;
+	}
+
+	local.path_star = path_ptr;
+	search_paths_dir(&local,&collect,n1,n2);
+	PRINT0("%sDIR: %d records for **%s\n",colerr->highlight,collect.used,colerr->reset);
+
+	ParamFieldItem_t *end = collect.field + collect.used;
+	for ( ParamFieldItem_t *ptr = collect.field; !local.status.abort && ptr < end; ptr++ )
+	{
+	    local.path_ptr = StringCopyE(path_ptr,sp->path_end,ptr->key);
+	    PRINT0("%sDIR: %s%s\n",colerr->highlight,local.path_buf,colerr->reset);
+	    search_paths_helper(&local);
+	    if (local.status.abort)
+	        break;
+	}
+	goto terminate;
+    }
+
+
+    //--- scan directory
+
+    DIR *fdir = opendir( *local.path_buf ? local.path_buf: "." );
+    local.status.dir_count++;
+    if (fdir)
+    {
+	for(;;)
+	{
+	    struct dirent *dent = readdir(fdir);
+	    if (!dent)
+		break;
+
+	    if ( dent->d_name[0] == '.'
+		&& (  !allow_hidden
+		   || !dent->d_name[1]
+		   || dent->d_name[1] == '.' && !dent->d_name[2] ))
+	    {
+		continue;
+	    }
+
+	    uint st_mode = ConvertDType2STMode(dent->d_type);
+	    if ( st_mode && want_dir && !S_ISDIR(st_mode) && !S_ISLNK(st_mode) )
+		continue;
+
+	    if ( MatchPatternFull(pattern.ptr,dent->d_name) )
+	    {
+		if (!st_mode)
+		{
+		    local.path_ptr = StringCopyE(path_ptr,sp->path_end,dent->d_name);
+		    struct stat st;
+		    if (stat(local.path_buf,&st))
+			continue;
+		    if ( want_dir && !S_ISDIR(st.st_mode) && !S_ISLNK(st.st_mode) )
+			continue;
+		    st_mode = st.st_mode;
+		}
+		PRINT0("BINGO: [%d,%x] %s\n",dent->d_type,st_mode,dent->d_name);
+		InsertParamField(&collect,dent->d_name,false,st_mode,0);
+	    }
+	}
+	closedir(fdir);
+    }
+
+    if (!local.status.abort)
+    {
+	ParamFieldItem_t *end = collect.field + collect.used;
+	for ( ParamFieldItem_t *ptr = collect.field; !local.status.abort && ptr < end; ptr++ )
+	{
+	    local.path_ptr = StringCopyE(path_ptr,sp->path_end,ptr->key);
+	    if (local.source.len)
+	    {
+		search_paths_helper(&local);
+		if (local.status.abort)
+		    break;
+	    }
+	    else
+	    {
+		mem_t path = { .ptr = local.path_buf, .len = local.path_ptr - local.path_buf };
+		search_paths_hit(&local,path,ptr->num);
+	    }
+	}
+    }
+
+ terminate:;
+    ResetParamField(&collect);
+    FreeString(pattern.ptr);
+    sp->status = local.status;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+search_paths_stat_t SearchPaths
+(
+    ccp			path1,		// not NULL: part #1 of base path
+    ccp			path2,		// not NULL: part #2 of base path
+    bool		allow_hidden,	// allow hiddent directories and files
+    SearchPathsFunc	func,		// callback function, never NULL
+    void		*param		// last param for func()
+)
+{
+    if (!func)
+    {
+	search_paths_stat_t stat = { .max_err = ERR_MISSING_PARAM };
+	return stat;
+    }
+
+    char srcbuf[PATH_MAX+2];
+    ccp source = PathCatPP(srcbuf,sizeof(srcbuf),path1,path2);
+
+    char pathbuf[PATH_MAX];
+    search_paths_t sp =
+    {
+	.source.ptr	= source,
+	.source.len	= strlen(source),
+	.allow_hidden	= allow_hidden,
+	.path_buf	= pathbuf,
+	.path_ptr	= pathbuf,
+	.path_end	= pathbuf + sizeof(pathbuf) - 2,
+	.func		= func,
+	.param		= param,
+    };
+
+    search_paths_helper(&sp);
+    PRINT0("abort=%d, max_err = %d, %u dirs scanned, %u func calls, %u hits\n",
+		sp.abort, sp.max_err, sp.dir_count, sp.func_count, sp.hit_count );
+    return sp.status;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			normalize filenames		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3833,7 +4268,7 @@ uint NormalizeFilenameCygwin
 	    *dest++ = *src++;
 
     *dest = 0;
-    ASSERT( dest < buf + buf_size );
+    DASSERT( dest < buf + buf_size );
     return dest - buf;
 }
 

@@ -141,13 +141,19 @@ szs v1.60a r7578 - 2018-08-21
  - Advanced support of battle arenas.
  - Support of dispatch points (enemy routes)
 
-szs v2.00a
+szs v2.00a r7754 - 2019-02-22
  - Support of LE-CODE (Leserattes CT-CODE).
  - VR calculations.
 
-szs v2.01a
+szs v2.01a r7798 - 2019-03-16
  - First LEX support.
 
-szs v2.08a
+szs v2.08a r7979 - 2019-09-05
  - Support of all known BMG encodings (CP-1252, UTF-16, SHIFT-JIS and UTF-8).
+
+szs v2.15a r8176 - 2020-04-03
+ - Support of file format LPAR to manage LE-CODE parameters by a text file.
+
+szs v2.28a
+ - wlect distribution and new self defined file formats.
 

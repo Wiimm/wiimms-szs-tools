@@ -46,6 +46,7 @@
 #include <dirent.h>
 #include <stddef.h>
 
+#include "dclib-utf8.h"
 #include "lib-std.h"
 #include "lib-szs.h"
 #include "lib-rarc.h"
@@ -59,8 +60,7 @@
 #include "lib-rkg.h"
 #include "lib-image.h"
 #include "lib-staticr.h"
-#include "lib-ctcode.h"
-#include "lib-lecode.h"
+#include "lib-ledis.h"
 #include "lib-common.h"
 #include "lib-bzip2.h"
 #include "lib-checksum.h"
@@ -758,7 +758,7 @@ file_format_t GetByMagicFF
 	    case ADDR_PORT_MAGIC_NUM:		return FF_PORTDB;
 
 	    //--- see below for BOM support
-	    case CT_TEXT_MAGIC8_NUM:		return FF_CT_TEXT;
+	    case CT_DEF_MAGIC8_NUM:		return FF_CTDEF;
 	    case DISTRIB_MAGIC8_NUM:		return FF_DISTRIB;
 	    case ITEMSLT_TEXT_MAGIC_NUM:	return FF_ITEMSLT_TXT;
 	    case OBJFLOW_TEXT_MAGIC8_NUM:	return FF_OBJFLOW_TXT;
@@ -767,6 +767,12 @@ file_format_t GetByMagicFF
 	    case GH_KART_TEXT_MAGIC8_NUM:	return FF_GH_KART_TXT;
 	    case GH_KOBJ_TEXT_MAGIC8_NUM:	return FF_GH_KOBJ_TXT;
 	    case LE_LPAR_MAGIC_NUM:		return FF_LPAR;
+	    case LE_DEFINE_MAGIC8_NUM:		return FF_LEDEF;
+	    case LE_DISTRIB_MAGIC8_NUM:		return FF_LEDIS;
+	    case LE_REFERENCE_MAGIC8_NUM:	return FF_LEREF;
+	    case LE_STRINGS_MAGIC8_NUM:		return FF_LESTR;
+	    case LE_SHA1REF_MAGIC8_NUM:		return FF_SHA1REF;
+	    case LE_PREFIX_MAGIC8_NUM:		return FF_PREFIX;
 	}
     }
 
@@ -867,7 +873,7 @@ file_format_t GetByMagicFF
 	    const u64 magic64 = be64(data+bom_len);
 	    switch(magic64)
 	    {
-		case CT_TEXT_MAGIC8_NUM:	return FF_CT_TEXT;
+		case CT_DEF_MAGIC8_NUM:	return FF_CTDEF;
 		case DISTRIB_MAGIC8_NUM:	return FF_DISTRIB;
 		case ITEMSLT_TEXT_MAGIC_NUM:	return FF_ITEMSLT_TXT;
 		case OBJFLOW_TEXT_MAGIC8_NUM:	return FF_OBJFLOW_TXT;
@@ -1955,8 +1961,8 @@ void SearchConfigHelper ( search_file_list_t *sfl, int stop_mode )
     ccp etc[]	 = { "wiimm", "" };
 
     SearchConfig(sfl,CONFIG_FILE, opt,2, &xdg_home,1, &home,1, etc,2, etc+1,1, 0,0, stop_mode );
-    if (logging>3)
-	DumpSearchFile(stdout,2,sfl,logging>4,"Config search list");
+    if ( logging >= 4 )
+	DumpSearchFile(stdout,2,sfl,logging>=5,"Config search list");
 }
 
 //-----------------------------------------------------------------------------
@@ -2543,7 +2549,7 @@ static char * trim_line ( char * ptr, bool allow_quote, char ** begin )
 	    buf_ptr = MALLOC(need);
 	    buf_size = need;
 	}
-	
+
 	uint scanned_len;
 	int elen = ScanEscapedString(buf_ptr,buf_size,ptr,slen,true,-1,&scanned_len);
 	if ( elen > slen )
@@ -3528,6 +3534,7 @@ int ScanOptCoding64 ( ccp arg )
 	{ ENCODE_BASE64URL,	"URL",		0,	0 },
 	{ ENCODE_BASE64STAR,	"STAR",		0,	0 },
 	{ ENCODE_BASE64XML,	"XML",		0,	0 },
+	{ ENCODE_HEX,		"HEX",		0,	0 },
 	{ 0,0,0,0 }
     };
 
@@ -3547,9 +3554,9 @@ int ScanOptCoding64 ( ccp arg )
 
 EncodeMode_t SetupCoding64 ( EncodeMode_t mode, EncodeMode_t fallback )
 {
-    PRINT("SetupCoding64(%d,%d) std=%d, url=%d, star=%d, xml=%d\n",
+    PRINT("SetupCoding64(%d,%d) std=%d, url=%d, star=%d, xml=%d, hex=%d\n",
 		mode, fallback,
-		ENCODE_BASE64, ENCODE_BASE64URL, ENCODE_BASE64STAR, ENCODE_BASE64XML );
+		ENCODE_BASE64, ENCODE_BASE64URL, ENCODE_BASE64STAR, ENCODE_BASE64XML, ENCODE_HEX );
 
     switch(mode)
     {
@@ -3576,6 +3583,14 @@ EncodeMode_t SetupCoding64 ( EncodeMode_t mode, EncodeMode_t fallback )
 	    TableDecode64BySetup = TableDecode64xml;
 	    TableEncode64BySetup = TableEncode64xml;
 	    break;
+
+ #if 0
+	case ENCODE_HEX:
+	    PRINT("USE ENCODE_HEX\n");
+	    TableDecode64BySetup = TableDecode64;
+	    TableEncode64BySetup = TableEncode64;
+	    break;
+ #endif
 
 	default:
 	    PRINT("BASE64 -> FALLBACK\n");
@@ -3849,6 +3864,650 @@ slot_info_t GetSlotByName ( mem_t name, bool minus_for_empty )
     AnalyzeSlotByName(&si,false,name);
     FinalizeSlotInfo(&si,minus_for_empty);
     return si;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			mkw_prefix_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#include "prefix.inc"
+
+static const mkw_prefix_t *current_prefix_tab = 0;
+static int current_prefix_tab_len = 0;
+
+///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptLoadPrefix ( ccp arg )
+{
+    if ( !arg || !*arg )
+	return 0;
+
+    raw_data_t raw;
+    enumError err = LoadRawData(&raw,true,arg,0,opt_ignore>0,0);
+    if ( !err && raw.fform == FF_PREFIX )
+	DefinePrefixTable(raw.data,raw.data_size);
+    ResetRawData(&raw);
+    return err > ERR_WARNING;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static int compare_prekey ( mkw_prefix_t *a, mkw_prefix_t *b )
+{
+    return strcmp(a->prefix,b->prefix);
+}
+
+//-----------------------------------------------------------------------------
+
+const mkw_prefix_t * ScanPrefixTable ( ScanText_t *st )
+{
+    DASSERT(st);
+    if (!st)
+	return 0;
+
+    enum
+    {
+	IDX_PREFIX,
+	IDX_INFO,
+	IDX_FLAGS,
+	IDX_ORDER,
+	IDX_COLOR,
+	IDX__N
+    };
+
+    st->detect_sections++;
+
+    int n_elem = 0;
+    while (NextLineScanText(st))
+    {
+	ccp pipe = memchr(st->line,'|',st->eol-st->line);
+	if ( pipe && pipe > st->line )
+	    n_elem++;
+    }
+    if (!n_elem)
+	return 0;
+
+    mkw_prefix_t *tab = CALLOC( n_elem+1, sizeof(*tab) );
+    mkw_prefix_t *ptr = tab;
+
+    RewindScanText(st);
+    while ( ptr < tab+n_elem < n_elem && NextLineScanText(st) )
+    {
+	mem_t srcline = { .ptr = st->line, .len = st->eol - st->line };
+	mem_t src[IDX__N+2];
+	const uint n = SplitByCharMem(src,IDX__N+1,srcline,'|');
+	if ( n <= IDX_INFO )
+	    continue;
+
+	PRINT0("LINE %d/%d: %.*s | %.*s | %.*s | %.*s | %.*s |\n",
+		lineno, n_elem,
+		src[IDX_PREFIX].len, src[IDX_PREFIX].ptr,
+		src[IDX_INFO].len, src[IDX_INFO].ptr,
+		src[IDX_FLAGS].len, src[IDX_FLAGS].ptr,
+		src[IDX_ORDER].len, src[IDX_ORDER].ptr,
+		src[IDX_COLOR].len, src[IDX_COLOR].ptr );
+
+	StringCopySMem(ptr->prefix,sizeof(ptr->prefix),src[IDX_PREFIX]);
+	ptr->info = MEMDUP(src[IDX_INFO].ptr,src[IDX_INFO].len);
+	if ( n > IDX_ORDER )
+	    ptr->order = str2l(src[IDX_ORDER].ptr,0,10);
+	if ( n > IDX_COLOR )
+	    ptr->color = str2l(src[IDX_COLOR].ptr,0,10);
+
+	if ( n > IDX_FLAGS )
+	{
+	    mkw_prefix_flags_t flags = 0;
+	    mem_t f = src[IDX_FLAGS];
+	    if (memchr(f.ptr,'N',f.len)) flags |= MPF_NINTENDO;
+	    if (memchr(f.ptr,'M',f.len)) flags |= MPF_MARIOKART;
+	    if (memchr(f.ptr,'1',f.len)) flags |= MPF_PREFIX1;
+	    if (memchr(f.ptr,'2',f.len)) flags |= MPF_PREFIX2;
+	    ptr->flags = flags;
+	}
+	ptr++;
+    }
+
+    qsort( tab, n_elem, sizeof(*tab), (qsort_func)compare_prekey );
+
+    st->detect_sections--;
+    return tab;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const mkw_prefix_t * DefinePrefixTable ( cvp source, uint len )
+{
+    ScanText_t st;
+    SetupScanText(&st,source,len);
+
+    if (current_prefix_tab)
+    {
+	for ( mkw_prefix_t *ptr = (mkw_prefix_t*)current_prefix_tab; ptr->info; ptr++ )
+	    FreeString(ptr->info);
+	FREE((void*)current_prefix_tab);
+    }
+
+    current_prefix_tab = ScanPrefixTable(&st);
+    current_prefix_tab_len = 0;
+    if (current_prefix_tab)
+	for ( const mkw_prefix_t *ptr = current_prefix_tab; ptr->info; ptr++ )
+	    current_prefix_tab_len++;
+
+    ResetScanText(&st);
+    return current_prefix_tab;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const mkw_prefix_t * GetPrefixTable(void)
+{
+    if (!current_prefix_tab)
+    {
+	DecodeBZIP2Manager(&prefix_inc_mgr);
+	DefinePrefixTable(prefix_inc_mgr.data,prefix_inc_mgr.size);
+    }
+
+    return current_prefix_tab;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const mkw_prefix_t * FindPrefix ( ccp pre, int pre_len, bool exact )
+{
+    if ( !pre || !*pre )
+	return 0;
+
+    char pbuf[20];
+    if ( pre_len < 0 )
+	pre_len = strlen(pre);
+    if ( !pre_len || pre_len >= sizeof(pbuf) )
+	return 0;
+    if (pre[pre_len])
+    {
+	memcpy(pbuf,pre,pre_len);
+	pbuf[pre_len] = 0;
+	pre = pbuf;
+    }
+
+    const mkw_prefix_t *tab = GetPrefixTable();
+    if (!tab)
+	return 0;
+
+    for ( int i = 0; i < 2; i++ )
+    {
+	int beg = 0;
+	int end = current_prefix_tab_len - 1;
+	while ( beg <= end )
+	{
+	    const uint idx = (beg+end)/2;
+	    const mkw_prefix_t *p = tab + idx;
+	    const int stat = strcmp(pre,p->prefix);
+	    if ( stat < 0 )
+		end = idx - 1 ;
+	    else if ( stat > 0 )
+		beg = idx + 1;
+	    else
+		return p;
+	}
+
+	if ( exact || i )
+	    return 0;
+
+	StringUpperS(pbuf,sizeof(pbuf),pre);
+	if (!strcmp(pbuf,pre))
+	    return 0;
+	pre = pbuf;
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError SavePrefixTable ( FILE *f, const mkw_prefix_t * tab )
+{
+    if (!tab)
+	tab = GetPrefixTable();
+    if ( !tab || !f )
+	return ERR_MISSING_PARAM;
+
+    fprintf(f,
+	"#PREFIX1\r\n"
+	"#> prefix|info|flags|order|\r\n"
+	"# Info flags: N: by Nintento,  M: Original Mario Kart\r\n"
+	"# Functional flags: 1|2: Can be used as first|second part of a combi\r\n"
+	"#%.68s\r\n"
+	,Minus300 );
+
+    int count = 0, fw_prefix = 0, fw_info = 0;
+    for ( ; tab->info; tab++ )
+    {
+	count++;
+	exmem_t prefix = EscapeStringPipeCircS(tab->prefix);
+	exmem_t info   = EscapeStringPipeCircS(tab->info);
+
+	if ( fw_prefix < prefix.data.len )
+	     fw_prefix = prefix.data.len;
+	if ( fw_info < info.data.len )
+	     fw_info = info.data.len;
+
+	fprintf(f,"%s|%s|%s%s%s%s|%u|\r\n",
+		prefix.data.ptr, info.data.ptr,
+		tab->flags & MPF_NINTENDO  ? "N" : "",
+		tab->flags & MPF_MARIOKART ? "M" : "",
+		tab->flags & MPF_PREFIX1   ? "1" : "",
+		tab->flags & MPF_PREFIX2   ? "2" : "",
+		tab->order );
+
+	FreeExMem(&prefix);
+	FreeExMem(&info);
+    }
+
+    fprintf(f,
+	"#-------------------\r\n"
+	"# %u prefixes total\r\n"
+	"# Max prefix len:%2u\r\n"
+	"# Max info len:%4u\r\n"
+	,count
+	,fw_prefix
+	,fw_info
+	);
+
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError SavePrefixTableFN ( ccp fname, const mkw_prefix_t * tab )
+{
+    File_t F;
+    enumError err = CreateFileOpt(&F,true,fname,false,0);
+    if (!err)
+	err = SavePrefixTable(F.f,tab);
+    CloseFile(&F,0);
+    return err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			split_filename_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp opt_plus = "+";
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ResetSPF ( split_filename_t *spf )
+{
+    if (spf)
+    {
+	if (spf->input_alloced)
+	    FreeString(spf->input);
+	FreeString(spf->norm.ptr);
+	InitializeSPF(spf);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void AnalyseSPF
+(
+    split_filename_t	*spf,		// valid pointet
+    bool		init_spf,	// true: InitializeSPF(), false: ResetSPF()
+    ccp			source,		// NULL or ponter to name
+    ccp			src_end,	// end of source. if 0 then use strlen()
+    CopyMode_t		cpm,		// copy mode for 'source'
+    ccp			plus_mode	// NULL or string of chars
+)
+{
+    if (!spf)
+	return;
+
+    //--- setup
+
+    if ( init_spf)
+	InitializeSPF(spf);
+    else
+	ResetSPF(spf);
+
+    if ( !source || !*source || src_end && src_end <= source )
+	return;
+
+    char buf[100];
+
+
+    //--- store input data
+
+    if ( cpm == CPM_COPY )
+    {
+	// optimization: we need only the base name
+	const int nlen = src_end ? src_end - source : strlen(source);
+	char *slash = memrchr(source,'/',nlen);
+	if (slash)
+	    source = slash+1;
+    }
+
+    int nlen = src_end ? src_end - source : strlen(source);
+    spf->input = CopyData(source,nlen,cpm,&spf->input_alloced);
+
+    char *name = (char*)spf->input;
+    char *end  = name + nlen;
+
+
+    //--- remove leading directory and store source
+
+    char *slash = memrchr(name,'/',nlen);
+    if (slash)
+    {
+	slash++;
+	nlen -= slash - name;
+	name = slash;
+    }
+
+    spf->source.ptr = name;
+    spf->source.len = nlen;
+
+
+    //--- split source into name + d + ext
+
+    // find last space or ']' or ')'
+    for ( char *p1 = end-1; p1 > name; p1-- )
+    {
+	if ( *p1 == '.' )
+	{
+	    spf->f_ext.ptr = p1;
+	    spf->f_ext.len = end - p1;
+	    end	 = p1;
+	    nlen = end - name;
+	    break;
+	}
+
+	if ( (uchar)*p1 <= ' ' || *p1 == ']' || *p1 == ')' )
+	    break;
+    }
+
+    if ( nlen >= 2 && end[-1] == 'd' && end[-2] == '_' )
+    {
+	end -= 2;
+	spf->f_d.ptr = end;
+	spf->f_d.len = 2;
+	nlen -= 2;
+    }
+
+    spf->f_name.ptr = name;
+    spf->f_name.len = nlen;;
+
+
+    //--- alloc name buffer and normalize blanks,controls and "ː⁄"
+
+    char *p1 = MALLOC(nlen+1), *p2;
+    spf->norm.ptr = p1;
+    int have_blank = 0;
+    for ( ccp src = name; src < end; src++ )
+    {
+	if ( (uchar)*src > ' ' )
+	{
+	    if ( have_blank && p1 > spf->norm.ptr )
+		*p1++ = ' ';
+
+	    if (!memcmp(src,"ː",sizeof("ː")-1))
+	    {
+		*p1++ = ':';
+		src += sizeof("ː") - 2;
+	    }
+	    else if (!memcmp(src,"⁄",sizeof("⁄")-1))
+	    {
+		*p1++ = '/';
+		src += sizeof("⁄") - 2;
+	    }
+	    else
+		*p1++ = *src;
+	    have_blank = 0;
+	}
+	else
+	    have_blank++;
+    }
+
+    *p1 = 0;
+    name = (char*)spf->norm.ptr;
+    end  = p1;
+    nlen = end - name;
+    spf->norm.len = nlen;
+
+
+    //--- attributes and authors
+
+    p1 = memrchr(name,'[',nlen);
+    if (p1)
+    {
+	p2 = memrchr(name,']',nlen);
+	if ( !p2 || p2 <= p1 )
+	    p2 = end;
+
+	spf->attribs.ptr = p1+1;
+	spf->attribs.len = p2 - spf->attribs.ptr;
+	end = p1;
+	while ( end > name && end[-1] == ' ' )
+	    end--;
+	nlen = end - name;
+    }
+
+    p1 = memrchr(name,'(',nlen);
+    if (p1)
+    {
+	p2 = memrchr(name,')',nlen);
+	if ( !p2 || p2 <= p1 )
+	    p2 = end;
+
+	spf->authors.ptr = p1+1;
+	spf->authors.len = p2 - spf->authors.ptr;
+	end = p1;
+	while ( end > name && end[-1] == ' ' )
+	    end--;
+	nlen = end - name;
+    }
+
+
+    //--- check version number
+
+    p1 = memrchr(name,' ',nlen);
+    p2 = memrchr(name,'}',nlen);
+    if ( !p1 || p2 && p1 < p2 )
+	p1 = p2;
+    if (p1)
+    {
+	p1++;
+	p2 = buf;
+	for ( char *src = p1; src < end && p2 < buf+sizeof(buf)-1 && isalpha((int)*src); src++  )
+	    *p2++ = tolower((int)*src);
+
+	int plen = p2 - buf, valid = 0;
+	switch (plen)
+	{
+	 case 1:
+	    valid = !memcmp(buf,"v",1)
+		 || !memcmp(buf,"t",1);
+	    break;
+
+	 case 2:
+	    valid = !memcmp(buf,"rc",2)
+		 || !memcmp(buf,"vx",2);
+	    break;
+
+	 case 3:
+	    valid = !memcmp(buf,"pre",3)
+		 || !memcmp(buf,"poc",3)
+		 || !memcmp(buf,"rcx",3);
+	    break;
+
+	 case 4:
+	    valid = !memcmp(buf,"beta",4)
+		 || !memcmp(buf,"test",4)
+		 || !memcmp(buf,"vjam",4);
+	    break;
+
+	 case 5:
+	    valid = !memcmp(buf,"alpha",5);
+	    break;
+
+	 case 7:
+	    valid = !memcmp(buf,"preview",7);
+	    break;
+	}
+
+	if (valid)
+	{
+	    spf->version.ptr = p1;
+	    spf->version.len = end - p1;
+	    end = p1;
+	    while ( end > name && end[-1] == ' ' )
+		end--;
+	    nlen = end - name;
+	}
+    }
+
+
+    //--- check extra
+
+    p1 = memrchr(name,'{',nlen);
+    if (!p1)
+	p1 = memrchr(name,'(',nlen);
+    if (p1)
+    {
+	p2 = memrchr(p1,'}',end-p1);
+	if (!p2)
+	    p2 = memrchr(p1,')',end-p1);
+	if (!p2)
+	    p2 = end;
+	if ( p1 < p2 )
+	{
+	    spf->extra.ptr = p1+1;
+	    spf->extra.len = p2 - spf->extra.ptr;
+	    end = p1;
+	    while ( end > name && end[-1] == ' ' )
+		end--;
+	    nlen = end - name;
+	}    
+    }
+
+
+    //--- plus
+
+    spf->plus_order = 999999;
+    if ( *name == '+' )
+    {
+	p2 = strchr(name,' ');
+	if (p2)
+	{
+	    p1 = name;
+	    while ( *p1 == '+' )
+		p1++;
+	    if ( p1 == p2 )
+		p1--;
+
+	    spf->plus_order = 998000 - (p1-name) * 1000;
+	    if ( spf->plus_order < 0 )
+		 spf->plus_order = 0;
+
+	    ccp found = plus_mode ? strchr(plus_mode,*p1) : 0;
+	    spf->plus_order += found ? found - plus_mode : 500 + *p1;
+
+	    spf->plus.ptr = name;
+	    spf->plus.len = p2 - name;
+	    name = p2+1;
+	    nlen = end - name;
+	}
+    }
+
+
+    //--- special chars
+
+ #if SUPPORT_SPLIT_SIGN
+    p1 = name;
+    for (;;)
+    {
+	p2 = NextUTF8Char(p1);
+	const int len = p2 - p1;
+	if (  ( !len || memcmp(p1,"→",len) && memcmp(p1,"»",len) ) 
+	   && ( len != 1 || !strchr("~>^",*p1) )
+	   )
+	{
+	    break;
+	}
+	p1 = p2;
+    }
+    if ( p1 > name )
+    {
+	if ( *p1 == ' ' )
+	    p1++;
+	spf->sign.ptr	= name;
+	spf->sign.len	= p1 - name;
+	name		= p1;
+	nlen		= end - name;
+    }
+ #endif
+
+
+    //--- boost
+
+    if (!strncasecmp(name,"boost:",6))
+    {
+	    spf->boost.ptr = name;
+	    spf->boost.len = 6;
+	    name += 6;
+	    if ( *name == ' ' )
+		name++;
+	    nlen = end - name;
+    }
+
+
+    //--- game prefix
+
+    spf->game_order = 999999;
+    p1 = memchr(name,' ',nlen);
+    if (p1)
+    {
+	const mkw_prefix_t *pre1 = FindPrefix(name,p1-name,true);
+	if (pre1)
+	{
+	    spf->game1.ptr	= name;
+	    spf->game1.len	= p1 - name;
+	    spf->game		= spf->game1;
+	    spf->game_color	= pre1->color;
+	    spf->game_order	= 1000 * pre1->order;
+	    int add_game	= 998;
+	    name		= p1+1;
+	    nlen		= end - name;
+
+	    if ( pre1->flags & MPF_PREFIX1 )
+	    {
+		p1 = memchr(name,' ',nlen);
+		if (p1)
+		{
+		    const mkw_prefix_t *pre2 = FindPrefix(name,p1-name,true);
+		    if ( pre2 && pre2->flags & MPF_PREFIX2 )
+		    {
+			spf->game2.ptr = name;
+			spf->game2.len = p1 - name;
+			spf->game.len += spf->game2.len + 1;
+			name		= p1+1;
+			nlen		= end - name;
+			add_game	= 2*pre2->order;
+		    }
+		}
+	    }
+	    spf->game_order += add_game;
+	    if (spf->boost.len)
+		spf->game_order++;
+	}
+    }
+
+
+    //--- finally we have the pure name
+
+    spf->name.ptr = name;
+    spf->name.len = nlen;
 }
 
 //

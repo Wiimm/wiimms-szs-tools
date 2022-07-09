@@ -442,6 +442,9 @@ const sizeof_info_t sizeof_info_linux[] =
 	SIZEOF_INFO_ENTRY(int)
 	SIZEOF_INFO_ENTRY(long)
 	SIZEOF_INFO_ENTRY(long long)
+ #ifdef __SIZEOF_INT128__
+	SIZEOF_INFO_ENTRY(__int128_t)
+ #endif
 	SIZEOF_INFO_ENTRY(float)
 	SIZEOF_INFO_ENTRY(double)
 	SIZEOF_INFO_ENTRY(long double)
@@ -471,6 +474,10 @@ const sizeof_info_t sizeof_info_dclib[] =
 	SIZEOF_INFO_ENTRY(u16)
 	SIZEOF_INFO_ENTRY(u32)
 	SIZEOF_INFO_ENTRY(u64)
+ #if HAVE_INT128
+	SIZEOF_INFO_ENTRY(u128)
+ #endif
+	SIZEOF_INFO_ENTRY(intx_t)
 	SIZEOF_INFO_ENTRY(mem_t)
 	SIZEOF_INFO_ENTRY(exmem_t)
 
@@ -497,6 +504,7 @@ const sizeof_info_t sizeof_info_dclib[] =
 	SIZEOF_INFO_ENTRY(Escape_t)
 
     SIZEOF_INFO_TITLE("dcLib buffers")
+	SIZEOF_INFO_ENTRY(exmem_dest_t)
 	SIZEOF_INFO_ENTRY(sha1_hash_t)
 	SIZEOF_INFO_ENTRY(sha1_hex_t)
 	SIZEOF_INFO_ENTRY(sha1_id_t)
@@ -509,6 +517,7 @@ const sizeof_info_t sizeof_info_dclib[] =
 	SIZEOF_INFO_ENTRY(GrowBuffer_t)
 
     SIZEOF_INFO_TITLE("dcLib lists")
+	SIZEOF_INFO_ENTRY(mem_src_t)
 	SIZEOF_INFO_ENTRY(mem_list_t)
 	SIZEOF_INFO_ENTRY(exmem_key_t)
 	SIZEOF_INFO_ENTRY(exmem_list_t)
@@ -546,6 +555,7 @@ const sizeof_info_t sizeof_info_dclib[] =
  #endif
 	SIZEOF_INFO_ENTRY(search_file_t)
 	SIZEOF_INFO_ENTRY(search_file_list_t)
+	SIZEOF_INFO_ENTRY(search_paths_stat_t)
 	SIZEOF_INFO_ENTRY(CatchOutput_t)
 	SIZEOF_INFO_ENTRY(SectionInfo_t)
 	SIZEOF_INFO_ENTRY(stat_file_count_t)

@@ -18,7 +18,7 @@
 # standard object files
 
 DCLIB_O		:= dclib-basics.o dclib-cli.o dclib-color.o dclib-numeric.o \
-			dclib-file.o dclib-option.o dclib-regex.o \
+			dclib-parser.o dclib-file.o dclib-option.o dclib-regex.o \
 			dclib-utf8.o dclib-shift-jis.o \
 			dclib-vector.o dclib-tables.o dclib-ui.o \
 			dclib-xdump.o dclib-debug.o

@@ -340,6 +340,7 @@ int ReplaceRegex
 	return -ERR_INVALID_DATA;
 
     ClearFastBuf(res);
+    res->buf[0] = 0;
 
     if ( !re || !re->valid )
 	return -ERR_INVALID_DATA;

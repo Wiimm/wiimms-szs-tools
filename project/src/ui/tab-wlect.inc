@@ -67,6 +67,10 @@
 		    "wlect ARGTEST ...",
 		0 /* copy of wszst */ },
 
+  { T_DEF_CMD,	"EXPAND",	"EXPAND",
+		    "wlect EXPAND ...",
+		0 /* copy of wszst */ },
+
   { T_DEF_CMD,	"TEST",		"TEST",
 		    "wlect TEST [options]... [ignored]...",
 		0 /* copy of wszst */ },
@@ -161,17 +165,23 @@
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
   { T_DEF_CMD,	"CREATE",	"CREATE|CR",
-		    "wlect CREATE [keyword]",
+		    "wlect CREATE [keyword] ...",
 		"Create a file and print it to standard output."
+		" Options {--dest} and {--DEST} can forc another destination."
 		" The kind of file is defined by KEYWORD."
-		" Use command without keywords to get a list of possible keywords."
+		" The command can create LEX files, a LPAR file or a track listing."
 		"\n "
-		" The following keywords are possible:"
-		" @LEX@ for a LEX text file with all known sections except @TEST@."
-		" @LEX+@ for a LEX text file with all known sections including @TEST@."
-		" @SET1, CANN, HIPT@ and @TEST@ (section names)"
-		" for a LEX text file with 1 section only."
-		" @LPAR@ for an example LE-CODE parameter file." },
+		" Use the command without keyword to get an extended description." },
+
+  { T_DEF_CMD,	"DISTRIBUTION",	"DISTRIBUTION|DIS|DISTRIB",
+		    "wlect DISTRIBUTION [argument]...",
+		"This command manages data for LE-CODE track distributions."
+		" It reads any number of source files with different file types,"
+		" collects the data and creates any number of files with different file types."
+		"\n "
+		" Use the command without keyword to get an extended description."
+		"\n "
+		"This command is still under development. Its use is therefore EXPERIMENTAL!" },
 
   { T_DEF_CMD,	"CAT",		"CAT",
 		    "wlect CAT [source]...",
@@ -222,6 +232,10 @@
 		"MAX_WIDTH",	"max-width|maxwidth",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_G|F_IGNORE,
+		"NO_PAGER",	"no-pager|nopager",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0, 0 /* copy of wszst */ },
 
@@ -229,6 +243,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GM,	"LOGGING",	"L|logging",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GM,	"TIMING",	"timing",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GP,	"WARN",		"W|warn",
@@ -252,6 +269,12 @@
 		"[=param]",
 		"This option is completely ignored by wlect."
 		" It only exists due to compatibility with the other tools." },
+
+  { T_OPT_GP,	"LOAD_PREFIX",	"load-prefix|loadprefix",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_CP,	"PLUS",		"plus",
+		0, 0 /* copy of wszst */ },
 
   { T_OPT_GMP,	"CHDIR",	"chdir",
 		0, 0 /* copy of wszst */ },
@@ -407,6 +430,11 @@
   { T_OPT_GO,	"REPAIR_MAGICS",	"repair-magics|repairmagics",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_CP,	"CREATE_DISTRIB",	"create-distrib|createdistrib",
+		"file",
+		"Create a LE-CODE distribution dump with a track list and more info about"
+		" the current distribution. Store the dump info a file." },
+
  #if OPT_OLD_NEW
   { H_OPT_GM,	"OLD",		"OLD",
 		0, 0 /* copy of wszst */ },
@@ -541,6 +569,15 @@
 		" Files found in this directory are linked to the"
 		" directory specified by option {--track-dir}."
 		" If linking fails, the file is copied." },
+
+  { T_OPT_CP,	"SZS_MODE",	"szs-mode|szsmode",
+		"mode",
+		"If a track is inserted via the SZS file,"
+		" then the associated directory is automatically included in the list"
+		" of search directories for option {--track-dir}."
+		" This option now sets the transfer mode. @OFF@ turns this feature off."
+		" The values @COPY@, @MOVE@, @MOVE1@ and @LINK@ define one of the 4 modes."
+		" Default mode is @LINK@." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -721,13 +758,16 @@
   //---------- COMMAND wlect ARGTEST ----------
 
   { T_CMD_BEG,	"ARGTEST",	0,0,0 },
+  { T_ALL_OPT,	0,		0,0,0 },
 
+  //---------- COMMAND wlect EXPAND ----------
+
+  { T_CMD_BEG,	"EXPAND",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wlect TEST ----------
 
   { T_CMD_BEG,	"TEST",		0,0,0 },
-
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wlect COLORS ----------
@@ -821,6 +861,7 @@
   { T_COPT,	"VERBOSE",		0,0,
 		"For LE-CODE binaries: If set, print a track slot usage table." },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
+  { T_COPT,	"CREATE_DISTRIB",0,0,0 },
 
   //---------- COMMAND wlect DL ----------
 
@@ -851,6 +892,7 @@
   { T_COPY_GRP,	"DEST",		0,0,0 },
 //  { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_COPT,	"CREATE_DISTRIB",0,0,0 },
 
   //---------- COMMAND wlect LPAR ----------
 
@@ -878,7 +920,21 @@
   { T_COPT,	"LEX_PURGE",	0,0,0 },
   { H_COPT,	"LEX_RM_FEAT",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"LE_DEFINE",	0,0,0 },
+  { T_COPT,	"LOAD_BMG",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"PARAM",	0,0,0 },
+
+  //---------- COMMAND wlect DISTRIBUTION ----------
+
+  { T_CMD_BEG,	"DISTRIBUTION",	0,0,0 },
+  { T_COPT,	"LOAD_PREFIX",	0,0,0 },
+  { T_COPT,	"PLUS",		0,0,0 },
+  { T_COPY_GRP,	"TRACK_COPY",	0,0,0 },
+  { T_COPT,	"SZS_MODE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
+  { T_COPY_GRP,	"DEST",		0,0,0 },
 
   //---------- COMMAND wlect CAT ----------
 

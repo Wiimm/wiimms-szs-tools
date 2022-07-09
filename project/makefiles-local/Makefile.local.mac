@@ -6,10 +6,10 @@ CFLAGS += -Wno-gnu-variable-sized-type-not-at-end -Wno-address-of-packed-member
 #-----------------------------------------------------------------------------
 
 .PHONY : mac-distrib
-mac-distrib: mac1 doc $(INSTALL_SCRIPTS) gen-mac-distrib
+mac-distrib: mac1x doc $(INSTALL_SCRIPTS) gen-mac-distrib
 
-.PHONY : mac1
-mac1: mac-x86_64
+.PHONY : mac1x
+mac1x: mac-x86_64
 
 	@echo
 	@echo "----- building universal binaries -----"
@@ -21,30 +21,30 @@ mac1: mac-x86_64
 	@rm -rf bin/x86_64
 	@echo "done"
 
-.PHONY : mac2
-mac2: mac-i386 mac-x86_64
+.PHONY : mac1
+mac1: mac-arm
 
 	@echo
 	@echo "----- building universal binaries -----"
 
 	@for i in $(MAIN_TOOLS); do \
-	    lipo -create bin/i386/$${i} bin/x86_64/$${i} -output $${i}; \
+	    lipo -create bin/arm/$${i} -output $${i}; \
 	    cp -p $${i} bin/$${i}; \
 	done
-	@rm -rf bin/i386 bin/x86_64
+	@rm -rf bin/arm
 	@echo "done"
 
-.PHONY : mac3
-mac3: mac-i386 mac-x86_64 mac-ppc
+.PHONY : mac2
+mac2: mac-x86_64 mac-arm
 
 	@echo
 	@echo "----- building universal binaries -----"
 
 	@for i in $(MAIN_TOOLS); do \
-	    lipo -create bin/ppc/$${i} bin/i386/$${i} bin/x86_64/$${i} -output $${i}; \
+	    lipo -create bin/x86_64/$${i} bin/arm/$${i} -output $${i}; \
 	    cp -p $${i} bin/$${i}; \
-	done;
-	@rm -rf bin/ppc bin/i386 bin/x86_64
+	done
+	@rm -rf bin/x86_64 bin/arm
 	@echo "done"
 
 #-----------------------------------------------------------------------------
@@ -74,9 +74,21 @@ mac-i386:
 mac-x86_64:
 	@echo
 	@echo "----- building X86-64 [SDK $(SDKVERSION)] -----"
-	@XFLAGS="-arch x86_64 -mfpmath=sse" make clean all
+#	@XFLAGS="-arch x86_64 -mfpmath=sse" make clean all
+	@XFLAGS="-target x86_64-apple-macos10.12" make clean all
 	@mkdir -p bin/x86_64
 	@mv $(MAIN_TOOLS) bin/x86_64
+
+#-----------------------------------------------------------------------------
+
+.PHONY : mac-arm
+mac-arm:
+	@echo
+	@echo "----- building arm [SDK $(SDKVERSION)] -----"
+#	@XFLAGS="-arch arm -mfpmath=sse" make clean all
+	@XFLAGS="-target arm64-apple-macos11" make clean all
+	@mkdir -p bin/arm
+	@mv $(MAIN_TOOLS) bin/arm
 
 #-----------------------------------------------------------------------------
 

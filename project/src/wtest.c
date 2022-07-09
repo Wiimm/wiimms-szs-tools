@@ -4050,6 +4050,98 @@ static enumError test_arg_manager ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_xcode_hex()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_xcode_hex ( int argc, char ** argv )
+{
+    putchar('\n');
+    char buf1[50], buf2[20];
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	int elen = EncodeHex(buf1,sizeof(buf1),arg,-1,0);
+	int dlen = DecodeHex(buf2,sizeof(buf2),buf1,-1,-1,0);
+	printf("\n| %s | %s | %s | %d,%d\n",arg,buf1,buf2,elen,dlen);
+
+	elen = EncodeHex(buf1+1,sizeof(buf1)-2,arg,-1,0);
+	char *ptr = buf1 + elen + 1;
+	*buf1 = *ptr++ = '"';
+	*ptr = 0;
+	dlen = DecodeHex(buf2,sizeof(buf2),buf1,-1,-1,0);
+	printf("| %s | %s | %s | %d,%d\n",arg,buf1,buf2,elen,dlen);
+    }
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_is_checksum()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_is_checksum ( int argc, char ** argv )
+{
+    putchar('\n');
+    sha1_size_t res;
+    sha1_hex_t hex;
+
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	int stat = IsSSChecksum(&res,arg,-1);
+	Sha1Bin2Hex(hex,res.hash);
+	printf(" %d %s : %s\n",stat,hex,arg);
+    }
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_test_prefix()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_test_prefix ( int argc, char ** argv )
+{
+    putchar('\n');
+
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	if (!strcmp(arg,"-l"))
+	{
+	    const mkw_prefix_t *tab = GetPrefixTable();
+	    if (tab)
+	    {
+		putchar('\n');
+		for ( ; tab->info; tab++ )
+		    printf(" %-8s %s\n",tab->prefix,tab->info);
+		putchar('\n');
+	    }
+	    continue;
+	}
+	if (!strcmp(arg,"-x"))
+	{
+	    SavePrefixTableFN("-",0);
+	    continue;
+	}
+
+	const mkw_prefix_t *key0 = FindPrefix(arg,-1,false);
+	const mkw_prefix_t *key1 = FindPrefix(arg,-1,true);
+	printf(" %d %d : %10.10s",key0!=0,key1!=0,arg);
+	if (key0)
+	    printf(" => %-8s %s\n",key0->prefix,key0->info);
+	else
+	    putchar('\n');
+    }
+
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4329,6 +4421,9 @@ enum
     CMD_UTF8,			// test_utf8(argc,argv)
     CMD_NICE,			// test_nice(argc,argv)
     CMD_ARG_MANAGER,		// test_arg_manager(argc,argv)
+    CMD_XCODE_HEX,		// test_xcode_hex(argc,argv)
+    CMD_IS_CHECKSUM,		// test_is_checksum(argc,argv)
+    CMD_TEST_PREFIX,		// test_test_prefix(argc,argv)
 
  #ifdef HAVE_WIIMM_EXT
     CMD_WIIMM,			// test_wiimm(argc,argv)
@@ -4401,6 +4496,9 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_UTF8,		"UTF8",		0,		0 },
 	{ CMD_NICE,		"NICE",		0,		0 },
 	{ CMD_ARG_MANAGER,	"ARG-MANAGER",	"AM",		0 },
+	{ CMD_XCODE_HEX,	"XCODE-HEX",	"XH",		0 },
+	{ CMD_IS_CHECKSUM,	"IS-CHECKSUM",	"ICSUM",	0 },
+	{ CMD_TEST_PREFIX,	"TEST-PREFIX",	"TP",		0 },
 
  #ifdef HAVE_WIIMM_EXT
 	{ CMD_WIIMM,		"WIIMM",	"W",		0 },
@@ -4456,6 +4554,12 @@ void AddOne ( double m[3][4] )
 
 int main ( int argc, char ** argv )
 {
+    ArgManager_t am = {0};
+    SetupArgManager(&am,LOUP_AUTO,argc,argv,false);
+    ExpandAtArgManager(&am,AMXM_SHORT,10,false);
+    argc = am.argc;
+    argv = am.argv;
+
     print_title_func = print_title;
     SetupLib(argc,argv,NAME,VERSION,TITLE);
 
@@ -4564,6 +4668,9 @@ int main ( int argc, char ** argv )
 	case CMD_UTF8:			test_utf8(argc,argv); break;
 	case CMD_NICE:			test_nice(argc,argv); break;
 	case CMD_ARG_MANAGER:		test_arg_manager(argc,argv); break;
+	case CMD_XCODE_HEX:		test_xcode_hex(argc,argv); break;
+	case CMD_IS_CHECKSUM:		test_is_checksum(argc,argv); break;
+	case CMD_TEST_PREFIX:		test_test_prefix(argc,argv); break;
 
  #ifdef HAVE_WIIMM_EXT
 	case CMD_WIIMM:			test_wiimm(argc,argv); break;
@@ -4580,6 +4687,7 @@ int main ( int argc, char ** argv )
     if (SIGINT_level)
 	ERROR0(ERR_INTERRUPT,"Program interrupted by user.");
 
+    ClosePager();
     return ProgInfo.max_error;
 }
 

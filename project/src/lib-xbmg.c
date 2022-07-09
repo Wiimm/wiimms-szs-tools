@@ -1287,7 +1287,7 @@ int ScanOptFilterBMG ( ccp arg )
 	    memset( filter_message+a3, value, b3-a3 );
     }
 
-    if ( logging > 1 )
+    if ( logging >= 2 )
 	HexDump016(stderr,0,0,filter_message,MAX_FILTER_MSG);
 
     return 0;

@@ -789,7 +789,7 @@ enumError CreateBRRES
 
     //--- clean
 
-    if (logging)
+    if ( logging >= 1 )
 	dump_brres_group(broot,endian);
 
     FREE(ep_list);
@@ -998,7 +998,7 @@ int IterateFilesBRRES
     //--- iterate groups
 
  #if defined(TEST) || 1
-    if (logging)
+    if ( logging >= 1 )
 	dump_brres_group(root,endian);
  #endif
 

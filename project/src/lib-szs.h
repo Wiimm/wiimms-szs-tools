@@ -1384,8 +1384,8 @@ typedef struct raw_data_t
 
     DataContainer_t	*old_container;	// old data [[container]] support, init with NULL
     Container_t		container;	// container data
-
-} raw_data_t;
+}
+raw_data_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1461,7 +1461,7 @@ typedef struct analyse_szs_t
     sha1_hex_t	sha1_vrcorn;		// SHA1 of vrcorn
     sha1_hex_t	sha1_minimap;		// SHA1 of minimap
 
-    //--- slots of orgiginal tarcks: 0:none, 11.84:track 111..125:arena
+    //--- slots of orgiginal tracks: 0:none, 11.84:track 111..125:arena
 
     u8		sha1_kmp_slot;
     u8		sha1_kmp_norm_slot;
@@ -1502,7 +1502,7 @@ void AnalyseSZS
 (
     analyse_szs_t	*as,		// result
     bool		init_sa,	// true: init 'as', false: reset 'as'
-    szs_file_t		*szs,		// SZS filre t analysze
+    szs_file_t		*szs,		// SZS file to analysze
     ccp			fname		// NULL or fname for slot analysis
 );
 

@@ -56,6 +56,7 @@ typedef enum enumOptions
 
 	//----- command specific options -----
 
+	OPT_PLUS,
 	OPT_ROUND,
 	OPT_LONG,
 	OPT_NO_HEADER,
@@ -66,6 +67,7 @@ typedef enum enumOptions
 	OPT_LT_CLEAR,
 	OPT_LT_ONLINE,
 	OPT_LT_N_PLAYERS,
+	OPT_CREATE_DISTRIB,
 	OPT_LE_DEFINE,
 	OPT_LE_ARENA,
 	OPT_LPAR,
@@ -82,6 +84,7 @@ typedef enum enumOptions
 	OPT_MOVE_TRACKS,
 	OPT_MOVE1_TRACKS,
 	OPT_LINK_TRACKS,
+	OPT_SZS_MODE,
 	OPT_COMPLETE,
 	OPT_LOAD_BMG,
 	OPT_PATCH_BMG,
@@ -100,7 +103,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 44
+	OPT__N_SPECIFIC, // == 47
 
 	//----- global options -----
 
@@ -112,15 +115,18 @@ typedef enum enumOptions
 	OPT_COMPATIBLE,
 	OPT_WIDTH,
 	OPT_MAX_WIDTH,
+	OPT_NO_PAGER,
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_TIMING,
 	OPT_WARN,
 	OPT_DE,
 	OPT_COLORS,
 	OPT_NO_COLORS,
 	OPT_CT_CODE,
 	OPT_LE_CODE,
+	OPT_LOAD_PREFIX,
 	OPT_CHDIR,
 	OPT_CONST,
 	OPT_MAX_FILE_SIZE,
@@ -140,7 +146,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 79
+	OPT__N_TOTAL // == 85
 
 } enumOptions;
 
@@ -155,6 +161,7 @@ typedef enum enumOptions
 //{
 //	//----- command specific options -----
 //
+//	OB_PLUS			= 1llu << OPT_PLUS,
 //	OB_ROUND		= 1llu << OPT_ROUND,
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
@@ -165,6 +172,7 @@ typedef enum enumOptions
 //	OB_LT_CLEAR		= 1llu << OPT_LT_CLEAR,
 //	OB_LT_ONLINE		= 1llu << OPT_LT_ONLINE,
 //	OB_LT_N_PLAYERS		= 1llu << OPT_LT_N_PLAYERS,
+//	OB_CREATE_DISTRIB	= 1llu << OPT_CREATE_DISTRIB,
 //	OB_LE_DEFINE		= 1llu << OPT_LE_DEFINE,
 //	OB_LE_ARENA		= 1llu << OPT_LE_ARENA,
 //	OB_LPAR			= 1llu << OPT_LPAR,
@@ -181,6 +189,7 @@ typedef enum enumOptions
 //	OB_MOVE_TRACKS		= 1llu << OPT_MOVE_TRACKS,
 //	OB_MOVE1_TRACKS		= 1llu << OPT_MOVE1_TRACKS,
 //	OB_LINK_TRACKS		= 1llu << OPT_LINK_TRACKS,
+//	OB_SZS_MODE		= 1llu << OPT_SZS_MODE,
 //	OB_COMPLETE		= 1llu << OPT_COMPLETE,
 //	OB_LOAD_BMG		= 1llu << OPT_LOAD_BMG,
 //	OB_PATCH_BMG		= 1llu << OPT_PATCH_BMG,
@@ -248,6 +257,8 @@ typedef enum enumOptions
 //
 //	OB_CMD_ARGTEST		= ~(u64)0,
 //
+//	OB_CMD_EXPAND		= ~(u64)0,
+//
 //	OB_CMD_TEST		= ~(u64)0,
 //
 //	OB_CMD_COLORS		= OB_LONG
@@ -279,7 +290,8 @@ typedef enum enumOptions
 //
 //	OB_CMD_DUMP		= OB_GRP_PATCH
 //				| OB_LONG
-//				| OB_GRP_PATCH,
+//				| OB_GRP_PATCH
+//				| OB_CREATE_DISTRIB,
 //
 //	OB_CMD_DL		= OB_CMD_DUMP,
 //
@@ -290,7 +302,8 @@ typedef enum enumOptions
 //	OB_CMD_PATCH		= OB_GRP_PATCH
 //				| OB_GRP_TRACK_COPY
 //				| OB_GRP_DEST
-//				| OB_IGNORE,
+//				| OB_IGNORE
+//				| OB_CREATE_DISTRIB,
 //
 //	OB_CMD_LPAR		= OB_GRP_PATCH
 //				| OB_GRP_DEST
@@ -303,7 +316,15 @@ typedef enum enumOptions
 //				| OB_LT_CLEAR
 //				| OB_LT_ONLINE
 //				| OB_LT_N_PLAYERS
+//				| OB_LE_DEFINE
+//				| OB_LOAD_BMG
 //				| OB_GRP_PARAM,
+//
+//	OB_CMD_DISTRIBUTION	= OB_PLUS
+//				| OB_GRP_TRACK_COPY
+//				| OB_SZS_MODE
+//				| OB_GRP_TEXTOUT
+//				| OB_GRP_DEST,
 //
 //	OB_CMD_CAT		= OB_COMPLETE
 //				| OB_GRP_TEXTOUT
@@ -336,6 +357,7 @@ typedef enum enumCommands
 	CMD_HELP,
 	CMD_CONFIG,
 	CMD_ARGTEST,
+	CMD_EXPAND,
 	CMD_TEST,
 	CMD_COLORS,
 	CMD_ERROR,
@@ -356,12 +378,13 @@ typedef enum enumCommands
 	CMD_LPAR,
 
 	CMD_CREATE,
+	CMD_DISTRIBUTION,
 	CMD_CAT,
 	CMD_DECODE,
 	CMD_ENCODE,
 
 
-	CMD__N // == 26
+	CMD__N // == 28
 
 } enumCommands;
 
@@ -405,11 +428,15 @@ typedef enum enumGetOpt
 	GO_COMPATIBLE,
 	GO_WIDTH,
 	GO_MAX_WIDTH,
+	GO_NO_PAGER,
+	GO_TIMING,
 	GO_DE,
 	GO_COLORS,
 	GO_NO_COLORS,
 	GO_CT_CODE,
 	GO_LE_CODE,
+	GO_LOAD_PREFIX,
+	GO_PLUS,
 	GO_CHDIR,
 	GO_ROUND,
 	GO_NO_ECHO,
@@ -426,6 +453,7 @@ typedef enum enumGetOpt
 	GO_LEX_RM_FEAT,
 	GO_FORCE,
 	GO_REPAIR_MAGICS,
+	GO_CREATE_DISTRIB,
 	GO_OLD,
 	GO_STD,
 	GO_NEW,
@@ -446,6 +474,7 @@ typedef enum enumGetOpt
 	GO_MOVE_TRACKS,
 	GO_MOVE1_TRACKS,
 	GO_LINK_TRACKS,
+	GO_SZS_MODE,
 	GO_LOAD_BMG,
 	GO_PATCH_BMG,
 	GO_MACRO_BMG,

@@ -7,12 +7,17 @@
 #
 #  * Option: '%' name = value
 #
-#	Set option NAME to VAULE. The follwing options are supported:
+#	Set option NAME to VAULE. The following options are supported:
 #
 #	  LE-FLAGS = 0 | 1
 #	    Enable or disable support of LE-FLAGS member. At section start
 #	    it is disabled. If enabled, the Track definition expects an
 #	    additional parameter between 'property_id' and 'file_name'.
+#
+#	  N-STRINGS = 4..255
+#	    Define the number of strings beginning with string FILE_NAME.
+#	    Use this setting to allow more than 4 strings without running
+#	    into a syntax error.
 #
 #  * Nintendo track mode: 'N' mode
 #
@@ -123,6 +128,11 @@
 #		Optional identifier. While creating references, it is assumed,
 #		that tracks with equal identifiers are equal. Empty strings
 #		and a single "-" means: no identifier available.
+#
+#	 * xname
+#		Optional string, tha can be used by e.g. »wlect CREATE XNAMES«
+#		or »wlect CREATE XINFO« to create listings with this extended
+#		names. This string is supported since v2.29.
 #
 #  * Hidden track definition:
 #	'H' music_id ';' property_id ';' file_name ';' info ';' id

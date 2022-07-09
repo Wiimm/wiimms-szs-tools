@@ -44,7 +44,7 @@
 #include "lib-xbmg.h"
 #include "lib-kcl.h"
 #include "lib-kmp.h"
-#include "lib-lecode.h"
+#include "lib-ledis.h"
 #include "lib-mdl.h"
 #include "lib-pat.h"
 #include "lib-breff.h"
@@ -68,8 +68,6 @@
   #include "lib-vehicle.h"
   #include "wcommand.h"
 #endif
-
-#include "distrib.inc"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -451,7 +449,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(kmp_ana_pflag_res_t)
 	SIZEOF_INFO_ENTRY(kmp_ana_pflag_t)
 
-    SIZEOF_INFO_TITLE("LE-CODE")
+    SIZEOF_INFO_TITLE("LE-CODE basics")
 	SIZEOF_INFO_ENTRY(lecode_debug_info_t)
 	SIZEOF_INFO_ENTRY(lecode_debug_ex_t)
 	SIZEOF_INFO_ENTRY(le_lpar_t)
@@ -469,6 +467,30 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(le_cup_par_t)
 	SIZEOF_INFO_ENTRY(le_course_par_t)
 	SIZEOF_INFO_ENTRY(le_analyse_t)
+	SIZEOF_INFO_ENTRY(le_region_t)
+	SIZEOF_INFO_ENTRY(le_cup_track_t)
+	SIZEOF_INFO_ENTRY(le_property_t)
+	SIZEOF_INFO_ENTRY(le_music_t)
+	SIZEOF_INFO_ENTRY(le_flags_t)
+
+    SIZEOF_INFO_TITLE("LE-CODE distribution")
+	SIZEOF_INFO_ENTRY(le_group_t)
+	SIZEOF_INFO_ENTRY(le_track_type_t)
+	SIZEOF_INFO_ENTRY(le_track_status_t)
+	SIZEOF_INFO_ENTRY(le_track_text_t)
+	SIZEOF_INFO_ENTRY(le_options_t)
+	SIZEOF_INFO_ENTRY(le_cup_ref_t)
+	SIZEOF_INFO_ENTRY(le_cup_t)
+	SIZEOF_INFO_ENTRY(le_strpar_t)
+	SIZEOF_INFO_ENTRY(le_track_id_t)
+	SIZEOF_INFO_ENTRY(le_track_t)
+	SIZEOF_INFO_ENTRY(le_track_arch_t)
+	SIZEOF_INFO_ENTRY(le_auto_setup_t)
+	SIZEOF_INFO_ENTRY(le_type_settings_t)
+	SIZEOF_INFO_ENTRY(le_settings_t)
+	SIZEOF_INFO_ENTRY(le_group_info_t)
+	SIZEOF_INFO_ENTRY(le_distrib_t)
+	SIZEOF_INFO_ENTRY(DistributionInfo_t)
 
     SIZEOF_INFO_TITLE("LEX")
 	SIZEOF_INFO_ENTRY(features_szs_t)
@@ -577,6 +599,8 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(wbz_header_t)
 	SIZEOF_INFO_ENTRY(analyse_szs_t)
 	SIZEOF_INFO_ENTRY(file_type_t)
+	SIZEOF_INFO_ENTRY(mkw_prefix_t)
+	SIZEOF_INFO_ENTRY(split_filename_t)
 
     SIZEOF_INFO_TERM()
 };
@@ -2541,6 +2565,118 @@ static enumError cmd_analyze()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			command split			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static void print_split_val ( PrintScript_t *ps, ccp name, mem_t val )
+{
+    DASSERT(ps);
+    DASSERT(name);
+
+
+    if ( val.ptr && val.len )
+    {
+	char buf[1000];
+	PrintEscapedString(buf,sizeof(buf),val.ptr,val.len,CHMD_UTF8,'"',0);
+	PrintScriptVars(ps,0,"%s=\"%s\"\n",name,buf);
+    }
+    else
+	PrintScriptVars(ps,0,"%s=\"\"\n",name);
+}
+
+//-----------------------------------------------------------------------------
+
+static enumError cmd_split()
+{
+    static ccp def_path = "\1P/\1F\1?T";
+    CheckOptDest("-",false);
+    char dest[PATH_MAX];
+    enumError max_err = ERR_OK;
+    if (!strcmp(opt_dest,"-"))
+	fputc('\n',stdout);
+
+    split_filename_t spf;
+    InitializeSPF(&spf);
+
+    File_t fo;
+    InitializeFile(&fo);
+
+    PrintScript_t ps;
+    SetupPrintScriptByOptions(&ps);
+
+    ParamList_t *param;
+    for ( param = first_param; param; param = param->next )
+    {
+	NORMALIZE_FILENAME_PARAM(param);
+
+	if (!fo.f)
+	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+			GetExtFF(script_fform,0),false);
+
+	if (!fo.f)
+	{
+	    enumError err = CreateFile(&fo,false,dest,FM_STDIO|FM_OVERWRITE);
+	    if (err)
+	    {
+		max_err = err;
+		break;
+	    }
+	    ps.f = fo.f;
+	    PrintScriptHeader(&ps);
+	}
+
+	const u_nsec_t start_nsec = GetTimerNSec();
+	AnalyseSPF(&spf,false,param->arg,0,CPM_LINK,opt_plus);
+	const u_nsec_t duration_nsec = GetTimerNSec() - start_nsec;
+
+	PutScriptVars(&ps,1,0);
+
+	print_split_val(&ps,"source",spf.source);
+
+	print_split_val(&ps,"file_name",spf.f_name);
+	print_split_val(&ps,"file_d",spf.f_d);
+	print_split_val(&ps,"file_ext",spf.f_ext);
+
+	print_split_val(&ps,"normed",spf.norm);
+	print_split_val(&ps,"plus",spf.plus);
+	PrintScriptVars(&ps,0,"plus_order=%d\n",spf.plus_order);
+
+     #if SUPPORT_SPLIT_SIGN
+	print_split_val(&ps,"sign",spf.sign);
+     #endif
+	print_split_val(&ps,"boost",spf.boost);
+
+	print_split_val(&ps,"game1",spf.game1);
+	print_split_val(&ps,"game2",spf.game2);
+	print_split_val(&ps,"game",spf.game);
+	PrintScriptVars(&ps,0,"game_order=%d\ngame_color=%d\n",
+				spf.game_order, spf.game_color );
+
+	print_split_val(&ps,"name",spf.name);
+	print_split_val(&ps,"extra",spf.extra);
+	print_split_val(&ps,"version",spf.version);
+	print_split_val(&ps,"authors",spf.authors);
+	print_split_val(&ps,"attribs",spf.attribs);
+
+	PrintScriptVars(&ps,2,"duration_nsec=%llu\n",duration_nsec);
+
+	if (!script_array)
+	{
+	    PrintScriptFooter(&ps);
+	    ps.f = 0;
+	    ResetFile(&fo,0);
+	}
+    }
+
+    PrintScriptFooter(&ps);
+    ResetPrintScript(&ps);
+    ResetFile(&fo,0);
+    ResetSPF(&spf);
+    return max_err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command is-texture		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2841,61 +2977,6 @@ enumError ScanDistribFile
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static ccp GetDistribParamByNameS ( DistributionInfo_t *dinf, ccp name, ccp def )
-{
-    DASSERT(dinf);
-    DASSERT(name);
-    ParamFieldItem_t *it = FindParamField(&dinf->param,name);
-    if ( it && it->data )
-    {
-	it->num = 1;
-	return (ccp)it->data;
-    }
-    return def;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-// for name changes
-
-#if 0
-
-static ccp GetDistribParamByNameS2
-	( DistributionInfo_t *dinf, ccp name1, ccp name2, ccp def )
-{
-    DASSERT(dinf);
-    DASSERT(name);
-    ParamFieldItem_t *it = FindParamField(&dinf->param,name1);
-    if (!it)
-	it = FindParamField(&dinf->param,name2);
-    if ( it && it->data )
-    {
-	it->num = 1;
-	return (ccp)it->data;
-    }
-    return def;
-}
-
-#endif
-
-///////////////////////////////////////////////////////////////////////////////
-
-static int GetDistribParamByNameIMM
-	( DistributionInfo_t *dinf, ccp name, int def, int min, int max )
-{
-    DASSERT(dinf);
-    DASSERT(name);
-    ParamFieldItem_t *it = FindParamField(&dinf->param,name);
-    if (!it)
-	return def;
-    it->num = 1;
-
-    char *end;
-    int val = str2l((ccp)it->data,&end,10);
-    return *end || val < min || val > max ? def : val;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 static enumError cmd_distribution()
 {
     SetPatchFileModeReadonly();
@@ -2958,21 +3039,21 @@ static enumError cmd_distribution()
 	else if ( !result_found && !strcmp(result,arg) )
 	{
 	    result_found = true;
-	    ScanSlotTranslation(&dinf.translate,&dinf.param,arg,false);
+	    ScanSlotTranslation(&dinf.translate,&dinf.ld,arg,false);
 	}
 	else
 	    ScanSlotTranslation(&dinf.translate,0,arg,false);
     }
 
     if (!result_found)
-	ScanSlotTranslation(&dinf.translate,&dinf.param,result,true);
+	ScanSlotTranslation(&dinf.translate,&dinf.ld,result,true);
 
     AddParamDistributionInfo(&dinf,false);
 
 
     //--- logging
 
-    if ( logging > 0 )
+    if ( logging >= 1 )
     {
 	fputs("---------------  translation  ---------------\n",stdlog);
 
@@ -3007,8 +3088,8 @@ static enumError cmd_distribution()
 	fputs("----------------  parameter  ----------------\n",stdlog);
 
 	uint i;
-	const ParamFieldItem_t *it = dinf.param.field;
-	for ( i = 0; i < dinf.param.used; i++, it++ )
+	const ParamFieldItem_t *it = dinf.ld.dis_param.field;
+	for ( i = 0; i < dinf.ld.dis_param.used; i++, it++ )
 	    fprintf(stdlog,"%4u. %-20s = %s\n",
 			i+1, it->key, (ccp)it->data );
 
@@ -3089,83 +3170,10 @@ static enumError cmd_distribution()
     if (!f)
 	ERROR1(ERR_CANT_CREATE,"Can't create file: %s\n",result);
 
-    ccp uuid = GetDistribParamByNameS(&dinf,"UUID","");
-    fprintf(f,text_distrib_head_cr
-
-		,GetDistribParamByNameS(&dinf,"COMMENT1","")
-		,GetDistribParamByNameS(&dinf,"COMMENT2","")
-		,GetDistribParamByNameS(&dinf,"COMMENT3","")
-		,GetDistribParamByNameS(&dinf,"COMMENT4","")
-		,GetDistribParamByNameS(&dinf,"COMMENT5","")
-
-		,GetDistribParamByNameS(&dinf,"USER-CT-WIIMM","")
-		,GetDistribParamByNameS(&dinf,"USER-WIIMMFI","")
-		,GetDistribParamByNameS(&dinf,"USER-CT-WIIKI","")
-		,GetDistribParamByNameS(&dinf,"USER-MISC","")
-		,GetDistribParamByNameS(&dinf,"MAIL","")
-		,GetDistribParamByNameS(&dinf,"NOTE-FOR-WIMMM","")
-
-		,GetDistribParamByNameS(&dinf,"NAME","?")
-		,GetDistribParamByNameS(&dinf,"VERSION","?")
-		,GetDistribParamByNameS(&dinf,"AUTHORS","?")
-		,GetDistribParamByNameS(&dinf,"RELEASE-DATE","")
-		,GetDistribParamByNameS(&dinf,"KEYWORDS","")
-		,GetDistribParamByNameS(&dinf,"PREDECESSOR","")
-
-		,GetDistribParamByNameS(&dinf,"WIIMMFI-REGION","")
-		,GetDistribParamByNameS(&dinf,"INFO-TEXT","")
-		,GetDistribParamByNameS(&dinf,"INFO-URL","")
-
-		,uuid
-		,GetDistribParamByNameIMM(&dinf,"DISPLAY-MODE",3,0,3)
-		,GetDistribParamByNameIMM(&dinf,"DATABASE-NAME",1,0,1)
-		,GetDistribParamByNameIMM(&dinf,"VIEW-COMMENT",0,0,1)
-		,GetDistribParamByNameIMM(&dinf,"ENABLE-NEW",0,0,1)
-		,GetDistribParamByNameIMM(&dinf,"ENABLE-AGAIN",0,0,1)
-		,GetDistribParamByNameIMM(&dinf,"ENABLE-FILL",0,0,1)
-		,GetDistribParamByNameIMM(&dinf,"ENABLE-UPDATE",0,0,1)
-		,GetDistribParamByNameIMM(&dinf,"ENABLE-BOOST",0,0,1)
-
-		,uuid
-		,VERSION
-		,REVISION_NUM
-		,GetDistribParamByNameS(&dinf,"FIRST-CREATION","")
-		,GetDistribParamByNameS(&dinf,"LAST-UPDATE","")
-		);
-
-
-
-    //--- mark some more params as 'used'
-
-    GetDistribParamByNameS(&dinf,"WSZST-VERSION","");
-    GetDistribParamByNameS(&dinf,"WSZST-REVISION","");
-
-
-    //--- additional parameters
-
-    ccp info = text_distrib_param_cr;
-
-    const ParamFieldItem_t *it = dinf.param.field;
-    for ( i = 0; i < dinf.param.used; i++, it++ )
-	if (!it->num)
-	{
-	    int len = strlen(it->key);
-	    ccp sep;
-	    if ( len > 14 )
-		sep = " ";
-	    else if ( len > 6 )
-		sep = "\t";
-	    else
-		sep = "\t\t";
-
-	    fprintf(f,"%s@%s%s= %s\r\n", info, it->key, sep, (ccp)it->data );
-	    info = "";
-	}
+    CreateDistribLD(f,&dinf.ld,true);
 
 
     //--- battle arenas
-
-    fputs(text_distrib_tracks_cr,f);
 
     int slot, slot10 = -1, count = 0;
     for ( slot = 0; slot < MAX_DISTRIBUTION_ARENA; slot++ )
@@ -5584,13 +5592,15 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
 	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
+	case GO_NO_PAGER:	opt_no_pager = true; break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_TIMING:		log_timing++; break;
 	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
-	case GO_LE_CODE:	lecode_enabled = true; break;
+	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
 
@@ -5598,6 +5608,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_CONST:		err += ScanOptConst(optarg); break;
 	case GO_TOUCH:		break;
 	case GO_AUTO:		break;
+	case GO_LOAD_PREFIX:	err += ScanOptLoadPrefix(optarg); break;
+	case GO_PLUS:		opt_plus = optarg; break;
 	case GO_SET_FLAGS:	err += ScanOptSetFlags(optarg); break;
 	case GO_SET_SCALE:	err += ScanOptSetScale(optarg); break;
 	case GO_SET_ROT:	err += ScanOptSetRot(optarg); break;
@@ -5887,6 +5899,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_INSTALL:	err = cmd_install(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
+	case CMD_EXPAND:	err = cmd_expand(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0); break;
 	case CMD_ERROR:		err = cmd_error(); break;
@@ -5932,6 +5945,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_MEMORY_A:	set_all(1); err = cmd_memory(); break;
 	case CMD_SHA1:		err = cmd_sha1(); break;
 	case CMD_ANALYZE:	err = cmd_analyze(); break;
+	case CMD_SPLIT:		err = cmd_split(); break;
 	case CMD_IS_TEXTURE:	err = cmd_is_texture(); break;
 	case CMD_FEATURES:	err = cmd_features(); break;
 	case CMD_DISTRIBUTION:	err = cmd_distribution(); break;
@@ -5989,6 +6003,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 
 int main_wszst ( int argc, char ** argv )
 {
+    tool_name = "wszst";
     print_title_func = print_title;
     SetupLib(argc,argv,WSZST_SHORT,VERSION,TITLE);
     SetupExtendedSZS();
@@ -6307,6 +6322,12 @@ int main_wrapper ( int argc, char ** argv )
 
 int main ( int argc, char ** argv )
 {
+    ArgManager_t am = {0};
+    SetupArgManager(&am,LOUP_AUTO,argc,argv,false);
+    ExpandAtArgManager(&am,AMXM_SHORT,10,false);
+    argc = am.argc;
+    argv = am.argv;
+
     //PRINT("ERR__N=%u\n",ERR__N);
     if ( argc > 1 )
     {
@@ -6321,7 +6342,9 @@ int main ( int argc, char ** argv )
 
     const wrapper_t *w = FindWrapper(argc,argv);
     DASSERT(w);
-    return w->func(argc,argv);
+    const int err = w->func(argc,argv);
+    ClosePager();
+    return err;
 }
 
 //

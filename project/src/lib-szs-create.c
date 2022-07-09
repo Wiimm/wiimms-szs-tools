@@ -890,7 +890,7 @@ enumError CreateSZS
 
     //--- debugging
 
-    if ( logging > 1 )
+    if ( logging >= 2 )
     {
 	int i;
 	for ( i = 0; i < szs->subfile.used; i++ )
@@ -4884,7 +4884,7 @@ void AnalyseSZS
 (
     analyse_szs_t	*as,		// result
     bool		init_sa,	// true: init 'as', false: reset 'as'
-    szs_file_t		*szs,		// SZS filre t analysze
+    szs_file_t		*szs,		// SZS file to analysze
     ccp			fname		// NULL or fname for slot analysis
 )
 {

@@ -57,8 +57,8 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.27b
-BETA_VERSION		= 0
+VERSION_NUM		= 2.28a
+BETA_VERSION		= -1
 			# 0:off  -1:"beta"  >0:"beta#"
 
 URI_HOME		= https://szs.wiimm.de/
@@ -239,7 +239,7 @@ XOBJ_COMMON	= lib-common.o lib-geohit.o lib-itemslot.o lib-minigame.o lib-objflo
 
 XOBJ_LIB	= analyze.o lib-szs-create.o lib-xbmg.o \
 			lib-mdl.o lib-pat.o lib-transform.o \
-			lib-ctcode.o lib-lex.o lib-lecode.o \
+			lib-ctcode.o lib-lex.o lib-lecode.o lib-ledis.o \
 			lib-staticr.o db-dol.o db-ctcode.o getopt.o \
 			$(XOBJ_KMP) $(XOBJ_COMMON) $(XOBJ_KCL) lib-kcl-image.o lib-rkg.o \
 			$(XOBJ_OBJECT) $(XOBJ_PARSER) $(XOBJ_IMAGE)
@@ -247,15 +247,17 @@ XOBJ_LIB	= analyze.o lib-szs-create.o lib-xbmg.o \
 TOBJ_gen-ui	= $(XOBJ_OBJECT)
 TOBJ_wszst	= $(XOBJ_LIB) $(WRAPPER_OBJ)
 TOBJ_wbmgt	= lib-xbmg.o $(XOBJ_OBJECT)
-TOBJ_wctct	= lib-ctcode.o lib-lex.o lib-lecode.o lib-xbmg.o db-ctcode.o \
+TOBJ_wctct1	= lib-ctcode.o lib-lex.o lib-lecode.o lib-ledis.o lib-xbmg.o db-ctcode.o \
 			$(XOBJ_PARSER) $(XOBJ_IMAGE) $(XOBJ_OBJECT)
+TOBJ_wctct	= $(XOBJ_LIB)
 TOBJ_wimgt	= $(XOBJ_IMAGE) $(XOBJ_OBJECT)
 TOBJ_wkclt	= lib-transform.o $(XOBJ_KCL) $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wkmpt	= $(XOBJ_KMP) lib-transform.o \
 			$(XOBJ_KCL) lib-kcl-image.o \
 			$(XOBJ_IMAGE) $(XOBJ_PARSER) $(XOBJ_OBJECT)
-TOBJ_wlect	= lib-lex.o lib-lecode.o lib-ctcode.o lib-xbmg.o db-ctcode.o \
+TOBJ_wlect1	= lib-lex.o lib-lecode.o lib-ledis.o lib-ctcode.o lib-xbmg.o db-ctcode.o \
 			$(XOBJ_PARSER) $(XOBJ_IMAGE) $(XOBJ_OBJECT)
+TOBJ_wlect	= $(XOBJ_LIB)
 TOBJ_wmdlt	= lib-mdl.o lib-transform.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wpatt	= lib-pat.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wstrt	= lib-staticr.o db-dol.o db-ctcode.o $(XOBJ_OBJECT)
@@ -389,7 +391,7 @@ BIN_FILES	= $(MAIN_TOOLS) $(EXTRA_TOOLS)
 SHARE_FILES	=
 
 CYGWIN_DIR	= /usr/bin
-CYGWIN_TOOLS	= bash chmod cp env grep mkdir realpath regtool stat tr
+CYGWIN_TOOLS	= bash chmod cp env grep mkdir realpath regtool stat tr less
 CYGWIN_SCRIPTS	= windows-install.sh windows-uninstall.sh windows-uninstall.bat \
 		  sendto-install.sh sendto-uninstall.sh
 CYGWIN_INSTALL	= $(SETUP_DIR)/windows-install.exe \
@@ -575,6 +577,7 @@ clean:
 	@printf "$(LOGFORMAT)" rm "output files + distrib" ""
 	-@rm -fr _start-pos.tmp
 	@find . -type d -name test.tmp -exec rm -rf {} +
+	@rm -rf pool/tracks.tmp
 	@rm -f $(RM_FILES)
 	@rm -fr $(DISTRIB_RM)* $(LIBEXPORT)
 	@cd dclib && rm -f $(DCLIB_PRIVATE)

@@ -59,7 +59,7 @@
 #define LE_CUP_MAGIC		"CUP2"
 #define LE_COURSE_MAGIC		"CRS2"
 
-#define LE_RESERVED_SLOTS	(LE_FIRST_LOWER_CT_SLOT - 32)
+#define LE_RESERVED_SLOTS	(LE_FIRST_CT_SLOT - 32)
 #define LE_MAX_BLOCK_TRACK	50
 
 //-----------------------------------------------------------------------------
@@ -239,6 +239,49 @@ ccp GetPredefDebugName ( predef_debug_t pd_mode );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			enum le_region_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[le_region_t]]
+
+typedef enum le_region_t
+{
+    LEREG_UNKNOWN = 0,
+
+    LEREG_PAL,
+    LEREG_USA,
+    LEREG_JAP,
+    LEREG_KOR,
+
+    LEREG__BEG	= LEREG_PAL,
+    LEREG__END	= LEREG_KOR,
+    LEREG__N	= LEREG__END - LEREG__BEG + 1,
+}
+le_region_t;
+
+//-----------------------------------------------------------------------------
+
+le_region_t GetLEREG ( char ch ); // anylse first char only
+ccp GetNameLEREG ( le_region_t lereg, ccp return_on_invalid );
+
+// replace last '@' by region name.
+// returns either NULL on error or 'name' or 'buf'. If !buf or to small, then use circ-buf.
+ccp PatchNameLEREG ( char *buf, uint bufsize, ccp name, le_region_t lereg );
+
+const mem_t GetLecodeLEREG ( le_region_t reg );
+
+// returns circ-buf
+ccp GetLecodeBuildLEREG ( le_region_t reg );
+ccp GetLecodeInfoLEREG ( le_region_t reg );
+
+//-----------------------------------------------------------------------------
+// some more global functions, used as helpers for *LEREG functions
+
+// returns circ-buf
+ccp GetBuildLECODE ( mem_t lecode );
+ccp GetInfoLECODE ( mem_t lecode );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			    le_lpar_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[le_lpar_t]] [[new-lpar]]
@@ -288,6 +331,7 @@ extern const u16 chat_mode_mkwfun[BMG_N_CHAT];
 //-----------------------------------------------------------------------------
 
 void InitializeLPAR ( le_lpar_t *lpar, bool load_lpar );
+static inline void ResetLPAR ( le_lpar_t *lpar ) {}
 
 enumError LoadLPAR
 (
@@ -314,6 +358,13 @@ enumError SaveTextLPAR
     le_lpar_t		*lpar,		// LE-CODE parameters
     ccp			fname,		// filename of destination
     bool		set_time	// true: set time stamps
+);
+
+enumError SaveTextFileLPAR
+(
+    le_lpar_t		*lpar,		// LE-CODE parameters
+    FILE		*f,		// open file
+    bool		print_full	// true: print ehader + append section [END]
 );
 
 enumError WriteSectionLPAR
@@ -677,6 +728,7 @@ typedef struct le_analyse_t
 
     le_valid_t	valid;		// see LE_VALID_* above
     uint	version;	// version = phase
+    le_region_t	region;		// one of LEREG_*
 
     const u8	*data;		// pointer to raw data
     u32		size;		// data size
@@ -762,6 +814,8 @@ enumError AnalyseLEBinary
     uint		data_size	// data size
 );
 
+le_region_t GetLERegion ( const le_analyse_t *ana );
+
 void CalculateStatsLE ( le_analyse_t *ana );
 const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc );
 char GetLEUsageChar ( le_usage_t usage );
@@ -771,7 +825,10 @@ ccp GetLEValid ( le_valid_t valid );
 void CalculateStatsLE ( le_analyse_t *ana );
 void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana );
 
-static inline bool IsLESlotUsed ( le_analyse_t *ana, uint slot )
+void TransferTrackFile   ( LogFile_t *log, uint dest_slot, ccp  src_name, TransferMode_t flags );
+void TransferTrackBySlot ( LogFile_t *log, uint dest_slot, uint src_slot, TransferMode_t flags );
+
+static inline bool IsLESlotUsed ( const le_analyse_t *ana, uint slot )
 	{ return slot < ana->n_slot && ana->music[slot]; }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -792,17 +849,17 @@ const VarMap_t * SetupVarsLECODE();
 
 static inline bool IsRacingTrackLE ( uint tid )
 	{ return tid < MKW_N_TRACKS
-		|| tid >= LE_FIRST_LOWER_CT_SLOT && tid != 0xff; }
+		|| tid >= LE_FIRST_CT_SLOT && tid != 0xff; }
 
 uint GetNextRacingTrackLE ( uint tid );
 
 ///////////////////////////////////////////////////////////////////////////////
 
-extern ccp	opt_le_define;
 extern ccp	opt_le_arena;
 extern ccp	opt_lpar;
 extern ccp	opt_track_dest;
 extern ParamField_t opt_track_source;
+extern int	opt_szs_mode;
 
 extern ccp	opt_le_alias;
 extern bool	opt_engine_valid;
@@ -816,7 +873,8 @@ extern int	opt_lecode_debug;
 
 extern bool	opt_complete;
 
-int ScanOptTrackSource	( ccp arg, int mode );
+int ScanOptTrackSource	( ccp arg, int arg_len, int mode );
+int ScanOptSzsMode	( ccp arg );
 int ScanOptAlias	( ccp arg );
 int ScanOptEngine	( ccp arg );
 int ScanOpt200cc	( ccp arg );

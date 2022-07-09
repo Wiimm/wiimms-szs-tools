@@ -390,7 +390,7 @@ static void __attribute__((__noreturn__)) usage(void)
     exit(EXIT_SUCCESS);
 }
 
-int main(int argc, char *argv[])
+int main ( int argc, char *argv[] )
 {
     struct getopt_control ctl = {
 	.shell = BASH,

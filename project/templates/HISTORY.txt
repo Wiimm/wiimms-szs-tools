@@ -549,6 +549,12 @@ szs v2.27a r8529 - 2022-05-13
  - wszst ANALYZE: Detect goombas with scale other than 1.00.
 
 
+szs v2.27b r8534 - 2022-05-22
+
+ - Bug fix for scanning DEBUG-* sections of LPAR.txt: Parameters ITEM-POINT and
+   KCL-TYPE were not recognized.
+
+
 @@MODULE(last-history.txt)@@
 
 

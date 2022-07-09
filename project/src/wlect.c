@@ -35,7 +35,7 @@
  *                                                                         *
  ***************************************************************************/
 
-#include "lib-lecode.h"
+#include "lib-ledis.h"
 #include "lib-szs.h"
 #include "lib-xbmg.h"
 //#include "lib-bzip2.h"
@@ -219,8 +219,7 @@ static enumError cmd_test()
 
  #elif 0
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    for ( ParamList_t *param = first_param; param; param = param->next )
     {
 	//NORMALIZE_FILENAME_PARAM(param);
     }
@@ -311,6 +310,8 @@ static enumError cmd_dpad()
 
 static enumError cmd_dump ( int long_level )
 {
+    SetupPager();
+
     if ( long_level > 0 )
     {
 	RegisterOptionByIndex(&InfoUI_wlect,OPT_LONG,long_level,false);
@@ -366,6 +367,7 @@ static enumError cmd_dump ( int long_level )
 	    ResetCTCODE(&ctcode);
 	}
 	fflush(stdout);
+	CloseLDUMP();
     }
 
     ResetRawData(&raw);
@@ -751,7 +753,9 @@ static enumError cmd_patch()
 	PatchLECODE(&ana);
 	err = SaveFILE( dest, 0, dest_is_source||opt_overwrite,
 				raw.data, raw.data_size, 0 );
+	ImportAnaLDUMP(&ana);
 	ResetLEAnalyse(&ana);
+	CloseLDUMP();
     }
 
     ResetRawData(&raw);
@@ -763,48 +767,148 @@ static enumError cmd_patch()
 ///////////////			command create			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+static void help_create ( enumError exit_code )
+{
+    //SetupTermWidth();
+    if ( logging >= 3 )
+	printf("# colors: %d %d %d\n",colout->col_mode,colout->colorize,colout->n_colors);
+
+    static const char text[] =
+	"\n"
+	"{heading|Command »%s CREATE«}\n"
+	"\n"
+	"  |This command creates text files."
+	" The optional argument defines the type of output. The general syntax is:\n"
+	"|[4,25]\n"
+	"\t|{cmd|%s CREATE}\n"
+	"\t|{cmd|%s CREATE SUB_COMMAND} {opt|option}...\n"
+	"\n"
+	"  |This help is printed if no {cmd|SUB_COMMAND} is used or if it is »{name|HELP}«."
+	" The sub-commands are case sensitive, unique abbreviations are allowed."
+	" The sub-commands are logically divided into several groups:\n"
+	"\n"
+	"\tCreate a LEX file:\t|{name|LEX}, {name|LEX+}, {name|SET1}, {name|CANNONS}, {name|HIPT}, {name|TEST}.\n"
+	"\tCreate another file:\t|{name|LPAR}, {name|LE-DEF}, {name|PREFIX}.\n"
+	"\tPrint an information:\t|{name|LE-INFO}.\n"
+ #if HAVE_WIIMM_EXTxx
+	 "\tHidden sub-commands:\t|{name|DEVELOP}, {name|FEATURES}.\n"
+ #endif
+	"\n"
+	"  |This help and the generated text files are output via the standard output (stdout)"
+	" by an internal pager."
+	" Options {opt|--dest}, {opt|--DEST} and {opt|--overwrite} can change this default.\n"
+	"\n"
+
+	//---------------------------------------------------------------------
+
+	"\n"
+	"{caption|Create a LEX file:}\n"
+ #if HAVE_WIIMM_EXTxx
+	"\n|[4,14]"
+ #else
+	"\n|[4,13]"
+ #endif
+	"  |The following sub-commands create a LEX file with one or all sections:\n"
+	"\n"
+	"\t{name|LEX}:\t|"
+		"Create a LEX file with all known sections except section »TEST«.\n"
+	"\t{name|LEX+}:\t|"
+		"Create a complete LEX text file including section »TEST«.\n"
+ #if HAVE_WIIMM_EXTxx
+	"\t{info|DEVELOP}:\t|"
+		"This {warn|hidden sub-command} acts like LEX+,"
+		" but includes all devoloper sections.\n"
+ #endif
+	"\n"
+ #if HAVE_WIIMM_EXTxx
+	"\t{info|FEATURES}:\t|"
+		"This {warn|hidden sub-command} create a LEX text file with section »FEA0« only."
+		" {warn|This section is under development.}\n"
+ #endif
+	"\t{name|SET1}:\t|"
+		"Create a LEX text file with section »SET1« only.\n"
+	"\t{name|CANNONS}:\t|"
+		"Create a LEX text file with section »CANN« only.\n"
+	"\t{name|HIPT}:\t|"
+		"Create a LEX text file with section »HIPT« only.\n"
+	"\t{name|TEST}:\t|"
+		"Create a LEX text file with section »TEST« only.\n"
+	"\n"
+
+	//---------------------------------------------------------------------
+
+	"\n"
+	"{caption|Create other files:}\n"
+	"\n"
+	"\t{name|LPAR}:\t|"
+		"Create a LPAR text file (LE-CODE parameters) as template."
+		" Option {opt|--lpar} is recognized to change defaults.\n"
+	"\t{name|LE-DEF}:\t|"
+		"Create a LE-CODE distribution definition file of type LE-DEF as template.\n"
+	"\t{name|PREFIX}:\t|"
+		"Create a machine readable prefix list."
+		" {file|https://ct.wiimm.de/export/prefix} is the authoritative source for this.\n"
+	"\n"
+
+	//---------------------------------------------------------------------
+
+	"\n"
+	"{caption|Print an information:}\n"
+	"\n"
+	"\t{name|LE-INFO}:\t|"
+		"Print information about built-in LE-CODE binaries.\n"
+	"\n"
+
+	;
+
+    int good_width = GetGoodTermWidth(0,false);
+    PrintColoredLines(stdout,colout,0,good_width-1,0,0,text,
+		ProgInfo.progname,
+		ProgInfo.progname,
+		ProgInfo.progname );
+    ClosePager();
+    exit(exit_code);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 static enumError cmd_create()
 {
-    stdlog = stderr;
+    CheckOptDest("-",false);
+    if (!strcmp(opt_dest,"-"))
+	SetupPager();
 
     if ( n_param != 1 )
-    {
-	fputs("\n"
-	 "Use command CREATE without exact one keyword.\n"
-	 "\n"
-	 "Possible keywords:\n"
-	 "  LEX    : Create a with all sections except »TEST«.\n"
-	 "  LEX+   : Create a complete LEX text file.\n"
-	 "  SET1   : Create a LEX text file with section »SET1« only.\n"
-	 "  CANNON : Create a LEX text file with section »CANN« only.\n"
-	 "  TEST   : Create a LEX text file with section »TEST« only.\n"
-	 "  LPAR   : Create a LPAR text file as template.\n"
- #if HAVE_WIIMM_EXT
-	 "\n"
-	 "Hidden keyword:\n"
-	 "  FEATURES : Create a LEX text file with section »FEA0« only.\n"
-	 "  DEVELOP  : Like LEX+, but include all devoloper sections.\n"
- #endif
-	 "\n",stderr);
-
-	hint_exit(ERR_SYNTAX);
-    }
+	help_create(ERR_OK);
 
 
     //--- data
 
-    enum { C_LEX, C_FEATURES, C_SET1, C_CANNON, C_HIDE_PT, C_TEST, C_LPAR };
+    enum { C_HELP,
+		C_LEX, C_FEATURES, C_SET1, C_CANNON, C_HIDE_PT, C_TEST,
+		C_LPAR, C_LEDEF, C_PREFIX,
+		C_LEINFO,
+    };
+
     static const KeywordTab_t tab[] =
     {
+	{ C_HELP,	"HELP",		"H",		0 },
+
 	{ C_LEX,	"LEX",		0,		0 },
-	{ C_LEX,	"LEX+",		0,		1 },
-	{ C_LEX,	"DEVELOP",	0,		2 },
+	{ C_LEX,	"LEX+",		0,		 1 },
+	{ C_LEX,	"DEVELOP",	0,		 2 },
 	{ C_FEATURES,	"FEATURES",	0,		0 },
 	{ C_SET1,	"SET1",		0,		0 },
-	{ C_CANNON,	"CANNON",	0,		0 },
+	{ C_CANNON,	"CANNONS",	0,		0 },
 	{ C_HIDE_PT,	"HIPT",		0,		0 },
 	{ C_TEST,	"TEST",		0,		0 },
+
 	{ C_LPAR,	"LPAR",		0,		0 },
+	{ C_LEDEF,	"LE-DEF",	"LEDEF",	0 },
+	{ C_PREFIX,	"PREFIX",	0,		0 },
+
+	{ C_LEINFO,	"LE-INFO",	"LEINFO",	0 },
+
 	{ 0,0,0,0 }
     };
 
@@ -825,54 +929,39 @@ static enumError cmd_create()
     enumError err = ERR_OK;
     switch (cmd->id)
     {
+     case C_HELP:
+	help_create(ERR_OK);
+	break;
+
+     //-------------------------
+
      case C_LEX:
 	{
 	    lex_t lex;
 	    InitializeLEX(&lex);
 	    lex.develop = cmd->opt > 1;
-	    UpdateLEX(&lex,true,cmd->opt>0);
+	    UpdateLEX( &lex, true, cmd->opt > 0 );
 	    PatchLEX(&lex,0);
-	    err = SaveTextLEX(&lex,"-",false);
+	    err = SaveTextLEX(&lex,opt_dest,false);
 	    ResetLEX(&lex);
 	}
 	break;
 
      case C_FEATURES:
-	{
-	    lex_t lex;
-	    InitializeLEX(&lex);
-	    AppendFea0LEX(&lex,false,0);
-	    err = SaveTextLEX(&lex,"-",false);
-	    ResetLEX(&lex);
-	}
-	break;
-
      case C_SET1:
-	{
-	    lex_t lex;
-	    InitializeLEX(&lex);
-	    AppendSet1LEX(&lex,false);
-	    err = SaveTextLEX(&lex,"-",false);
-	    ResetLEX(&lex);
-	}
-	break;
-
      case C_CANNON:
-	{
-	    lex_t lex;
-	    InitializeLEX(&lex);
-	    AppendCannLEX(&lex,false);
-	    err = SaveTextLEX(&lex,"-",false);
-	    ResetLEX(&lex);
-	}
-	break;
-
      case C_HIDE_PT:
 	{
 	    lex_t lex;
 	    InitializeLEX(&lex);
-	    AppendHiptLEX(&lex,false);
-	    err = SaveTextLEX(&lex,"-",false);
+	    switch (cmd->id)
+	    {
+	      case C_FEATURES: AppendFea0LEX(&lex,false,0); break;
+	      case C_SET1:     AppendSet1LEX(&lex,false); break;
+	      case C_CANNON:   AppendCannLEX(&lex,false); break;
+	      case C_HIDE_PT:  AppendHiptLEX(&lex,false); break;
+	    }
+	    err = SaveTextLEX(&lex,opt_dest,false);
 	    ResetLEX(&lex);
 	}
 	break;
@@ -883,10 +972,12 @@ static enumError cmd_create()
 	    InitializeLEX(&lex);
 	    lex_item_t * li = AppendTestLEX(&lex,false);
 	    PatchTestLEX((lex_test_t*)li->elem.data,0);
-	    err = SaveTextLEX(&lex,"-",false);
+	    err = SaveTextLEX(&lex,opt_dest,false);
 	    ResetLEX(&lex);
 	}
 	break;
+
+     //-------------------------
 
      case C_LPAR:
 	{
@@ -894,13 +985,1013 @@ static enumError cmd_create()
 	    InitializeLPAR(&lpar,true);
 	    PatchLPAR(&lpar);
 	    lpar.limit_mode = LPM_FORCE_AUTOMATIC;
-	    err = SaveTextLPAR(&lpar,"-",false);
+	    err = SaveTextLPAR(&lpar,opt_dest,false);
 	}
 	break;
+
+     case C_LEDEF:
+	{
+	    File_t F;
+	    enumError err = CreateFileOpt(&F,true,opt_dest,false,0);
+	    if (!err)
+	    {
+		le_distrib_t ld;
+		InitializeLD(&ld);
+		AutoSetupLD(&ld,LAS_DEFAULT|LAS_TEMPLATE);
+		err = CreateLeDefLD(F.f,&ld);
+		ResetLD(&ld);
+	    }
+	    CloseFile(&F,0);
+	}
+	break;
+
+     case C_PREFIX:
+	SavePrefixTableFN(opt_dest,0);
+	break;
+
+     //-------------------------
+
+     case C_LEINFO:
+	{
+	    File_t F;
+	    enumError err = CreateFileOpt(&F,true,opt_dest,false,0);
+	    if (!err)
+	    {
+		fprintf(F.f,
+			"\n"
+			"Built-in LE-CODE binaries:\n"
+			"\n"
+			"  %s\n"
+			"  %s\n"
+			"  %s\n"
+			"  %s\n"
+			"\n"
+			,GetLecodeInfoLEREG(LEREG_PAL)
+			,GetLecodeInfoLEREG(LEREG_USA)
+			,GetLecodeInfoLEREG(LEREG_JAP)
+			,GetLecodeInfoLEREG(LEREG_KOR)
+			);
+	    }
+	    CloseFile(&F,0);
+	}
     }
 
-    fflush(stdout);
     return err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			command distrib			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static void help_distrib ( enumError exit_code )
+{
+    if ( logging >= 3 )
+	printf("# colors: %d %d %d\n",colout->col_mode,colout->colorize,colout->n_colors);
+
+    static const char text[] =
+	"\n"
+	"{heading|Command »%s DISTRIBUTION«}\n"
+	"\n"
+	"  |This command manages data for LE-CODE track distributions."
+	" It reads any number of source files with different file types,"
+	" collects the data and creates any number of files with different file types.\n"
+	"\n"
+	"  |»{cmd|%s DISTRIBUTION}« is a very powerful tool when dealing with distributions."
+	" Because of the complexity, the input line offers many possibilities."
+	" First, the default options (arguments beginning with 1 or 2 minus signs"
+	" like {opt|-B} or {opt|--brief}) are evaluated."
+	" Then the remaining arguments of the command line are evaluated step by step from left to right."
+	" There are {name|input files} that change the internal model."
+	" The {name|instructions} are used to change the data or to write data to files."
+	" The {name|processing options} affect both reading and writing.\n"
+	"\n"
+	"  |{warn|This command is still under development."
+	" Its use is therefore experimental and errors are quite likely!}\n"
+	"\n"
+	"  {syntax|Syntax:}\n"
+	"|[4]\n"
+	"\t|{cmd|%s DISTRIBUTION}\n"
+	"\t|{cmd|%s DISTRIBUTION} {opt|option}... {par|argument}...\n"
+	"\n"
+	"  |»{cmd|DIS}« and »{cmd|DISTRIB}« are well defined shortcuts for »{cmd|DISTRIBUTION}«."
+	" Without arguments, this help is printed.\n"
+	"\n"
+
+	//-------------------------------------------------------------------------
+
+	"\n"
+	"{heading|Arguments:}\n"
+	"\n"
+	"  |Arguments are divided into 3 groups:"
+	" {name|processing options}, {name|instructions} and {name|filenames}.\n"
+	"\n"
+	"  |If an argument beginns with a {hl|plus sign} ({hl|+}), then is is scanned as"
+	" a {name|comma-separated list of processing options}."
+	" To use a filename that starts with a plus sign (e.g. »{file|+file.txt}«),"
+	" precede it with »{file|./}« (e.g. »{file|./+file.txt}«).\n"
+	"\n"
+	"  |Otherwise, if the argument is of the form {hl|COMMAND=PARAMETER},"
+	" then it is a {name|instruction}."
+	" COMMAND is a keyword (case-insenitive) and starts with a letter"
+	" followed by any number of letters, digits and minus signs."
+	" PARAMETER must consist of at least one character."
+	" If PARAMETER is empty, then the next argument is used as PARAMETER."
+	" This also allows the syntax {hl|COMMAND= PARAMETER} (2 arguments),"
+	" which is helpful for the automatic completion of filenames.\n"
+	"\n"
+	"  |Otherwise it is a {name|filename of an input file}."
+	" The file is read and generally overwrites existing content."
+	" This means that the file last read in has the highest priority."
+	" However, this can be influenced by the processing options."
+	" Arguments beginning with »{file|/}« or »{file|./}«"
+	" are always recognized as filenames.\n"
+	"\n"
+	"  |All arguments are executed in the order in which they were entered without any logging."
+	" Only error messages are displayed."
+	" With option {opt|--verbose} (short: {opt|-v}),"
+	"  at least one log line for each argument is printed.\n"
+	"\n"
+	"  |It is possible to store arguments into a file (e.g. into file »{file|param.txt}«)"
+	" and to include those file by option {opt|-@FILENAME}"
+	" (e.g. by »{file|-@param.txt}«). This option can be used multiple times"
+	" and is evaluated before the actual analysis of the command line."
+	" Command »{cmd|wlect argtest ...}« is suitable for tests.\n"
+	"\n"
+
+	//-------------------------------------------------------------------------
+
+	"\n"
+	"{heading|Input Files:}\n"
+	"\n"
+	"  |{name|Input files} are processed in the order in which they were entered."
+	" They supplement or overwrite the internal data structure with its diverse data.\n"
+	"\n"
+	"  |If a file does not exist but the associated filename contains wildcards"
+	" (any of »{file|*?[}«), then all matching files are loaded as source."
+	" So it's possible to keep the command line small if using »{file|'*.szs'}«"
+	" (with apostrophs) instead of »{file|*.szs}«.\n"
+	"\n"
+	"  |The following file types are recognized and processed."
+	" The names used here are the same as those given out"
+	" by the command {cmd|FILETYPE} for identification:\n"
+	"|[4,13]\n"
+	"\t{name|LEDIS}:\t|"
+		"A distribution dump created by {name|write instruction} »{par|DUMP=…}«."
+		" Such a dump usually contains all relevant data of the internal model,"
+		" which is restored by reading it in.\n"
+	"\n"
+	"\t{name|LEDEF}:\t|"
+		"A distribution definition file."
+		" This new format replaces the old {name|CTTEXT} format."
+		" It supports all LE-CODE properties and will be further developed to match LE-CODE."
+		" Templates can be created with instruction »{par|LEDEF=…}«"
+		" or with command »{par|wlect CREATE LEDEF}«.\n"
+	"\n"
+	"\t{name|LEREF}:\t|"
+		"A track reference list created by {name|write instruction} »{par|REF=…}«.\n"
+	"\n"
+	"\t{name|SHA1REF}:\t|"
+		"A SHA1 reference list created by {name|write instruction} »{par|SHA1=…}«."
+		" Only checksum and track slot are used.\n"
+	"\n"
+	"\t{name|LE-BIN}:\t|"
+		"A LE-CODE binary file (e.g. »{file|lecode-PAL.bin}«)."
+		" Usually settings and LPAR are imported."
+		" Option {name|IN-LECODE} decides if the file is used as template"
+		" for the specifig region if a binary is created.\n"
+	"\n"
+	"\t{name|PREFIX}:\t|"
+		"Replace the internal prefix list by the content of the file."
+		" {file|https://ct.wiimm.de/export/prefix} is the authoritative source for this.\n"
+	"\n"
+	"\t{name|LPAR}:\t|"
+		"A LE-CODE parameter file (e.g. »{file|lpar.txt}«).\n"
+	"\n"
+	"\t{name|BMG} and {name|BMGTXT}:\n\t\t|"
+		"Any BMG (binary or text)."
+		" See section »{heading|Processing Options}« for more details.\n"
+	"\n"
+	"\t{name|DISTRIB}:\t|"
+		"A distribution file created by {name|write instruction} »{par|DISTRIB=…}«"
+		" or by command »{cmd|wszst DISTRIBUTION}«."
+		" Such files are imported by ct.wiimm.de to display information about distributions.\n"
+	"\n"
+	"\t{name|CTTEXT}:\t|"
+		"A CT-CODE or LE-CODE definition file."
+		" The file is scanned by the CT-CODE scanner and then imported.\n"
+	"\n"
+	"  |All file types that are accepted by option {opt|--le-define}"
+	" ({name|BRRES}, {name|TEX0}, {name|CT-CODE}, ...) are also possible.\n"
+	"\n"
+
+	//-------------------------------------------------------------------------
+
+	"\n"
+	"{heading|Instructions:}\n"
+	"\n"
+	"  |{name|Instructions} are of the form {hl|COMMAND=PARAMETER} (1 argument)"
+	" or {hl|COMMAND= PARAMETER} (2 arguments). Commands are case-insenitive."
+	" The use of keywords without the minus sign and unique abbreviations are permitted."
+	" Any number of write instructions can be used."
+	" And these can be mixed with input files at will.\n"
+	"\n"
+	"  |Most commands, but not all, are {name|write instructions}."
+	" They write the current contents of the internal model to a file."
+	" In these cases, {hl|PARAMETER} is a filename."
+	" If a filename is a minus sign only, then {file|stdout} is used."
+	" Existing files are only overwritten if at least one of the options"
+	" {opt|--overwrite} (short: {opt|-o}) or {opt|--remove-dest} (short: {opt|-r}) is set.\n"
+	"\n|[4,14]"
+
+	//-------------------------
+	"  |{heading|Create human readable information files:}\n"
+	"\n"
+
+	"\t{name|NAMES}:\t|"
+		"Create a human readable reference file with cup info and track names."
+		" Only tracks with known name (not empty) are printed."
+		" The tracks are ordered by cups.\n"
+	"\t{name|XNAMES}:\t|"
+		"Same as {name|NAMES}, but use extended names if available.\n"
+	"\n"
+	"\t{name|INFO}:\t|"
+		"Create a human readable reference file with cup info slots and track names."
+		" Only tracks with known name (not empty) are printed."
+		" The tracks are  ordered by cups.\n"
+	"\t{name|XINFO}:\t|"
+		"Same as {name|INFO}, but use extended names if available.\n"
+	"\n"
+	"\t{name|LE-INFO}:\t|"
+		"Print information about current LE-CODE binaries.\n"
+	"\n"
+	"\t{name|PREFIX}:\t|"
+		"Print a machine readable prefix list."
+		" {file|https://ct.wiimm.de/export/prefix} is the authoritative source for this.\n"
+	"\n"
+	"\t{name|DEBUG}:\t|"
+		"Print some statistics for debugging."
+		" The current sate is analysed without updating cups.\n"
+	"\n"
+
+	//-------------------------
+	"  |{heading|Create human and machine readable definition files (usually input files):}\n"
+	"\n"
+
+	"\t{name|LE-DEF}:\t|"
+		"Create a LE-CODE definition file of format »{name|#LE-DEF1}«,"
+		" that is usually used to declare tracks for a LE-CODE distributions."
+		" This new format replaces the old format created by {name|CTDEF=}."
+		" It supports all LE-CODE properties and will be further developed"
+		" to match future LE-CODE.\n"
+	"\n"
+	"\t{name|CT-DEF}:\t|"
+		"Create a definition file of format »{name|#CT-CODE}«,"
+		" that is usually used to declare tracks for a CT-CODE or LE-CODE distributions."
+		" Only simple layouts are supported,"
+		" so that the track arrangement can be distorted when importing again."
+		" In addition, a file is created"
+		" that can only be read by the tools since version 2.28a.\n"
+	"\n"
+
+
+	//-------------------------
+	"  {heading|Generate machine-readable files that can also be used as input files:}\n"
+	"\n"
+
+	"\t{name|SHA1}:\t|"
+		"Create a SHA1 list file that can be used on Wiimmfi"
+		" to limit the tracks that can be used in a region."
+		" Only tracks with known SHA1 are printed."
+		" The output can be used as input file to restore the checksums.\n"
+	"\t{name|XSHA1}:\t|"
+		"Same as {name|SHA1}, but use extended names if available.\n"
+	"\n"
+	"\t{name|DISTRIB}:\t|"
+		"Create a distribution file like command »{cmd|wszst DISTRIBUTION}« does."
+		" However, this variant only supports tracks with a known track slot."
+		" The output can be used as input file.\n"
+	"\t{name|XDISTRIB}:\t|"
+		"Same as {name|DISTRIB}, but use extended names for the track list if available.\n"
+	"\n"
+	"\t{name|LPAR}:\t|"
+		"Create a LPAR file. Use {opt|--brief} ({opt|-b}) to suppress comments.\n"
+	"\n"
+	"\t{name|BMG}:\t|"
+		"Create a BMG binary file. BMG options are recognized."
+		" But if the output goes to a terminal, then use {name|BMGTXT} insted.\n"
+	"\t{name|BMGTXT}:\t|"
+		"Create a BMG text file. BMG options are recognized.\n"
+	"\n"
+	"\t{name|REF}:\t|"
+		"Create a machine readable track reference (type {name|LEREF}),"
+		" that can be used as input file for other commands."
+		" One line is printed for each defined track.\n"
+	"\n"
+	"\t{name|DUMP}:\t|"
+		"Create a dump of the complete internal model to a distribution file"
+		" (type {name|LE-DIS})."
+		" This file can be used as source to restore the internal model.\n"
+	"\n"
+
+	//-------------------------
+	"  {heading|Create LE-CODE binary files:}\n"
+	"\n"
+
+	"\t{name|LECODE}:\t|"
+		"Create 4 LE-CODE binary files, one for each region."
+		" The filename must contain at least {hl|one »@« character}."
+		" The last »@« character is replaced by"
+		" {name|PAL}, {name|USA}, {name|JAP} and {name|KOR} in sequence."
+		" The binary data embedded in the SZS tools is usually used as a template."
+		" At the moment it is {info|build %s}."
+		" Other templates can be used with the {name|IN-LECODE} processing option.\n"
+	"\n"
+	"\t{name|PAL}:\t|"
+		"Similar to mode {name|LECODE}, but only the PAL version is generated."
+		" The »@« character has no special meaning here.\n"
+	"\t{name|USA}:\t|"
+		"Like {name|PAL}, but the USA version is generated.\n"
+	"\t{name|JAP}:\t|"
+		"Like {name|PAL}, but the JAP version is generated.\n"
+	"\t{name|KOR}:\t|"
+		"Like {name|PAL}, but the KOR version is generated.\n"
+	"\n"
+
+	//-------------------------
+	"  {heading|String functions:}\n"
+	"\n"
+
+	"\t{name|SUBST}:\t|"
+		"This command searches for text passages using a regular expression"
+		" and replaces the found passages with another text.\r"
+		"  {heading|Syntax of PARAMETER:} |{syntax|STORAGE ',' SEP REGEXP SEP REPLACEMENT SEP OPTIONS}\n"
+		"\n\t\t|"
+		"{syntax|STORAGE} is a storage indicator"
+		" explained in section »{name|Processing Options: Storage}«."
+		" {syntax|SEP} is the very first character behind the comma."
+		" It must occur exactly 3 times and separates the 3 parts from each other."
+		" {syntax|REGEXP} is the extended regular expression used for searching."
+		" If successful, replace that portion matched with {syntax|REPLACEMENT}."
+		" The replacement may contain the special string »{mark|$0}«"
+		" to refer to that portion of the pattern space which matched,"
+		" and the special string1 »{mark|$1}« through »{mark|$9}«"
+		" to refer to the corresponding matching sub-expressions in the regexp."
+		" The two characters »{mark|g}« for global (replace all occurrences)"
+		" and »{mark|i}« for ignore case are recognized as {syntax|OPTIONS}.\r"
+		"\r"
+		"Examples: |{syntax|subst=name,+abc+xyz+}\r"
+			"{syntax|subst=[key],/search ([0-9])/replace $1/gi}\n"
+	"\n"
+
+	"\t{name|COPY}:\t|"
+		"This command copies the texts of 1 or more sources to a destination.\r"
+		"  {heading|Syntax of PARAMETER:} {syntax|DEST '=' SRC [ '+' SRC ]...}\r"
+		"\r"
+		"{syntax|DEST} and {syntax|SRC} are storage indicators"
+		" explained in section »{name|Processing Options: Storage}«."
+		" The sources are joined textually, with CTRL-A (ASCII 1, '\\1')"
+		" inserted as a separator between the sources."
+		" Use instruction {name|SUBST} to change the separators.\r"
+		"\r"
+		"Example: |{syntax|copy=[result]=sha1+[size]}\n"
+	"\n"
+
+	//-------------------------
+	"  {heading|Copy, move or link track files:}\n"
+	"\n|[4,12,14,22]"
+
+	"\t{name|TRACKS}:\t|"
+		"Copy, move or links files following the options {opt|--copy-tracks},"
+		" {opt|--move-tracks}, {opt|--move1-tracks}, {opt|--link-tracks}"
+		" and {opt|--track-dir}."
+		" {hl|PARAMETER} is a keyword that specifies the options for execution:\n"
+	"\n"
+
+	"\t\t\t{name|NO-LOG}:\t|"
+		"Transfer the tracks without logging.\n"
+	"\t\t\t{name|LOG}:\t|"
+		"Transfer the tracks with logging.\n"
+	"\t\t\t{name|TEST}:\t|"
+		"Log planned actions only and don't touch any file.\n"
+	"\n"
+
+	//-------------------------------------------------------------------------
+
+	"\n"
+	"{heading|Processing Options:}\n"
+	"\n"
+	"  |{name|Processing Options} are inserted as comma separated list."
+	" A list always begins with a plus sign to distinguish it from filenames"
+	" and instructions."
+	" Option names are case-insenitive. Unique abbreviations are allowed."
+	" Names with a minus sign in their name can also be specified without the minus sign.\n"
+	"\n"
+	"  |Most option names can be preeceded by a minus sign or a slash to negate its meaning."
+	"\n"
+	"  |{name|Processing Options} are only valid for subsequent arguments."
+	" This makes it possible to use different filters for different input or output files."
+	" The keywords are divided into several functional groups.\n"
+	"\n|[4,16]"
+
+	//-------------------------
+
+	"  |{heading|Managment Options:}\n"
+	"\n"
+	"\t{name|HELP}:\t|"
+		"Stop execution and print this help.\n"
+	"\t{name|RESET}:\t|"
+		"Reset the filter to its default.\n"
+	"\n"
+	"\t{name|CUT-STD}:\t|"
+		"Remove settings and tracks, that are not needed for a standard distribution"
+		" with 32 tracks and 10 battle arenas.\n"
+	"\t{name|CUT-CTCODE}:\t|"
+		"Remove settings and tracks, that are not needed for a CT-CODE distribution."
+		" Arenas are also removed.\n"
+	"\n"
+
+	//-------------------------
+
+	"  |{heading|BMG source:}\n"
+	"\n"
+	"\t|Define which BMG strings are used as input."
+	" Multiple source can be selected. If none is selected, then all are used."
+	" {name|MKW1} has the lowest priority and {name|LE-CODE} the highest.\n"
+	"\n"
+
+	"\t{name|MKW1}:\t|"
+		"Use the first set of orignal names starting from"
+		" message id 0x2454 (racing tracks) and 0x2490 (battle arenas).\n"
+	"\t{name|MKW2}:\t|"
+		"Use the second set of orignal names starting from"
+		" message id 0x24b8 (racing tracks) and 0x24cc (battle arenas).\n"
+	"\t{name|MKW}:\t|"
+		"Short cut for »{name|+MKW1,MKW2}«.\n"
+	"\t{name|CT-CODE}:\t|"
+		"Use the CT-CODE names starting from message id 0x4000.\n"
+	"\t{name|LE-CODE}:\t|"
+		"Use the LE-CODE names starting from message id 0x7000.\n"
+	"\n"
+
+	//-------------------------
+
+	"  |{heading|Input filters:}\n"
+	"\n"
+	"\t|Define the type of character identifiers accepted as source."
+	" Empty character strings and character strings"
+	" that only consist of a minus sign are considered invalid.\n"
+	"\n"
+
+	"\t{name|IN-EMPTY}:\t|"
+		"Empty strings are also considered valid."
+		" {name|IEMPTY} is a short cut for this keyword.\n"
+	"\t{name|IN-MINUS}:\t|"
+		"Strings consisting only of a minus sign are also considered valid."
+		" {name|IMINUS} is a short cut for this keyword.\n"
+	"\t{name|IN-ALL}:\t|"
+		"Short cut for »{name|+IN-EMPTY,IN-MINUS}«."
+		" {name|IALL} is a short cut for this keyword.\n"
+	"\n"
+
+	//-------------------------
+
+	"  |{heading|Input operation:}\n"
+	"\n"
+	"\t|Define how already existing strings are overwritten.\n"
+	"\n"
+
+	"\t{name|OVERWRITE}:\t|"
+		"Insert all valid BMG strings and overwrite already existing strings."
+		" This is the default.\n"
+	"\t{name|INSERT}:\t|"
+		"Insert only valid BMG strings, that are empty in the track list.\n"
+	"\t{name|REPLACE}:\t|"
+		"Replace only valid BMG strings that are already defined in the track list."
+		" Other strings are ignored.\n"
+	"\n"
+
+	//-------------------------
+
+	"  |{heading|Storage:}\n"
+	"\n"
+	"\t|Define the string type being processed. This is used for BMG input and output files only.\n"
+	"\n"
+
+	"\t{name|IDENT}:\t|"
+		"Define a new identfication string."
+		" If it is a valid SHA1 or DB64 string, then update SHA1 too."
+		" If reading, then get the identfication string.\n"
+	"\t{name|SHA1}:\t|"
+		"Same as {name|IDENT} if writing."
+		" If reading, then get the SHA1 string.\n"
+	"\t{name|FILE}:\t|"
+		"Define a new or get the filename.\n"
+	"\t{name|NAME}:\t|"
+		"Define a new or get the standard name.\n"
+	"\t{name|XNAME}:\t|"
+		"Define a new or get the extended name.\n"
+	"\t{name|X2NAME}:\t|"
+		"Define a new standard and a new extended name."
+		" If reading, then get the extended name, if valid, or the standard name as fallback.\n"
+	"\n"
+	"\t{name|[key]}:\t|"
+		"For each track there is a set of character strings at the user's disposal."
+		" The character strings are addressed via KEY."
+		" The KEY itself can consist of any character and are case-sensitive."
+		" This type of square bracket option can only be used"
+		" directly after the leading plus sign. More processing options may follow.\n"
+	"\n"
+
+	//-------------------------
+
+	"  |{heading|Output filters:}\n"
+	"\n"
+	"\t|Select tracks for the output by their features.\n"
+	"\n"
+
+	"\t{name|VERSUS}||{name|VS}:\t|"
+		"Select versus tracks only.\n"
+	"\t{name|BATTLE}||{name|BT}:\t|"
+		"Select battle tracks (arenas) only."
+		" If neither or both of {name|VERSUS} and {name|BATTLE} set, both types are selected.\n"
+	"\n"
+	"\t{name|CUSTOM}:\t|"
+		"Select custom tracks."
+		" An original track in the wrong slot will also be considered CUSTOM.\n"
+	"\t{name|ORIGINAL}:\t|"
+		"Select original tracks at correct track slot only."
+		" Original tracks are detected by their SHA1."
+		" If neither or both of {name|CUSTOM} and {name|ORIGINAL} set, both types are selected.\n"
+	"\n"
+	"\t{name|NO-D}:\t|"
+		"This option suppresses information about so-called '_d' files."
+		" This affects 2 sub-commands:"
+		" With the {name|REF} sub-command, the data fields relating to '_d' files remain empty,"
+		" and with {name|SHA1}, no lines are output for '_d' tracks.\n"
+	"\n"
+
+	//-------------------------
+
+	"  |{heading|Empty output strings:}\n"
+	"\n"
+	"\t|For sub-commands {name|(X)NAMES} and {name|(X)INFO},"
+	" only tracks that have a valid name are output."
+	" Empty character strings and character strings"
+	" that only consist of a minus sign are considered invalid.\n"
+	"\n"
+
+	"\t{name|OUT-EMPTY}:\t|"
+		"Empty strings are also considered valid."
+		" {name|OEMPTY} is a short cut for this keyword.\n"
+	"\t{name|OUT-MINUS}:\t|"
+		"Strings consisting only of a minus sign are also considered valid."
+		" {name|OMINUS} is a short cut for this keyword.\n"
+	"\t{name|OUT-ALL}:\t|"
+		"Short cut for »{name|+OUT-EMPTY,OUT-MINUS}«."
+		" {name|OALL} is a short cut for this keyword.\n"
+	"\n"
+
+	//-------------------------
+
+	"\n"
+	"  |{heading|More options:}\n"
+	"\n"
+	"\t{name|IN-LECODE}:\t|"
+		"When reading a LE-CODE binaray file (e.g. »{file|lecode-PAL.bin}«),"
+		" only the settings are imported, but not the binary itself."
+		" So if writing a LE-CODE binary then the region dependent built-in binary is used."
+		" If this option set, then binaries are imported to override the built-in versions."
+		" One reason to activate this option is to use more recent LE-CODE versions."
+		" {name|ILECODE} is a short cut for this keyword.\n"
+	"\t{name|/IN-LECODE}:\t|"
+		"Switch option {name|IN-LECODE} off.\n"
+	"\n"
+	"\t{name|BRIEF}:\t|"
+		"When creating text files, detailed descriptions are suppressed."
+		" The default is based on the global options {opt|--no-header} and {opt|--brief}.\n"
+	"\t{name|/BRIEF}:\t|"
+		"Switch option {name|BRIEF} off.\n"
+	"\n"
+
+	//-------------------------------------------------------------------------
+
+	"\n"
+	"{heading|Examples:}\n"
+	"\n"
+	"  |....\n"
+	"\n"
+
+	//-------------------------------------------------------------------------
+
+	"\n"
+	"{heading|Built-in LE-CODE binaries:}\n"
+	"\n"
+	"  |%s\r%s\r%s\r%s\n"
+	"\n"
+
+	;
+
+ #if 0
+    char wildcards[] = PATTERN_WILDCARDS;
+    for ( char *ptr = wildcards; *ptr; ptr++ )
+	if ( *ptr == ' ' )
+	    *ptr = 0xa0;
+ #endif
+
+    int good_width = GetGoodTermWidth(0,false);
+    PrintColoredLines(stdout,colout,0,good_width-1,0,0,text
+		,ProgInfo.progname
+		,ProgInfo.progname
+		,ProgInfo.progname
+		,ProgInfo.progname
+	//	,wildcards
+		,GetLecodeBuildLEREG(LEREG_PAL)
+		,GetLecodeInfoLEREG(LEREG_PAL)
+		,GetLecodeInfoLEREG(LEREG_USA)
+		,GetLecodeInfoLEREG(LEREG_JAP)
+		,GetLecodeInfoLEREG(LEREG_KOR)
+		);
+    ClosePager();
+    exit(exit_code);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void PrintHead ( ccp format, ... )
+	__attribute__ ((__format__(__printf__,1,2)));
+
+static void PrintHead ( ccp format, ... )
+{
+    if (stdlog)
+    {
+	char buf[500];
+	va_list arg;
+	va_start(arg,format);
+	vsnprintf(buf,sizeof(buf),format,arg);
+	va_end(arg);
+
+	ASSERT(collog);
+	fprintf(stdlog,"%s▼ %s%s\n",collog->caption,buf,collog->reset);
+	fflush(stdlog);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * arg )
+{
+    u_nsec_t start_nsec = GetTimerNSec();
+
+    enum { C_NAMES, C_INFO, C_LEINFO, C_SHA1, C_DISTRIB,
+		C_CTDEF, C_LEDEF, C_REF, C_STRINGS, C_DUMP, 
+		C_LECODE, C_LECODE4, C_LPAR,
+		C_BMG, C_SUBST, C_COPY,
+		C_TRACKS, C_PREFIX, C_RESERVE, C_DEBUG };
+
+    enum
+    {
+	O_PARAM_D	= 0x100, // scan storage DEST
+	O_PARAM_S	= 0x200, // scan storage SRC
+	O_PARAM_SS	= 0x600, // scan storage SRC [ + SRC ]...
+	O_PARAM_A	= 0x800, // allow additonal arguments
+    };
+
+    static const KeywordTab_t tab[] =
+    {
+	{ C_NAMES,	"NAMES",		0,		0  },
+	{ C_NAMES,	"XNAMES",		0,		 1 },
+	{ C_INFO,	"INFO",			0,		0  },
+	{ C_INFO,	"XINFO",		0,		 1 },
+	{ C_LEINFO,	"LE-INFO",		"LEINFO",	0 },
+
+	{ C_SHA1,	"SHA1",			0,		0  },
+	{ C_SHA1,	"XSHA1",		0,		 1 },
+	{ C_DISTRIB,	"DISTRIBUTION",		0,		0  },
+	{ C_DISTRIB,	"XDISTRIBUTION",	0,		 1 },
+
+	{ C_CTDEF,	"CT-DEF",		"CTDEF",	0  },
+	{ C_LEDEF,	"LE-DEF",		"LEDEF",	0  },
+	 { C_LEDEF,	"DEFINITION",		"DEF",		0  },
+	{ C_REF,	"REFERENCE",		"REF",		0  },
+	{ C_STRINGS,	"STRINGS",		"STR",		0  },
+	{ C_DUMP,	"DUMP",			0,		0  },
+
+	{ C_LECODE,	"PAL",			0,		LEREG_PAL },
+	{ C_LECODE,	"USA",			0,		LEREG_USA },
+	{ C_LECODE,	"JAP",			0,		LEREG_JAP },
+	{ C_LECODE,	"KOR",			0,		LEREG_KOR },
+	{ C_LECODE4,	"LECODE",		0,		0  },
+
+	{ C_LPAR,	"LPAR",			0,		0  },
+
+	{ C_BMG,	"BMG",			"BMGBIN",	0  },
+	{ C_BMG,	"BMG-TXT",		"BMGTXT",	 1 },
+
+
+	{ C_SUBST,	"SUBST",		0,		O_PARAM_D|O_PARAM_A },
+	{ C_COPY,	"COPY",			0,		O_PARAM_D|O_PARAM_SS },
+
+	{ C_TRACKS,	"TRACKS",		0,		0  },
+
+	{ C_PREFIX,	"PREFIX",		0,		0  },
+	{ C_RESERVE,	"RESERVE",		0,		0  },
+	{ C_DEBUG,	"DEBUG",		0,		0  },
+
+	{ 0,0,0,0 }
+    };
+
+    enum { O_LOG = 1, O_TEST = 2 };
+    static const KeywordTab_t tracks_tab[] =
+    {
+	{ 0,		"NO-LOG",		"NOLOG",	0  },
+	{ 0,		"LOG",			0,		O_LOG  },
+	{ 0,		"TEST",			0,		O_LOG|O_TEST  },
+	{ 0,0,0,0 }
+    };
+
+    if ( !ld || !mode  || !arg || !*arg )
+	return ERROR0(ERR_MISSING_PARAM,0);
+
+
+    //--- scan keyword
+
+    int cmd_stat;
+    const KeywordTab_t *cmd = ScanKeyword(&cmd_stat,mode,tab);
+    if (!cmd)
+    {
+	PrintHead("Instruction: %s = %s",mode,arg);
+	PrintKeywordError(tab,mode,cmd_stat,0,"instruction");
+	hint_exit(ERR_SYNTAX);
+    }
+
+
+    //--- start
+
+    if ( verbose >= 1 )
+	PrintHead("Instruction %s: %s",cmd->name1,arg);
+
+    u_nsec_t temp_nsec = GetTimerNSec();
+    if ( CloseArchLD(ld) && verbose >= 2 )
+    {
+	const u_nsec_t dur = GetTimerNSec() - temp_nsec;
+	fprintf(stdlog,"%s   >> SZS archive closed in %s%s\n",
+		collog->status, PrintTimerNSec6(0,0,dur,0), collog->reset );
+	start_nsec += dur;
+    }
+
+
+    //--- text argument only
+
+    const int MAX_PAR_SRC = 20;
+    int n_par_src = 0;
+    le_strpar_t par_dest, par_src[MAX_PAR_SRC];
+
+    enumError err = ERR_OK;
+    const le_options_t opt = cmd->opt;
+    if ( opt & (O_PARAM_D|O_PARAM_S) )
+    {
+	if ( opt & O_PARAM_D )
+	{
+	    par_dest = ld->spar;
+	    char *end = ScanLSP(&par_dest,arg,&err);
+	    if ( opt & (O_PARAM_S|O_PARAM_A) )
+	    {
+		if ( *end != '=' && *end != ',' )
+		    return ERROR0( ERR_SEMANTIC,"%s: Missing '=' or ',': %s\n",cmd->name1,end);
+		end++;
+	    }
+
+	    if (err)
+	    {
+	     err_param12:;
+		return ERROR0( ERR_SEMANTIC,
+			    "%s: Invalid string name: %s\n", cmd->name1, arg );
+	    }
+	    arg = end;
+	    if ( verbose >= 2 )
+		fprintf(stdlog,"   > %s%s %s\n",
+			    cmd->name1,
+			    opt & O_PARAM_S ? " DEST:   " : ":",
+			    GetOptionsLSP(&par_dest,LEO__DEST));
+	}
+
+	if ( opt & O_PARAM_S )
+	{
+	    const int max = opt & O_PARAM_SS ? MAX_PAR_SRC : 1;
+	    le_strpar_t *src = par_src;
+	    while ( n_par_src < max )
+	    {
+		*src = ld->spar;
+		char *end = ScanLSP(src,arg,&err);
+		if (err)
+		    goto err_param12;
+		if ( verbose >= 2 )
+		    fprintf(stdlog,"   > %s SRC[%02u]: %s\n",
+			    cmd->name1, n_par_src+1, GetOptionsLSP(src,LEO__SRC));
+		n_par_src++;
+		src++ ;
+		arg = end;
+		if ( *arg != '+' && *arg != ',' )
+		    break;
+		arg++;
+	    }
+	}
+	if ( *arg && !(opt&O_PARAM_A) )
+	    return ERROR0( ERR_SEMANTIC,"%s: Missing end-of-line: %s\n",cmd->name1,arg);
+    }
+
+
+    //--- text argument only
+
+    err = ~0;
+    switch (cmd->id)
+    {
+	case C_LECODE4:	err = CreateLecode4LD(arg,ld); break;
+	case C_SUBST:	err =  SubstLD(ld,&par_dest,arg); break;
+	case C_COPY:	err =  CopyLD(ld,&par_dest,par_src,n_par_src); break;
+
+	case C_TRACKS:
+	    cmd = ScanKeyword(&cmd_stat,arg,tracks_tab);
+	    if (!cmd)
+	    {
+		PrintHead("Instruction: %s = %s",mode,arg);
+		PrintKeywordError(tab,arg,cmd_stat,0,"TRACKS keyword");
+		hint_exit(ERR_SYNTAX);
+	    }
+	    err = TransferFilesLD(ld,cmd->opt&O_LOG,cmd->opt&O_TEST);
+	    break;
+
+	case C_RESERVE:
+	    {
+		le_track_type_t ltty = LTTY_TRACK;
+		char ch = tolower(*arg);
+		if ( ch == 'a' || ch == 'b' )
+		{
+		    ltty = LTTY_ARENA;
+		    arg++;
+		}
+		else if ( ch == 't' || ch == 'v' )
+		    arg++;
+
+		char *end;
+		int n1 = str2ul(arg,&end,10);
+		if ( end > arg )
+		{
+		    int n2 = 1;
+		    if ( *end == ',' || *end == 'x' )
+			n2 = str2ul(end+1,0,10);
+		    ccp ltty_name = ltty==LTTY_TRACK ? "versus track" : "battle arena";
+		    PRINT1("RESERVE %s %dx%d\n", ltty_name, n1, n2 );
+		    if ( n2 > 0 )
+		    {
+			if ( verbose >= 1 )
+			    fprintf(stdlog,"   > Reserve %dx%d %s%s\n",
+					n1, n2, ltty_name, n1*n2 == 1 ? "" : "s" );
+			while (	n1-- > 0 )
+			{
+			    le_track_t *lt = ReserveTracksLD(ld,ltty,n2,false);
+			    if (!lt)
+				break;
+			    if ( verbose >= 1 )
+			    {
+				if ( n2 > 1 )
+				    fprintf(stdlog,"     > Slots %d to %d reserved for %u %ss.\n",
+					lt->track_slot, lt->track_slot + n2 -1, n2, ltty_name );
+				else
+				    fprintf(stdlog,"     > Slot %d reserved for a %s.\n",
+					lt->track_slot, ltty_name );
+			    }
+			}
+		    }    
+		}
+	    }
+	    err = ERR_OK;
+	    break;
+    }
+
+
+    //-- with opened file
+
+    if ( err == ~0 )
+    {
+	File_t F;
+	err = CreateFileOpt(&F,true,arg,false,0);
+	if (!err)
+	{
+	    const bool variant = cmd->opt & 1; // use xnames || force text mode
+	    switch (cmd->id)
+	    {
+	      case C_NAMES:   err = CreateNamesLD(F.f,ld,variant); break;
+	      case C_INFO:    err = CreateInfoLD(F.f,ld,variant); break;
+	      case C_LEINFO:  err = CreateLeInfoLD(F.f,ld,false); break;
+	      case C_SHA1:    err = CreateSha1LD(F.f,ld,variant,true); break;
+	      case C_DISTRIB: err = CreateDistribLD(F.f,ld,variant); break;
+
+	      case C_CTDEF:   err = CreateCtDefLD(F.f,ld); break;
+	      case C_LEDEF:   err = CreateLeDefLD(F.f,ld); break;
+	      case C_REF:     err = CreateRefLD(F.f,ld,true); break;
+	      case C_STRINGS: err = CreateStringsLD(F.f,ld); break;
+	      case C_DUMP:    err = CreateDumpLD(F.f,ld); break;
+
+	      case C_LECODE:  err = CreateLecodeLD(F.f,ld,cmd->opt); break;
+	      case C_LPAR:    err = CreateLparLD(F.f,ld,true); break;
+	      case C_BMG:     err = CreateBmgLD(F.f,ld,variant||F.is_stdio); break;
+	      case C_PREFIX:  err = SavePrefixTable(F.f,0); break;
+	      case C_DEBUG:   err = CreateDebugLD(F.f,ld); break;
+	    }
+	}
+	CloseFile(&F,0);
+    }
+
+    if ( verbose >= 2 )
+    {
+	const u_nsec_t dur = GetTimerNSec() - start_nsec;
+	fprintf(stdlog,"%s   >> %s done in %s%s\n",
+		collog->status, cmd->name1,
+		PrintTimerNSec6(0,0,dur,0), collog->reset );
+    }
+
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_distrib()
+{
+    stdlog = stderr;
+    SetupPager();
+    if (!n_param)
+	help_distrib(ERR_OK);
+
+    CheckOptDest("-",false);
+
+    if ( verbose >= 1 )
+	fputc('\n',stdlog);
+
+    le_distrib_t ld;
+    InitializeLD(&ld);
+
+    for ( ParamList_t *param = first_param; param; param = param->next )
+    {
+	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = param->arg;
+
+	if ( *arg == '+' )
+	{
+	    if ( verbose >= 1 )
+		PrintHead("Scan options: %s",arg);
+	    ScanOptionsLSP(&ld.spar,arg+1,"Filter option");
+	    if ( ld.spar.opt & LEO_HELP )
+		help_distrib(ERR_OK);
+	    if ( ld.spar.opt & LEO_M_CUT )
+	    {
+		CutLD(&ld,ld.spar.opt);
+		ld.spar.opt &= ~LEO_M_CUT;
+	    }
+	    if ( verbose >= 2 )
+		fprintf(stdlog,"   > Options: %s\n",GetOptionsLSP(&ld.spar,LEO__ALL));
+	    continue;
+	}
+
+	char *fname = strchr(arg,'=');
+	if ( fname && isalpha((int)*arg) )
+	{
+	    ccp p = arg;
+	    while ( isalnum((int)*p) || *p == '-' )
+		p++;
+	    if ( p == fname )
+	    {
+		*fname++ = 0;
+		if (!*fname)
+		{
+		    param = param->next;
+		    if (param)
+		    {
+			NORMALIZE_FILENAME_PARAM(param);
+			fname = param->arg;
+		    }
+		}
+		cmd_distrib_instruction(&ld,arg,fname);
+		continue;
+	    }
+	}
+
+	if ( verbose >= 1 )
+	    PrintHead("Read file(s): %s",arg);
+	const u_nsec_t start_nsec = GetTimerNSec();
+	NORMALIZE_FILENAME_PARAM(param);
+	ImportFileLD(&ld,arg,true,false);
+	if ( verbose >= 2 )
+	{
+	    const u_nsec_t dur = GetTimerNSec() - start_nsec;
+	    fprintf(stdlog,"%s   >> File(s) read in %s%s\n",
+		collog->status, PrintTimerNSec6(0,0,dur,0), collog->reset );
+	}
+    }
+
+    ClosePager();
+    return ProgInfo.max_error;
 }
 
 //
@@ -1125,13 +2216,15 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
 	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
+	case GO_NO_PAGER:	opt_no_pager = true; break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_TIMING:		log_timing++; break;
 	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
-	case GO_LE_CODE:	lecode_enabled = true; break;
+	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
 
@@ -1144,6 +2237,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_TEST:		testmode++; break;
 	case GO_FORCE:		force_count++; break;
 	case GO_REPAIR_MAGICS:	err += ScanOptRepairMagic(optarg); break;
+	case GO_CREATE_DISTRIB:	EnableLDUMP(optarg); break;
 
  #if OPT_OLD_NEW
 	case GO_OLD:		opt_new = opt_new>0 ? -1 : opt_new-1; break;
@@ -1162,6 +2256,9 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_PRESERVE:	opt_preserve = true; break;
 	case GO_IGNORE:		opt_ignore++; break;
 
+	case GO_LOAD_PREFIX:	err += ScanOptLoadPrefix(optarg); break;
+	case GO_PLUS:		opt_plus = optarg; break;
+
 	case GO_LOAD_BMG:	err += ScanOptLoadBMG(optarg); break;
 	case GO_PATCH_BMG:	err += ScanOptPatchMessage(optarg); break;
 	case GO_MACRO_BMG:	err += ScanOptMacroBMG(optarg); break;
@@ -1170,7 +2267,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_ORDER_BY:	opt_order_by = optarg; break;
 	case GO_ORDER_ALL:	opt_order_all = true; break;
 
-	case GO_LE_DEFINE:	opt_le_define = optarg; break;
+	case GO_LE_DEFINE:	ScanOptLeDefine(optarg); break;
 	case GO_LE_ARENA:	opt_le_arena = optarg; break;
 	case GO_LPAR:		opt_lpar = optarg; break;
 	case GO_ALIAS:		err += ScanOptAlias(optarg); break;
@@ -1183,10 +2280,11 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_DEBUG:		err += ScanOptDebug(optarg); break;
 
 	case GO_TRACK_DIR:	opt_track_dest = optarg; break;
-	case GO_COPY_TRACKS:	err += ScanOptTrackSource(optarg,TFMD_COPY); break;
-	case GO_MOVE_TRACKS:	err += ScanOptTrackSource(optarg,TFMD_MOVE); break;
-	case GO_MOVE1_TRACKS:	err += ScanOptTrackSource(optarg,TFMD_MOVE1); break;
-	case GO_LINK_TRACKS:	err += ScanOptTrackSource(optarg,TFMD_LINK); break;
+	case GO_COPY_TRACKS:	err += ScanOptTrackSource(optarg,-1,TFMD_COPY); break;
+	case GO_MOVE_TRACKS:	err += ScanOptTrackSource(optarg,-1,TFMD_MOVE); break;
+	case GO_MOVE1_TRACKS:	err += ScanOptTrackSource(optarg,-1,TFMD_MOVE1); break;
+	case GO_LINK_TRACKS:	err += ScanOptTrackSource(optarg,-1,TFMD_LINK); break;
+	case GO_SZS_MODE:	err += ScanOptSzsMode(optarg); break;
 
 	case GO_COMPLETE:	opt_complete = true; break;
 
@@ -1286,6 +2384,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_HELP:		PrintHelpColor(&InfoUI_wlect); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
+	case CMD_EXPAND:	err = cmd_expand(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0); break;
 	case CMD_ERROR:		err = cmd_error(); break;
@@ -1306,6 +2405,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_PATCH:		err = cmd_patch(); break;
 
 	case CMD_CREATE:	err = cmd_create(); break;
+	case CMD_DISTRIBUTION:	err = cmd_distrib(); break;
 	case CMD_CAT:		err = cmd_cat(); break;
 	case CMD_LPAR:		err = cmd_lpar(); break;
 	case CMD_DECODE:	err = cmd_convert(cmd_ct->id,"DECODE","\1P/\1N.txt"); break;
@@ -1333,10 +2433,20 @@ static enumError CheckCommand ( int argc, char ** argv )
     int main ( int argc, char ** argv )
 #endif
 {
+ #if !SZS_WRAPPER
+    ArgManager_t am = {0};
+    SetupArgManager(&am,LOUP_AUTO,argc,argv,false);
+    ExpandAtArgManager(&am,AMXM_SHORT,10,false);
+    argc = am.argc;
+    argv = am.argv;
+ #endif
+
+    tool_name = "wlect";
     print_title_func = print_title;
     SetupLib(argc,argv,WLECT_SHORT,VERSION,TITLE);
     ctcode_enabled = true;
     lecode_enabled = true;
+
 
     //----- process arguments
 
@@ -1360,6 +2470,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 
     if (SIGINT_level)
 	err = ERROR0(ERR_INTERRUPT,"Program interrupted by user.");
+    ClosePager();
     return err;
 }
 

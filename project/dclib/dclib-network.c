@@ -3520,7 +3520,11 @@ int PrintBinary1TCPStream
 	return -1;
 
     char buf[10000], *end_buf = buf + sizeof(buf) - 4;
+ #if 0 // dcc12: throws error: buf may be used uninitialized
     char *dest = StringCopyE(buf,end_buf,cmd);
+ #else
+    char *dest = StringCopyS(buf,sizeof(buf)-4,cmd);
+ #endif
     if ( dest + 6 + bin_size >= end_buf )
 	return -1;
 
@@ -3579,7 +3583,11 @@ int PrintBinary2TCPStream
 	return -1;
 
     char buf[10000], *end_buf = buf + sizeof(buf) - 4;
+ #if 0 // dcc12: throws error: buf may be used uninitialized
     char *dest = StringCopyE(buf,end_buf,cmd);
+ #else
+    char *dest = StringCopyS(buf,sizeof(buf)-4,cmd);
+ #endif
     if ( dest + 9 + bin1_size + bin2_size >= end_buf )
 	return -1;
 

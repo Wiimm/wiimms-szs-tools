@@ -350,13 +350,15 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
         case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
 	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
+	case GO_NO_PAGER:	opt_no_pager = true; break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_TIMING:		log_timing++; break;
 	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
-	case GO_LE_CODE:	lecode_enabled = true; break;
+	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
 
@@ -459,6 +461,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_HELP:		PrintHelpColor(&InfoUI_wpatt); break;
 	case CMD_CONFIG:	err = cmd_config(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
+	case CMD_EXPAND:	err = cmd_expand(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0); break;
 	case CMD_ERROR:		err = cmd_error(); break;
@@ -497,6 +500,15 @@ static enumError CheckCommand ( int argc, char ** argv )
     int main ( int argc, char ** argv )
 #endif
 {
+ #if !SZS_WRAPPER
+    ArgManager_t am = {0};
+    SetupArgManager(&am,LOUP_AUTO,argc,argv,false);
+    ExpandAtArgManager(&am,AMXM_SHORT,10,false);
+    argc = am.argc;
+    argv = am.argv;
+ #endif
+
+    tool_name = "wpatt";
     print_title_func = print_title;
     SetupLib(argc,argv,WPATT_SHORT,VERSION,TITLE);
 
@@ -522,6 +534,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 
     if (SIGINT_level)
 	err = ERROR0(ERR_INTERRUPT,"Program interrupted by user.");
+    ClosePager();
     return err;
 }
 

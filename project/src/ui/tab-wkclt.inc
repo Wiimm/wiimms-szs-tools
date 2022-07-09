@@ -67,6 +67,10 @@
 		    "wkclt ARGTEST ...",
 		0 /* copy of wszst */ },
 
+  { T_DEF_CMD,	"EXPAND",	"EXPAND",
+		    "wkclt EXPAND ...",
+		0 /* copy of wszst */ },
+
   { T_DEF_CMD,	"TEST",		"TEST",
 		    "wkclt TEST [options]... [ignored]...",
 		0 /* copy of wszst */ },
@@ -282,6 +286,10 @@
 		"MAX_WIDTH",	"max-width|maxwidth",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_G|F_IGNORE,
+		"NO_PAGER",	"no-pager|nopager",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0, 0 /* copy of wszst */ },
 
@@ -289,6 +297,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GM,	"LOGGING",	"L|logging",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GM,	"TIMING",	"timing",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GP,	"WARN",		"W|warn",
@@ -588,7 +599,11 @@
   //---------- COMMAND wkclt ARGTEST ----------
 
   { T_CMD_BEG,	"ARGTEST",	0,0,0 },
+  { T_ALL_OPT,	0,		0,0,0 },
 
+  //---------- COMMAND wkclt EXPAND ----------
+
+  { T_CMD_BEG,	"EXPAND",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wkclt TEST ----------

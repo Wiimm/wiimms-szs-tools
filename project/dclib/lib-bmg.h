@@ -88,6 +88,9 @@ enum
     MID_BCUP_BEG		= 0x2489,
     MID_BCUP_END		= MID_BCUP_BEG + BMG_N_BCUP,
 
+    BMG_RCUP_TRACKS		=     4,
+    BMG_BCUP_TRACKS		=     5,
+
     MID_ENGINE_BEG		= 0x0589,
     MID_ENGINE_END		= MID_ENGINE_BEG + 4,
 
@@ -898,13 +901,31 @@ enumError SaveRawBMG
     bool		set_time	// true: set time stamps
 );
 
+enumError SaveRawFileBMG
+(
+    bmg_t		* bmg,		// pointer to valid bmg
+    FILE		* f,		// valid output file
+    ccp			fname		// NULL or filename for error messages
+);
+
 enumError SaveTextBMG
 (
     bmg_t		* bmg,		// pointer to valid bmg
     ccp			fname,		// filename of destination
     FileMode_t		fmode,		// create-file mode
     bool		set_time,	// true: set time stamps
-    bool		force_numeric,	// true: force numric MIDs
+    bool		force_numeric,	// true: force numeric MIDs
+    uint		brief_count	// >0: suppress syntax info
+					// >1: suppress all comments
+					// >2: suppress '#BMG' magic
+);
+
+enumError SaveTextFileBMG
+(
+    bmg_t		* bmg,		// pointer to valid bmg
+    FILE		* f,		// valid output file
+    ccp			fname,		// NULL or filename for error messages
+    bool		force_numeric,	// true: force numeric MIDs
     uint		brief_count	// >0: suppress syntax info
 					// >1: suppress all comments
 					// >2: suppress '#BMG' magic

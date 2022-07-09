@@ -1218,7 +1218,7 @@ static enumError BackTrackYAZ ( yaz_compr_t *yaz, uint max_depth )
     if ( max_depth > BACK_TRACK_MAX_DEPTH )
 	max_depth = BACK_TRACK_MAX_DEPTH;
 
-    if (logging)
+    if ( logging >= 1 )
     {
 	fprintf(stdlog,">>YAZ back tracking: depth=%u, max-depth=%u\n",
 		max_depth, BACK_TRACK_MAX_DEPTH );
@@ -2483,7 +2483,7 @@ enumError CreateU8
 
     //--- debugging
 
-    if ( logging > 0 )
+    if ( logging >= 1 )
     {
 	printf("----- internal file list -----\n");
 	IterateFilesParSZS(szs,PrintFileSZS,0,false,true,0,0,SORT_NONE);

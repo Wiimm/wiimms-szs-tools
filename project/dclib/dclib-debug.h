@@ -41,6 +41,21 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			error_level_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[error_level_t]]
+
+typedef enum error_level_t
+{
+    ERRLEV_MINIMAL,	// simple error line only
+    ERRLEV_HEADING,	// headline with: tool: ERROR # [ERR_NAME]
+    ERRLEV_EXTENDED,	// extended headline with function and source
+    ERRLEV_ANNOTATE,	// like ERRLEV_EXTENDED; but append 'URL?annotate='
+}
+error_level_t;
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			program info			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[ProgInfo_t]]
@@ -58,7 +73,8 @@ typedef struct ProgInfo_t
     ccp  toolversion;		// version of the tool, set by SetupProgname()
     ccp  tooltitle;		// title of the tool, set by SetupProgname()
 
-    bool multi_processing;	// TRUE: program uses multiple thread
+    error_level_t error_level;	// one of ERRLEV_*
+    bool multi_processing;	// TRUE: program uses multiple threads
 
     enumError	last_error;	// last error, set by PrintErrorArg()
     enumError	max_error;	// max error, set by PrintErrorArg()
@@ -149,25 +165,50 @@ extern bool hexdump_align;
 // HexDump*() return the number of printed lines
 
 uint HexDump ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
-		const void * data, size_t count );
-
+			const void * data, size_t count );
 uint HexDump16 ( FILE * f, int indent, u64 addr,
-		const void * data, size_t count );
+			const void * data, size_t count );
 uint HexDump20 ( FILE * f, int indent, u64 addr,
-		const void * data, size_t count );
+			const void * data, size_t count );
+
+uint HexDumpBE2 ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
+			const void * data, size_t count );
+uint HexDump16BE2 ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+uint HexDump20BE2 ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+
+uint HexDumpLE2 ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
+			const void * data, size_t count );
+uint HexDump16LE2 ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+uint HexDump20LE2 ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+
+uint HexDumpBE4 ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
+			const void * data, size_t count );
+uint HexDump16BE4 ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+uint HexDump20BE4 ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+
+uint HexDumpLE4 ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
+			const void * data, size_t count );
+uint HexDump16LE4 ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+uint HexDump20LE4 ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
 
 // HexDump0*() will supress null-only lines.
 
 uint HexDump0 ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
 		const void * data, size_t count );
-
 uint HexDump016 ( FILE * f, int indent, u64 addr,
 		const void * data, size_t count );
 
 void HexDiff ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
 		const void * p_data1, size_t count1,
 		const void * p_data2, size_t count2 );
-
 void HexDiff16 ( FILE * f, int indent, u64 addr,
 		 const void * data1, size_t count1,
 		 const void * data2, size_t count2 );
@@ -414,41 +455,42 @@ void WAIT_ARG_FUNC ( ccp format, va_list arg );
 
 ///////////////////////////////////////////////////////////////////////////////
 
+#undef HAVE_PRINT
 #undef PRINT
 #undef PRINT_IF
 #undef PRINT_SIZEOF
 #undef BINGO
 
+#undef HAVE_PRINT0
 #undef PRINT0
 #undef PRINT_IF0
 #undef PRINT_SIZEOF0
 #undef BINGO0
 
+#undef HAVE_PRINT1
 #undef PRINT1
 #undef PRINT_IF1
 #undef PRINT_SIZEOF1
 #undef BINGO1
 
+#undef HAVE_PRINTD
 #undef PRINTD
 #undef PRINT_IFD
 #undef PRINT_SIZEOFD
 #undef BINGOD
-#undef HAVE_PRINTD
 
 #undef xBINGO
-#undef HAVE_PRINT
 #undef PRINT_TIME
 
-#undef HAVE_PRINT0	// always false
-#define HAVE_PRINT0 0
-
 // always disabled
+#define HAVE_PRINT0	0
 #define PRINT0		TRACE
 #define PRINT_IF0	TRACE_IF
 #define PRINT_SIZEOF0	TRACE_SIZEOF
 #define BINGO0		TRACELINE
 
 // always enabled
+#define HAVE_PRINT1		1
 #define PRINT1(...)		PRINT_FUNC(__VA_ARGS__)
 #define PRINT_IF1(cond,...)	if (cond) PRINT_FUNC(__VA_ARGS__)
 #define PRINT_SIZEOF1(t)	PRINT_FUNC("%7zd ==%6zx/hex == sizeof(%s)\n",sizeof(t),sizeof(t),#t)
@@ -456,7 +498,7 @@ void WAIT_ARG_FUNC ( ccp format, va_list arg );
 
 #if defined(DEBUG) && defined(TEST)
 
-    #define HAVE_PRINT 1
+    #define HAVE_PRINT		1
     #define PRINT		PRINT1
     #define PRINT_IF		PRINT_IF1
     #define PRINT_SIZEOF	PRINT_SIZEOF1

@@ -56,6 +56,7 @@ typedef enum enumOptions
 
 	//----- command specific options -----
 
+	OPT_PLUS,
 	OPT_TOUCH,
 	OPT_AUTO,
 	OPT_SET_FLAGS,
@@ -191,7 +192,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 135
+	OPT__N_SPECIFIC, // == 136
 
 	//----- global options -----
 
@@ -203,15 +204,18 @@ typedef enum enumOptions
 	OPT_COMPATIBLE,
 	OPT_WIDTH,
 	OPT_MAX_WIDTH,
+	OPT_NO_PAGER,
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_TIMING,
 	OPT_WARN,
 	OPT_DE,
 	OPT_COLORS,
 	OPT_NO_COLORS,
 	OPT_CT_CODE,
 	OPT_LE_CODE,
+	OPT_LOAD_PREFIX,
 	OPT_CHDIR,
 	OPT_CONST,
 	OPT_BATTLE,
@@ -272,7 +276,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 211
+	OPT__N_TOTAL // == 215
 
 } enumOptions;
 
@@ -287,6 +291,7 @@ typedef enum enumOptions
 //{
 //	//----- command specific options -----
 //
+//	OB_PLUS			= 1llu << OPT_PLUS,
 //	OB_TOUCH		= 1llu << OPT_TOUCH,
 //	OB_AUTO			= 1llu << OPT_AUTO,
 //	OB_SET_FLAGS		= 1llu << OPT_SET_FLAGS,
@@ -573,6 +578,8 @@ typedef enum enumOptions
 //
 //	OB_CMD_ARGTEST		= ~(u64)0,
 //
+//	OB_CMD_EXPAND		= ~(u64)0,
+//
 //	OB_CMD_TEST		= ~(u64)0,
 //
 //	OB_CMD_COLORS		= OB_LONG
@@ -720,6 +727,12 @@ typedef enum enumOptions
 //				| OB_IGNORE
 //				| OB_GRP_SCRIPT
 //				| OB_REFERENCE
+//				| OB_DEST
+//				| OB_DEST2,
+//
+//	OB_CMD_SPLIT		= OB_PLUS
+//				| OB_IGNORE
+//				| OB_GRP_SCRIPT
 //				| OB_DEST
 //				| OB_DEST2,
 //
@@ -949,6 +962,7 @@ typedef enum enumCommands
 	CMD_CONFIG,
 	CMD_INSTALL,
 	CMD_ARGTEST,
+	CMD_EXPAND,
 	CMD_TEST,
 	CMD_COLORS,
 	CMD_ERROR,
@@ -992,6 +1006,7 @@ typedef enum enumCommands
 
 	CMD_SHA1,
 	CMD_ANALYZE,
+	CMD_SPLIT,
 	CMD_IS_TEXTURE,
 	CMD_FEATURES,
 	CMD_DISTRIBUTION,
@@ -1031,7 +1046,7 @@ typedef enum enumCommands
 
 	CMD_VEHICLE,
 
-	CMD__N // == 79
+	CMD__N // == 81
 
 } enumCommands;
 
@@ -1087,11 +1102,15 @@ typedef enum enumGetOpt
 	GO_COMPATIBLE,
 	GO_WIDTH,
 	GO_MAX_WIDTH,
+	GO_NO_PAGER,
+	GO_TIMING,
 	GO_DE,
 	GO_COLORS,
 	GO_NO_COLORS,
 	GO_CT_CODE,
 	GO_LE_CODE,
+	GO_LOAD_PREFIX,
+	GO_PLUS,
 	GO_CHDIR,
 	GO_TOUCH,
 	GO_AUTO,

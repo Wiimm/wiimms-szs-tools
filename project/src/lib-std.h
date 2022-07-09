@@ -2100,6 +2100,136 @@ ccp GetSha1Data ( cvp data, uint size );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			mkw_prefix_flags_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[mkw_prefix_flags_t]]
+
+typedef enum mkw_prefix_flags_t
+{
+	MPF_NINTENDO	= 0x01,  // N: by Nintendo
+	MPF_MARIOKART	= 0x02,  // M: Mario Kaert series
+	MPF_PREFIX1	= 0x04,  // 1: can be used as part 1 for a prefix pair
+	MPF_PREFIX2	= 0x08,  // 2: can be used as part 2 for a prefix pair
+}
+__attribute__ ((packed)) mkw_prefix_flags_t;
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			mkw_prefix_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[mkw_prefix_t]]
+
+typedef struct mkw_prefix_t
+{
+    char		prefix[8];
+    ccp			info;		// if NULL: list terminator
+    mkw_prefix_flags_t	flags;
+    u8			order;
+    u8			color;
+}
+mkw_prefix_t;
+
+///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptLoadPrefix ( ccp arg );
+
+struct ScanText_t;
+const mkw_prefix_t * ScanPrefixTable ( struct ScanText_t *st );
+const mkw_prefix_t * DefinePrefixTable ( cvp source, uint len );
+const mkw_prefix_t * GetPrefixTable(void);
+const mkw_prefix_t * FindPrefix ( ccp pre, int pre_len, bool exact );
+
+// if tab==0: Use GetPrefixTable()
+enumError SavePrefixTable   ( FILE *f,   const mkw_prefix_t * tab );
+enumError SavePrefixTableFN ( ccp fname, const mkw_prefix_t * tab );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			split_filename_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[split_filename_t]]
+
+#define SUPPORT_SPLIT_SIGN 0
+
+typedef struct split_filename_t
+{
+    mem_t source;	// full source without leading directories
+
+    //--- split source into 3 parts
+
+    mem_t f_name;	// name part
+    mem_t f_d;		// empty or "_d"
+    mem_t f_ext;	// file extention
+
+    //--- split name into 3 parts
+
+    mem_t norm;		// normalized name, alloced
+
+    mem_t plus;
+ #if SUPPORT_SPLIT_SIGN
+    mem_t sign;
+ #endif
+    mem_t boost;
+    mem_t game1;
+    mem_t game2;
+    mem_t game;
+    mem_t name;
+    mem_t extra;
+    mem_t version;
+    mem_t authors;
+    mem_t attribs;
+    
+
+    //--- misc
+
+    uint	plus_order;
+    uint	game_order;
+    uint	game_color;
+
+    ccp		input;
+    bool	input_alloced;
+}
+split_filename_t;
+
+//-----------------------------------------------------------------------------
+
+extern ccp opt_plus;
+
+static inline void InitializeSPF ( split_filename_t *spf )
+	{ DASSERT(spf); memset(spf,0,sizeof(*spf)); }
+
+void ResetSPF ( split_filename_t *spf );
+void AnalyseSPF
+(
+    split_filename_t	*spf,		// valid pointet
+    bool		init_spf,	// true: InitializeSPF(), false: ResetSPF()
+    ccp			source,		// NULL or ponter to name
+    ccp			src_end,	// end of source. if 0 then use strlen()
+    CopyMode_t		cpm,		// copy mode for 'source'
+    ccp			plus_mode	// NULL or string of format '[max][','][chars]'
+);
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			output_mode_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[output_mode_t]]
+
+typedef struct output_mode_t
+{
+    bool		syntax;		// true: print syntax infos
+    u8			mode;		// 1:list, 2:ref, 3:full
+    bool		cross_ref;	// true: print cross reference infos
+    bool		hex;		// true: force hex out
+    bool		lecode;		// true: print LE-CODE specific data
+}
+output_mode_t;
+
+extern output_mode_t output_mode;
+void InitializeOutputMode ( output_mode_t * outmode );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			    misc			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[IsArena_t]]
@@ -2141,6 +2271,7 @@ void cmd_version_section
 enumError cmd_config();
 enumError cmd_install();
 enumError cmd_argtest ( int argc, char ** argv );
+enumError cmd_expand ( int argc, char ** argv );
 enumError cmd_error();
 enumError cmd_filetype();
 enumError cmd_fileattrib();
@@ -2259,25 +2390,6 @@ static inline ccp PrintU16M1 ( u16 num )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			output_mode_t			///////////////
-///////////////////////////////////////////////////////////////////////////////
-// [[output_mode_t]]
-
-typedef struct output_mode_t
-{
-    bool		syntax;		// true: print syntax infos
-    u8			mode;		// 1:list, 2:ref, 3:full
-    bool		cross_ref;	// true: print cross reference infos
-    bool		hex;		// true: force hex out
-    bool		lecode;		// true: print LE-CODE specific data
-}
-output_mode_t;
-
-extern output_mode_t output_mode;
-void InitializeOutputMode ( output_mode_t * outmode );
-
-//
-///////////////////////////////////////////////////////////////////////////////
 ///////////////			apple only			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2301,12 +2413,14 @@ extern const u8 TestDataLEX[8*1];
 ///////////////////////////////////////////////////////////////////////////////
 
 extern ccp		opt_config;
+extern bool		opt_no_pager;
 extern ccp		config_path;
 extern ccp		tool_name;
 extern ccp		std_share_path;
 extern ccp		share_path;
 extern volatile int	verbose;
 extern volatile int	logging;
+extern volatile int	log_timing;
 extern bool		allow_all;
 extern char		escape_char;
 extern bool		use_utf8;

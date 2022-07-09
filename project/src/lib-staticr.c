@@ -2574,12 +2574,12 @@ ct_dol_ext_t ct_dol_ext_kor =
 {
 	0x802a5000,
 	{ "rmck/boot_code.bin;boot_code.bin",
-		0, 0, // [[2do]] [[ct-korea]]
+		0, 0, // [[ct-korea]]
 		FF_CT0_CODE },
 
 	0x80002800,
 	{ "rmck/boot_data.bin;boot_data.bin",
-		0, 0, // [[2do]] [[ct-korea]]
+		0, 0, // [[ct-korea]]
 		FF_CT0_DATA },
 };
 
@@ -2904,7 +2904,7 @@ const addr_port_t * GetPortingRecord ( str_mode_t mode, u32 addr )
     }
 
     const addr_port_t *p = base[beg];
-    PRINT1("%u/%u: %08x + %06x + %06x, %08x\n",
+    PRINT0("%u/%u: %08x + %06x + %06x, %08x\n",
 		beg, addr_port_records,
 		p->addr[region], p->size1, p->size2,
 		(p[1]).addr[region] );
@@ -4841,7 +4841,7 @@ static bool CleanDol ( staticr_t * str ) // return TRUE if dol data modified.
     uint sect_list;
     dol_header_t *dol_head = (dol_header_t*)str->data;
 
-    uint new_size = RemoveDolSections(dol_head,0x7f83,&sect_list,logging>2?stdlog:0);
+    uint new_size = RemoveDolSections(dol_head,0x7f83,&sect_list,logging>=3?stdlog:0);
     bool stat = new_size > 0;
     noPRINT("SIZE: %x -> %x / sect=%x\n",str->data_size,new_size,sect_list);
     if (stat)
@@ -4963,7 +4963,8 @@ static void InititializeGCT()
 	wcode_job.grow_size  = 0x0100;
 	wcode_data.grow_size = 0x0400;
 
-	if (logging>2) TraceGCT("Init");
+	if ( logging >= 3 )
+	    TraceGCT("Init");
     }
 }
 
@@ -5268,7 +5269,7 @@ static enumError SetupCodeLoader
 				+ code_size - cheat_offset;
 
  #if defined(TEST) || defined(DEBUG) // || HAVE_WIIMM_EXT
-    if (logging>2)
+    if ( logging >= 3 )
 	fprintf(stderr,
 		"SetupCodeLoader() %d+%d+%d = %d, c-off=0x%x, ch-type=%d, seg=%d => %s\n",
 		code_size, wcode_job.used, wcode_data.used, total_data_size,
@@ -5919,7 +5920,8 @@ static enumError AddWCode ( cvp data, uint size )
       }
     }
  term:
-    if (logging>2) TraceGCT("WCode");
+    if ( logging >= 3 )
+	TraceGCT("WCode");
     return ERR_OK;
 }
 
@@ -5984,7 +5986,7 @@ static enumError AddCheatCode
 	InsertGrowBuffer(&gecko_data,mgr->data,mgr->size);
 	u64 magic = hton64(GCT_MAGIC8_NUM);
 	InsertGrowBuffer(&gecko_data,&magic,sizeof(magic));
-	if (logging>2)
+	if ( logging >= 3 )
 	    TraceGCT("Setup");
     }
 
@@ -6189,7 +6191,7 @@ static uint AddSectionsDOL
 
     if ( gecko_data.used )
     {
-	if (logging>0)
+	if ( logging >= 1 )
 	    fprintf(stdlog,">> GCT DATA/GROW, %u = 0x%x bytes\n",
 			gecko_data.used, gecko_data.used );
 
@@ -6203,7 +6205,7 @@ static uint AddSectionsDOL
 	    InsertGrowBuffer(&gecko_data,&term,sizeof(term));
 	    count += AddSectionGCH(str,gecko_data.ptr,gecko_data.used,"GCT",false);
 
-	    if ( verbose > 1 || logging > 1 )
+	    if ( verbose > 1 || logging >= 2 )
 	    {
 		fputs("\n   Memory map of code handler and GCT files:\n",stdlog);
 		PrintMemMap(&gct_data_mem,stdlog,5,"part");

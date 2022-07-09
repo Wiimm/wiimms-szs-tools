@@ -74,6 +74,13 @@ void DefineParserVars ( VarMap_t * vm )
     struct inttab_t { ccp name; int val; };
     static const struct inttab_t inttab[] =
     {
+	{ "NO",			0 },
+	{ "YES",		1 },
+	{ "OFF",		0 },
+	{ "ON",			1 },
+	{ "DISABLED",		0 },
+	{ "ENABLED",		1 },
+
 	{ "INT$MIN",		INT_MIN },
 	{ "INT$MAX",		INT_MAX },
 
@@ -179,6 +186,7 @@ void DefineMkwVars ( VarMap_t * vm )
 	{ "LE$F_NEW",		LETF_NEW },
 	{ "LE$F_HEAD",		LETF_RND_HEAD },
 	{ "LE$F_GROUP",		LETF_RND_GROUP },
+	{ "LE$F_ALIAS",		LETF_ALIAS },
 
 	{ "LE$PRODUCTIVE",	LPM_PRODUCTIVE },
 	{ "LE$TESTING",		LPM_TESTING },

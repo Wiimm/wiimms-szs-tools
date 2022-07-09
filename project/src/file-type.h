@@ -85,7 +85,7 @@ typedef enum file_format_t
 	FF_TEX,		// 21
 
 	FF_TEX_CT,	// 22
-	FF_CT_TEXT,	// 23
+	FF_CTDEF,	// 23
 
 	FF_CT0_CODE,	// 24
 	FF_CT0_DATA,	// 25
@@ -103,82 +103,88 @@ typedef enum file_format_t
 	FF_LEX_TXT,	// 35
 
 	FF_LPAR,	// 36
+	FF_LEDEF,	// 37
+	FF_LEDIS,	// 38
+	FF_LEREF,	// 39
+	FF_LESTR,	// 40
+	FF_SHA1REF,	// 41
+	FF_PREFIX,	// 42
 
-	FF_MDL_TXT,	// 37
+	FF_MDL_TXT,	// 43
 
-	FF_PAT_TXT,	// 38
+	FF_PAT_TXT,	// 44
 
-	FF_TPL,		// 39
-	FF_BTI,		// 40
-	FF_BREFT_IMG,	// 41
+	FF_TPL,		// 45
+	FF_BTI,		// 46
+	FF_BREFT_IMG,	// 47
 
-	FF_BMG,		// 42
-	FF_BMG_TXT,	// 43
+	FF_BMG,		// 48
+	FF_BMG_TXT,	// 49
 
-	FF_KCL,		// 44
-	FF_KCL_TXT,	// 45
-	FF_WAV_OBJ,	// 46
-	FF_SKP_OBJ,	// 47
+	FF_KCL,		// 50
+	FF_KCL_TXT,	// 51
+	FF_WAV_OBJ,	// 52
+	FF_SKP_OBJ,	// 53
 
-	FF_KMP,		// 48
-	FF_KMP_TXT,	// 49
+	FF_KMP,		// 54
+	FF_KMP_TXT,	// 55
 
-	FF_ITEMSLT,	// 50
-	FF_ITEMSLT_TXT,	// 51
+	FF_ITEMSLT,	// 56
+	FF_ITEMSLT_TXT,	// 57
 
-	FF_KMG,		// 52
-	FF_KMG_TXT,	// 53
+	FF_KMG,		// 58
+	FF_KMG_TXT,	// 59
 
-	FF_KRM,		// 54
-	FF_KRM_TXT,	// 55
+	FF_KRM,		// 60
+	FF_KRM_TXT,	// 61
 
-	FF_KRT,		// 56
-	FF_KRT_TXT,	// 57
+	FF_KRT,		// 62
+	FF_KRT_TXT,	// 63
 
-	FF_OBJFLOW,	// 58
-	FF_OBJFLOW_TXT,	// 59
+	FF_OBJFLOW,	// 64
+	FF_OBJFLOW_TXT,	// 65
 
-	FF_GH_ITEM,	// 60
-	FF_GH_ITEM_TXT,	// 61
+	FF_GH_ITEM,	// 66
+	FF_GH_ITEM_TXT,	// 67
 
-	FF_GH_IOBJ,	// 62
-	FF_GH_IOBJ_TXT,	// 63
+	FF_GH_IOBJ,	// 68
+	FF_GH_IOBJ_TXT,	// 69
 
-	FF_GH_KART,	// 64
-	FF_GH_KART_TXT,	// 65
+	FF_GH_KART,	// 70
+	FF_GH_KART_TXT,	// 71
 
-	FF_GH_KOBJ,	// 66
-	FF_GH_KOBJ_TXT,	// 67
+	FF_GH_KOBJ,	// 72
+	FF_GH_KOBJ_TXT,	// 73
 
-	FF_DRIVER,	// 68
-	FF_VEHICLE,	// 69
+	FF_DRIVER,	// 74
+	FF_VEHICLE,	// 75
 
-	FF_BRASD,	// 70
-	FF_RKG,		// 71
-	FF_RKCO,	// 72
+	FF_BRASD,	// 76
+	FF_RKG,		// 77
+	FF_RKCO,	// 78
 
-	FF_STATICR,	// 73
-	FF_DOL,		// 74
+	FF_STATICR,	// 79
+	FF_DOL,		// 80
 
-	FF_GCT,		// 75
-	FF_GCH,		// 76
-	FF_WCH,		// 77
-	FF_WPF,		// 78
-	FF_XPF,		// 79
-	FF_DISTRIB,	// 80
+	FF_GCT,		// 81
+	FF_GCH,		// 82
+	FF_WCH,		// 83
+	FF_WPF,		// 84
+	FF_XPF,		// 85
+	FF_DISTRIB,	// 86
 
-	FF_PNG,		// 81
-	FF_PORTDB,	// 82
+	FF_PNG,		// 87
+	FF_PORTDB,	// 88
 
-	FF_TXT,		// 83
-	FF_SCRIPT,	// 84
-	FF_JSON,	// 85
-	FF_SH,		// 86
-	FF_BASH,	// 87
-	FF_PHP,		// 88
-	FF_MAKEDOC,	// 89
+	FF_TXT,		// 89
+	FF_SCRIPT,	// 90
+	FF_JSON,	// 91
+	FF_SH,		// 92
+	FF_BASH,	// 93
+	FF_PHP,		// 94
+	FF_MAKEDOC,	// 95
 
-	FF_DIRECTORY,	// 90
+	FF_DIRECTORY,	// 96
 
 	//--- number of elements
 

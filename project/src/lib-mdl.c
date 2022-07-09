@@ -4105,7 +4105,7 @@ ccp RenameForSlot42MDL
 	}
 
      #ifdef TEST
-	//if ( logging > 1 && stdlog )
+	//if ( logging >= 2 && stdlog )
 	{
 	    fprintf(stdlog,
 		    "\tRename %u MDL material%s:\n",

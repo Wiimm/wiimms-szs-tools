@@ -58,8 +58,8 @@
 #define CT_MOD2_MAGIC_NUM	0x4d4f4432
 #define CT_OVR1_MAGIC_NUM	0x4f565231
 
-#define CT_TEXT_MAGIC8		"#CT-CODE"
-#define CT_TEXT_MAGIC8_NUM	0x2343542d434f4445ull
+#define CT_DEF_MAGIC8		"#CT-CODE"
+#define CT_DEF_MAGIC8_NUM	0x2343542d434f4445ull
 
 #define CT_CODE_TEX_OFFSET	   0x760  // CTCODE offset in TEX0 file
 #define CT_CODE_TEX_IMAGE_OFF	 0x658c0  // IMAGE offset in TEX0 file
@@ -83,11 +83,16 @@
 
 #define LE_CODE_MAX_TRACKS	BMG_N_LE_TRACK		// max supported tracks
 #define LE_CODE_MAX_CUPS	BMG_N_LE_RCUP		// max supported cups, must be <= 0x100
+
+#define LE_FIRST_CT_SLOT	MKW_LE_SLOT_BEG		// LE: first used custom slot
+#define LE_LAST_CT_SLOT		(MKW_LE_SLOT_END-1)	// LE: last used custom slot
+#define LE_FIRST_RANDOM_SLOT	MKW_LE_RANDOM_BEG	// LE: first used random slot
+#define LE_LAST_RANDOM_SLOT	(MKW_LE_RANDOM_END-1)	// LE: last used random slot
+
+// 3 [[obsolete]] definitions
 #define LE_FIRST_LOWER_CT_SLOT	   0x44			// LE: first used custom slot
 #define LE_FIRST_UPPER_CT_SLOT	  0x120			// LE: first used upper custom slot
 #define LE_LAST_UPPER_CT_SLOT	  0x13d			// LE: first used upper custom slot
-#define LE_FIRST_RANDOM_SLOT	   0x3e			// LE: first used upper custom slot
-#define LE_LAST_RANDOM_SLOT	   0x41			// LE: first used upper custom slot
 
 #define CODE_MAX_TRACKS		LE_CODE_MAX_TRACKS	// max(CT/LE CODE_MAX_TRACKS)
 #define CODE_MAX_CUPS		LE_CODE_MAX_CUPS	// max(CT/LE CODE_MAX_CUPS)
@@ -111,6 +116,9 @@ typedef u8  le_flags_t;		// type of ttack flags
 
 static inline int TrackByAliasLE ( le_property_t prop, le_music_t music )
 	{ return prop << 8 | music; }
+
+ccp PrintLEFT ( le_flags_t flags );
+le_flags_t ScanLEFT ( ccp text );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -229,7 +237,7 @@ ctcode_cupref_t;
 typedef struct ctcode_arena_t
 {
     le_property_t	prop[MKW_N_ARENAS];	// only valid if !=0
-    le_music_t		music[MKW_N_ARENAS];	// only valid if le_prop[]!=0
+    le_music_t		music[MKW_N_ARENAS];	// only valid if prop[]!=0
 }
 ctcode_arena_t;
 
@@ -266,7 +274,7 @@ typedef struct ctcode_t
     uint		n_unused_cups;	// number of unused cups
 
 
-    //--- arenas setup fir LE-CODE
+    //--- arenas setup for LE-CODE
 
     ctcode_arena_t	arena;		// data of section [SETUP-ARENA]
 
@@ -282,6 +290,7 @@ typedef struct ctcode_t
 
     bmg_t		track_file;	// file names of any length
     bmg_t		track_string;	// track strings of any length
+    bmg_t		track_xstring;	// extended track strings of any length
     bmg_t		track_ident;	// identifiers of any length (e.g. checksums)
 
     // property, music and le_flags
@@ -309,6 +318,7 @@ typedef struct ctcode_t
     bool		replace_at;	// true: Replace "@..@" on track names
     bool		use_lecode;	// true: enable le-code support
     bool		use_le_flags;	// true: le_flags enabled
+    u8			n_strings;	// number of used strings in track params (for syntax check)
     struct le_lpar_t	*lpar;		// NULL or LPAR parameters
 
 
@@ -397,6 +407,14 @@ ccp  PrintMusicID ( uint mid, bool force_hex );
 ccp  PrintPropertyID ( uint tid, bool force_hex );
 ccp  PrintArenaSlot ( uint tid, bool force_hex );
 
+void SetTrackBMG
+(
+    ctcode_t	*ctcode,	// valid CTCODE
+    bmg_t	*bmg,		// destination BMG
+    uint	tidx,		// index of the track
+    ccp		text		// any text
+);
+
 ///////////////////////////////////////////////////////////////////////////////
 
 enumError ScanSetupArena ( ctcode_arena_t *ca, ScanInfo_t * si );
@@ -421,7 +439,7 @@ int IterateFilesCTCODE
 //-----------------------------------------------------------------------------
 
 static inline bool IsCtcodeFF ( file_format_t ff )
-	{ return ff == FF_TEX_CT || ff == FF_CT_TEXT || ff == FF_LE_BIN; }
+	{ return ff == FF_TEX_CT || ff == FF_CTDEF || ff == FF_LE_BIN; }
 
 //-----------------------------------------------------------------------------
 

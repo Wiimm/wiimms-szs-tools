@@ -89,6 +89,17 @@ enum mkw_consts_t // some constants
 	MKW_ORIGINAL_BEG	= MKW_TRACK_BEG,
 	MKW_ORIGINAL_END	= MKW_ARENA_END,
 
+	//--- LE-CODE random tracks
+
+	MKW_N_LE_RANDOM		= 0x04,
+	MKW_LE_RANDOM_BEG	= 0x3e,
+	MKW_LE_RANDOM_END	= MKW_LE_RANDOM_BEG + MKW_N_LE_RANDOM,
+
+	//--- LE-CODE extended slots
+
+	MKW_LE_SLOT_BEG		=   0x44,
+	MKW_LE_SLOT_END		= 0x1000,
+	MKW_N_LE_SLOT		= MKW_LE_SLOT_END - MKW_LE_SLOT_BEG,
 
 	//--- music ids
 
@@ -110,6 +121,14 @@ static inline bool IsMkwOriginal ( uint tid )
 
 static inline bool IsMkwCustom ( uint tid )
 	{ return tid >= MKW_ARENA_END; }
+
+static inline bool IsLecodeRandom ( uint tid )
+	{ return tid >= MKW_LE_RANDOM_BEG && tid < MKW_LE_RANDOM_END; }
+
+static inline bool IsValidLecodeSlot ( uint tid )
+	{ return tid < MKW_ARENA_END
+		|| tid >= MKW_LE_SLOT_BEG && tid < MKW_LE_SLOT_END
+		|| tid >= MKW_LE_RANDOM_BEG && tid < MKW_LE_RANDOM_END; }
 
 //
 ///////////////////////////////////////////////////////////////////////////////

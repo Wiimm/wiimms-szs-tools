@@ -36,7 +36,7 @@
  ***************************************************************************/
 
 #include "lib-ctcode.h"
-#include "lib-lecode.h"
+#include "lib-ledis.h"
 #include "lib-szs.h"
 #include "lib-xbmg.h"
 #include "lib-bzip2.h"
@@ -95,7 +95,7 @@ void SetName16 ( u16 *dest, ccp src )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void SetTrackBMG
+void SetTrackBMG
 (
     ctcode_t	*ctcode,	// valid CTCODE
     bmg_t	*bmg,		// destination BMG
@@ -148,6 +148,18 @@ static inline void SetTrackString
 )
 {
     SetTrackBMG(ctcode,&ctcode->track_string,tidx,text);
+}
+
+//-----------------------------------------------------------------------------
+
+static inline void SetTrackXString
+(
+    ctcode_t	*ctcode,	// valid CTCODE
+    uint	tidx,		// index of the track
+    ccp		text		// any text
+)
+{
+    SetTrackBMG(ctcode,&ctcode->track_xstring,tidx,text);
 }
 
 //-----------------------------------------------------------------------------
@@ -299,6 +311,33 @@ static ccp GetTrackString
 }
 
 //-----------------------------------------------------------------------------
+#if 0
+
+ static ccp GetTrackXString
+ (
+    char	*buf,		// dest buffer
+    uint	size,		// size of 'buf'
+    ctcode_t	*ctcode,	// valid CTCODE
+    uint	tidx,		// index of the track
+    const bmg_item_t *bi	// NULL or bmg text
+ )
+ {
+    DASSERT(buf);
+    DASSERT(size);
+    DASSERT(ctcode);
+
+    if ( !bi || !bi->len )
+	bi = FindItemBMG(&ctcode->track_xstring,tidx+ctcode->ctb.track_name1.beg);
+
+    if ( bi && bi->len )
+	PrintString16BMG(buf,size,bi->text,bi->len,BMG_UTF8_MAX,0,opt_bmg_colors);
+    else
+	*buf = 0;
+    return buf;
+ }
+
+#endif
+//-----------------------------------------------------------------------------
 
 static ccp GetTrackIdentifier
 (
@@ -449,8 +488,11 @@ void InitializeCTCODE ( ctcode_t * ctcode, ct_mode_t ct_mode )
 
     ctcode->use_lecode = lecode_enabled;
     ctcode->fname = EmptyString;
+
+    ctcode->n_strings = 4;
     InitializeBMG(&ctcode->track_file);
     InitializeBMG(&ctcode->track_string);
+    InitializeBMG(&ctcode->track_xstring);
     InitializeBMG(&ctcode->track_ident);
 }
 
@@ -461,6 +503,7 @@ void ResetCTCODE ( ctcode_t * ctcode )
     DASSERT(ctcode);
     ResetBMG(&ctcode->track_file);
     ResetBMG(&ctcode->track_string);
+    ResetBMG(&ctcode->track_xstring);
     ResetBMG(&ctcode->track_ident);
     ResetDataCTCODE(ctcode,false);
     FreeString(ctcode->fname);
@@ -480,7 +523,7 @@ static void SetupUsedSlotList ( u8 *slot_list, uint n_slots, uint le_phase )
     {
 	memset( slot_list + MKW_ARENA_BEG,
 		2,
-		LE_FIRST_LOWER_CT_SLOT - MKW_ARENA_BEG );
+		LE_FIRST_CT_SLOT - MKW_ARENA_BEG );
 	if ( le_phase == 1 )
 	{
 	    const uint max = n_slots < LE_FIRST_UPPER_CT_SLOT
@@ -525,7 +568,7 @@ void SetupUsedSlotsCTCODE ( ctcode_t * ctcode )
     {
 	SetupUsedSlotList( ctcode->used_slot,
 				sizeof(ctcode->used_slot), ctcode->ctb.le_phase );
-	ctcode->n_tracks = LE_FIRST_LOWER_CT_SLOT;
+	ctcode->n_tracks = LE_FIRST_CT_SLOT;
     }
     else
     {
@@ -1227,7 +1270,7 @@ void DumpCTCODE ( FILE *f, uint indent, ctcode_t * ctcode )
 
     PrepareExportCTCODE(ctcode);
 
-    if ( ctcode->fform == FF_CT_TEXT )
+    if ( ctcode->fform == FF_CTDEF )
 	fprintf(f,"\n%*sSections in virtual binary code:\n\n",indent,"");
     else
 	fprintf(f,"\n%*sSections:\n\n",indent,"");
@@ -1251,7 +1294,7 @@ void DumpCTCODE ( FILE *f, uint indent, ctcode_t * ctcode )
 
     if (long_count)
     {
-	if ( ctcode->fform == FF_CT_TEXT )
+	if ( ctcode->fform == FF_CTDEF )
 	    fprintf(f,"\n%*sHexdump of headers in virtual binary code:\n",indent,"");
 	else
 	    fprintf(f,"\n%*sHexdump of headers:\n",indent,"");
@@ -1378,8 +1421,6 @@ static int InsertTrackIntoCup ( ctcode_t *ctcode, uint tidx, bool hidden )
 {
     DASSERT(ctcode);
     DASSERT( tidx < ctcode->max_tracks );
-
-// [[2do]] [[hidden]]
 
     if (hidden)
     {
@@ -1566,6 +1607,15 @@ static enumError ScanRTL_Option ( ctcode_t *ctcode, ScanInfo_t * si )
 	    return err;
 	ctcode->use_le_flags = num > 0;
 	PRINT("%%LE-FLAGS = %d\n",ctcode->use_le_flags);
+    }
+    else if (!strcmp(name,"N-STRINGS"))
+    {
+	long num;
+	enumError err = ScanUValueSI(si,&num,false);
+	if (err)
+	    return err;
+	ctcode->n_strings = num < 0 || num > 255 ? 255 : num;
+	PRINT("%%LE-STRINGS = %d\n",ctcode->n_strings);
     }
     else if (!strcmp(name,"REPLACE-AT"))
     {
@@ -1883,7 +1933,8 @@ static enumError ScanRTL_Track
 
     //--- scan track_file, track_string and track_ident => create fname
 
-    char *track_file = 0, *track_string = 0, *track_ident = 0;
+    // in scan order!
+    char *track_file = 0, *track_string = 0, *track_ident = 0, *track_xstring = 0;
     char fname[100];
 
     err = ConcatStringsSI(si,&track_file,0);
@@ -1892,6 +1943,7 @@ static enumError ScanRTL_Track
       abort:
 	FreeString(track_file);
 	FreeString(track_string);
+	FreeString(track_xstring);
 	FreeString(track_ident);
 	return err;
     }
@@ -1926,9 +1978,30 @@ static enumError ScanRTL_Track
 	    err = ConcatStringsSI(si,&track_ident,0);
 	    if (err)
 		goto abort;
+
+	    if ( NextCharSI(si,false) == ';' )
+	    {
+		SkipCharSI(si,';');
+		err = ConcatStringsSI(si,&track_xstring,0);
+		if (err)
+		    goto abort;
+	    }
 	}
     }
 
+    //-- skip additional strings
+
+    for ( int n = (int)ctcode->n_strings - 4; n > 0; n-- )
+    {
+	if ( NextCharSI(si,false) == ';' )
+	{
+	    SkipCharSI(si,';');
+	    err = ConcatStringsSI(si,0,0);
+	    if (err)
+		goto abort;
+	}
+    }
+	
     CheckEolSI(si);
 
 
@@ -1948,10 +2021,17 @@ static enumError ScanRTL_Track
 	track_string = ReplaceName(track_string,"@SLOT@",buf);
 	track_string = ReplaceName(track_string,"@@","@");
 	PRINT(">>> REPLACED: %s\n",track_string);
+
+	PRINT(">>> REPLACE:  %s\n",track_xstring);
+	snprintf(buf,sizeof(buf),"%03X",tidx);
+	track_xstring = ReplaceName(track_xstring,"@SLOT@",buf);
+	track_xstring = ReplaceName(track_xstring,"@@","@");
+	PRINT(">>> REPLACED: %s\n",track_xstring);
     }
 
     SetTrackFile(ctcode,tidx,track_file);
     SetTrackString(ctcode,tidx,track_string);
+    SetTrackXString(ctcode,tidx,track_xstring);
     SetTrackIdentifier(ctcode,tidx,track_ident);
 
     td->music_id    = htonl(music_id);
@@ -1973,6 +2053,7 @@ static enumError ScanRTL_Track
 
     FreeString(track_file);
     FreeString(track_string);
+    FreeString(track_xstring);
     FreeString(track_ident);
 
     return ERR_OK;
@@ -2026,7 +2107,7 @@ enumError ScanSetupArena ( ctcode_arena_t *ca, ScanInfo_t * si )
 	if (err)
 	    return err;
 
-	if ( property_id > 0 && ( property_id < MKW_ARENA_BEG || property_id >= MKW_ARENA_END ))
+	if ( property_id > 0 && !IsMkwArena(property_id) )
 	{
 	    ccp eol = FindNextLineFeedSI(si,true);
 	    if ( si->no_warn <= 0 )
@@ -2236,7 +2317,7 @@ enumError ScanTextArena
 		break;
 
 	    default:
-		// ignore all other section without any warnings
+		// ignore all other sections without any warnings
 		break;
 	}
 
@@ -2363,7 +2444,7 @@ enumError ScanTextCTCODE
 		break;
 
 	    default:
-		// ignore all other section without any warnings
+		// ignore all other sections without any warnings
 		break;
 	}
 
@@ -2384,6 +2465,7 @@ enumError ScanTextCTCODE
 
 // [[file-name]]
     UsePatchingListBMG(&ctcode->track_string);
+    //UsePatchingListBMG(&ctcode->track_xstring);
     CalcCupRefCTCODE(ctcode,true);
     return max_err;
 }
@@ -2874,7 +2956,7 @@ enumError ScanLEBinCTCODE
 	for ( tidx = 0; tidx < max;
 		tidx++, td++, prop++, music++, flags++, ct_flags++ )
 	{
-	    if ( tidx >= 0x2a && tidx < LE_FIRST_LOWER_CT_SLOT )
+	    if ( tidx >= 0x2a && tidx < LE_FIRST_CT_SLOT )
 	    {
 		td->music_id	= htonl(0x75);
 		td->property_id	= htonl(0);
@@ -2945,7 +3027,8 @@ enumError ScanCTCODE
 
     enumError err;
 // [[analyse-magic]]
-    switch (GetByMagicFF(data,data_size,data_size))
+    const file_format_t fform = GetByMagicFF(data,data_size,data_size);
+    switch (fform)
     {
 	case FF_BRRES:
 	    err = ScanBrresCTCODE(ctcode,ct_mode,data,data_size,cdata);
@@ -2969,14 +3052,14 @@ enumError ScanCTCODE
 	    ctcode->fform = FF_CT1_DATA;
 	    break;
 
-	case FF_CT_TEXT:
+	case FF_CTDEF:
 	 #if USE_NEW_CONTAINER_CTC
 	    FreeContainerData(cdata);
 	 #else
 	    FreeContainer(cdata);
 	 #endif
-	    err =  ScanTextCTCODE(ctcode,ct_mode,data,data_size);
-	    ctcode->fform = FF_CT_TEXT;
+	    err = ScanTextCTCODE(ctcode,ct_mode,data,data_size);
+	    ctcode->fform = FF_CTDEF;
 	    break;
 
 	case FF_LE_BIN:
@@ -2985,7 +3068,7 @@ enumError ScanCTCODE
 	 #else
 	    FreeContainer(cdata);
 	 #endif
-	    err =  ScanLEBinCTCODE(ctcode,ct_mode,data,data_size);
+	    err = ScanLEBinCTCODE(ctcode,ct_mode,data,data_size);
 	    ctcode->fform = FF_LE_BIN;
 	    break;
 
@@ -2997,13 +3080,21 @@ enumError ScanCTCODE
 	 #endif
 	    if (ct_mode)
 		InitializeCTCODE(ctcode,ct_mode);
-	    return ERROR0(ERR_INVALID_DATA,
-		"No CTCODE file: %s\n", ctcode->fname ? ctcode->fname : "?");
+
+	    ccp fname = ctcode->fname ? ctcode->fname : "?";
+	    return fform == FF_UNKNOWN
+		? ERROR0(ERR_INVALID_DATA,
+			"Need CT-CODE compatible file, but have unknown file format: %s\n",
+			fname)
+		: ERROR0(ERR_INVALID_DATA,
+			"Need CT-CODE compatible file, but file format is %s: %s",
+			GetNameFF(fform,0),fname);
     }
 
     if ( !err && opt_patch_names )
 	PatchNamesCTCODE(ctcode);
 
+    ImportCtcodeLDUMP(ctcode);
     return err;
 }
 
@@ -3059,7 +3150,7 @@ enumError LoadCTCODE
 
     if (!strcmp(fname,"0"))
     {
-	ctcode->fform = FF_CT_TEXT;
+	ctcode->fform = FF_CTDEF;
 	ctcode->fname = STRDUP(fname);
 	return ERR_OK;
     }
@@ -3183,7 +3274,7 @@ enumError SaveTextCTCODE
 	fputs(section_sep,F.f);
     }
     else
-	fprintf(F.f,"%s\r\n\r\n",CT_TEXT_MAGIC8);
+	fprintf(F.f,"%s\r\n\r\n",CT_DEF_MAGIC8);
 
     MARK_USED(keybuf,namebuf);
     fprintf( F.f, text_ctcode_setup_cr,
@@ -3232,7 +3323,6 @@ enumError SaveTextCTCODE
 
     if ( omode.mode & 1 && ctcode->used_tracks )
     {
-// [[2do]] [TRACK-LIST]
 	fprintf(F.f,"%s[RACING-TRACK-LIST]\r\n%s",
 			section_sep,
 			omode.syntax
@@ -3600,7 +3690,7 @@ enumError SaveMessageCTCODE
 		prev_cup     = bi->text;
 		prev_cup_len = bi->len;
 	    }
-	    else if ( prev_cup && tidx >= LE_FIRST_LOWER_CT_SLOT )
+	    else if ( prev_cup && tidx >= LE_FIRST_CT_SLOT )
 	    {
 		bmg_item_t *bi
 			= InsertItemBMG(&bmg,ctcode->ctb.cup_ref.beg+tidx,0,0,0);
@@ -3888,7 +3978,7 @@ enumError SaveCTCODE
 	{ REF("rmcj","mod2.bin",      ctcode_mod2_jap_bz2),      FF_MOD2 },
 	{ REF("rmcj","ovr1.bin",      ctcode_ovr1_jap_bz2),      FF_OVR1 },
 
-	// [[2do]] [[ct-korea]]
+	// [[ct-korea]]
 	{ REF("rmck","boot_code.bin", 0), FF_CT0_CODE },
 	{ REF("rmck","boot_data.bin", 0), FF_CT0_DATA },
 	{ REF("rmck","bad1code.bin",  0), FF_CT1_CODE },
@@ -4056,7 +4146,7 @@ enumError SaveCTCODE
 	    static const u32 pal[] = { 0x8065920c, 0x80653644, 0x8065a034, 0 };
 	    static const u32 usa[] = { 0x80654d84, 0x8064f1bc, 0x80655bac, 0 };
 	    static const u32 jap[] = { 0x80658878, 0x80652cb0, 0x806596a0, 0 };
-	    static const u32 kor[] = { 0 }; // [[2do]] [[ct-korea]]
+	    static const u32 kor[] = { 0 }; // [[ct-korea]]
 	    DeactivateMOD2( bz2s+BIDX_MOD2, lang_mode, pal, usa, jap, kor );
 	}
 
@@ -4068,7 +4158,7 @@ enumError SaveCTCODE
 	    static const u32 pal[] = { 0x808a5b30, 0 };
 	    static const u32 usa[] = { 0x808a1058, 0 };
 	    static const u32 jap[] = { 0x808a4c90, 0 };
-	    static const u32 kor[] = { 0 }; // [[2do]] [[ct-korea]]
+	    static const u32 kor[] = { 0 }; // [[ct-korea]]
 	    DeactivateMOD2( bz2s+BIDX_MOD2, lang_mode, pal, usa, jap, kor );
 	}
     }
@@ -4521,7 +4611,7 @@ int ScanOptAllowSlots ( ccp arg )
 	}
     }
 
-    if ( logging > 1 ) // must be set before --allow-slots
+    if ( logging >= 2 ) // must be set before --allow-slots
 	HexDump16(stdlog,0,0,ctcode_used_slot,sizeof(ctcode_used_slot));
     return 0;
 }

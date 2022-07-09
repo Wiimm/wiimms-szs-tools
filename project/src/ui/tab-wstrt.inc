@@ -68,6 +68,10 @@
 		    "wstrt ARGTEST ...",
 		0 /* copy of wszst */ },
 
+  { T_DEF_CMD,	"EXPAND",	"EXPAND",
+		    "wstrt EXPAND ...",
+		0 /* copy of wszst */ },
+
   { T_DEF_CMD,	"TEST",		"TEST",
 		    "wstrt TEST [options]... [ignored]...",
 		0 /* copy of wszst */ },
@@ -223,6 +227,10 @@
 		"MAX_WIDTH",	"max-width|maxwidth",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_G|F_IGNORE,
+		"NO_PAGER",	"no-pager|nopager",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0, 0 /* copy of wszst */ },
 
@@ -230,6 +238,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GM,	"LOGGING",	"L|logging",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GM,	"TIMING",	"timing",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GP,	"WARN",		"W|warn",
@@ -923,13 +934,16 @@
   //---------- COMMAND wstrt ARGTEST ----------
 
   { T_CMD_BEG,	"ARGTEST",	0,0,0 },
+  { T_ALL_OPT,	0,		0,0,0 },
 
+  //---------- COMMAND wstrt EXPAND ----------
+
+  { T_CMD_BEG,	"EXPAND",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wstrt TEST ----------
 
   { T_CMD_BEG,	"TEST",		0,0,0 },
-
   { T_ALL_OPT,	0,		0,0,0 },
 
   //---------- COMMAND wstrt COLORS ----------
@@ -997,6 +1011,7 @@
   { T_COPT,	"FADDR",	0,0,0 },
   { T_COPT,	"SNAME",	0,0,0 },
   { T_COPT,	"LOGGING",	0,0,0 },
+  { T_COPT,	"TIMING",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"HEXDUMP",	0,0,0 },
 

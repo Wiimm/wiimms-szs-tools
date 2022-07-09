@@ -41,6 +41,7 @@
 #define _GNU_SOURCE 1
 
 #include "dclib-types.h"
+#include "lib-ledis.h"
 
 typedef struct szs_file_t szs_file_t;
 
@@ -57,7 +58,7 @@ typedef struct szs_file_t szs_file_t;
 typedef struct sha1_size_t
 {
     sha1_hash_t	hash;	    // SHA1 checksum (binary)
-    u32		size;	    // size of date (big endian)
+    u32		size;	    // size of data (big endian)
 }
 __attribute__ ((packed)) sha1_size_t;
 
@@ -74,88 +75,10 @@ void CreateSSChecksumDBBySZS	( char *buf, uint bufsize, const szs_file_t *szs );
 
 enumError GetSSByFile ( sha1_size_t *ss, ccp path1, ccp path2 );
 
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////		    struct DistributionInfo_t		///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-#define DISTRIB_MAGIC8			"#DISTRIB"
-#define DISTRIB_MAGIC8_NUM		0x2344495354524942ull
-
-#define DISTRIBUTION_FILE_VERSION	     1
-#define MIN_DISTRIBUTION_SLOT		    10	// included
-#define MAX_DISTRIBUTION_TRACK		 10000	// excluded
-#define MAX_DISTRIBUTION_ARENA		  1000	// excluded
-#define DISTRIBUTION_ARENA_DELTA	100000
-
-#define DEFAULT_DISTIBUTION_FNAME	"distribution.txt"
-
-//-----------------------------------------------------------------------------
-
-static inline bool IsValidDistribArena ( uint slot )
-{
-    return slot == DISTRIBUTION_ARENA_DELTA
-	|| slot >= DISTRIBUTION_ARENA_DELTA+MIN_DISTRIBUTION_SLOT
-		&& slot < DISTRIBUTION_ARENA_DELTA+MAX_DISTRIBUTION_ARENA;
-}
-
-static inline bool IsValidDistribTrack ( uint slot )
-{
-    return !slot
-	|| slot >= MIN_DISTRIBUTION_SLOT && slot < MAX_DISTRIBUTION_TRACK;
-}
-
-static inline bool IsValidDistribSlot ( uint slot )
-{
-    return !slot
-	|| slot >= MIN_DISTRIBUTION_SLOT
-		&& slot < MAX_DISTRIBUTION_TRACK
-	|| slot == DISTRIBUTION_ARENA_DELTA
-	|| slot >= DISTRIBUTION_ARENA_DELTA+MIN_DISTRIBUTION_SLOT
-		&& slot < DISTRIBUTION_ARENA_DELTA+MAX_DISTRIBUTION_ARENA;
-}
-
-//-----------------------------------------------------------------------------
-// [[DistributionInfo_t]]
-
-typedef struct DistributionInfo_t
-{
-    ParamField_t	translate;
-    ParamField_t	param;
-    ParamField_t	arena[MAX_DISTRIBUTION_ARENA];
-    ParamField_t	track[MAX_DISTRIBUTION_TRACK];
-}
-DistributionInfo_t;
-
-//-----------------------------------------------------------------------------
-
-void InitializeDistributionInfo
-	( DistributionInfo_t * dinf, bool add_default_param );
-void ResetDistributionInfo ( DistributionInfo_t *dinf );
-void AddParamDistributionInfo ( DistributionInfo_t * dinf, bool overwrite );
-
-enumError ScanDistribFile
-	( DistributionInfo_t *dinf, ccp fname, int ignore, bool assume_arena );
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			slot translation		///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-char * ScanSlot ( uint *res_slot, ccp source, bool need_point );
-
-void NormalizeSlotTranslation ( char *buf, uint bufsize, ccp name,
-			char ** p_first_para, char ** p_first_brack );
-
-uint DefineSlotTranslation
-	( ParamField_t *translate, bool is_arena, uint slot, ccp name );
-
-// 'sha1' can be NULL
-int FindSlotByTranslation ( const ParamField_t *translate, ccp fname, ccp sha1 );
-
-// 'param' not NULL: Scan "@PARAM = VALUE" lines and store result.
-void ScanSlotTranslation
-	( ParamField_t *translate, ParamField_t *param, ccp fname, bool ignore );
+// slen < 0 => strlen(source)
+// returns: 0:fail, 1:SHA1, 2:DB64
+// if res != NULL: scanned SHA1
+int IsSSChecksum ( sha1_size_t *res, ccp source, int slen );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

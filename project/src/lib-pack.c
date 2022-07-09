@@ -166,7 +166,7 @@ enumError CreatePACK
 
     SortSubFilesSZS(szs,SORT_AUTO);
 
-    if ( logging > 1 )
+    if ( logging >= 2 )
     {
 	printf("\nsorted file list:\n");
 	int i;
