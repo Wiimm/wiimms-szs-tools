@@ -354,6 +354,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_EXT_ERRORS:	ext_errors++; break;
 	case GO_TIMING:		log_timing++; break;
 	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
@@ -521,7 +522,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	hint_exit(ERR_OK);
     }
 
-    enumError err = CheckEnvOptions("WPATT_OPT",CheckOptions);
+    enumError err = CheckEnvOptions2("WPATT_OPT",CheckOptions);
     if (err)
 	hint_exit(err);
 

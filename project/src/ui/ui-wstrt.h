@@ -139,6 +139,7 @@ typedef enum enumOptions
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_EXT_ERRORS,
 	OPT_TIMING,
 	OPT_WARN,
 	OPT_DE,
@@ -181,7 +182,7 @@ typedef enum enumOptions
 	OPT_CLEAN_DOL,
 	OPT_CT_DIR,
 
-	OPT__N_TOTAL // == 120
+	OPT__N_TOTAL // == 121
 
 } enumOptions;
 
@@ -472,6 +473,7 @@ typedef enum enumGetOpt
 	GO_UPPER		= 'U',
 	GO_VERSION		= 'V',
 	GO_WARN			= 'W',
+	GO_EXT_ERRORS		= 'Y',
 
 	GO_CONST		= 'c',
 	GO_DEST			= 'd',

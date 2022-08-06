@@ -156,7 +156,7 @@ static const feature_var_t kmp_feature_list[] =
 
 static const feature_var_t lex_section_list[] =
 {
-    DEF_VAR( 1,HAVELEXS_FEA0,		lex_sect_fea0,	"LEX section FEA0" ),
+    DEF_VAR( 1,HAVELEXS_FEAT,		lex_sect_feat,	"LEX section FEAT" ),
     DEF_VAR( 0,HAVELEXS_TEST,		lex_sect_test,	"LEX section TEST" ),
     DEF_VAR( 0,HAVELEXS_SET1,		lex_sect_set1,	"LEX section SET1" ),
     DEF_VAR( 0,HAVELEXS_CANN,		lex_sect_cann,	"LEX section CANN" ),
@@ -376,7 +376,7 @@ void SetIsLexFeaturesSZS ( features_szs_t *fs )
 
  #if 1
     // short cut for code below
-    fs->f_lex = fs->lex_sect_fea0 = 1;
+    fs->f_lex = fs->lex_sect_feat = 1;
  #else
     // non optimized code
     const feature_list_t *list;
@@ -396,8 +396,8 @@ int GetFeaturesStatusSZS ( const features_szs_t *fs )
 {
     // returns
     //	0: all features set to null
-    //	1: all features except f_lex + lex_sect_fea0 are set to null
-    //	2: any features except f_lex + lex_sect_fea0 is not NULL
+    //	1: all features except f_lex + lex_sect_feat are set to null
+    //	2: any features except f_lex + lex_sect_feat is not NULL
 
     DASSERT(fs);
 
@@ -407,7 +407,7 @@ int GetFeaturesStatusSZS ( const features_szs_t *fs )
 	return 0;
 
     temp.f_lex		= fs->f_lex;
-    temp.lex_sect_fea0	= fs->lex_sect_fea0;
+    temp.lex_sect_feat	= fs->lex_sect_feat;
     return memcmp(&temp,fs,sizeof(temp)) ? 2 : 1;
 }
 
@@ -419,6 +419,7 @@ void PrintFeaturesSZS
     const features_szs_t *fs,		// valid source
     bool		is_lex,		// TRUE: Create output for a LEX file
     int			comments,	// >0: add extended comments
+    int			print_options,	// >0: print options as additional bits
     int			print_modes,	// >0: append ",MODES"
     u8			include,	// print only if all bits match
     u8			exclude		// exclude if any bit match
@@ -436,7 +437,7 @@ void PrintFeaturesSZS
 	"#   %u: feature found with impact to game play.\n",
 	FZV_UNDEF, FZV_NO_IMPACT, FZV_MAYBE_IMPACT, FZV_IMPACT );
 
-    if ( comments >= 1 )
+    if ( print_options > 0 )
 	PrintScriptVars(ps,0,
 		"#\n"
 		"# If value is %u, then some additional bits may be set:\n"
@@ -472,9 +473,7 @@ void PrintFeaturesSZS
 	    const u8 value = ((u8*)fs)[var->offset];
 	    if ( value || comments >= -2 )
 	    {
-		if ( head_mode == 1 )
-		    fputc('\n',ps->f);
-		else if ( head_mode == 2 )
+		if ( head_mode == 2 )
 		{
 		    const int hlen1 = strlen(list->heading1);
 		    const int hlen2 = list->heading2 ? strlen(list->heading2) : 0;
@@ -496,11 +495,11 @@ void PrintFeaturesSZS
 		    PrintScriptVars(ps,0,"# %s\n",var->comment);
 		    ccp effect = GetFeaturesEffects(mode);
 		    if (effect)
-			PrintScriptVars(ps,0,"# %s\n",effect);
+			PrintScriptVars(ps,0,"# > %s\n",effect);
 		}
 
 		char valbuf[30];
-		if ( value & FZV_M_OPTIONS && !is_lex && comments )
+		if ( value & FZV_M_OPTIONS && print_options >0 )
 		    snprintf(valbuf,sizeof(valbuf),"0x%02x",value);
 		else
 		    snprintf(valbuf,sizeof(valbuf),"%u", value & FZV_M_VALUE );
@@ -562,7 +561,7 @@ const features_szs_t * GetFeaturesModes()
 	m.kmp_uncond_oob	=			      FZM_M_TYPE | FZM_M_WHERE;
 
 	// existence of a section don't have impact to gameplay => see lex attributes
-	m.lex_sect_fea0		=							  FZM_SECTION;
+	m.lex_sect_feat		=							  FZM_SECTION;
 	m.lex_sect_test		= FZM_VISUAL | FZM_GAMEPLAY | FZM_M_TYPE | no_timetrial | FZM_SECTION;
 	m.lex_sect_set1		=	       FZM_GAMEPLAY | FZM_M_TYPE | FZM_ONLINE   | FZM_SECTION;
 	m.lex_sect_cann		=	       FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE  | FZM_SECTION;
@@ -947,7 +946,7 @@ static uint GetLexSortOrder ( u32 magic )
 {
     switch(magic)
     {
-	case LEXS_FEA0:		return 1;
+	case LEXS_FEAT:		return 1;
 	case LEXS_SET1:		return 2;
 	case LEXS_TEST:		return 9;
 	default:		return 5;
@@ -1038,7 +1037,7 @@ static lex_item_t * AppendElementLEX
 
     switch(magic)
     {
-	case LEXS_FEA0:
+	case LEXS_FEAT:
 	    if ( size4 < sizeof(features_szs_t) )
 		size4 = ALIGN32(sizeof(features_szs_t),4);
 	    break;
@@ -1264,7 +1263,7 @@ const have_lex_info_t have_lex_sect_info[HAVELEXS__N] =
     { LEXS_CANN, "cannon",	0 },				// HAVELEXS_CANN
     { LEXS_TEST, "test",	1 },				// HAVELEXS_TEST
     { LEXS_HIPT, "hidepos",	sizeof(lex_hipt_rule_t) },	// HAVELEXS_HIPT
-    { LEXS_FEA0, "features",	2 },				// HAVELEXS_FEA0
+    { LEXS_FEAT, "features",	2 },				// HAVELEXS_FEAT
     //--- add new sections here (order is important)
 };
 
@@ -1334,8 +1333,8 @@ void UpdateLEX ( lex_t * lex, bool add_missing, bool add_test )
 
     if ( add_missing && lex->develop )
     {
-	//--- FEA0
-	AppendFea0LEX(lex,false,0);
+	//--- FEAT
+	AppendFeatLEX(lex,false,0);
     }
 
     if (add_missing)
@@ -1358,7 +1357,7 @@ void UpdateLEX ( lex_t * lex, bool add_missing, bool add_test )
 
 //-----------------------------------------------------------------------------
 
-lex_item_t * AppendFea0LEX
+lex_item_t * AppendFeatLEX
 	( lex_t * lex, bool overwrite, const features_szs_t *src_fs )
 {
     features_szs_t fs;
@@ -1368,7 +1367,7 @@ lex_item_t * AppendFea0LEX
 	InitializeFeaturesSZS(&fs);
     SetIsLexFeaturesSZS(&fs);
 
-    return AppendElementLEX(lex,LEXS_FEA0,&fs,sizeof(fs),overwrite);
+    return AppendElementLEX(lex,LEXS_FEAT,&fs,sizeof(fs),overwrite);
 }
 
 //-----------------------------------------------------------------------------
@@ -1569,9 +1568,9 @@ enumError ScanRawLEX
     if ( IsValidLEX(data,data_size,data_size,lex->fname) >= VALID_ERROR )
     {
 	return ERROR0(ERR_INVALID_DATA,
-		"Invalid LEX file: %s\n"
+		"Invalid LEX file (size %u): %s\n"
 		"Add option --lex=force or --force to ignore some validity checks.",
-		lex->fname ? lex->fname : "?" );
+		data_size, lex->fname ? lex->fname : "?" );
     }
 
     lex->fform = FF_LEX;
@@ -2260,7 +2259,7 @@ enumError SaveRawLEX
 ///////////////			  SaveTextLEX()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static enumError SaveTextLEX_FEA0
+static enumError SaveTextLEX_FEAT
 (
     FILE		* f,		// file to write
     const lex_t		* lex,		// pointer to valid LEX
@@ -2285,7 +2284,16 @@ static enumError SaveTextLEX_FEA0
     ps.f		= f;
     ps.fform		= PSFF_ASSIGN;
     ps.force_case	= LOUP_UPPER;
-    PrintFeaturesSZS(&ps,fs,true,1,0,0,0);
+    int comments = -1;
+
+    if (!brief_count)
+    {
+	comments = 1;
+	ps.ena_empty	= true;
+	ps.ena_comments	= true;
+	ps.boc		= "#";
+    }
+    PrintFeaturesSZS(&ps,fs,true,comments,0,0,0,0);
     ResetPrintScript(&ps);
 
     uint data_size = ntohs(fs->size_be);
@@ -2557,7 +2565,7 @@ enumError SaveTextLEX
 	enumError err = ERR_OK;
 	switch(magic)
 	{
-	    case LEXS_FEA0: err = SaveTextLEX_FEA0(F.f,lex,s); break;
+	    case LEXS_FEAT: err = SaveTextLEX_FEAT(F.f,lex,s); break;
 	    case LEXS_SET1: err = SaveTextLEX_SET1(F.f,lex,s); break;
 	    case LEXS_CANN: err = SaveTextLEX_CANN(F.f,lex,s); break;
 	    case LEXS_HIPT: err = SaveTextLEX_HIPT(F.f,lex,s); break;
@@ -2883,7 +2891,7 @@ bool PatchFeaturesLEX ( lex_t * lex, const szs_have_t *have, bool *empty )
     SetupFeaturesSZS(&fs,have,true);
     const bool need_features = GetFeaturesStatusSZS(&fs) > 1;
 
-    lex_item_t *li = FindElementLEX(lex,LEXS_FEA0);
+    lex_item_t *li = FindElementLEX(lex,LEXS_FEAT);
     const bool have_features = li != 0;
 
     PRINT("--lex-features = %d, --lex-rm-features = %d : have=%d, need=%d\n",
@@ -2891,7 +2899,7 @@ bool PatchFeaturesLEX ( lex_t * lex, const szs_have_t *have, bool *empty )
 
     bool modified = false;
     if ( opt_lex_rm_features && RemoveElementByMagicLEX(lex,LEXS_FEAT) )
-	modified = true; // FEA0
+	modified = true; // FEAT
 
     if ( have_features && !need_features )
     {
@@ -2902,7 +2910,7 @@ bool PatchFeaturesLEX ( lex_t * lex, const szs_have_t *have, bool *empty )
 	    && need_features
 	    && ( !have_features || memcmp(&fs,li->elem.data,sizeof(fs)) ))
     {
-	AppendFea0LEX(lex,true,&fs);
+	AppendFeatLEX(lex,true,&fs);
 	modified = true;
     }
 
@@ -2957,7 +2965,7 @@ bool PatchLEX ( lex_t * lex, const szs_have_t *have )
     }
 
 
-    //--- section FEA0
+    //--- section FEAT
 
     if ( HavePatchFeaturesLEX() && have && have->valid )
     {
@@ -3002,7 +3010,7 @@ bool PurgeLEX ( lex_t * lex )
 	bool remove = false;
 	switch(ntohl((*ss)->elem.magic))
 	{
-	 case LEXS_FEA0:
+	 case LEXS_FEAT:
 	    remove = GetFeaturesStatusSZS((features_szs_t*)data) < 2;
 	    break;
 

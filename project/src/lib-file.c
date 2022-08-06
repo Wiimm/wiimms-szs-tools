@@ -4074,7 +4074,7 @@ enumError SavePrefixTable ( FILE *f, const mkw_prefix_t * tab )
 
     fprintf(f,
 	"#PREFIX1\r\n"
-	"#> prefix|info|flags|order|\r\n"
+	"#> prefix|info|flags|order|color_index|\r\n"
 	"# Info flags: N: by Nintento,  M: Original Mario Kart\r\n"
 	"# Functional flags: 1|2: Can be used as first|second part of a combi\r\n"
 	"#%.68s\r\n"
@@ -4092,13 +4092,13 @@ enumError SavePrefixTable ( FILE *f, const mkw_prefix_t * tab )
 	if ( fw_info < info.data.len )
 	     fw_info = info.data.len;
 
-	fprintf(f,"%s|%s|%s%s%s%s|%u|\r\n",
+	fprintf(f,"%s|%s|%s%s%s%s|%u|%u|\r\n",
 		prefix.data.ptr, info.data.ptr,
 		tab->flags & MPF_NINTENDO  ? "N" : "",
 		tab->flags & MPF_MARIOKART ? "M" : "",
 		tab->flags & MPF_PREFIX1   ? "1" : "",
 		tab->flags & MPF_PREFIX2   ? "2" : "",
-		tab->order );
+		tab->order, tab->color );
 
 	FreeExMem(&prefix);
 	FreeExMem(&info);
@@ -4135,6 +4135,7 @@ enumError SavePrefixTableFN ( ccp fname, const mkw_prefix_t * tab )
 ///////////////////////////////////////////////////////////////////////////////
 
 ccp opt_plus = "+";
+ccp opt_printf = 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4153,7 +4154,7 @@ void ResetSPF ( split_filename_t *spf )
 
 void AnalyseSPF
 (
-    split_filename_t	*spf,		// valid pointet
+    split_filename_t	*spf,		// valid pointer
     bool		init_spf,	// true: InitializeSPF(), false: ResetSPF()
     ccp			source,		// NULL or ponter to name
     ccp			src_end,	// end of source. if 0 then use strlen()
@@ -4174,6 +4175,7 @@ void AnalyseSPF
     if ( !source || !*source || src_end && src_end <= source )
 	return;
 
+    const int max_attrib = 100;
     char buf[100];
 
 
@@ -4276,7 +4278,7 @@ void AnalyseSPF
     spf->norm.len = nlen;
 
 
-    //--- attributes and authors
+    //--- attributes
 
     p1 = memrchr(name,'[',nlen);
     if (p1)
@@ -4291,7 +4293,33 @@ void AnalyseSPF
 	while ( end > name && end[-1] == ' ' )
 	    end--;
 	nlen = end - name;
+
+	mem_t attrib_list[max_attrib+2];
+	const uint n = SplitByCharMem(attrib_list,max_attrib+1,spf->attribs,',');
+	for ( int i = 0; i < n; i++ )
+	{
+	    mem_t p = attrib_list[i];
+
+	    float speed = 0.0;
+	    char *end;
+	    if ( p.ptr[0] == 'x' )
+		speed = strtof(p.ptr+1,&end);
+	    else if (!memcmp(p.ptr,"×",2))
+		speed = strtof(p.ptr+2,&end);
+	    if ( speed > 0.0 && end == p.ptr + p.len )
+		spf->speed_factor = speed;
+
+	    if ( p.len == 4 && !memcmp(p.ptr+1,"lap",3) || p.len == 5 && !memcmp(p.ptr+1,"laps",4) )
+	    {
+		const uint laps = p.ptr[0] - '0';
+		if ( laps < 10 )
+		    spf->lap_count = laps;
+	    }
+	}
     }
+
+
+    //--- authors
 
     p1 = memrchr(name,'(',nlen);
     if (p1)
@@ -4421,34 +4449,6 @@ void AnalyseSPF
     }
 
 
-    //--- special chars
-
- #if SUPPORT_SPLIT_SIGN
-    p1 = name;
-    for (;;)
-    {
-	p2 = NextUTF8Char(p1);
-	const int len = p2 - p1;
-	if (  ( !len || memcmp(p1,"→",len) && memcmp(p1,"»",len) ) 
-	   && ( len != 1 || !strchr("~>^",*p1) )
-	   )
-	{
-	    break;
-	}
-	p1 = p2;
-    }
-    if ( p1 > name )
-    {
-	if ( *p1 == ' ' )
-	    p1++;
-	spf->sign.ptr	= name;
-	spf->sign.len	= p1 - name;
-	name		= p1;
-	nlen		= end - name;
-    }
- #endif
-
-
     //--- boost
 
     if (!strncasecmp(name,"boost:",6))
@@ -4474,7 +4474,7 @@ void AnalyseSPF
 	    spf->game1.ptr	= name;
 	    spf->game1.len	= p1 - name;
 	    spf->game		= spf->game1;
-	    spf->game_color	= pre1->color;
+	    spf->game1_color	= pre1->color;
 	    spf->game_order	= 1000 * pre1->order;
 	    int add_game	= 998;
 	    name		= p1+1;
@@ -4488,12 +4488,13 @@ void AnalyseSPF
 		    const mkw_prefix_t *pre2 = FindPrefix(name,p1-name,true);
 		    if ( pre2 && pre2->flags & MPF_PREFIX2 )
 		    {
-			spf->game2.ptr = name;
-			spf->game2.len = p1 - name;
-			spf->game.len += spf->game2.len + 1;
-			name		= p1+1;
-			nlen		= end - name;
-			add_game	= 2*pre2->order;
+			spf->game2.ptr	 = name;
+			spf->game2.len	 = p1 - name;
+			spf->game.len	+= spf->game2.len + 1;
+			spf->game2_color = pre2->color;
+			name		 = p1+1;
+			nlen		 = end - name;
+			add_game	 = 2*pre2->order;
 		    }
 		}
 	    }
@@ -4508,6 +4509,367 @@ void AnalyseSPF
 
     spf->name.ptr = name;
     spf->name.len = nlen;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void ResetPSP ( print_split_par_t *psp )
+{
+    if (psp)
+    {
+	ResetEML(&psp->u_list);
+	memset(psp,0,sizeof(*psp));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t PrintSPF
+(
+    exmem_dest_t	*dest,		// Kind of destination, if NULL then MALLOC()
+    const split_filename_t
+			*spf,		// Valid and initialized source
+    print_split_par_t	*par		// valid struct with parameters
+)
+{
+    const int MAX_FW = 1000;
+    int active_color = 0;
+
+    bool skip = false;
+    ccp format = 0;
+    char fbuf[500];
+    if (par)
+    {
+	par->u_item	= 0;
+
+	if (par->format)
+	{
+	    ScanEscapedString(fbuf,sizeof(fbuf),par->format,-1,true,0,0);
+	    format = fbuf;
+	}
+    }
+
+    char buf[2000], tempbuf[20];
+    char *end_buf = buf + sizeof(buf) - 1, *ptr = buf;
+
+    char destbuf[200];
+    exmem_dest_t exdest = { .buf = destbuf, .buf_size = sizeof(destbuf), .try_circ = true };
+
+    if ( spf && format )
+    {
+	ccp saved_format[4] = {0}; // max 3 needed, 4'th for security
+	int saved_index = 0;
+
+	for(;;)
+	{
+	    while ( *format && ptr < end_buf )
+	    {
+		if ( *format != '%' )
+		{
+		    *ptr++ = *format++;
+		    continue;
+		}
+
+		format++;
+		if ( *format == '%' )
+		{
+		    *ptr++ = *format++;
+		    continue;
+		}
+
+
+		//--- now we have a print instruction
+		//--- scan flags
+
+		bool left_adjust	= false;
+		int  add_space		= 0;	// -1:suppres, 0:auto, 1:force
+		int  add_colors		= 0;
+		bool no_braces		= false;
+		ccp  force_braces	= 0;
+		bool multi_use		= false;
+		int always		= 0;
+
+		for(;;)
+		{
+		    switch(*format++)
+		    {
+			case '-': left_adjust	= true; break;
+			case ' ': add_space	= 1; break;
+			case '0': add_space	= -1; break;
+			case '!': no_braces	= true; break;
+			case '(': force_braces	= "()"; break;
+			case '{': force_braces	= "{}"; break;
+			case '[': force_braces	= "[]"; break;
+			case '<': force_braces	= "<>"; break;
+			case '+': multi_use	= true; break;
+			case '@': always++; break;
+			case '#': add_colors++; break;
+			default:  goto end_scan_flags;
+		    }
+		}
+		end_scan_flags:;
+		--format;
+
+
+		//--- skip entry*
+
+		if ( multi_use )
+		{
+		    if ( par->u_skip_mode > 0 )
+			skip = true;
+
+		    if ( par->u_use_list && !par->u_item )
+		    {
+			*ptr = 0;
+			bool found;
+			par->u_item = FindInsertEML(&par->u_list,buf,CPM_COPY,&found);
+			if ( !found && !par->u_skip_mode )
+			    skip = true;
+		    }
+		}
+
+
+		//--- scan field width
+
+		int fw = 0;
+		if ( *format >= '0' && *format <= '9' )
+		{
+		    while ( *format >= '0' && *format <= '9' )
+			fw = fw * 10 + *format++ - '0';
+		}
+		if ( fw > MAX_FW )
+		     fw = MAX_FW;
+
+
+		//----- scan precision
+
+		int prec = -1;
+		if ( *format == '.' )
+		{
+		    format++;
+		    prec = 0;
+
+		    while ( *format >= '0' && *format <= '9' )
+			prec = prec * 10 + *format++ - '0';
+		    if ( prec > MAX_FW )
+			 prec = MAX_FW;
+		}
+
+		mem_t src	= {0};	// source string
+		int color	= 0;	// >0: color index
+		ccp braces	= 0;	// NULL or kind of default braces
+		bool auto_space	= true;	// add additional space before
+
+		switch(*format++)
+		{
+		  case 'a':	// authors: list of authors, format "(authors)", options=raw, curly braces
+		    src = spf->authors;
+		    braces = "()";
+		    break;
+
+		  case 'A':	// attribs: list of attributes, format "(authors)", options=raw
+		    src = spf->attribs;
+		    braces = "[]";
+		    break;
+
+		  case 'b':	// boost: boost prefix
+		    src = spf->boost;
+		    if (add_colors)
+			color = 0x32; // RED3
+		    break;
+
+		  case 'D':	// f_d: empty or "_d"
+		    src = spf->f_d;
+		    if (!add_space)
+			add_space = -1;
+		    break;
+
+		  case 'e':	// extra: extra info, format "(extra)", options=raw, curly braces
+		    src = spf->extra;
+		    braces = "()";
+		    if (add_colors)
+			color = 0x21; // BLUE1
+		    break;
+
+		  case 'E':	// f_ext: file extention
+		    src = spf->f_ext;
+		    if (!add_space)
+			add_space = -1;
+		    break;
+
+		  case 'g':	// game1: first game prefix
+		    src = spf->game1;
+		    if (add_colors)
+			color = spf->game1_color;
+		    break;
+
+		  case 'G':	// game2: second game prefix
+		    src = spf->game2;
+		    if (add_colors)
+			color = spf->game2_color;
+		    break;
+
+		  case 'F':	// f_name: source name, stripped
+		    src = spf->f_name;
+		    break;
+
+		  case 'l':	// lap_count
+		    {
+			int laps = par->lap_count > 0 ? par->lap_count : spf->lap_count;
+			if ( always > 1 || laps > 0 && ( always || laps != 3 ))
+			{
+			    if (!laps)
+				laps = 3;
+			    src.ptr = tempbuf;
+			    src.len = snprintf(tempbuf,sizeof(tempbuf), "%u%s%s",
+					laps,
+					no_braces ? "" : "lap", 
+					no_braces ? "" : laps != 1 ? "s" : fw > 4 ? " " : "" ); 
+			    if (add_colors)
+				color = 0x21; // BLUE1
+			}
+		    }
+		    break;
+
+		  case 'L':	// LOTTERY ALIAS
+		    saved_format[saved_index++] = format;
+		    format = add_colors > 1
+				? "%#N%#e%#s%#+v" : add_colors
+				? "%#N%e%#s%#+v"
+				: "%N%e%s%+v";
+		    break;
+
+		  case 'n':	// name: name
+		    src = spf->name;
+		    break;
+
+		  case 'N':	// RACE ALIAS
+		    saved_format[saved_index++] = format;
+		    format = add_colors ? "%#P%#b%#p%n" : "%P%b%p%n";
+		    break;
+
+		  case 'O':	// norm: normalized name, alloced
+		    src = spf->norm;
+		    break;
+
+		  case 'p':	// game: combined game prefix
+		    src = spf->game;
+		    if (add_colors)
+			color = spf->game1_color;
+		    break;
+
+		  case 'P':	// plus: plus prefix
+		    src = spf->plus;
+		    if (add_colors)
+			color = 0x31; // BLUE2
+		    break;
+
+		  case 'R':	// RACE ALIAS
+		    saved_format[saved_index++] = format;
+		    format = add_colors > 1
+				? "%##L\n%!a" : add_colors
+				? "%#L\n%!a"
+				: "%L\n%!a";
+		    break;
+
+		  case 's':	// speed_factor
+		    {
+			float speed = par->speed_factor > 0.0 ? par->speed_factor : spf->speed_factor;
+			if ( always > 1 || speed > 0.0 && ( always || speed != 1.0 ))
+			{
+			    if ( speed <= 0.0 )
+				speed = 1.0;
+			    src.ptr = tempbuf;
+			    src.len = snprintf(tempbuf,sizeof(tempbuf), "%s%*.*f",
+					no_braces ? "" : "×", fw, prec<0 ? 2 : prec, speed );
+			    if ( prec < 0 )
+			    {
+				while ( src.ptr[src.len-1] == '0' )
+				    src.len--;
+				if ( src.ptr[src.len-1] == '.' )
+				    src.len--;
+			    }
+			    if (add_colors)
+				color = 0x21; // BLUE1
+			    prec = -1;
+			}
+		    }
+		    break;
+
+		  case 'v':	// version: version number
+		    src = spf->version;
+		    if (add_colors)
+			color = 0x21; // BLUE1
+		    break;
+		}
+
+		if ( skip && multi_use )
+		    par->u_skip_count++;
+		else if ( src.len )
+		{
+		    if (force_braces)
+			braces = force_braces;
+		    else if (no_braces)
+			braces = 0;
+
+		    if ( add_space > 0 || add_space == 0 && auto_space && ptr > buf && (u8)ptr[-1] > ' ' )
+			*ptr++ = ' ';
+
+		    if ( color != active_color )
+		    {
+			snprintf(destbuf,sizeof(destbuf),"\\c{%x}",color);
+			ptr = StringCopyE(ptr,end_buf,destbuf);
+			active_color = color;
+		    }
+
+		    if (braces)
+		    {
+			*ptr++ = braces[0];
+			fw = fw > 2 ? fw-2 : 0;
+		    }
+
+		    if ( fw > 0 || prec >= 0 )
+		    {
+			exmem_t res = AlignUTF8(&exdest,src.ptr,src.len,left_adjust?-fw:fw,prec);
+			ptr = StringCopyEM(ptr,end_buf,res.data.ptr,res.data.len);
+			FreeExMem(&res);
+		    }
+		    else
+			ptr = StringCopyEM(ptr,end_buf,src.ptr,src.len);
+
+		    if (braces)
+			*ptr++ = braces[1];
+		}
+	    } // while
+	    if (!saved_index)
+		break;
+	    format = saved_format[--saved_index];
+	 } // for
+    } // if
+
+    *ptr = 0;
+    exmem_t res = GetExmemDestBuf(dest,ptr-buf);
+    memcpy((char*)res.data.ptr,buf,res.data.len+1);
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t PrintNameSPF
+(
+    exmem_dest_t	*dest,		// Kind of destination, if NULL then MALLOC()
+    ccp			source,		// NULL or pointer to name to analyze
+    ccp			src_end,	// End of source. If 0 then use strlen().
+    print_split_par_t	*par		// valid struct with parameters
+)
+{
+    
+    split_filename_t spf;
+    AnalyseSPF(&spf,true,source,src_end,CPM_LINK,par?par->plus_mode:0);
+    exmem_t res = PrintSPF(dest,&spf,par);
+    ResetSPF(&spf);
+    return res;
 }
 
 //

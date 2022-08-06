@@ -58,6 +58,20 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			 conditionals			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// support function utimensat()
+
+#undef SUPPORT_UTIMENSAT
+
+#if defined(UTIME_OMIT) && !defined(__APPLE__)
+  #define SUPPORT_UTIMENSAT 1
+#else
+  #define SUPPORT_UTIMENSAT 0
+#endif
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			    helpers			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1472,52 +1486,61 @@ int GetProgramPath
 
 //-----
 
-// StringCopyS(), StringCopyE(), StringCat*()
+// StringCopy*(), StringCat*()
 //	RESULT: end of copied string pointing to a NULL character.
 //	'src*' may be a NULL pointer.
-// if max_copy<0: ignore it!
+// MAX_COPY define max number of bytes to copy.
+//	It's only relevant if src is longer.
+//	If MAX_COPY<0: ignore it.
+// SRC_LEN is the length of src (or the number of bytes to copy)
+//	If SRC_LEN<0: use strlen(src)
 
-char * StringCopyS  ( char *buf, size_t bufsize, ccp src );
-char * StringCopySM ( char *buf, size_t bufsize, ccp src, ssize_t max_copy );
-char * StringCat2S  ( char *buf, size_t bufsize, ccp src1, ccp src2 );
-char * StringCat3S  ( char *buf, size_t bufsize, ccp src1, ccp src2, ccp src3 );
+char * StringCopyS  ( char *buf, ssize_t buf_size, ccp src );
+char * StringCopySM ( char *buf, ssize_t buf_size, ccp src, ssize_t max_copy );
+char * StringCopySL ( char *buf, ssize_t buf_size, ccp src, ssize_t src_len );
 
-char * StringCopyE  ( char *buf, ccp buf_end, ccp src );
-char * StringCopyEM ( char *buf, ccp buf_end, ccp src, ssize_t max_copy );
-char * StringCat2E  ( char *buf, ccp buf_end, ccp src1, ccp src2 );
-char * StringCat3E  ( char *buf, ccp buf_end, ccp src1, ccp src2, ccp src3 );
+static inline char * StringCopyE ( char * buf, ccp buf_end, ccp src )
+	{ return StringCopyS(buf,buf_end-buf,src); }
+static inline char * StringCopyEM ( char *buf, ccp buf_end, ccp src, ssize_t max_copy )
+	{ return StringCopySM(buf,buf_end-buf,src,max_copy ); }
+static inline char * StringCopyEL ( char *buf, ccp buf_end, ccp src, ssize_t src_len )
+	{ return StringCopySL(buf,buf_end-buf,src,src_len ); }
 
-// alloc space and return
-char * StringCat2A  ( ccp src1, ccp src2 );
-char * StringCat3A  ( ccp src1, ccp src2, ccp src3 );
+// concat sources, *A(): use MALLOC()
+char * StringCat2S ( char *buf, ssize_t buf_size, ccp src1, ccp src2 );
+char * StringCat3S ( char *buf, ssize_t buf_size, ccp src1, ccp src2, ccp src3 );
+char * StringCat2E ( char *buf, ccp buf_end, ccp src1, ccp src2 );
+char * StringCat3E ( char *buf, ccp buf_end, ccp src1, ccp src2, ccp src3 );
+char * StringCat2A ( ccp src1, ccp src2 );
+char * StringCat3A ( ccp src1, ccp src2, ccp src3 );
 
 // like above, but cat with separators
-char * StringCatSep2S ( char *buf, size_t bufsize, ccp sep, ccp src1, ccp src2 );
-char * StringCatSep3S ( char *buf, size_t bufsize, ccp sep, ccp src1, ccp src2, ccp src3 );
-char * StringCatSep2E ( char *buf, ccp buf_end,    ccp sep, ccp src1, ccp src2 );
-char * StringCatSep3E ( char *buf, ccp buf_end,    ccp sep, ccp src1, ccp src2, ccp src3 );
+char * StringCatSep2S ( char *buf, ssize_t bufsize, ccp sep, ccp src1, ccp src2 );
+char * StringCatSep3S ( char *buf, ssize_t bufsize, ccp sep, ccp src1, ccp src2, ccp src3 );
+char * StringCatSep2E ( char *buf, ccp buf_end,     ccp sep, ccp src1, ccp src2 );
+char * StringCatSep3E ( char *buf, ccp buf_end,     ccp sep, ccp src1, ccp src2, ccp src3 );
 char * StringCatSep2A ( ccp sep, ccp src1, ccp src2 );
 char * StringCatSep3A ( ccp sep, ccp src1, ccp src2, ccp src3 );
 
 // center string
 ccp StringCenterE ( char * buf, ccp buf_end, ccp src, int width );
-static inline ccp StringCenterS ( char *buf, size_t bufsize, ccp src, int width )
+static inline ccp StringCenterS ( char *buf, ssize_t bufsize, ccp src, int width )
 	{ return StringCenterE(buf,buf+bufsize,src,width); }
 
-static inline char * StringCopySMem ( char *buf, size_t bufsize, mem_t mem )
+static inline char * StringCopySMem ( char *buf, ssize_t bufsize, mem_t mem )
 	{ return StringCopySM(buf,bufsize,mem.ptr,mem.len); }
 static inline char * StringCopyEMem ( char *buf, ccp buf_end, mem_t mem )
 	{ return StringCopyEM(buf,buf_end,mem.ptr,mem.len); }
 
-char * StringLowerS ( char * buf, size_t bufsize, ccp src );
-char * StringLowerE ( char * buf, ccp buf_end,    ccp src );
-char * StringUpperS ( char * buf, size_t bufsize, ccp src );
-char * StringUpperE ( char * buf, ccp buf_end,    ccp src );
+char * StringLowerS ( char * buf, ssize_t bufsize, ccp src );
+char * StringLowerE ( char * buf, ccp buf_end,     ccp src );
+char * StringUpperS ( char * buf, ssize_t bufsize, ccp src );
+char * StringUpperE ( char * buf, ccp buf_end,     ccp src );
 
-char * MemLowerE    ( char * buf, ccp buf_end,    mem_t src );
-char * MemLowerS    ( char * buf, size_t bufsize, mem_t src );
-char * MemUpperE    ( char * buf, ccp buf_end,    mem_t src );
-char * MemUpperS    ( char * buf, size_t bufsize, mem_t src );
+char * MemLowerE    ( char * buf, ccp buf_end,     mem_t src );
+char * MemLowerS    ( char * buf, ssize_t bufsize, mem_t src );
+char * MemUpperE    ( char * buf, ccp buf_end,     mem_t src );
+char * MemUpperS    ( char * buf, ssize_t bufsize, mem_t src );
 
 // special handling for unsigned decimals
 int StrNumCmp ( ccp a, ccp b );
@@ -1533,29 +1556,29 @@ mem_t  SkipEscapesM ( mem_t mem );
 
 // Concatenate path + path, return pointer to buf
 // Return pointer to   buf  or  path1|path2|buf  or  alloced string
-char *PathCatBufPP  ( char *buf, size_t bufsize, ccp path1, ccp path2 );
-char *PathCatBufPPE ( char *buf, size_t bufsize, ccp path1, ccp path2, ccp ext );
-ccp PathCatPP	    ( char *buf, size_t bufsize, ccp path1, ccp path2 );
-//ccp PathCatPPE    ( char *buf, size_t bufsize, ccp path1, ccp path2, ccp ext );
+char *PathCatBufPP  ( char *buf, ssize_t bufsize, ccp path1, ccp path2 );
+char *PathCatBufPPE ( char *buf, ssize_t bufsize, ccp path1, ccp path2, ccp ext );
+ccp PathCatPP	    ( char *buf, ssize_t bufsize, ccp path1, ccp path2 );
+//ccp PathCatPPE    ( char *buf, ssize_t bufsize, ccp path1, ccp path2, ccp ext );
 ccp PathAllocPP	    ( ccp path1, ccp path2 );
 ccp PathAllocPPE    ( ccp path1, ccp path2, ccp ext );
 
 // inline wrapper
-static inline ccp PathCatPPE ( char *buf, size_t bufsize, ccp path1, ccp path2, ccp ext )
+static inline ccp PathCatPPE ( char *buf, ssize_t bufsize, ccp path1, ccp path2, ccp ext )
 	{ return PathCatBufPPE(buf,bufsize,path1,path2,ext); }
 
 // like PathCatPP(), but ignores path2, if path1 is not empty and not a directory
-ccp PathCatDirP ( char * buf, size_t bufsize, ccp path1, ccp path2 );
+ccp PathCatDirP ( char * buf, ssize_t bufsize, ccp path1, ccp path2 );
 
 // Same as PathCatPP*(), but use 'base' as prefix for relative paths.
 // If 'base' is NULL (but not empty), use getcwd() instead.
 // PathCatBufBP() and PathCatBP() are special: path can be part of buf
-char *PathCatBufBP   ( char *buf, size_t bufsize, ccp base, ccp path );
-char *PathCatBufBPP  ( char *buf, size_t bufsize, ccp base, ccp path1, ccp path2 );
-char *PathCatBufBPPE ( char *buf, size_t bufsize, ccp base, ccp path1, ccp path2, ccp ext );
-ccp PathCatBP        ( char *buf, size_t bufsize, ccp base, ccp path );
-ccp PathCatBPP       ( char *buf, size_t bufsize, ccp base, ccp path1, ccp path2 );
-ccp PathCatBPPE      ( char *buf, size_t bufsize, ccp base, ccp path1, ccp path2, ccp ext );
+char *PathCatBufBP   ( char *buf, ssize_t bufsize, ccp base, ccp path );
+char *PathCatBufBPP  ( char *buf, ssize_t bufsize, ccp base, ccp path1, ccp path2 );
+char *PathCatBufBPPE ( char *buf, ssize_t bufsize, ccp base, ccp path1, ccp path2, ccp ext );
+ccp PathCatBP        ( char *buf, ssize_t bufsize, ccp base, ccp path );
+ccp PathCatBPP       ( char *buf, ssize_t bufsize, ccp base, ccp path1, ccp path2 );
+ccp PathCatBPPE      ( char *buf, ssize_t bufsize, ccp base, ccp path1, ccp path2, ccp ext );
 ccp PathAllocBP      ( ccp base, ccp path );
 ccp PathAllocBPP     ( ccp base, ccp path1, ccp path2 );
 ccp PathAllocBPPE    ( ccp base, ccp path1, ccp path2, ccp ext );
@@ -1567,8 +1590,8 @@ char * PathCombineFast ( char *dest_buf, uint buf_size, ccp path, ccp base_path 
 //	If ext==NULL or emtpy: remove only
 //	'ext' may start with '.'. If not, a additional '.' is included
 //	If 'path' is NULL or path==buf: Inplace job using 'buf' as source.
-char * NewFileExtE ( char * buf, ccp buf_end,    ccp path, ccp ext );
-char * NewFileExtS ( char * buf, size_t bufsize, ccp path, ccp ext );
+char * NewFileExtE ( char * buf, ccp buf_end,     ccp path, ccp ext );
+char * NewFileExtS ( char * buf, ssize_t bufsize, ccp path, ccp ext );
 
 // eliminate leading './' before comparing
 int StrPathCmp ( ccp path1, ccp path2 );

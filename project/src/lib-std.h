@@ -118,6 +118,9 @@ void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 void SetupColors();
 void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle );
 
+typedef enumError (*check_opt_func) ( int argc, char ** argv, bool mode );
+enumError CheckEnvOptions2 ( ccp varname, check_opt_func func );
+
 void NormalizeOptions
 (
     uint	log_level	// >0: print PROGRAM_NAME and pathes
@@ -2149,65 +2152,135 @@ enumError SavePrefixTableFN ( ccp fname, const mkw_prefix_t * tab );
 ///////////////////////////////////////////////////////////////////////////////
 // [[split_filename_t]]
 
-#define SUPPORT_SPLIT_SIGN 0
-
 typedef struct split_filename_t
 {
-    mem_t source;	// full source without leading directories
+    mem_t source;		// full source without leading directories
 
     //--- split source into 3 parts
 
-    mem_t f_name;	// name part
-    mem_t f_d;		// empty or "_d"
-    mem_t f_ext;	// file extention
+    mem_t f_name;		// %F source name, stripped
+    mem_t f_d;			// %D empty or "_d"
+    mem_t f_ext;		// %E file extention
 
     //--- split name into 3 parts
 
-    mem_t norm;		// normalized name, alloced
+    mem_t norm;			// %O normalized name, alloced
 
-    mem_t plus;
- #if SUPPORT_SPLIT_SIGN
-    mem_t sign;
- #endif
-    mem_t boost;
-    mem_t game1;
-    mem_t game2;
-    mem_t game;
-    mem_t name;
-    mem_t extra;
-    mem_t version;
-    mem_t authors;
-    mem_t attribs;
-    
+    mem_t plus;			// %P Plus prefix
+    mem_t boost;		// %b boost prefix
+    mem_t game1;		// %g first game prefix
+    mem_t game2;		// %G second game prefix
+    mem_t game;			// %p combined game prefix
+    mem_t name;			// %n name
+    mem_t extra;		// %x extra info
+    mem_t version;		// %v version nummber
+    mem_t authors;		// %a list of authors
+    mem_t attribs;		// %A list of attributes
+
 
     //--- misc
 
     uint	plus_order;
     uint	game_order;
-    uint	game_color;
+    uint	game1_color;
+    uint	game2_color;
+
+    u8		lap_count;	// %l number of laps, valid if >0.0
+    float	speed_factor;	// %s speed factor, valid if >0.0
 
     ccp		input;
     bool	input_alloced;
 }
 split_filename_t;
 
-//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
+// [[print_split_par_t]]
+
+typedef struct print_split_par_t
+{
+    ccp			format;		// format string
+    ccp			plus_mode;	// plus mode, only needed by PrintNameSPF()
+
+    u8			lap_count;	// number of laps, valid if >0.0
+    float		speed_factor;	// speed factor, valid if >0.0
+
+    int			u_skip_mode;	// skip '+': <0:never, 0:if unique, >0: always
+    int			u_skip_count;	// number of skipped tags
+    bool		u_use_list;	// true: use 'u_list' to find multi-used names
+    exmem_list_t	u_list;		// list of keywords until first '%+'
+    exmem_key_t		*u_item;	// last inderted/used element of 'u_list'
+}
+print_split_par_t;
+
+///////////////////////////////////////////////////////////////////////////////
 
 extern ccp opt_plus;
+extern ccp opt_printf;
 
 static inline void InitializeSPF ( split_filename_t *spf )
 	{ DASSERT(spf); memset(spf,0,sizeof(*spf)); }
 
 void ResetSPF ( split_filename_t *spf );
+
 void AnalyseSPF
 (
-    split_filename_t	*spf,		// valid pointet
+    split_filename_t	*spf,		// valid pointer
     bool		init_spf,	// true: InitializeSPF(), false: ResetSPF()
     ccp			source,		// NULL or ponter to name
-    ccp			src_end,	// end of source. if 0 then use strlen()
+    ccp			src_end,	// end of source. if 0 then use strlen().
     CopyMode_t		cpm,		// copy mode for 'source'
-    ccp			plus_mode	// NULL or string of format '[max][','][chars]'
+    ccp			plus_mode	// NULL or priority string
 );
+
+//-----------------------------------------------------------------------------
+
+void ResetPSP ( print_split_par_t *psp );
+
+exmem_t PrintSPF
+(
+    exmem_dest_t	*dest,		// Kind of destination, if NULL then MALLOC()
+    const split_filename_t
+			*spf,		// Valid and initialized source
+    print_split_par_t	*par		// valid struct with parameters
+);
+
+exmem_t PrintNameSPF
+(
+    exmem_dest_t	*dest,		// Kind of destination, if NULL then MALLOC()
+    ccp			source,		// NULL or pointer to name to analyze
+    ccp			src_end,	// End of source. If 0 then use strlen().
+    print_split_par_t	*par		// valid struct with parameters
+);
+
+// Convertion types in alphabertic order:
+//
+//	%a  authors,	list of authors, format "(authors)", options=0, curly braces
+//	%A  attribs,	list of attributes, format "(authors)", options=0
+//	%b  boost,	boost prefix
+//	%D  f_d,	empty or "_d"
+//	%e  extra,	extra info, format "(extra)", options=0, curly braces
+//	%E  f_ext,	file extention, format ".ext", options=0
+//	%g  game1,	first game prefix
+//	%G  game2,	second game prefix
+//	%F  f_name,	file name, stripped
+//	%l  lap_count
+//	%L  LOTTERY	ALIAS
+//	%n  name,	name
+//	%N  NAME	ALIAS for plus+boost+pre+name
+//	%O  norm,	normalized file name, alloced
+//	%p  game,	combined game prefix
+//	%P  plus,	plus prefix
+//	%R  RACE	ALIAS
+//	%s  speed_factor
+//	%v  version,	version nummber
+
+// Format options:
+//	'-'	align left
+//	' '	add leading space if not empty
+//	'0'	leading space
+//	'!'	suppress braces
+//	'({[<'	force a kind of braces
+//	'c'  insert color escape if known
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2420,6 +2493,7 @@ extern ccp		std_share_path;
 extern ccp		share_path;
 extern volatile int	verbose;
 extern volatile int	logging;
+extern volatile int	ext_errors;
 extern volatile int	log_timing;
 extern bool		allow_all;
 extern char		escape_char;

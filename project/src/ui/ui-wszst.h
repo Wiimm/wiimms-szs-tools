@@ -57,6 +57,7 @@ typedef enum enumOptions
 	//----- command specific options -----
 
 	OPT_PLUS,
+	OPT_PRINTF,
 	OPT_TOUCH,
 	OPT_AUTO,
 	OPT_SET_FLAGS,
@@ -192,7 +193,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 136
+	OPT__N_SPECIFIC, // == 137
 
 	//----- global options -----
 
@@ -208,6 +209,7 @@ typedef enum enumOptions
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
+	OPT_EXT_ERRORS,
 	OPT_TIMING,
 	OPT_WARN,
 	OPT_DE,
@@ -276,7 +278,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 215
+	OPT__N_TOTAL // == 217
 
 } enumOptions;
 
@@ -292,6 +294,7 @@ typedef enum enumOptions
 //	//----- command specific options -----
 //
 //	OB_PLUS			= 1llu << OPT_PLUS,
+//	OB_PRINTF		= 1llu << OPT_PRINTF,
 //	OB_TOUCH		= 1llu << OPT_TOUCH,
 //	OB_AUTO			= 1llu << OPT_AUTO,
 //	OB_SET_FLAGS		= 1llu << OPT_SET_FLAGS,
@@ -731,6 +734,7 @@ typedef enum enumOptions
 //				| OB_DEST2,
 //
 //	OB_CMD_SPLIT		= OB_PLUS
+//				| OB_PRINTF
 //				| OB_IGNORE
 //				| OB_GRP_SCRIPT
 //				| OB_DEST
@@ -1077,6 +1081,7 @@ typedef enum enumGetOpt
 	GO_VERSION		= 'V',
 	GO_WARN			= 'W',
 	GO_EXPORT		= 'X',
+	GO_EXT_ERRORS		= 'Y',
 
 	GO_ALL			= 'a',
 	GO_CONST		= 'c',
@@ -1111,6 +1116,7 @@ typedef enum enumGetOpt
 	GO_LE_CODE,
 	GO_LOAD_PREFIX,
 	GO_PLUS,
+	GO_PRINTF,
 	GO_CHDIR,
 	GO_TOUCH,
 	GO_AUTO,

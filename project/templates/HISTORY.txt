@@ -555,6 +555,26 @@ szs v2.27b r8534 - 2022-05-22
    KCL-TYPE were not recognized.
 
 
+szs v2.28a.beta r8612 - 2022-07-09
+
+ - There is a new property for parsing the command line. In a preliminary
+   step, the options "-@FILENAME" (1 argument) and "-@ FILENAME" (2 arguments)
+   are searched. Each occurrence is replaced by the contents of file FILENAME,
+   which again may contain "-@...". The maximum recursion depth is 10.
+   Wildcard patterns are not resolved.
+ - New command for all tools: EXPAND: All parameters are treated as a filename
+   with wildcards and all matching files are searched.
+ - New command: wszst SPLIT: Analyse (file) names and split them into the
+   different parts. Print the results in machine readable format.
+ - Command wlect CREATE re-implemented. Type 'wlect create help' for details.
+ - New command: wlect DISTRIBUTION: The command manages data for LE-CODE track
+   distributions. It reads any number of source files with different file
+   types, collects the data and creates any number of files with different
+   file types. Type 'wlect distribution' without arguments to get details.
+ - New file formats to support wlect DISTRIBUTION: LE-DEF, LE-DIS, LE-REF,
+   LE-STR, SHA1REF and PREFIX.
+
+
 @@MODULE(last-history.txt)@@
 
 

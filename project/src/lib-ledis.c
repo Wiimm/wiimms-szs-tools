@@ -1649,6 +1649,7 @@ void ResetLD ( le_distrib_t *ld )
 	ResetParamField(&ld->dis_param);
 	FREE(ld->lpar);
 	ResetLSP(&ld->spar);
+	FreeString(ld->separator);
 
 	if (ld->ctcode)
 	{
@@ -2290,6 +2291,8 @@ void ScanRefSTLD
 	IDX_MUSIC,
 	IDX_FLAGS,
 	IDX_HIDDEN,
+	IDX_LAPS,
+	IDX_SPEED,
 	IDX_SHA1,
 	IDX_SHA1_D,
 	IDX_IDENT,
@@ -2305,6 +2308,9 @@ void ScanRefSTLD
 
     while (NextLineScanText(st))
     {
+	if ( *st->line == '@' )
+	    continue;
+
 	mem_t srcline = { .ptr = st->line, .len = st->eol - st->line };
 	mem_t src[IDX__N+2];
 	const uint n = SplitByCharMem(src,IDX__N+1,srcline,'|');
@@ -2322,6 +2328,8 @@ void ScanRefSTLD
 	lt->property	= str2l(src[IDX_PROPERTY].ptr,0,10);
 	lt->music	= str2l(src[IDX_MUSIC].ptr,0,10);
 	lt->flags	= str2l(src[IDX_FLAGS].ptr,0,10);
+	lt->lap_count	= str2l(src[IDX_LAPS].ptr,0,10);
+	lt->speed_factor= strtof(src[IDX_SPEED].ptr,0);
 
 	char buf[LE_TRACK_STRING_MAX+1];
 	if ( n > IDX_SHA1  )	SetIdentOptLT(lt,xstring(buf,sizeof(buf),src[IDX_SHA1]),   0,1,ld->spar.opt );
@@ -2384,6 +2392,9 @@ void ScanStrSTLD
 
     while (NextLineScanText(st))
     {
+	if ( *st->line == '@' )
+	    continue;
+
 	mem_t srcline = { .ptr = st->line, .len = st->eol - st->line };
 	mem_t src[IDX__N+2];
 	const uint n = SplitByCharMem(src,IDX__N+1,srcline,'|');
@@ -2409,7 +2420,7 @@ void ScanStrSTLD
 	StringCopySM(buf,sizeof(buf),src[IDX_STRING].ptr,src[IDX_STRING].len);
 	ScanEscapedStringPipe(buf,sizeof(buf),buf,0);
 
-	PRINT1(">>>> %s = %s\n",GetNameLSP(&spar),buf);
+	PRINT0(">>>> %s = %s\n",GetNameLSP(&spar),buf);
 	const int dmode = str2l(src[IDX_D_MODE].ptr,0,10);
 	if ( dmode == 2 )
 	    spar.use_d = true;
@@ -2463,7 +2474,7 @@ bool ScanSha1LineLD
     bool		ident_only	// TRUE: SetIdent*LT() only
 )
 {
-    if ( !ld || !src || !end )
+    if ( !ld || !src || *src == '@' || !end )
 	return false;
 
     bool is_arena	= false;
@@ -2718,14 +2729,17 @@ static enumError ScanLeDefTRACKS
     if ( !ld || !si )
 	return ERR_MISSING_PARAM;
 
-    enum { C_SLOT, C_TRACK, C_IDENT, C_FILE, C_NAME, C_XNAME,
+    enum { C_SLOT, C_TRACK, C_LAPS, C_SPEED, C_IDENT, C_FILE, C_NAME, C_XNAME,
 		C_LIST, C_STD_ARENAS, C_STD_VERSUS };
-    enum { O_STRING = 0x100 };
+    enum { O_CURRENT = 0x100, O_STRING = 0x200 };
 
     static const KeywordTab_t commands[] =
     {
 	{ C_SLOT,	"SLOT",			0,		0 },
 	{ C_TRACK,	"TRACK",		0,		0 },
+
+	{ C_LAPS,	"LAPS",			"LAP",		O_CURRENT },
+	{ C_SPEED,	"SPEED",		0,		O_CURRENT },
 
 	{ C_IDENT,	"IDENT",		0,		O_STRING },
 	{ C_FILE,	"FILE",			0,		O_STRING },
@@ -2791,27 +2805,28 @@ static enumError ScanLeDefTRACKS
 		continue;
 	}
 
-	const le_options_t opt = cmd ? cmd->opt : 0;
+	const le_options_t opt = cmd ? cmd->opt : O_CURRENT;
+	if ( !current_lt && opt & (O_CURRENT|O_STRING) )
+	{
+	    if (!si->no_warn)
+	    {
+		ccp eol = FindNextLineFeedSI(si,true);
+		ScanFile_t *sf = si->cur_file;
+		DASSERT(sf);
+		ERROR0(ERR_WARNING,
+			"File %s, section [TRACK-LIST], line #%u:\nNo current track: %.*s\n",
+			sf->name, sf->line,
+			(int)(eol - sf->prev_ptr), sf->prev_ptr );
+	    }
+	    if ( max_err < ERR_WARNING )
+		max_err = ERR_WARNING;
+	    GotoEolSI(si);
+	    continue;
+	}
+
 	if ( opt & O_STRING || define_set )
 	{
-	    if (!current_lt)
-	    {
-		if (!si->no_warn)
-		{
-		    ccp eol = FindNextLineFeedSI(si,true);
-		    ScanFile_t *sf = si->cur_file;
-		    DASSERT(sf);
-		    ERROR0(ERR_WARNING,
-			    "File %s, section [TRACK-LIST], line #%u:\nNo current track: %.*s\n",
-			    sf->name, sf->line,
-			    (int)(eol - sf->prev_ptr), sf->prev_ptr );
-		}
-		if ( max_err < ERR_WARNING )
-		    max_err = ERR_WARNING;
-		GotoEolSI(si);
-		continue;
-	    }
-
+	    DASSERT(current_lt);
 	    enumError err = ScanStringSI(si,&string_par);
 	    if ( max_err < err )
 		max_err = err;
@@ -2872,6 +2887,24 @@ static enumError ScanLeDefTRACKS
 		    }
 		}
 		ClearLT(&temp,0);
+	    }
+	    break;
+
+	 case C_LAPS:
+	    ASSERT(current_lt);
+	    {
+		uint uval;
+		if ( !ScanUIntValueSI(si,&uval) && uval > 0 && uval < 10 )
+		    current_lt->lap_count = uval;
+	    }
+	    break;
+
+	 case C_SPEED:
+	    ASSERT(current_lt);
+	    {
+		double dval;
+		if ( !ScanDValueSI(si,&dval) && dval > 0.0 )
+		    current_lt->speed_factor = dval;
 	    }
 	    break;
 
@@ -3705,7 +3738,9 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 	    ScanOptTrackSource(".",1,opt_szs_mode);
 
 	err = ERR_OK;
-	le_track_arch_t *ta = GetNextArchLD(ld);
+	le_track_arch_t *ta= GetNextArchLD(ld);
+	ta->lt.lap_count    = as.lap_count;
+	ta->lt.speed_factor = as.speed_factor;
 
 	if (szs.is_arena)
 	{
@@ -3751,11 +3786,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 	StringCopySM(buf,sizeof(buf),spf.f_name.ptr,spf.f_name.len);
 	SetFileLT(&ta->lt,&spar,buf);
 
-     #if SUPPORT_SPLIT_SIGN
-	mem_t list[]	= { spf.sign, spf.boost, spf.game, spf.name, spf.extra };
-     #else
 	mem_t list[]	= { spf.boost, spf.game, spf.name, spf.extra };
-     #endif
 	mem_src_t msrc	= { .src = list, .n_src = sizeof(list)/sizeof(*list) };
 	exmem_t exsum	= ExMemCat(&exdest,space,&msrc);
 	SetNameLT(&ta->lt,&spar,exsum.data.ptr);
@@ -3809,7 +3840,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 
 	ta->plus_order = spf.plus_order;
 	ta->game_order = spf.game_order;
-//	ta->game_color = spf.game_color;
+//	ta->game_color = spf.game1_color;
 
 
 	//-- clean
@@ -4404,10 +4435,15 @@ static enumError search_func
     ASSERT(s);
     ASSERT(s->ld);
 
-    const enumError err = ImportFileLD(s->ld,path.ptr,false,false);
+    raw_data_t raw;
+    enumError err = LoadRawData(&raw,true,path.ptr,0,opt_ignore>0,0);
+    if (!err)
+	err = ImportRawDataLD(s->ld,&raw);
+    ResetRawData(&raw);
+
+    s->count++;
     if ( s->max_err < err )
 	 s->max_err = err;
-    s->count++;
     return err;
 }
 
@@ -4421,6 +4457,7 @@ enumError ImportFileLD
     bool		support_options		// support options (leading '+' and no slash )
 )
 {
+    PRINT0("ImportFileLD(,%s,%d,%d)\n",fname,use_wildcard,support_options);
     enumError err = ERR_MISSING_PARAM;
     if ( ld && fname )
     {
@@ -4434,6 +4471,7 @@ enumError ImportFileLD
 	    struct stat st;
 	    if ( use_wildcard && HaveWildcards(MemByString(fname)) && stat(fname,&st) )
 	    {
+		PRINT0(" > SEARCH %s\n",fname);
 		struct search_t param = { .ld = ld };
 		SearchPaths(fname,0,false,search_func,&param);
 		return param.count
@@ -4827,14 +4865,15 @@ enumError CreateRefLD ( FILE *f, le_distrib_t *ld, bool add_strings )
     UpdateCupsLD(ld);
     SetupReferenceList(ld,filter_options_td,ld->spar.opt);
 
-    fprintf(f,"%s : LE-CODE track reference v1\r\n",LE_REFERENCE_MAGIC8);
+    fprintf(f,"%s : LE-CODE track reference v1.%u\r\n@VERSION=%u\r\n",
+		LE_REFERENCE_MAGIC8, LE_REFERENCE_VERSION, LE_REFERENCE_VERSION );
 
     ccp filter = GetOutputFilterLEO(ld->spar.opt&LEO_M_OUTPUT);
     if (filter)
 	fprintf(f,"# Active output filter: %s\r\n",filter);
 
     fprintf(f,
-	"#> track_slot|type|orig|cup_slot|cup_slot_name|property|music|flags|hidden|sha1|sha1_d|%s\r\n",
+	"#> track_slot|type|orig|cup_slot|cup_slot_name|property|music|flags|hidden|laps|speed|sha1|sha1_d|%s\r\n",
 	add_strings ? "ident|ident_d|file|file_d|name|name_d|xname|xname_d|" : "" );
 
     const bool no_d = ( ld->spar.opt & LEO_NO_D_FILES ) != 0;
@@ -4845,12 +4884,13 @@ enumError CreateRefLD ( FILE *f, le_distrib_t *ld, bool add_strings )
 	count++;
 	const le_track_t *lt = *plt;
 
-	fprintf(f,"%u|%s|%u|%u|%s|%u|%u|%u|%u|%s|%s|",
+	fprintf(f,"%u|%s|%u|%u|%s|%u|%u|%u|%u|%u|%5.3f|%s|%s|",
 		lt->track_slot, GetNameLTTY(lt->track_type),
 		lt->is_original,
 		lt->cup_slot, GetCupLT(lt,""),
 		lt->property, lt->music,
 		lt->flags, IsHiddenLETF(lt->flags),
+		lt->lap_count, lt->speed_factor,
 		GetSha1LT(lt,0,""),
 		no_d ? 0 : GetSha1LT(lt,1,"") );
 
@@ -4892,7 +4932,8 @@ enumError CreateStringsLD ( FILE *f, le_distrib_t *ld )
 	return ERR_MISSING_PARAM;
 
     SetupReferenceList(ld,filter_options_td,ld->spar.opt);
-    fprintf(f,"%s : LE-CODE track strings v1\r\n",LE_STRINGS_MAGIC8);
+    fprintf(f,"%s : LE-CODE track strings v1.%u\r\n@VERSION=%u\r\n",
+		LE_STRINGS_MAGIC8, LE_STRINGS_VERSION, LE_STRINGS_VERSION );
 
     ccp filter = GetOutputFilterLEO(ld->spar.opt&LEO_M_OUTPUT);
     if (filter)
@@ -5103,8 +5144,11 @@ enumError CreateSha1LD
     {
 	fprintf(f,
 	    "%s\r\n"
+	    "@VERSION=%u\r\n"
 	    "# A SHA1 list, that can be used for example @ Wiimmfi.de\r\n"
-	    ,LE_SHA1REF_MAGIC8 );
+	    ,LE_SHA1REF_MAGIC8
+	    ,LE_SHA1REF_VERSION
+	    );
 
 	ccp filter = GetOutputFilterLEO(ld->spar.opt&LEO_M_OUTPUT);
 	if ( filter && *filter )
@@ -5287,10 +5331,17 @@ static void print_ledef_track
 		     max_len = slen;
 	    }
     }
-    max_len = ( max_len + 18 ) / 8 * 8 - 1;
  #else
     int max_len = 7;
  #endif
+
+    max_len = ( max_len + 18 ) / 8 * 8 - 1;
+    const int n_tabs = ( max_len - 7 ) / 8;
+
+    if ( lt->lap_count > 0 && lt->track_type & LTTY_TRACK )
+	fprintf(f,"\tlaps%.*s%u\r\n",n_tabs,Tabs20,lt->lap_count);
+    if ( lt->speed_factor > 0.0 )
+	fprintf(f,"\tspeed%.*s%5.3f\r\n",n_tabs,Tabs20,lt->speed_factor);
 
     print_ledef_text(f,ld,max_len,"ident",GetIdentLT(lt,false,true,0));
     print_ledef_text(f,ld,max_len,"file",GetFileLT(lt,0));
@@ -5642,7 +5693,7 @@ enumError CreateBmgLD ( FILE *f, le_distrib_t *ld, bool bmg_text )
 
     le_options_t source = ld->spar.opt & LEO_M_BMG;
     if (!source)
-	source = LEO_M_BMG;
+	source = LEO_DEFAULT_BMG;
 
     for ( int slot = 0; slot < ld->tlist_used; slot++ )
     {
@@ -5668,7 +5719,7 @@ enumError CreateBmgLD ( FILE *f, le_distrib_t *ld, bool bmg_text )
 	    {
 		bmg_item_t *bi = InsertItemBMG(&bmg,mid,0,0,0);
 		ASSERT(bi);
-		AssignItemTextBMG(bi,text,-1);
+		AssignItemScanTextBMG(bi,text,-1);
 	    }
 	}
 
@@ -5684,7 +5735,7 @@ enumError CreateBmgLD ( FILE *f, le_distrib_t *ld, bool bmg_text )
 	    {
 		bmg_item_t *bi = InsertItemBMG(&bmg,mid,0,0,0);
 		ASSERT(bi);
-		AssignItemTextBMG(bi,text,-1);
+		AssignItemScanTextBMG(bi,text,-1);
 	    }
 	}
 
@@ -5692,14 +5743,14 @@ enumError CreateBmgLD ( FILE *f, le_distrib_t *ld, bool bmg_text )
 	{
 	    bmg_item_t *bi = InsertItemBMG(&bmg,slot+MID_CT_TRACK_BEG,0,0,0);
 	    ASSERT(bi);
-	    AssignItemTextBMG(bi,text,-1);
+	    AssignItemScanTextBMG(bi,text,-1);
 	}
 
 	if ( source & LEO_LECODE )
 	{
 	    bmg_item_t *bi = InsertItemBMG(&bmg,slot+MID_LE_TRACK_BEG,0,0,0);
 	    ASSERT(bi);
-	    AssignItemTextBMG(bi,text,-1);
+	    AssignItemScanTextBMG(bi,text,-1);
 	}
     }
 
@@ -5899,6 +5950,112 @@ enumError CreateDebugLD ( FILE *f, const le_distrib_t *ld )
 ///////////////		le_distrib_t: text jobs			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+enumError SeparatorLD ( le_distrib_t *ld, ccp arg )
+{
+    if (!ld)
+	return ERR_MISSING_PARAM;
+
+    FreeString(ld->separator);
+    ld->separator = !arg ? 0 : !*arg ? EmptyString : STRDUP(arg);
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CopyLD ( le_distrib_t *ld, const le_strpar_t *dest,
+				     const le_strpar_t *src, int n_src )
+{
+    if ( !ld || !dest || !src || n_src < 1 )
+	return ERR_MISSING_PARAM;
+
+    char buf[LE_TRACK_STRING_MAX+10];
+    ccp sep = ld->separator ? ld->separator : " ";
+
+    SetupReferenceList(ld,filter_options_td,dest->opt);
+    for ( le_track_t **plt = ld->reflist; *plt; plt++ )
+    {
+	le_track_t *lt = *plt;
+	char *bufptr = buf;
+	for ( int idx = 0; idx < n_src; idx++ )
+	{
+	    if ( bufptr > buf )
+		bufptr = StringCopyE(bufptr,buf+sizeof(buf),sep);
+	    ccp text = GetTextLT(lt,src+idx,0);
+	    if (IsInputNameValidLEO(text,src[idx].opt))
+		bufptr = StringCopyE(bufptr,buf+sizeof(buf),text);
+	    if ( bufptr >= buf + LE_TRACK_STRING_MAX )
+	    {
+		buf[LE_TRACK_STRING_MAX-1] = 0;
+		break;
+	    }
+	}
+
+	ccp *ptr = GetPtrLT(lt,dest);
+	if (IsAssignmentAllowedLEO( ptr ? *ptr : 0,buf,dest->opt))
+	    SetTextLT(lt,dest,buf);
+    }
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError SplitLD
+	( le_distrib_t *ld, const le_strpar_t *dest, const le_strpar_t *src, ccp arg )
+{
+    if ( !ld || !dest || !src || !arg )
+	return ERR_MISSING_PARAM;
+
+    PRINT0("SPLIT: %s := %s / %s\n",GetNameLSP(dest),GetNameLSP(src),arg);
+
+    typedef struct { le_track_t *first; bool done; } storage_t;
+    char destbuf[LE_TRACK_STRING_MAX+10];
+    exmem_dest_t exdest = { .buf = destbuf, .buf_size = sizeof(destbuf), .try_circ = true };
+
+    print_split_par_t psp = { .format = arg, .plus_mode = opt_plus, .u_use_list = true };
+
+    SetupReferenceList(ld,filter_options_td,dest->opt);
+    for ( le_track_t **plt = ld->reflist; *plt; plt++ )
+    {
+	le_track_t *lt = *plt;
+	ccp text = GetTextLT(lt,src,0);
+	exmem_t res = PrintNameSPF(&exdest,text,0,&psp);
+	SetTextLT(lt,dest,res.data.ptr);
+	if (psp.u_item)
+	{
+	    exmem_key_t *ek  = psp.u_item;
+	    if (!ek->data.data.ptr)
+	    {
+		ek->data.data.ptr	= CALLOC(1,sizeof(storage_t));
+		ek->data.data.len	= sizeof(storage_t);
+		ek->data.is_alloced	= true;
+		storage_t *st		= (storage_t*)ek->data.data.ptr;
+		st->first		= lt;
+	    }
+	    else
+	    {
+		storage_t *st = (storage_t*)ek->data.data.ptr;
+		ASSERT(st);
+		ASSERT(st->first);
+		ASSERT(st->first!=lt);
+		if (!st->done)
+		{
+		    st->done = true;
+		    ccp text2 = GetTextLT(st->first,src,0);
+		    exmem_t res2 = PrintNameSPF(&exdest,text2,0,&psp);
+		    SetTextLT(st->first,dest,res2.data.ptr);
+		    FreeExMem(&res2);
+		}
+	    }
+	}
+	FreeExMem(&res);
+    }
+
+    ResetPSP(&psp);
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 enumError SubstLD ( le_distrib_t *ld, const le_strpar_t *dest, ccp arg )
 {
     if ( !ld || !dest || !arg || !*arg )
@@ -5940,42 +6097,6 @@ enumError SubstLD ( le_distrib_t *ld, const le_strpar_t *dest, ccp arg )
 
     ResetRegex(&re);
     ResetFastBuf(&result.b);
-    return ERR_OK;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-enumError CopyLD ( le_distrib_t *ld, const le_strpar_t *dest,
-				     const le_strpar_t *src, int n_src )
-{
-    if ( !ld || !dest || !src || n_src < 1 )
-	return ERR_MISSING_PARAM;
-
-    char buf[LE_TRACK_STRING_MAX+10];
-
-    SetupReferenceList(ld,filter_options_td,dest->opt);
-    for ( le_track_t **plt = ld->reflist; *plt; plt++ )
-    {
-	le_track_t *lt = *plt;
-	char *bufptr = buf;
-	for ( int idx = 0; idx < n_src; idx++ )
-	{
-	    if ( bufptr > buf )
-		*bufptr++ = '\1';
-	    ccp text = GetTextLT(lt,src+idx,0);
-	    if (IsInputNameValidLEO(text,src[idx].opt))
-		bufptr = StringCopyE(bufptr,buf+sizeof(buf),text);
-	    if ( bufptr >= buf + LE_TRACK_STRING_MAX )
-	    {
-		buf[LE_TRACK_STRING_MAX-1] = 0;
-		break;
-	    }
-	}
-
-	ccp *ptr = GetPtrLT(lt,dest);
-	if (IsAssignmentAllowedLEO( ptr ? *ptr : 0,buf,dest->opt))
-	    SetTextLT(lt,dest,buf);
-    }
     return ERR_OK;
 }
 

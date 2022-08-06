@@ -572,13 +572,19 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
 	0,
 	"This debug option enables the logging of internal lists and maps. Set"
-	" it up to three times to be more verbose.\n"
+	" it up to three times to be more verbose."
+    },
+
+    {	OPT_EXT_ERRORS, false, false, false, false, false, 'Y', "extended-errors",
+	0,
+	"Enable extended error messages. This includes a source file and line"
+	" reference. Logging level 1 activates it too. --xerr is a short cut."
     },
 
     {	OPT_TIMING, false, false, false, false, false, 0, "timing",
 	0,
 	"Activate the timing of some operations. Logging level 3 activates"
-	" them too.\n"
+	" them too."
     },
 
     {	OPT_WARN, false, false, false, false, false, 'W', "warn",
@@ -898,7 +904,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" directory."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 120
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 121
 
 };
 
@@ -1109,7 +1115,7 @@ static const KeywordTab_t CommandTab[] =
 ///////////////            OptionShort & OptionLong             ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static const char OptionShort[] = "Vh@qvLW:c:lBHT:A:R:td:D:E:orupi0U";
+static const char OptionShort[] = "Vh@qvLYW:c:lBHT:A:R:td:D:E:orupi0U";
 
 static const struct option OptionLong[] =
 {
@@ -1129,6 +1135,9 @@ static const struct option OptionLong[] =
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
+	{ "extended-errors",	0, 0, 'Y' },
+	 { "extendederrors",	0, 0, 'Y' },
+	 { "xerr",		0, 0, 'Y' },
 	{ "timing",		0, 0, GO_TIMING },
 	{ "warn",		1, 0, 'W' },
 	{ "de",			0, 0, GO_DE },
@@ -1319,7 +1328,9 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x055 U */	OPT_UPPER,
 	/* 0x056 V */	OPT_VERSION,
 	/* 0x057 W */	OPT_WARN,
-	/* 0x058   */	 0,0,0,0, 0,0,0,0, 0,0,0,
+	/* 0x058   */	 0,
+	/* 0x059 Y */	OPT_EXT_ERRORS,
+	/* 0x05a   */	 0,0,0,0, 0,0,0,0, 0,
 	/* 0x063 c */	OPT_CONST,
 	/* 0x064 d */	OPT_DEST,
 	/* 0x065   */	 0,0,0,
@@ -1640,6 +1651,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
+	OptionInfo + OPT_EXT_ERRORS,
 	OptionInfo + OPT_TIMING,
 	OptionInfo + OPT_WARN,
 	OptionInfo + OPT_DE,
@@ -1786,6 +1798,7 @@ static const InfoOption_t * option_tab_cmd_HEXDUMP[] =
 	OptionInfo + OPT_FADDR,
 	OptionInfo + OPT_SNAME,
 	OptionInfo + OPT_LOGGING,
+	OptionInfo + OPT_EXT_ERRORS,
 	OptionInfo + OPT_TIMING,
 
 	OptionInfo + OPT_NONE, // separator
@@ -2054,7 +2067,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms StaticR Tool : Manipulate the 'main.dol' and 'StaticR.rel'"
 	" files of Mario Kart Wii.",
 	0,
-	42,
+	43,
 	option_tab_tool,
 	0
     },
@@ -2281,7 +2294,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" Select parts by --vaddr, --faddr and --sname. Without selectors, the"
 	" whole file is dumped.",
 	0,
-	33,
+	34,
 	option_tab_cmd_HEXDUMP,
 	option_allowed_cmd_HEXDUMP
     },

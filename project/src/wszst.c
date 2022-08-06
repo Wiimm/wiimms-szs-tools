@@ -601,6 +601,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(file_type_t)
 	SIZEOF_INFO_ENTRY(mkw_prefix_t)
 	SIZEOF_INFO_ENTRY(split_filename_t)
+	SIZEOF_INFO_ENTRY(print_split_par_t)
 
     SIZEOF_INFO_TERM()
 };
@@ -2598,6 +2599,8 @@ static enumError cmd_split()
     split_filename_t spf;
     InitializeSPF(&spf);
 
+    print_split_par_t psp = { .format = opt_printf, .u_use_list = true };
+
     File_t fo;
     InitializeFile(&fo);
 
@@ -2640,26 +2643,36 @@ static enumError cmd_split()
 	print_split_val(&ps,"normed",spf.norm);
 	print_split_val(&ps,"plus",spf.plus);
 	PrintScriptVars(&ps,0,"plus_order=%d\n",spf.plus_order);
-
-     #if SUPPORT_SPLIT_SIGN
-	print_split_val(&ps,"sign",spf.sign);
-     #endif
 	print_split_val(&ps,"boost",spf.boost);
 
 	print_split_val(&ps,"game1",spf.game1);
 	print_split_val(&ps,"game2",spf.game2);
 	print_split_val(&ps,"game",spf.game);
-	PrintScriptVars(&ps,0,"game_order=%d\ngame_color=%d\n",
-				spf.game_order, spf.game_color );
+	PrintScriptVars(&ps,0,"game_order=%d\ngame1_color=%d\ngame2_color=%d\n",
+				spf.game_order, spf.game1_color, spf.game2_color );
 
 	print_split_val(&ps,"name",spf.name);
 	print_split_val(&ps,"extra",spf.extra);
 	print_split_val(&ps,"version",spf.version);
 	print_split_val(&ps,"authors",spf.authors);
 	print_split_val(&ps,"attribs",spf.attribs);
+	
+	PrintScriptVars(&ps,0,"lap_count=%u\n",spf.lap_count);
+	if ( spf.speed_factor > 0.0 )
+	    PrintScriptVars(&ps,0,"speed_factor=%5.3f\n",spf.speed_factor);
+	else
+	    PutScriptVars(&ps,0,"speed_factor=0\n");
+
+	if (opt_printf)
+	{
+	    exmem_t res = PrintSPF(0,&spf,&psp);
+	    print_split_val(&ps,"printf",res.data);
+	    FreeExMem(&res);
+	}
 
 	PrintScriptVars(&ps,2,"duration_nsec=%llu\n",duration_nsec);
 
+	fflush(ps.f);
 	if (!script_array)
 	{
 	    PrintScriptFooter(&ps);
@@ -2671,6 +2684,7 @@ static enumError cmd_split()
     PrintScriptFooter(&ps);
     ResetPrintScript(&ps);
     ResetFile(&fo,0);
+    ResetPSP(&psp);
     ResetSPF(&spf);
     return max_err;
 }
@@ -2842,7 +2856,7 @@ static enumError cmd_features()
 	//--- print result
 
 	PrintScriptVars(&ps,1,"file=\"%s\"\n",dest);
-	PrintFeaturesSZS( &ps, &fs, false, comments,
+	PrintFeaturesSZS( &ps, &fs, false, comments, long_count,
 				opt_pmodes, opt_fmodes_include, opt_fmodes_exclude );
 	PutScriptVars(&ps,2,0);
 
@@ -5596,6 +5610,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_EXT_ERRORS:	ext_errors++; break;
 	case GO_TIMING:		log_timing++; break;
 	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
@@ -5610,6 +5625,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_AUTO:		break;
 	case GO_LOAD_PREFIX:	err += ScanOptLoadPrefix(optarg); break;
 	case GO_PLUS:		opt_plus = optarg; break;
+	case GO_PRINTF:		opt_printf = optarg; break;
 	case GO_SET_FLAGS:	err += ScanOptSetFlags(optarg); break;
 	case GO_SET_SCALE:	err += ScanOptSetScale(optarg); break;
 	case GO_SET_ROT:	err += ScanOptSetRot(optarg); break;
@@ -6017,7 +6033,7 @@ int main_wszst ( int argc, char ** argv )
 	hint_exit(ERR_OK);
     }
 
-    enumError err = CheckEnvOptions("WSZST_OPT",CheckOptions);
+    enumError err = CheckEnvOptions2("WSZST_OPT",CheckOptions);
     if (err)
 	hint_exit(err);
 

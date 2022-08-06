@@ -139,7 +139,7 @@ int ScanOptSzsMode ( ccp arg )
 	return 1;
 
     opt_szs_mode = cmd->id;
-    PRINT1("SZS-MODE=%d\n",opt_szs_mode);
+    PRINT("SZS-MODE=%d\n",opt_szs_mode);
     return 0;
 }
 

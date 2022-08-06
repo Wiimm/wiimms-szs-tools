@@ -408,22 +408,19 @@ void FreeString ( ccp str )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-char * StringCopyE ( char * buf, ccp buf_end, ccp src )
+char * StringCopyS ( char * buf, ssize_t buf_size, ccp src )
 {
-    // RESULT: end of copied string pointing to NULL
-    // 'src' may be a NULL pointer.
-
-    if ( buf >= buf_end )
-	return (char*)buf_end - 1;
-
     DASSERT(buf);
-    DASSERT(buf<buf_end);
+    if ( !buf || buf_size <= 0 )
+	return buf;
 
     if (src)
     {
-	buf_end--;
-	while( buf < buf_end && *src )
-	    *buf++ = *src++;
+	size_t slen = strlen(src);
+	if ( slen >= buf_size )
+	    slen = buf_size-1;
+	memcpy(buf,src,slen);
+	buf += slen;
     }
 
     *buf = 0;
@@ -432,37 +429,22 @@ char * StringCopyE ( char * buf, ccp buf_end, ccp src )
 
 //-----------------------------------------------------------------------------
 
-char * StringCopyS ( char * buf, size_t buf_size, ccp src )
+char * StringCopySM ( char * buf, ssize_t buf_size, ccp src, ssize_t max_copy )
 {
     DASSERT(buf);
-    if ( buf_size <= 0 )
+    if ( !buf || buf_size <= 0 )
 	return buf;
 
-    DASSERT(buf_size>=0);
-
     if (src)
-	while( --buf_size > 0 && *src )
-	    *buf++ = *src++;
-    *buf = 0;
-    return buf;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-char * StringCopyEM ( char * buf, ccp buf_end, ccp src, ssize_t max_copy )
-{
-    // RESULT: end of copied string pointing to NULL
-    // 'src' may be a NULL pointer.
-
-    DASSERT(buf);
-    DASSERT(buf<buf_end);
-    buf_end--;
-    if ( max_copy >= 0 && buf + max_copy < buf_end )
-	buf_end = buf + max_copy;
-
-    if (src)
-	while( buf < buf_end && *src )
-	    *buf++ = *src++;
+    {
+	size_t slen = strlen(src);
+	if ( slen >= buf_size )
+	    slen = buf_size-1;
+	if ( max_copy >= 0 && slen >= max_copy )
+	    slen = max_copy;
+	memcpy(buf,src,slen);
+	buf += slen;
+    }
 
     *buf = 0;
     return buf;
@@ -470,9 +452,24 @@ char * StringCopyEM ( char * buf, ccp buf_end, ccp src, ssize_t max_copy )
 
 //-----------------------------------------------------------------------------
 
-char * StringCopySM ( char * buf, size_t buf_size, ccp src, ssize_t max_copy )
+char * StringCopySL ( char * buf, ssize_t buf_size, ccp src, ssize_t src_len )
 {
-    return StringCopyEM(buf,buf+buf_size,src,max_copy);
+    DASSERT(buf);
+    if ( !buf || buf_size <= 0 )
+	return buf;
+
+    if (src)
+    {
+	if ( src_len < 0 )
+	    src_len = strlen(src);
+	if ( src_len >= buf_size )
+	    src_len = buf_size-1;
+	memcpy(buf,src,src_len);
+	buf += src_len;
+    }
+
+    *buf = 0;
+    return buf;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -500,7 +497,7 @@ char * StringCat2E ( char * buf, ccp buf_end, ccp src1, ccp src2 )
 
 //-----------------------------------------------------------------------------
 
-char * StringCat2S ( char * buf, size_t buf_size, ccp src1, ccp src2 )
+char * StringCat2S ( char * buf, ssize_t buf_size, ccp src1, ccp src2 )
 {
     return StringCat2E(buf,buf+buf_size,src1,src2);
 }
@@ -541,7 +538,7 @@ char * StringCatSep2E ( char * buf, ccp buf_end, ccp sep, ccp src1, ccp src2 )
 
 //-----------------------------------------------------------------------------
 
-char * StringCatSep2S ( char * buf, size_t buf_size, ccp sep, ccp src1, ccp src2 )
+char * StringCatSep2S ( char * buf, ssize_t buf_size, ccp sep, ccp src1, ccp src2 )
 {
     return StringCatSep2E(buf,buf+buf_size,sep,src1,src2);
 }
@@ -575,7 +572,7 @@ char * StringCat3E ( char * buf, ccp buf_end, ccp src1, ccp src2, ccp src3 )
 
 //-----------------------------------------------------------------------------
 
-char * StringCat3S ( char * buf, size_t buf_size, ccp src1, ccp src2, ccp src3 )
+char * StringCat3S ( char * buf, ssize_t buf_size, ccp src1, ccp src2, ccp src3 )
 {
     return StringCat3E(buf,buf+buf_size,src1,src2,src3);
 }
@@ -631,7 +628,7 @@ char * StringCatSep3E
 //-----------------------------------------------------------------------------
 
 char * StringCatSep3S
-	( char * buf, size_t buf_size, ccp sep, ccp src1, ccp src2, ccp src3 )
+	( char * buf, ssize_t buf_size, ccp sep, ccp src1, ccp src2, ccp src3 )
 {
     return StringCatSep3E(buf,buf+buf_size,sep,src1,src2,src3);
 }
@@ -745,7 +742,7 @@ char * StringLowerE ( char * buf, ccp buf_end, ccp src )
 
 //-----------------------------------------------------------------------------
 
-char * StringLowerS ( char * buf, size_t buf_size, ccp src )
+char * StringLowerS ( char * buf, ssize_t buf_size, ccp src )
 {
     return StringLowerE(buf,buf+buf_size,src);
 }
@@ -777,7 +774,7 @@ char * MemLowerE ( char * buf, ccp buf_end, mem_t src )
 
 //-----------------------------------------------------------------------------
 
-char * MemLowerS ( char * buf, size_t buf_size, mem_t src )
+char * MemLowerS ( char * buf, ssize_t buf_size, mem_t src )
 {
     return MemLowerE(buf,buf+buf_size,src);
 }
@@ -806,7 +803,7 @@ char * StringUpperE ( char * buf, ccp buf_end, ccp src )
 
 //-----------------------------------------------------------------------------
 
-char * StringUpperS ( char * buf, size_t buf_size, ccp src )
+char * StringUpperS ( char * buf, ssize_t buf_size, ccp src )
 {
     return StringUpperE(buf,buf+buf_size,src);
 }
@@ -838,7 +835,7 @@ char * MemUpperE ( char * buf, ccp buf_end, mem_t src )
 
 //-----------------------------------------------------------------------------
 
-char * MemUpperS ( char * buf, size_t buf_size, mem_t src )
+char * MemUpperS ( char * buf, ssize_t buf_size, mem_t src )
 {
     return MemUpperE(buf,buf+buf_size,src);
 }
@@ -1008,7 +1005,7 @@ int SleepNSec ( s_nsec_t nsec )
 ///////////////				PathCat*()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-char * PathCatBufPP ( char * buf, size_t bufsize, ccp path1, ccp path2 )
+char * PathCatBufPP ( char * buf, ssize_t bufsize, ccp path1, ccp path2 )
 {
     // concatenate path + path; returns buf
 
@@ -1039,7 +1036,7 @@ char * PathCatBufPP ( char * buf, size_t bufsize, ccp path1, ccp path2 )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp PathCatPP ( char * buf, size_t bufsize, ccp path1, ccp path2 )
+ccp PathCatPP ( char * buf, ssize_t bufsize, ccp path1, ccp path2 )
 {
     // concatenate path + path; returns path1 | path2 | buf
 
@@ -1061,7 +1058,7 @@ ccp PathCatPP ( char * buf, size_t bufsize, ccp path1, ccp path2 )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp PathCatDirP ( char * buf, size_t bufsize, ccp path1, ccp path2 )
+ccp PathCatDirP ( char * buf, ssize_t bufsize, ccp path1, ccp path2 )
 {
     // concatenate path + path; returns path1 | path2 | buf
 
@@ -1085,7 +1082,7 @@ ccp PathAllocPP ( ccp path1, ccp path2 )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-char * PathCatBufPPE ( char * buf, size_t bufsize, ccp path1, ccp path2, ccp ext )
+char * PathCatBufPPE ( char * buf, ssize_t bufsize, ccp path1, ccp path2, ccp ext )
 {
     // concatenate path + path; returns (by definition) path1 | path2 | buf
 
@@ -1125,7 +1122,7 @@ ccp PathAllocPPE ( ccp path1, ccp path2, ccp ext )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-char * PathCatBufBP ( char *buf, size_t bufsize, ccp base, ccp path )
+char * PathCatBufBP ( char *buf, ssize_t bufsize, ccp base, ccp path )
 {
     // PathCatBP() is special: path can be part of buf
 
@@ -1167,7 +1164,7 @@ char * PathCatBufBP ( char *buf, size_t bufsize, ccp base, ccp path )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp PathCatBP ( char *buf, size_t bufsize, ccp base, ccp path )
+ccp PathCatBP ( char *buf, ssize_t bufsize, ccp base, ccp path )
 {
     // PathCatBP() is special: path can be part of buf
 
@@ -1188,7 +1185,7 @@ ccp PathAllocBP ( ccp base, ccp path )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-char * PathCatBufBPP ( char * buf, size_t bufsize, ccp base, ccp path1, ccp path2 )
+char * PathCatBufBPP ( char * buf, ssize_t bufsize, ccp base, ccp path1, ccp path2 )
 {
     ccp path = PathCatPP(buf,bufsize,path1,path2);
     return PathCatBufBP(buf,bufsize,base,path);
@@ -1196,7 +1193,7 @@ char * PathCatBufBPP ( char * buf, size_t bufsize, ccp base, ccp path1, ccp path
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp PathCatBPP ( char * buf, size_t bufsize, ccp base, ccp path1, ccp path2 )
+ccp PathCatBPP ( char * buf, ssize_t bufsize, ccp base, ccp path1, ccp path2 )
 {
     ccp path = PathCatPP(buf,bufsize,path1,path2);
     return PathCatBP(buf,bufsize,base,path);
@@ -1213,7 +1210,7 @@ ccp PathAllocBPP ( ccp base, ccp path1, ccp path2 )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-char * PathCatBufBPPE ( char * buf, size_t bufsize, ccp base, ccp path1, ccp path2, ccp ext )
+char * PathCatBufBPPE ( char * buf, ssize_t bufsize, ccp base, ccp path1, ccp path2, ccp ext )
 {
     ccp path = PathCatPPE(buf,bufsize,path1,path2,ext);
     return PathCatBufBP(buf,bufsize,base,path);
@@ -1221,7 +1218,7 @@ char * PathCatBufBPPE ( char * buf, size_t bufsize, ccp base, ccp path1, ccp pat
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp PathCatBPPE ( char * buf, size_t bufsize, ccp base, ccp path1, ccp path2, ccp ext )
+ccp PathCatBPPE ( char * buf, ssize_t bufsize, ccp base, ccp path1, ccp path2, ccp ext )
 {
     ccp path = PathCatPPE(buf,bufsize,path1,path2,ext);
     return PathCatBP(buf,bufsize,base,path);
@@ -1316,7 +1313,7 @@ char * NewFileExtE ( char * buf, ccp buf_end, ccp path, ccp ext )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-char * NewFileExtS ( char * buf, size_t bufsize, ccp path, ccp ext )
+char * NewFileExtS ( char * buf, ssize_t bufsize, ccp path, ccp ext )
 {
     return NewFileExtE(buf,buf+bufsize,path,ext);
 }
@@ -3239,14 +3236,14 @@ uint ScanQuotedArgManager ( ArgManager_t *am, ccp src, bool is_utf8 )
 		}
 		else
 		{
-		    while ( dest < bufend && !isspace(*src) && *src != '\'' && *src != '\"' )
+		    while ( dest < bufend && *src && !isspace(*src) && *src != '\'' && *src != '\"' )
 		    {
 			if ( *src == '\\' && src[1] )
 			    src++;
 			*dest++ = *src++;
 		    }
 		}
-		if (isspace(*src))
+		if ( !*src || isspace(*src) )
 		    break;
 	    }
 	    ccp arg = MEMDUP(buf,dest-buf);
@@ -3377,7 +3374,7 @@ enumError ExpandAtArgManager
 
 		if (n_rm)
 		{
-		    PRINT1("rm @%u %d, file=%s\n",pos,n_rm,fname);
+		    PRINT0("rm @%u %d, file=%s\n",pos,n_rm,fname);
 		    int n_added;
 		    enumError err = ScanFileArgManager(am,pos,fname,silent,&n_added);
 		    if ( max_err < err )
@@ -3389,7 +3386,7 @@ enumError ExpandAtArgManager
 		    }
 
 		    // remove after insert to keep fname valid!
-		    PRINT1("rm @%u %d\n",pos,n_rm);
+		    PRINT0("rm @%u %d\n",pos,n_rm);
 		    RemoveArgManager(am,pos,n_rm);
 		}
 		else

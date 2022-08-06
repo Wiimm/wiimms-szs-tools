@@ -58,6 +58,7 @@
 #include "lib-checksum.h"
 #include "lib-kmp.h"
 #include "db-mkw.h"
+#include "dclib-ui.h"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -484,7 +485,7 @@ typedef enum szs_norm_info_t
     SZI_AI_PARAM,	// A: have AI param
     SZI_SPEED,		// S: have speed KMP/STGI factoe
     SZI_LAPS,		// #: (1-9) KMP/STGI number of laps
-    SZI_RM_LEX_FEA0,	// F: have LEX section FEA0
+    SZI_RM_LEX_FEAT,	// F: have LEX section FEAT
     SZI_RM_LEX_TEST,	// T: have LEX section TEST
 
     SZI__N		// number of flags
@@ -516,7 +517,7 @@ typedef struct szs_norm_t
     u8		max_laps;		// >0: limit number of laps (KMP/STGI)
     u8		set_laps;		// >0: set number of laps (KMP/STGI)
     bool	rm_lex_test;		// remove LEX section TEST
-    bool	manage_lex_fea0;	// manage LEX section FEA0: 0:off, 1:remove, 2:auto
+    bool	manage_lex_feat;	// manage LEX section FEAT: 0:off, 1:remove, 2:auto
     bool	purge_lex;		// purge lex section and remove course.bin if empty
 
     //--- for output via PrintNorm()

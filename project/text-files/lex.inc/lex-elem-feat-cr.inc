@@ -2,9 +2,8 @@
 #FF#
 ###############################################################################
 
-[FEA0]
+[FEAT]
 # Sort order: %u
 
-# This experimental section reflects the special features of a track file.
-# ???
+# This section reflects the special features of a track file.
 

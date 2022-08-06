@@ -83,12 +83,15 @@
 
 #define LE_REFERENCE_MAGIC8	"#LE-REF1"
 #define LE_REFERENCE_MAGIC8_NUM	0x234c452d52454631ull
+#define LE_REFERENCE_VERSION	1
 
 #define LE_STRINGS_MAGIC8	"#LE-STR1"
 #define LE_STRINGS_MAGIC8_NUM	0x234c452d53545231ull
+#define LE_STRINGS_VERSION	1
 
 #define LE_SHA1REF_MAGIC8	"#SHA1REF"
 #define LE_SHA1REF_MAGIC8_NUM	0x2353484131524546ull
+#define LE_SHA1REF_VERSION	1
 
 #define LE_PREFIX_MAGIC8	"#PREFIX1"
 #define LE_PREFIX_MAGIC8_NUM	0x2350524546495831ull
@@ -233,7 +236,8 @@ typedef enum le_options_t
     LEO_CTCODE		= 0x0000040,  // import track names from CT-CODE   (0x4000..)
     LEO_LECODE		= 0x0000080,  // import track names from LE-CODE   (0x7000..)
      LEO_MKW		= LEO_MKW1 | LEO_MKW2,
-     LEO_M_BMG		= LEO_MKW | LEO_CTCODE | LEO_LECODE,
+     LEO_DEFAULT_BMG	= LEO_MKW | LEO_LECODE,
+     LEO_M_BMG		= LEO_MKW | LEO_LECODE | LEO_CTCODE,
 
 
     //-- BMG input options
@@ -455,6 +459,9 @@ typedef struct le_track_t
     le_music_t		music;		// music slot
     le_flags_t		flags;		// flags
 
+    u8			lap_count;	// number of laps, valid if >0.0
+    float		speed_factor;	// speed factor, valid if >0.0
+
     le_track_id_t	lti[2];		// index 0: normal, index 1:_d
     ccp			file;		// NULL or filename of track
     ccp			name;		// NULL or name of track
@@ -674,7 +681,8 @@ typedef struct le_distrib_t
 
     bool		is_initialized;		// true: data is InitializeLD()
     le_auto_setup_t	auto_setup;		// bit files (LAS_*)
-    le_strpar_t	spar;			// current string param, incl. default 'opt'
+    le_strpar_t		spar;			// current string param, incl. default 'opt'
+    ccp			separator;		// NULL or separator for string functions.
 
     le_track_t		*tlist;			// list of tracks
     uint		tlist_used;		// used elements in 'tlist'
@@ -923,11 +931,18 @@ enumError CreateDebugLD   ( FILE *f, const le_distrib_t *ld );
 enumError CreateLecode4LD ( ccp fname, le_distrib_t *ld );
 
 //-----------------------------------------------------------------------------
-// special jobs
+// string functions
 
-enumError SubstLD ( le_distrib_t *ld, const le_strpar_t *dest, ccp arg );
+enumError SeparatorLD ( le_distrib_t *ld, ccp arg );
+
 enumError CopyLD  ( le_distrib_t *ld, const le_strpar_t *dest,
 				      const le_strpar_t *src, int n_src );
+enumError SplitLD ( le_distrib_t *ld, const le_strpar_t *dest,
+				      const le_strpar_t *src, ccp arg );
+enumError SubstLD ( le_distrib_t *ld, const le_strpar_t *dest, ccp arg );
+
+//-----------------------------------------------------------------------------
+// special jobs
 
 enumError TransferFilesLD ( le_distrib_t *ld, bool logit, bool testmode );
 

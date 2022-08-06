@@ -36,7 +36,7 @@
 #define DCLIB_UTF8_H 1
 #ifndef WIN_DCLIB
 
-#include "dclib-types.h"
+#include "dclib-basics.h"
 
 ///////////////////////////////////////////////////////////////////////////////
 /////   this software is taken from dcLib2 and now publiced under GPL2.   /////
@@ -113,10 +113,11 @@ int	CalcUTF8PrintFW   ( ccp str, ccp end, uint wanted_fw );
 char *	PrintUTF8Char ( char * buf, u32 code );
 char *	PrintUTF8CharToCircBuf ( u32 code );
 
+exmem_t AlignUTF8 ( exmem_dest_t *dest, ccp str, int str_len, int fw, int prec );
 ccp	AlignUTF8ToCircBuf ( ccp str, int fw, int prec );
 
 ///////////////////////////////////////////////////////////////////////////////
-// special variants, that ignore known escape seqeuences
+// special variants, that ignore known escape sequences
 
 char *	NextEUTF8Char    ( ccp str );
 char *	NextEUTF8CharE   ( ccp str, ccp end );
@@ -125,6 +126,7 @@ char *	SkipEUTF8CharE   ( ccp str, ccp end, int skip );
 int	ScanEUTF8Length  ( ccp str );
 int	ScanEUTF8LengthE ( ccp str, ccp end );
 
+exmem_t AlignEUTF8 ( exmem_dest_t *dest, ccp str, int str_len, int fw, int prec );
 ccp	AlignEUTF8ToCircBuf ( ccp str, int fw, int prec );
 
 ///////////////////////////////////////////////////////////////////////////////

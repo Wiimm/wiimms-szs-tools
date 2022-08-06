@@ -254,13 +254,13 @@ enumError CheckEnvOptions ( ccp varname, check_opt_func func )
     if ( !env || !*env )
 	return ERR_OK;
 
-    TRACE("env[%s] = %s\n",varname,env);
+    PRINT("env[%s] = %s\n",varname,env);
 
  #if 1 // [[new]] with ArgManager_t
-
     ArgManager_t am = {0};
     AppendArgManager(&am,ProgInfo.progname,0,false);
     ScanQuotedArgManager(&am,env,true);
+
   #ifdef DEBUG
     for ( int i = 0; i < am.argc; i++ )
 	printf(" [%02u] |%s|\n",i,am.argv[i]);

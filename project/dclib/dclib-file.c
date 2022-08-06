@@ -579,7 +579,7 @@ FileAttrib_t * ClearFileAttrib
 	dest->mtime.tv_nsec =
 	dest->ctime.tv_nsec =
 	dest->itime.tv_nsec =
-     #ifdef UTIME_OMIT
+     #if SUPPORT_UTIMENSAT
 		UTIME_OMIT;
      #else
 		-2;
@@ -775,7 +775,7 @@ int CompareTimeSpec0 ( const struct timespec *a, const struct timespec *b )
 
 void SetAMTimes ( ccp fname, const struct timespec times[2] )
 {
- #ifdef UTIME_OMIT
+ #if SUPPORT_UTIMENSAT
     utimensat(AT_FDCWD,fname,times,0);
  #else
     struct timeval tv[2];

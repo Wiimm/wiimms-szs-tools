@@ -245,6 +245,9 @@
   { T_OPT_GM,	"LOGGING",	"L|logging",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_GM,	"EXT_ERRORS",	"Y|extended-errors|extendederrors|xerr",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"TIMING",	"timing",
 		0, 0 /* copy of wszst */ },
 
@@ -413,9 +416,9 @@
 		"Delete LEX sections without any impact."
 		" This option is executed after all --lt-* options." },
 
-  { H_OPT_G,	"LEX_RM_FEAT",	"rm-features|rmfeatures|lex-rm-features|lexrmfeatures",
+  { T_OPT_G,	"LEX_RM_FEAT",	"rm-features|rmfeatures|lex-rm-features|lexrmfeatures",
 		0,
-		"Remove LEX setion FEA0 (features) if exists."
+		"Remove LEX setion FEAT (features) if exists."
 		" It is executed after --lex-purge."
 		" {--lex-rm-features} is an alternative name." },
 
@@ -699,7 +702,7 @@
 //  { T_COPT,	"LT_ENGINE",	0,0,0 },
 //  { T_COPT,	"LT_RANDOM",	0,0,0 },
 //  { T_COPT,	"LEX_PURGE",	0,0,0 },
-//  { H_COPT,	"LEX_RM_FEAT",	0,0,0 },
+//  { T_COPT,	"LEX_RM_FEAT",	0,0,0 },
 
   //---------- wlect GROUP TRACK_COPY ----------
 
@@ -918,7 +921,7 @@
   { T_COPT,	"LT_ENGINE",	0,0,0 },
   { T_COPT,	"LT_RANDOM",	0,0,0 },
   { T_COPT,	"LEX_PURGE",	0,0,0 },
-  { H_COPT,	"LEX_RM_FEAT",	0,0,0 },
+  { T_COPT,	"LEX_RM_FEAT",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LE_DEFINE",	0,0,0 },
   { T_COPT,	"LOAD_BMG",	0,0,0 },

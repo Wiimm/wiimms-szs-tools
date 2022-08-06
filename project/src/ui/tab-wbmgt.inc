@@ -229,6 +229,9 @@
   { T_OPT_GM,	"LOGGING",	"L|logging",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_GM,	"EXT_ERRORS",	"Y|extended-errors|extendederrors|xerr",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"TIMING",	"timing",
 		0, 0 /* copy of wszst */ },
 

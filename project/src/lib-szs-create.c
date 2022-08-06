@@ -1727,10 +1727,15 @@ static int add_missing_file
 	InitializeLEX(&lex);
 	if ( PatchLEX(&lex,&am->szs->have) && CreateRawLEX(&lex) == ERR_OK )
 	    size = lex.raw_data_size;
+	PRINT0("LEX size=%lld\n",size);
     }
 
     szs_subfile_t *file = 0;
-    if (am->sd)
+    if (!size)
+    {
+	// [[2do]] maybe remove "course.lex" from list
+    }
+    else if (am->sd)
     {
 	file = AppendSubfileSZS(am->szs,0,0);
 	DASSERT(file);
@@ -1891,6 +1896,7 @@ void AddSectionsLEX ( szs_file_t *szs, szs_norm_t *norm, const szs_have_t * have
     {
 	features_szs_t fs;
 	SetupFeaturesSZS(&fs,have,true);
+	//PRINT1("GetFeaturesStatusSZS()=%d\n",GetFeaturesStatusSZS(&fs));
 	if ( GetFeaturesStatusSZS(&fs) > 1 )
 	    add_course_lex = true;
 	ResetFeaturesSZS(&fs);
@@ -2549,7 +2555,7 @@ static int transform_collect_func
 		break;
 
 	    case FF_LEX:
-		if ( !szs->allow_ext_data || !HavePatchTestLEX())
+		if ( !szs->allow_ext_data || !HavePatchLEX() )
 		{
 		    PRINT("### Patch/NOT LEX: %s\n",it->name);
 		    break;
@@ -2670,7 +2676,10 @@ bool PatchSZS ( szs_file_t * szs )
     if ( szs->data && szs->size )
     {
 	if (patch_lex)
+	{
+	    CalcHaveSZS(szs);
 	    dirty |= NormalizeExSZS(szs,0,0,0);
+	}
 
 	if ( have_patch_count > 0 || opt_lex_purge )
 	{
@@ -2704,7 +2713,10 @@ void CalcHaveSZS ( szs_file_t * szs )
     {
 	szs_file_t temp;
 	CopySZS(&temp,true,szs);
+	analyse_szs_t as;
+	AnalyseSZS(&as,true,&temp,temp.fname);
 	szs->have = temp.have;
+	ResetAnalyseSZS(&as);
 	ResetSZS(&temp);
     }
 }

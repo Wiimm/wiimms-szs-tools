@@ -281,6 +281,12 @@
 	" CAME has been intentionally left out. Section ENPT is only checked" \
 	" if KCL contains a least one face of type force-recalculation." )
 
+#:def_cmd( "FEATURES", "FEATURES", \
+	"wszst FEATURES [source]...", \
+	"Analyse track files and create a feature list for each source in" \
+	" machine readable format. CTGP uses the feature lists to manage" \
+	" ghosts. See option {--lex-features} for details." )
+
 #:def_cmd( "DISTRIBUTION", "DISTRIBUTION|DIS|DISTRIB", \
 	"wszst DISTRIBUTION result source...\n" \
 	"wszst DISTRIBUTION directory [source]...", \
@@ -576,12 +582,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -641,6 +653,10 @@
 	" The first character from the second part determines the lower value." \
 	" If it is in parameter CHARS then the position determines the value," \
 	" otherwise the ASCII value to which 500 is added." )
+
+#:def_opt( "PRINTF", "printf", "CP", \
+	"format", \
+	"Add an output line with a formatted string." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -1201,6 +1217,22 @@
 	"Delete LEX sections without any impact. Delete sub-file course.lex if" \
 	" it no longer contains a section. This option is executed after all" \
 	" --lt-* and --lex-* options." )
+
+#:def_opt( "LEX_FEATURES", "lex-features|lexfeatures", "G", \
+	"", \
+	"Calculate LEX setion FEAT (features) by analysing the track file. If" \
+	" no features found, delete the section and the possibly empty" \
+	" sub-file course.lex. If features found, then insert the section or" \
+	" update an existing section. If necessary, the sub-file course.lex is" \
+	" created. This option is executed after all --lt-* options and after" \
+	" --lex-purge.\n" \
+	"  CTGP uses the FEAT section to manage ghosts." )
+
+#:def_opt( "LEX_RM_FEAT", "lex-rm-features|lexrmfeatures", "G", \
+	"", \
+	"Remove LEX setion FEAT (features) if exists and the possibly empty" \
+	" sub-file course.lex. This option is ignored if --lex-features is" \
+	" set. It is executed after all --lt-* options and after --lex-purge." )
 
 #:def_opt( "LOAD_BMG", "load-bmg|loadbmg", "CMP", \
 	"file", \
@@ -2314,6 +2346,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SIZEOF", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SIZEOF", "TIMING", \
 	"", \
 	"" )
@@ -2464,6 +2500,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -2664,6 +2704,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_L", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_L", "TIMING", \
 	"", \
 	"" )
@@ -2858,6 +2902,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LL", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -3058,6 +3106,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LLL", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LLL", "TIMING", \
 	"", \
 	"" )
@@ -3255,6 +3307,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_A", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_A", "TIMING", \
 	"", \
 	"" )
@@ -3449,6 +3505,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LA", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -3660,6 +3720,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST", "TIMING", \
 	"", \
 	"" )
@@ -3842,6 +3906,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST_L", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -4030,6 +4098,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LL", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LL", "TIMING", \
 	"", \
 	"" )
@@ -4215,6 +4287,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_A", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_A", "TIMING", \
 	"", \
 	"" )
@@ -4397,6 +4473,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST_LA", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -4593,6 +4673,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY", "TIMING", \
 	"", \
 	"" )
@@ -4786,6 +4870,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY_A", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY_A", "TIMING", \
 	"", \
 	"" )
@@ -4947,6 +5035,10 @@
 	"" )
 
 #:def_cmd_opt( "DUMP", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -5127,6 +5219,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SHA1", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SHA1", "TIMING", \
 	"", \
 	"" )
@@ -5304,6 +5400,10 @@
 	"" )
 
 #:def_cmd_opt( "SPLIT", "PLUS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "PRINTF", \
 	"", \
 	"" )
 
@@ -5546,6 +5646,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DISTRIBUTION", "EXT_ERRORS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DISTRIBUTION", "TIMING", \
 	"", \
 	"" )
@@ -5779,6 +5883,10 @@
 	"" )
 
 #:def_cmd_opt( "CHECK", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -6019,6 +6127,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CHECK", "PATCH_BMG", \
 	"", \
 	"" )
@@ -6124,6 +6240,10 @@
 	"" )
 
 #:def_cmd_opt( "SLOTS", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -6365,6 +6485,14 @@
 	"" )
 
 #:def_cmd_opt( "SLOTS", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "LEX_RM_FEAT", \
 	"", \
 	"" )
 
@@ -6707,6 +6835,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "NORMALIZE", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "NORMALIZE", "PATCH_BMG", \
 	"", \
 	"" )
@@ -7007,6 +7143,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PATCH", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "PATCH_BMG", \
 	"", \
 	"" )
@@ -7304,6 +7448,14 @@
 	"" )
 
 #:def_cmd_opt( "COPY", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "LEX_RM_FEAT", \
 	"", \
 	"" )
 
@@ -7608,6 +7760,14 @@
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "LEX_RM_FEAT", \
 	"", \
 	"" )
 
@@ -8096,6 +8256,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COMPRESS", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COMPRESS", "PATCH_BMG", \
 	"", \
 	"" )
@@ -8368,6 +8536,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DECOMPRESS", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECOMPRESS", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DECOMPRESS", "PATCH_BMG", \
 	"", \
 	"" )
@@ -8409,6 +8585,10 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -8649,6 +8829,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "PATCH_BMG", \
 	"", \
 	"" )
@@ -8778,6 +8966,10 @@
 	"" )
 
 #:def_cmd_opt( "CREATE", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "EXT_ERRORS", \
 	"", \
 	"" )
 
@@ -9031,6 +9223,14 @@
 	"" )
 
 #:def_cmd_opt( "CREATE", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "LEX_RM_FEAT", \
 	"", \
 	"" )
 
@@ -9303,6 +9503,14 @@
 	"" )
 
 #:def_cmd_opt( "UPDATE", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UPDATE", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UPDATE", "LEX_RM_FEAT", \
 	"", \
 	"" )
 
@@ -9598,6 +9806,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "EXTRACT", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "EXTRACT", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "EXTRACT", "PATCH_BMG", \
 	"", \
 	"" )
@@ -9887,6 +10103,14 @@
 	"" )
 
 #:def_cmd_opt( "XDECODE", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "LEX_RM_FEAT", \
 	"", \
 	"" )
 
@@ -10182,6 +10406,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "XEXPORT", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XEXPORT", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "XEXPORT", "PATCH_BMG", \
 	"", \
 	"" )
@@ -10471,6 +10703,14 @@
 	"" )
 
 #:def_cmd_opt( "XALL", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "LEX_RM_FEAT", \
 	"", \
 	"" )
 
@@ -11045,6 +11285,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "KCL", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KCL", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "KCL", "PATCH_BMG", \
 	"", \
 	"" )
@@ -11246,6 +11494,14 @@
 	"" )
 
 #:def_cmd_opt( "KMP", "LEX_PURGE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KMP", "LEX_FEATURES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KMP", "LEX_RM_FEAT", \
 	"", \
 	"" )
 
@@ -11631,12 +11887,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -12914,12 +13176,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -14302,12 +14570,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -15329,12 +15603,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -17858,12 +18138,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -19955,12 +20241,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -20122,6 +20414,11 @@
 	"", \
 	"Delete LEX sections without any impact. This option is executed after" \
 	" all --lt-* options." )
+
+#:def_opt( "LEX_RM_FEAT", "rm-features|rmfeatures|lex-rm-features|lexrmfeatures", "G", \
+	"", \
+	"Remove LEX setion FEAT (features) if exists. It is executed after" \
+	" --lex-purge. {--lex-rm-features} is an alternative name." )
 
 #:def_opt( "TEST", "t|test", "GM", \
 	"", \
@@ -20933,6 +21230,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "LEX_RM_FEAT", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CREATE", "LE_DEFINE", \
 	"", \
 	"" )
@@ -21385,12 +21686,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -22672,12 +22979,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -23318,12 +23631,18 @@
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
-	" it up to three times to be more verbose.\n" )
+	" it up to three times to be more verbose." )
+
+#:def_opt( "EXT_ERRORS", "Y|extended-errors|extendederrors|xerr", "GM", \
+	"", \
+	"Enable extended error messages. This includes a source file and line" \
+	" reference. Logging level 1 activates it too. @--xerr@ is a short" \
+	" cut." )
 
 #:def_opt( "TIMING", "timing", "GM", \
 	"", \
 	"Activate the timing of some operations. Logging level 3 activates" \
-	" them too.\n" )
+	" them too." )
 
 #:def_opt( "WARN", "W|warn", "GP", \
 	"list", \
@@ -23949,6 +24268,10 @@
 	"" )
 
 #:def_cmd_opt( "HEXDUMP", "LOGGING", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HEXDUMP", "EXT_ERRORS", \
 	"", \
 	"" )
 

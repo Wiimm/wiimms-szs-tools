@@ -240,6 +240,9 @@
   { T_OPT_GM,	"LOGGING",	"L|logging",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_GM,	"EXT_ERRORS",	"Y|extended-errors|extendederrors|xerr",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"TIMING",	"timing",
 		0, 0 /* copy of wszst */ },
 
@@ -1011,6 +1014,7 @@
   { T_COPT,	"FADDR",	0,0,0 },
   { T_COPT,	"SNAME",	0,0,0 },
   { T_COPT,	"LOGGING",	0,0,0 },
+  { T_COPT,	"EXT_ERRORS",	0,0,0 },
   { T_COPT,	"TIMING",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"HEXDUMP",	0,0,0 },

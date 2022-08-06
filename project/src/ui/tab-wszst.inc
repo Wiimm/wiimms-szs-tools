@@ -386,9 +386,12 @@
 		" Section ENPT is only checked if KCL contains a least one face"
 		" of type force-recalculation." },
 
-  { H_DEF_CMD,	"FEATURES",	"FEATURES",
+  { T_DEF_CMD,	"FEATURES",	"FEATURES",
 		    "wszst FEATURES [source]...",
-		"Analyse track files and create a feature list in machine readable format." },
+		"Analyse track files and create a feature list for each source"
+		" in machine readable format."
+		" CTGP uses the feature lists to manage ghosts."
+		" See option {--lex-features} for details." },
 
   { T_DEF_CMD,	"DISTRIBUTION",	"DISTRIBUTION|DIS|DISTRIB",
 		    "wszst DISTRIBUTION result source...\n"
@@ -740,12 +743,18 @@
   { T_OPT_GM,	"LOGGING",	"L|logging",
 		0,
 		"This debug option enables the logging of internal lists and maps."
-		" Set it up to three times to be more verbose.\n" },
+		" Set it up to three times to be more verbose." },
+
+  { T_OPT_GM,	"EXT_ERRORS",	"Y|extended-errors|extendederrors|xerr",
+		0,
+		"Enable extended error messages. This includes a source file and line reference."
+		" Logging level 1 activates it too."
+		" @--xerr@ is a short cut." },
 
   { T_OPT_GM,	"TIMING",	"timing",
 		0,
 		"Activate the timing of some operations."
-		" Logging level 3 activates them too.\n" },
+		" Logging level 3 activates them too." },
 
   { T_OPT_GP,	"WARN",		"W|warn",
 		"list",
@@ -818,6 +827,11 @@
 		" The first character from the second part determines the lower value."
 		" If it is in parameter CHARS then the position determines the value,"
 		" otherwise the ASCII value to which 500 is added." },
+
+  { T_OPT_CP,	"PRINTF",	"printf",
+		"format",
+		"Add an output line with a formatted string."
+		"\1 See https://szs.wiimm.de/opt/printf for details." },
 
   { T_OPT_GMP,	"CHDIR",	"chdir",
 		"dir",
@@ -1499,17 +1513,19 @@
 		" Delete sub-file course.lex if it no longer contains a section."
 		" This option is executed after all --lt-* and --lex-* options." },
 
-  { H_OPT_G,	"LEX_FEATURES",	"lex-features|lexfeatures",
+  { T_OPT_G,	"LEX_FEATURES",	"lex-features|lexfeatures",
 		0,
-		"Calculate LEX setion FEA0 (features) by analysing the track file."
+		"Calculate LEX setion FEAT (features) by analysing the track file."
 		" If no features found, delete the section and the possibly empty sub-file"
 		" course.lex. If features found, then insert the section or update"
 		" an existing section. If necessary, the sub-file course.lex is created."
-		" This option is executed after all --lt-* options and after --lex-purge." },
+		" This option is executed after all --lt-* options and after --lex-purge."
+		"\n "
+		" CTGP uses the FEAT section to manage ghosts." },
 
-  { H_OPT_G,	"LEX_RM_FEAT",	"lex-rm-features|lexrmfeatures",
+  { T_OPT_G,	"LEX_RM_FEAT",	"lex-rm-features|lexrmfeatures",
 		0,
-		"Remove LEX setion FEA0 (features) if exists"
+		"Remove LEX setion FEAT (features) if exists"
 		" and the possibly empty sub-file course.lex."
 		" This option is ignored if --lex-features is set."
 		" It is executed after all --lt-* options and after --lex-purge." },
@@ -2488,8 +2504,8 @@
   { T_COPT,	"LT_ENGINE",	0,0,0 },
   { T_COPT,	"LT_RANDOM",	0,0,0 },
   { T_COPT,	"LEX_PURGE",	0,0,0 },
-  { H_COPT,	"LEX_FEATURES",	0,0,0 },
-  { H_COPT,	"LEX_RM_FEAT",	0,0,0 },
+  { T_COPT,	"LEX_FEATURES",	0,0,0 },
+  { T_COPT,	"LEX_RM_FEAT",	0,0,0 },
   { T_COPT,	"PATCH_BMG",	0,0,0 },
   { T_COPT,	"MACRO_BMG",	0,0,0 },
   { T_COPT,	"FILTER_BMG",	0,0,0 },
@@ -2632,6 +2648,7 @@
   { T_COPT,	"RM_AIPARAM",	0,0,0 },
   { T_COPY_GRP,	"ALIGN",	0,0,0 },
   { T_COPT,	"LOGGING",	0,0,0 },
+  { T_COPT,	"EXT_ERRORS",	0,0,0 },
   { T_COPT,	"TIMING",	0,0,0 },
   { T_COPY_GRP,	"ENCODE",	0,0,0 },
   { T_COPT,	"AUTO_ADD",	0,0,0 },
@@ -2899,6 +2916,7 @@
   { T_COPT,	"BRIEF",	0,0,
 		"Limit output to SZS specific data." },
   { T_COPT,	"LOGGING",	0,0,0 },
+  { T_COPT,	"EXT_ERRORS",	0,0,0 },
   { T_COPT,	"TIMING",	0,0,0 },
 
   //---------- COMMAND wszst _CODE ----------
@@ -3095,6 +3113,7 @@
   { T_CMD_BEG,	"SPLIT",	0,0,0 },
   { T_COPT,	"LOAD_PREFIX",	0,0,0 },
   { T_COPT,	"PLUS",		0,0,0 },
+  { T_COPT,	"PRINTF",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
@@ -3320,6 +3339,7 @@
   { T_COPT,	"IGNORE_SETUP",	0,0,0 },
   { T_COPY_GRP,	"ALIGN",	0,0,0 },
   { T_COPT,	"LOGGING",	0,0,0 },
+  { T_COPT,	"EXT_ERRORS",	0,0,0 },
   { T_COPT,	"TIMING",	0,0,0 },
   { T_COPY_GRP,	"ENCODE",	0,0,0 },
   { T_COPT,	"MIPMAPS",	0,0,0 },

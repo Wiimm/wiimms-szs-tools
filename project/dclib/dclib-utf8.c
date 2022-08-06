@@ -1054,6 +1054,45 @@ char * PrintUTF8CharToCircBuf ( u32 code )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t AlignUTF8 ( exmem_dest_t *dest, ccp str, int str_len, int fw, int prec )
+{
+    int slen = str_len < 0
+		? ScanUTF8Length(str)
+		: ScanUTF8LengthE(str,str+str_len);
+
+    if ( prec >= 0 && slen > prec )
+	slen = prec;
+
+    const int align_left = fw < 0;
+    if (align_left)
+	fw = -fw;
+    if ( fw < slen )
+	fw = slen;
+    int spaces = fw - slen;
+
+    ccp end = SkipUTF8Char(str,slen);
+    const int copy_len = end - str;
+
+    exmem_t res = GetExmemDestBuf(dest,copy_len+spaces);
+    char *buf = (char*)res.data.ptr;
+
+    DASSERT(buf);
+    if (align_left)
+    {
+	memcpy(buf,str,copy_len);
+	memset(buf+copy_len,' ',spaces);
+    }
+    else
+    {
+	memset(buf,' ',spaces);
+	memcpy(buf+spaces,str,copy_len);
+    }
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 ccp AlignUTF8ToCircBuf ( ccp str, int fw, int prec )
 {
@@ -1085,6 +1124,45 @@ ccp AlignUTF8ToCircBuf ( ccp str, int fw, int prec )
     }
     buf[copy_len+spaces] = 0;
     return buf;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+exmem_t AlignEUTF8 ( exmem_dest_t *dest, ccp str, int str_len, int fw, int prec )
+{
+    int slen = str_len < 0
+		? ScanUTF8Length(str)
+		: ScanUTF8LengthE(str,str+str_len);
+
+    if ( prec >= 0 && slen > prec )
+	slen = prec;
+
+    const int align_left = fw < 0;
+    if (align_left)
+	fw = -fw;
+    if ( fw < slen )
+	fw = slen;
+    int spaces = fw - slen;
+
+    ccp end = SkipEUTF8Char(str,slen);
+    const int copy_len = end - str;
+
+    exmem_t res = GetExmemDestBuf(dest,copy_len+spaces);
+    char *buf = (char*)res.data.ptr;
+
+    DASSERT(buf);
+    if (align_left)
+    {
+	memcpy(buf,str,copy_len);
+	memset(buf+copy_len,' ',spaces);
+    }
+    else
+    {
+	memset(buf,' ',spaces);
+	memcpy(buf+spaces,str,copy_len);
+    }
+    return res;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

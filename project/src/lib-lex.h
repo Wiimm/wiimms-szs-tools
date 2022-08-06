@@ -95,7 +95,7 @@ typedef struct features_szs_t
 
     //--- LEX sections (initial list)
 
-    u8 lex_sect_fea0;		// HAVELEXS_FEA0
+    u8 lex_sect_feat;		// HAVELEXS_FEAT
     u8 lex_sect_test;		// HAVELEXS_TEST
     u8 lex_sect_set1;		// HAVELEXS_SET1
     u8 lex_sect_cann;		// HAVELEXS_CANN
@@ -125,8 +125,8 @@ void SetIsLexFeaturesSZS ( features_szs_t *fs );
 int GetFeaturesStatusSZS ( const features_szs_t *fs );
     // returns
     //	0: all features set to null
-    //	1: all features except f_lex + lex_sect_fea0 are set to null
-    //	2: any features except f_lex + lex_sect_fea0 is not NULL
+    //	1: all features except f_lex + lex_sect_feat are set to null
+    //	2: any features except f_lex + lex_sect_feat is not NULL
 
 void PrintFeaturesSZS
 (
@@ -134,6 +134,7 @@ void PrintFeaturesSZS
     const features_szs_t *fs,		// valid source
     bool		is_lex,		// TRUE: Create output for a LEX file
     int			comments,	// >0: add extended comments
+    int			print_options,	// >0: print options as additional bits
     int			print_modes,	// >0: append ",MODES"
     u8			include,	// print only if all bits match
     u8			exclude		// exclude if any bit match
@@ -202,8 +203,8 @@ const features_szs_t * GetFeaturesModes();
 
 typedef struct check_features_szs_t
 {
-    bool		have_features;	// true: szs has LEX/FEA0 section
-    bool		need_features;	// true: szs needs a LEX/FEA0 section
+    bool		have_features;	// true: szs has LEX/FEAT section
+    bool		need_features;	// true: szs needs a LEX/FEAT section
     bool		wrong_features;	// true: 'current' and 'correct' differ
 
     features_szs_t	current;	// current features
@@ -239,7 +240,7 @@ typedef enum have_lex_sect_t
     HAVELEXS_CANN,
     HAVELEXS_TEST,
     HAVELEXS_HIPT,
-    HAVELEXS_FEA0,
+    HAVELEXS_FEAT,
     //--- add new elements here (order is important)
     HAVELEXS__N
 }
@@ -269,7 +270,6 @@ typedef enum lex_stream_id
     LEXS_TERMINATE	= 0,		// terminate stream
     LEXS_IGNORE		= 0x2d2d2d2d,	// "----" ignore and remove
 
-    LEXS_FEA0		= 0x46454130,	// "FEA0" features
     LEXS_FEAT		= 0x46454154,	// "FEAT" features
     LEXS_SET1		= 0x53455431,	// "SET1" primary settings
     LEXS_CANN		= 0x43414e4e,	// "CANN" cannon settings
@@ -431,7 +431,7 @@ void InitializeLEX ( lex_t * lex );
 void ResetLEX ( lex_t * lex );
 void UpdateLEX ( lex_t * lex, bool add_missing, bool add_test );
 
-lex_item_t * AppendFea0LEX ( lex_t * lex, bool overwrite, const features_szs_t *src_fs );
+lex_item_t * AppendFeatLEX ( lex_t * lex, bool overwrite, const features_szs_t *src_fs );
 lex_item_t * AppendSet1LEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendCannLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendHiptLEX ( lex_t * lex, bool overwrite );

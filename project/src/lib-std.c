@@ -81,6 +81,7 @@ ccp		std_share_path		= 0;
 ccp		share_path		= 0;
 volatile int	verbose			= 0;
 volatile int	logging			= 0;
+volatile int	ext_errors		= 0;
 volatile int	log_timing		= 0;
 bool		allow_all		= false;
 char		escape_char		= '%';
@@ -509,13 +510,21 @@ void SetupLib ( int argc, char ** argv, ccp tname, ccp tvers, ccp ttitle )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+enumError CheckEnvOptions2 ( ccp varname, check_opt_func func )
+{
+    const enumError err = CheckEnvOptions("WIIMMS_SZS_TOOLS",func);
+    return err ? err : CheckEnvOptions(varname,func);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void NormalizeOptions
 (
     uint	log_level	// >0: print PROGRAM_NAME and pathes
 )
 {
     SetupColors();
-    ProgInfo.error_level = logging > 0 ? ERRLEV_EXTENDED : ERRLEV_HEADING;
+    ProgInfo.error_level = logging > 0 || ext_errors ? ERRLEV_EXTENDED : ERRLEV_HEADING;
 
 
     //--- load configuration

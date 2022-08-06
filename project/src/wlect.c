@@ -820,11 +820,8 @@ static void help_create ( enumError exit_code )
 		" but includes all devoloper sections.\n"
  #endif
 	"\n"
- #if HAVE_WIIMM_EXTxx
 	"\t{info|FEATURES}:\t|"
-		"This {warn|hidden sub-command} create a LEX text file with section »FEA0« only."
-		" {warn|This section is under development.}\n"
- #endif
+		"Create a LEX text file with section »FEAT« only.\n"
 	"\t{name|SET1}:\t|"
 		"Create a LEX text file with section »SET1« only.\n"
 	"\t{name|CANNONS}:\t|"
@@ -956,7 +953,7 @@ static enumError cmd_create()
 	    InitializeLEX(&lex);
 	    switch (cmd->id)
 	    {
-	      case C_FEATURES: AppendFea0LEX(&lex,false,0); break;
+	      case C_FEATURES: AppendFeatLEX(&lex,false,0); break;
 	      case C_SET1:     AppendSet1LEX(&lex,false); break;
 	      case C_CANNON:   AppendCannLEX(&lex,false); break;
 	      case C_HIDE_PT:  AppendHiptLEX(&lex,false); break;
@@ -1218,7 +1215,7 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|INFO}:\t|"
 		"Create a human readable reference file with cup info slots and track names."
 		" Only tracks with known name (not empty) are printed."
-		" The tracks are  ordered by cups.\n"
+		" The tracks are ordered by cups.\n"
 	"\t{name|XINFO}:\t|"
 		"Same as {name|INFO}, but use extended names if available.\n"
 	"\n"
@@ -1279,9 +1276,11 @@ static void help_distrib ( enumError exit_code )
 	"\n"
 	"\t{name|BMG}:\t|"
 		"Create a BMG binary file. BMG options are recognized."
-		" But if the output goes to a terminal, then use {name|BMGTXT} insted.\n"
+		" But if the output goes to a terminal, then use {name|BMGTXT} insted."
+		" If no {heading|BMG selector} is defined,"
+		" then {name|MKW,LE-CODE} (all except {name|CT-CODE}) is used.\n"
 	"\t{name|BMGTXT}:\t|"
-		"Create a BMG text file. BMG options are recognized.\n"
+		"Create a BMG text file. Global BMG options are recognized.\n"
 	"\n"
 	"\t{name|REF}:\t|"
 		"Create a machine readable track reference (type {name|LEREF}),"
@@ -1322,8 +1321,35 @@ static void help_distrib ( enumError exit_code )
 	"  {heading|String functions:}\n"
 	"\n"
 
+	"\t{name|SEPARATOR}:| "
+		"Define a separator string that is used by other commands."
+		" The default is a space.\r"
+		"  {heading|Syntax:} {syntax|SEPARATOR '=' STRING}  or  {syntax|SEP '=' STRING}\n"
+	"\n"
+
+	"\t{name|COPY}:\t|"
+		"This instruction copies the texts of 1 or more sources to a destination.\r"
+		"  {heading|Syntax of PARAMETER:} {syntax|DEST '=' SRC [ '+' SRC ]...}\r"
+		"\r"
+		"{syntax|DEST} and {syntax|SRC} are storage indicators"
+		" explained in section »{name|Processing Options: Storage}«."
+		" The sources are joined textually, with a separator"
+		" (defined by instruction {name|SEPARATOR}, see above)"
+		" inserted between the sources.\r"
+		"\r"
+		"Example: |{syntax|copy=[result]=sha1+[size]}\n"
+	"\n"
+
+	"\t{name|SPLIT}:\t|"
+		"This instruction analyses the {syntax|SOURCE} like command {cmd|wszst split} does it."
+		" Then the directives of {syntax|FORMAT} create a string that is copied"
+		" to {syntax|DESTINATION}.\r"
+		"  {heading|Syntax of PARAMETER:} {syntax|DESTINATION ',' SOURCE ',' FORMAT}\r"
+		"Visit {file|https://szs.wiimm.de/opt/printf} for more details.\n"
+	"\n"
+
 	"\t{name|SUBST}:\t|"
-		"This command searches for text passages using a regular expression"
+		"This instruction searches for text passages using a regular expression"
 		" and replaces the found passages with another text.\r"
 		"  {heading|Syntax of PARAMETER:} |{syntax|STORAGE ',' SEP REGEXP SEP REPLACEMENT SEP OPTIONS}\n"
 		"\n\t\t|"
@@ -1342,19 +1368,6 @@ static void help_distrib ( enumError exit_code )
 		"\r"
 		"Examples: |{syntax|subst=name,+abc+xyz+}\r"
 			"{syntax|subst=[key],/search ([0-9])/replace $1/gi}\n"
-	"\n"
-
-	"\t{name|COPY}:\t|"
-		"This command copies the texts of 1 or more sources to a destination.\r"
-		"  {heading|Syntax of PARAMETER:} {syntax|DEST '=' SRC [ '+' SRC ]...}\r"
-		"\r"
-		"{syntax|DEST} and {syntax|SRC} are storage indicators"
-		" explained in section »{name|Processing Options: Storage}«."
-		" The sources are joined textually, with CTRL-A (ASCII 1, '\\1')"
-		" inserted as a separator between the sources."
-		" Use instruction {name|SUBST} to change the separators.\r"
-		"\r"
-		"Example: |{syntax|copy=[result]=sha1+[size]}\n"
 	"\n"
 
 	//-------------------------
@@ -1413,7 +1426,7 @@ static void help_distrib ( enumError exit_code )
 
 	//-------------------------
 
-	"  |{heading|BMG source:}\n"
+	"  |{heading|BMG selector:}\n"
 	"\n"
 	"\t|Define which BMG strings are used as input."
 	" Multiple source can be selected. If none is selected, then all are used."
@@ -1494,6 +1507,13 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|X2NAME}:\t|"
 		"Define a new standard and a new extended name."
 		" If reading, then get the extended name, if valid, or the standard name as fallback.\n"
+	"\n"
+	"\t{name|TEMP1}:\t|"
+		"A temporary variable with no specific purpose."
+		" Access is much faster than for dynamic strings by {name|[key]}."
+		" They are therefore intended for multi-level string manipulations.\n"
+	"\t{name|TEMP2}:\t|"
+		"A second temporary variable.\n"
 	"\n"
 	"\t{name|[key]}:\t|"
 		"For each track there is a set of character strings at the user's disposal."
@@ -1644,15 +1664,16 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     u_nsec_t start_nsec = GetTimerNSec();
 
     enum { C_NAMES, C_INFO, C_LEINFO, C_SHA1, C_DISTRIB,
-		C_CTDEF, C_LEDEF, C_REF, C_STRINGS, C_DUMP, 
+		C_CTDEF, C_LEDEF, C_LEREF, C_STRINGS, C_DUMP, 
 		C_LECODE, C_LECODE4, C_LPAR,
-		C_BMG, C_SUBST, C_COPY,
+		C_BMG, C_SEPARATOR, C_COPY, C_SPLIT, C_SUBST,
 		C_TRACKS, C_PREFIX, C_RESERVE, C_DEBUG };
 
     enum
     {
 	O_PARAM_D	= 0x100, // scan storage DEST
 	O_PARAM_S	= 0x200, // scan storage SRC
+	O_PARAM_S2	= 0x400, // scan second storage SRC
 	O_PARAM_SS	= 0x600, // scan storage SRC [ + SRC ]...
 	O_PARAM_A	= 0x800, // allow additonal arguments
     };
@@ -1673,7 +1694,8 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_CTDEF,	"CT-DEF",		"CTDEF",	0  },
 	{ C_LEDEF,	"LE-DEF",		"LEDEF",	0  },
 	 { C_LEDEF,	"DEFINITION",		"DEF",		0  },
-	{ C_REF,	"REFERENCE",		"REF",		0  },
+	{ C_LEREF,	"LE-REF",		"LEREF",	0  },
+	 { C_LEREF,	"REFERENCE",		"REF",		0  },
 	{ C_STRINGS,	"STRINGS",		"STR",		0  },
 	{ C_DUMP,	"DUMP",			0,		0  },
 
@@ -1689,8 +1711,10 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_BMG,	"BMG-TXT",		"BMGTXT",	 1 },
 
 
-	{ C_SUBST,	"SUBST",		0,		O_PARAM_D|O_PARAM_A },
+	{ C_SEPARATOR,	"SEPARATOR",		"SEP",		0 },
 	{ C_COPY,	"COPY",			0,		O_PARAM_D|O_PARAM_SS },
+	{ C_SPLIT,	"SPLIT",		0,		O_PARAM_D|O_PARAM_S|O_PARAM_A },
+	{ C_SUBST,	"SUBST",		0,		O_PARAM_D|O_PARAM_A },
 
 	{ C_TRACKS,	"TRACKS",		0,		0  },
 
@@ -1778,7 +1802,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 
 	if ( opt & O_PARAM_S )
 	{
-	    const int max = opt & O_PARAM_SS ? MAX_PAR_SRC : 1;
+	    const int max = opt & O_PARAM_S2 ? MAX_PAR_SRC : 1;
 	    le_strpar_t *src = par_src;
 	    while ( n_par_src < max )
 	    {
@@ -1797,6 +1821,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 		arg++;
 	    }
 	}
+
 	if ( *arg && !(opt&O_PARAM_A) )
 	    return ERROR0( ERR_SEMANTIC,"%s: Missing end-of-line: %s\n",cmd->name1,arg);
     }
@@ -1807,9 +1832,11 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     err = ~0;
     switch (cmd->id)
     {
-	case C_LECODE4:	err = CreateLecode4LD(arg,ld); break;
-	case C_SUBST:	err =  SubstLD(ld,&par_dest,arg); break;
-	case C_COPY:	err =  CopyLD(ld,&par_dest,par_src,n_par_src); break;
+	case C_LECODE4:		err = CreateLecode4LD(arg,ld); break;
+	case C_SEPARATOR:	err = SeparatorLD(ld,arg); break;
+	case C_COPY:		err = CopyLD(ld,&par_dest,par_src,n_par_src); break;
+	case C_SPLIT:		err = SplitLD(ld,&par_dest,par_src,arg); break;
+	case C_SUBST:		err = SubstLD(ld,&par_dest,arg); break;
 
 	case C_TRACKS:
 	    cmd = ScanKeyword(&cmd_stat,arg,tracks_tab);
@@ -1842,7 +1869,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 		    if ( *end == ',' || *end == 'x' )
 			n2 = str2ul(end+1,0,10);
 		    ccp ltty_name = ltty==LTTY_TRACK ? "versus track" : "battle arena";
-		    PRINT1("RESERVE %s %dx%d\n", ltty_name, n1, n2 );
+		    PRINT0("RESERVE %s %dx%d\n", ltty_name, n1, n2 );
 		    if ( n2 > 0 )
 		    {
 			if ( verbose >= 1 )
@@ -1875,6 +1902,14 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 
     if ( err == ~0 )
     {
+     #ifdef __CYGWIN__
+	char norm[PATH_MAX];
+	NormalizeFilenameCygwin(norm,sizeof(norm),arg);
+	if ( verbose >= 2 && strcmp(arg,norm) )
+	    fprintf(stdlog,"   > Normalized filename: %s\n",norm);
+	arg = norm;
+     #endif
+
 	File_t F;
 	err = CreateFileOpt(&F,true,arg,false,0);
 	if (!err)
@@ -1890,7 +1925,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 
 	      case C_CTDEF:   err = CreateCtDefLD(F.f,ld); break;
 	      case C_LEDEF:   err = CreateLeDefLD(F.f,ld); break;
-	      case C_REF:     err = CreateRefLD(F.f,ld,true); break;
+	      case C_LEREF:   err = CreateRefLD(F.f,ld,true); break;
 	      case C_STRINGS: err = CreateStringsLD(F.f,ld); break;
 	      case C_DUMP:    err = CreateDumpLD(F.f,ld); break;
 
@@ -1980,7 +2015,6 @@ static enumError cmd_distrib()
 	if ( verbose >= 1 )
 	    PrintHead("Read file(s): %s",arg);
 	const u_nsec_t start_nsec = GetTimerNSec();
-	NORMALIZE_FILENAME_PARAM(param);
 	ImportFileLD(&ld,arg,true,false);
 	if ( verbose >= 2 )
 	{
@@ -2220,6 +2254,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
+	case GO_EXT_ERRORS:	ext_errors++; break;
 	case GO_TIMING:		log_timing++; break;
 	case GO_WARN:		err += ScanOptWarn(optarg); break;
 	case GO_DE:		use_de = true; break;
@@ -2457,7 +2492,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	hint_exit(ERR_OK);
     }
 
-    enumError err = CheckEnvOptions("WLECT_OPT",CheckOptions);
+    enumError err = CheckEnvOptions2("WLECT_OPT",CheckOptions);
     if (err)
 	hint_exit(err);
 

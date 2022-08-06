@@ -1625,7 +1625,7 @@ typedef struct PrintScript_t
     int		var_size;	// if > 0: print size of var name (some 'fform' only)
     int		eq_tabstop;	// if > 0: indent '=' to set tabstop (some 'fform' only)
     LowerUpper_t force_case;	// change case of var names if not LOUP_AUTO
-    bool	create_array;	// true: create ar arrays
+    bool	create_array;	// true: create arrays
     bool	auto_quote;	// true: detect quotes and use EscapeString()
     bool	add_index;	// true: add index to varname
     bool	ena_empty;	// true: enable empty lines
