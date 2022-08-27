@@ -5383,8 +5383,8 @@ static void print_ledef_cup
 	( FILE *f, le_distrib_t *ld, const le_cup_t *lc, int sep_index )
 {
     DASSERT(f);
-    DASSERT(cup);
-    DASSERT(title);
+    DASSERT(ld);
+    DASSERT(lc);
 
     if (!lc->used)
 	return;

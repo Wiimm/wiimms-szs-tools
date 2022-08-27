@@ -5650,7 +5650,7 @@ static bool compare_kmp_pt2
     char		msg
 )
 {
-    DASSERT();
+    DASSERT(ck);
 
     if	(  ck->kmp1.dlist[sect_ph].used != ck->kmp2.dlist[sect_ph].used
 	|| ck->kmp1.dlist[sect_pt].used != ck->kmp2.dlist[sect_pt].used

@@ -1977,14 +1977,6 @@
 		"If @LOWER@ or @UPPER@ are set, then the lower/upper case"
 		" of the variable names is adjusted accordingly." },
 
-  { H_OPT_C,	"PMODES",	"pmodes|print-modes|printmodes",
-		0,
-		"--pmodes is an abbreviation for --print-mode."
-		" If set, a comma-separated list of letters is added to the end of each feature."
-		" The letters used are:"
-		" @S@ (section), @V@ (visual), @B@ (battle), @R@ (racing),"
-		" @T@ (time trial), @L@ (local=offline) and @O@ (online)." },
-
   { H_OPT_CP,	"FMODES",	"fmodes|feature-modes|featuremodes",
 		"list",
 		"--fmodes is an abbreviation for --feature-modes and declares an output filter."
@@ -3137,15 +3129,18 @@
   { T_COPT,	"BRIEF",	0,0,
 	"Suppres any comments at all."
 	" If set twice, suppress empty lines (for grouping) too."
-	" If set three times, omit inactive features (=0) too." },
+	" If set three times, omit inactive features (value 0) too." },
   { T_COPT,	"LONG",		0,0,
-	"Print additional comments." },
+	" If set, a comma-separated list of letters is added to the end of each feature."
+	" If set twice, the output is filled with minus signed to get an aligned string."
+	" The letters used are:"
+	" @S@ (section), @V@ (visual impact), @B@ (battle impact), @R@ (racing impact),"
+	" @T@ (time trial impact), @L@ (local=offline impact) and @O@ (online impact)." },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"QUIET",	0,0,
 	"Suppress logging of input and output files." },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"SCRIPT",	0,0,0 },
-  { T_COPT,	"PMODES",	0,0,0 },
   { T_COPT,	"FMODES",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"DEST",		0,0,0 },

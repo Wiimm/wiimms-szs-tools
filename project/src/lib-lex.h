@@ -135,7 +135,7 @@ void PrintFeaturesSZS
     bool		is_lex,		// TRUE: Create output for a LEX file
     int			comments,	// >0: add extended comments
     int			print_options,	// >0: print options as additional bits
-    int			print_modes,	// >0: append ",MODES"
+    int			print_modes,	// >0: append ",MODES" / >1: append aligned MODES
     u8			include,	// print only if all bits match
     u8			exclude		// exclude if any bit match
 );
@@ -188,7 +188,7 @@ features_szs_value_t;
 
 //-----------------------------------------------------------------------------
 
-ccp GetFeaturesMode ( features_szs_mode_t mode );
+ccp GetFeaturesMode ( features_szs_mode_t mode, bool align );
 ccp GetFeaturesEffects ( features_szs_mode_t mode );
 ccp GetFeaturesEffectsByOffset ( uint offset );
 void NormalizeFeatures ( features_szs_t *fs );

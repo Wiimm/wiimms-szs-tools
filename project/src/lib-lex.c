@@ -420,7 +420,7 @@ void PrintFeaturesSZS
     bool		is_lex,		// TRUE: Create output for a LEX file
     int			comments,	// >0: add extended comments
     int			print_options,	// >0: print options as additional bits
-    int			print_modes,	// >0: append ",MODES"
+    int			print_modes,	// >0: append ",MODES" / >1: append aligned MODES
     u8			include,	// print only if all bits match
     u8			exclude		// exclude if any bit match
 )
@@ -430,7 +430,7 @@ void PrintFeaturesSZS
 
     PrintScriptVars(ps,0,
 	"\n"
-	"# The base value (lower bits) of each feature is one of:\n"
+	"# The base value (lower 4 bits) of each feature is one of:\n"
 	"#   %u: file or feature not found.\n"
 	"#   %u: file or feature found, but no impact.\n"
 	"#   %u: file or feature found, maybe some settings with impact.\n"
@@ -499,14 +499,14 @@ void PrintFeaturesSZS
 		}
 
 		char valbuf[30];
-		if ( value & FZV_M_OPTIONS && print_options >0 )
+		if ( value & FZV_M_OPTIONS && print_options > 0 )
 		    snprintf(valbuf,sizeof(valbuf),"0x%02x",value);
 		else
 		    snprintf(valbuf,sizeof(valbuf),"%u", value & FZV_M_VALUE );
 
 		if ( print_modes > 0 )
 		    PrintScriptVars(ps,0,"%s=\"%s,%s\"\n",
-				var->name, valbuf, GetFeaturesMode(mode) );
+				var->name, valbuf, GetFeaturesMode(mode,print_modes>1) );
 		else
 		    PrintScriptVars(ps,0,"%s=%s\n",var->name,valbuf);
 	    }
@@ -597,7 +597,7 @@ const features_szs_t * GetFeaturesModes()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp GetFeaturesMode ( features_szs_mode_t mode )
+ccp GetFeaturesMode ( features_szs_mode_t mode, bool align )
 {
     char *buf = GetCircBuf(CHAR_BIT+1);
     char *src = "SVGBRTLO", *dest = buf;
@@ -605,6 +605,8 @@ ccp GetFeaturesMode ( features_szs_mode_t mode )
     for ( mask = 1; mask; mask <<= 1, src++ )
 	if ( mode & mask )
 	    *dest++ = *src;
+	else if (align)
+	    *dest++ = '-';
     *dest = 0;
     return buf;
 }
@@ -2284,7 +2286,7 @@ static enumError SaveTextLEX_FEAT
     ps.f		= f;
     ps.fform		= PSFF_ASSIGN;
     ps.force_case	= LOUP_UPPER;
-    int comments = -1;
+    int comments	= -1;
 
     if (!brief_count)
     {
@@ -2293,7 +2295,7 @@ static enumError SaveTextLEX_FEAT
 	ps.ena_comments	= true;
 	ps.boc		= "#";
     }
-    PrintFeaturesSZS(&ps,fs,true,comments,0,0,0,0);
+    PrintFeaturesSZS(&ps,fs,true,comments,1,0,0,0);
     ResetPrintScript(&ps);
 
     uint data_size = ntohs(fs->size_be);

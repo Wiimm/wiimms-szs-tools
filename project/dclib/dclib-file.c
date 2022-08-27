@@ -3725,7 +3725,7 @@ ccp GetBlockDeviceHolder ( ccp name, ccp sep, int *ret_level )
 
     bool old_found;
     ParamFieldItem_t *item = FindInsertParamField(&db,name,false,0,&old_found);
-    DASSERT(item)
+    DASSERT(item);
     if (!old_found)
     {
 	int level = 0;
@@ -4053,6 +4053,152 @@ search_paths_stat_t SearchPaths
     PRINT0("abort=%d, max_err = %d, %u dirs scanned, %u func calls, %u hits\n",
 		sp.abort, sp.max_err, sp.dir_count, sp.func_count, sp.hit_count );
     return sp.status;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError insert_string_field
+(
+    mem_t	path,		// full path of existing file, never NULL
+    uint	st_mode,	// copy of struct stat.st_mode, see "man 2 stat"
+    void	*param		// user defined parameter
+)
+{
+    StringField_t * sf = param;
+    DASSERT(sf);
+    InsertStringField(sf,path.ptr,false);
+    return ERR_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+uint InsertStringFieldExpand
+	( StringField_t * sf, ccp path1, ccp path2, bool allow_hidden )
+{
+    DASSERT(sf);
+    search_paths_stat_t stat = SearchPaths(path1,path2,allow_hidden,insert_string_field,sf);
+    PRINT0("%d %d %d\n",stat.dir_count,stat.func_count,stat.hit_count);
+    if (!stat.hit_count)
+    {
+	char srcbuf[PATH_MAX+2];
+	ccp source = PathCatPP(srcbuf,sizeof(srcbuf),path1,path2);
+	InsertStringField(sf,source,false);
+	stat.hit_count++;
+    }
+    return stat.hit_count;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError append_string_field
+(
+    mem_t	path,		// full path of existing file, never NULL
+    uint	st_mode,	// copy of struct stat.st_mode, see "man 2 stat"
+    void	*param		// user defined parameter
+)
+{
+    StringField_t * sf = param;
+    DASSERT(sf);
+    AppendStringField(sf,path.ptr,false);
+    return ERR_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+uint AppendStringFieldExpand
+	( StringField_t * sf, ccp path1, ccp path2, bool allow_hidden )
+{
+    DASSERT(sf);
+    search_paths_stat_t stat = SearchPaths(path1,path2,allow_hidden,append_string_field,sf);
+    PRINT0("%d %d %d\n",stat.dir_count,stat.func_count,stat.hit_count);
+    if (!stat.hit_count)
+    {
+	char srcbuf[PATH_MAX+2];
+	ccp source = PathCatPP(srcbuf,sizeof(srcbuf),path1,path2);
+	AppendStringField(sf,source,false);
+	stat.hit_count++;
+    }
+    return stat.hit_count;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct search_param_field_t
+{
+    ParamField_t	*pf;
+    uint		num;
+    cvp			data;
+}
+search_param_field_t;
+
+//-----------------------------------------------------------------------------
+
+static enumError insert_param_field
+(
+    mem_t	path,		// full path of existing file, never NULL
+    uint	st_mode,	// copy of struct stat.st_mode, see "man 2 stat"
+    void	*param		// user defined parameter
+)
+{
+    search_param_field_t *spf = param;
+    DASSERT(spf);
+    InsertParamField(spf->pf,path.ptr,false,spf->num,spf->data);
+    return ERR_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+uint InsertParamFieldExpand
+	( ParamField_t * pf, ccp path1, ccp path2, bool allow_hidden, uint num, cvp data )
+{
+    DASSERT(pf);
+    search_param_field_t spf = { .pf = pf, .num = num, .data = data };
+    search_paths_stat_t stat = SearchPaths(path1,path2,allow_hidden,insert_param_field,&spf);
+    PRINT0("%d %d %d\n",stat.dir_count,stat.func_count,stat.hit_count);
+    if (!stat.hit_count)
+    {
+	char srcbuf[PATH_MAX+2];
+	ccp source = PathCatPP(srcbuf,sizeof(srcbuf),path1,path2);
+	InsertParamField(pf,source,false,num,data);
+	stat.hit_count++;
+    }
+    return stat.hit_count;
+}
+	
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError append_param_field
+(
+    mem_t	path,		// full path of existing file, never NULL
+    uint	st_mode,	// copy of struct stat.st_mode, see "man 2 stat"
+    void	*param		// user defined parameter
+)
+{
+    search_param_field_t *spf = param;
+    DASSERT(spf);
+    AppendParamField(spf->pf,path.ptr,false,spf->num,spf->data);
+    return ERR_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+uint AppendParamFieldExpand
+	( ParamField_t * pf, ccp path1, ccp path2, bool allow_hidden, uint num, cvp data )
+{
+    DASSERT(pf);
+    search_param_field_t spf = { .pf = pf, .num = num, .data = data };
+    search_paths_stat_t stat = SearchPaths(path1,path2,allow_hidden,append_param_field,&spf);
+    PRINT0("%d %d %d\n",stat.dir_count,stat.func_count,stat.hit_count);
+    if (!stat.hit_count)
+    {
+	char srcbuf[PATH_MAX+2];
+	ccp source = PathCatPP(srcbuf,sizeof(srcbuf),path1,path2);
+	AppendParamField(pf,source,false,num,data);
+	stat.hit_count++;
+    }
+    return stat.hit_count;
 }
 
 //

@@ -6085,8 +6085,12 @@ ccp * InsertStringFieldHelper ( StringField_t * sf, int idx );
 // append at the end and do not sort
 void AppendStringField ( StringField_t * sf, ccp key, bool move_key );
 
-// append at the end if nor already exists, do not sort
+// append at the end if not already exists, do not sort
 void AppendUniqueStringField ( StringField_t * sf, ccp key, bool move_key );
+
+// insert or append a path (path1+path2) with optional wildcards by SearchPaths()
+uint InsertStringFieldExpand ( StringField_t * sf, ccp path1, ccp path2, bool allow_hidden );
+uint AppendStringFieldExpand ( StringField_t * sf, ccp path1, ccp path2, bool allow_hidden );
 
 // re-sort field using sf->func_cmp()
 void SortStringField ( StringField_t * sf );
@@ -6198,6 +6202,12 @@ bool RemoveParamField ( ParamField_t * pf, ccp key );
 // append at the end and do not sort
 ParamFieldItem_t * AppendParamField
 	( ParamField_t * pf, ccp key, bool move_key, uint num, cvp data );
+
+// insert or append a path (path1+path2) with optional wildcards by SearchPaths()
+uint InsertParamFieldExpand
+	( ParamField_t * pf, ccp path1, ccp path2, bool allow_hidden, uint num, cvp data );
+uint AppendParamFieldExpand
+	( ParamField_t * pf, ccp path1, ccp path2, bool allow_hidden, uint num, cvp data );
 
 // return the index of the (next) item
 uint FindParamFieldHelper ( const ParamField_t * pf, bool * found, ccp key );

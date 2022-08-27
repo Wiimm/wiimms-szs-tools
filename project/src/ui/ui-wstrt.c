@@ -80,6 +80,11 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"file",
 	"Each option call adds the filename to an internal list. Each file"
 	" must be of type GCT and is added to the internal wcode stock.\n"
+	"  If parameter FILE contains at least one wildcard (e.g. '*.gct'),"
+	" then FILE is used as search pattern and all found files are added."
+	" In order to use this variant, the calling shell must not interpret"
+	" the wildcards. Therefore, the parameter must usually be enclosed in"
+	" single or double quotes.\n"
 	"  If a single file is not found and the filename (not path) contains"
 	" at least 1 '@' character, then all '@' characters of it are replaced"
 	" by the region code (one of P,E,J,K) for a second try."
@@ -179,6 +184,11 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" and VBI hooks are optionally initialized. Use option --force to"
 	" allow overlapped sections. Use option --verbose up to 2 times for a"
 	" log.\n"
+	"  If parameter FILE contains at least one wildcard (e.g. '*.gct'),"
+	" then FILE is used as search pattern and all found files are added."
+	" In order to use this variant, the calling shell must not interpret"
+	" the wildcards. Therefore, the parameter must usually be enclosed in"
+	" single or double quotes.\n"
 	"  If a single file is not found and the filename (not path) contains"
 	" at least 1 '@' character, then all '@' characters of it are replaced"
 	" by the region code (one of P,E,J,K) for a second try.\n"
@@ -232,17 +242,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_GCT_ADDR, false, false, false, false, false, 0, "gct-addr",
 	"address",
 	"If --gct-move is active, a text section is created to manage the code"
-	" handling. This section is only needed at start and is placed by"
-	" default at address 0c802c0000 (good address for all 4 regions) as"
-	" part of BSS. This option changes the start address of the section."
-	" If address is 0 or invalid, then unused BSS space is searched."
+	" handler. This section is only needed at start and is placed by"
+	" default at address 0c802c0000 (part of BSS, good address for all 4"
+	" regions). This option changes the start address of the section. If"
+	" address is 0 or invalid, then unused BSS space is searched."
     },
 
     {	OPT_GCT_SPACE, false, false, false, false, false, 0, "gct-space",
 	"size",
 	"Define the minimal space for the code part of --gct-move. This value"
 	" is ignored, if it is smaller than the size of the cheat codes. This"
-	" option was only implemented to test the  memory allocation by"
+	" debug option was only implemented to test the  memory allocation by"
 	" --gct-move with large blocks."
     },
 
@@ -281,7 +291,12 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"file",
 	"Each option call adds the filename to an internal list. Each file"
 	" must be of type WPF (Wiimms Patch File) and defines a list of"
-	" conditionals and patches for staticr.rel and main.dol."
+	" conditionals and patches for staticr.rel and main.dol.\n"
+	"  If parameter FILE contains at least one wildcard (e.g. '*.wpf'),"
+	" then FILE is used as search pattern and all found files are added."
+	" In order to use this variant, the calling shell must not interpret"
+	" the wildcards. Therefore, the parameter must usually be enclosed in"
+	" single or double quotes."
     },
 
     {	OPT_SECTIONS, false, false, false, false, true, 0, "sections",

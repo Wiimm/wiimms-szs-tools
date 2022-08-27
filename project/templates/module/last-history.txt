@@ -1,26 +1,17 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - There is a new LEX section called "FEAT". It declares the special features
-   of a track file. CTGP-R uses this declaration to manage ghost.
-    - Command "wszst FEATURES" prints the feature list to standard output.
-    - Command "wlect CREATE FEAT" creates a LEX template with section FEAT.
-    - Patching option --lex-features adds or updates LEX section FEAT if any
-      relevant feature is set.
-    - Patching option --lex-rm-features removes LEX section FEAT.
- - Continuing the implementation of wlect DISTRIBUTION:
-    - Fixed a use after free bug (Cygwin only, fixed with r8614).
-    - Export of prefix list supports color_index now.
-    - Improved filename normalisation (Cygwin only).
-    - The file formats LE-REF and LE-DIS changed. They are *NOT* compatible
-      to v2.28a.beta.
-    - Support of lap count and speed factor for file formats LE-DEF and LE-REF.
-    - New instruction: SEPARATOR=string. Define a separator that is used by
-      other instructions (e.g. COPY=).
-    - New instruction: SPLIT=DEST,SRC,FORMAT.
-      Visit https://szs.wiimm.de/opt/printf for details.
- - New option: wszst SPLIT --printf=format: Use the split filename to create
-   a formatted string. See https://szs.wiimm.de/opt/printf for details.
-
+ - Continuing the implementation of LEX/FEAT:
+    - Comamnd wszst FEATURES: Options for value 3 (impact) are printed always.
+    - Option --print-modes removed.
+    - Option --long (-l and -ll) used to append human readable flags.
+ - Updated internal prefix database.
+ - Tool wstrt: Option --add-section=PATH supports now wildcards. In this case
+   PATH is used as search pattern and all found files are added. In order to
+   use this variant, the calling shell must not interpret the wildcards.
+   Therefore, PATH must usually be enclosed in single or double quotes.
+ - Bug fix: Option --all-ranks accepts keyword RESTORE now. Due to a spelling
+   mistake, only RETORE was recognized so far.
+ 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it
 ~   is possible to create a binary MDL by reading the internal data. This is

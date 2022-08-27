@@ -5479,11 +5479,16 @@
 #:def_cmd_opt( "FEATURES", "BRIEF", \
 	"", \
 	"Suppres any comments at all. If set twice, suppress empty lines (for" \
-	" grouping) too. If set three times, omit inactive features (=0) too." )
+	" grouping) too. If set three times, omit inactive features (value 0)" \
+	" too." )
 
 #:def_cmd_opt( "FEATURES", "LONG", \
 	"", \
-	"Print additional comments." )
+	" If set, a comma-separated list of letters is added to the end of" \
+	" each feature. If set twice, the output is filled with minus signed" \
+	" to get an aligned string. The letters used are: @S@ (section), @V@" \
+	" (visual impact), @B@ (battle impact), @R@ (racing impact), @T@ (time" \
+	" trial impact), @L@ (local=offline impact) and @O@ (online impact)." )
 
 #:def_cmd_opt( "FEATURES", "IGNORE", \
 	"", \
@@ -5531,10 +5536,6 @@
 	"" )
 
 #:def_cmd_opt( "FEATURES", "CASE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "FEATURES", "PMODES", \
 	"", \
 	"" )
 
@@ -23954,6 +23955,11 @@
 	" and VBI hooks are optionally initialized. Use option {--force} to" \
 	" allow overlapped sections. Use option {--verbose} up to 2 times for" \
 	" a log.\n" \
+	"  If parameter FILE contains at least one wildcard (e.g. '*.gct')," \
+	" then FILE is used as search pattern and all found files are added." \
+	" In order to use this variant, the calling shell must not interpret" \
+	" the wildcards. Therefore, the parameter must usually be enclosed in" \
+	" single or double quotes.\n" \
 	"  If a single file is not found and the filename (not path) contains" \
 	" at least 1 '@@' character, then all '@@' characters of it are" \
 	" replaced by the region code (one of P,E,J,K) for a second try.\n" \
@@ -23971,17 +23977,17 @@
 #:def_opt( "GCT_ADDR", "gct-addr|gctaddr", "CP", \
 	"address", \
 	"If {--gct-move} is active, a text section is created to manage the" \
-	" code handling. This section is only needed at start and is placed by" \
-	" default at address 0c802c0000 (good address for all 4 regions) as" \
-	" part of BSS. This option changes the start address of the section." \
-	" If address is @0@ or invalid, then unused BSS space is searched." )
+	" code handler. This section is only needed at start and is placed by" \
+	" default at address 0c802c0000 (part of BSS, good address for all 4" \
+	" regions). This option changes the start address of the section. If" \
+	" address is @0@ or invalid, then unused BSS space is searched." )
 
 #:def_opt( "GCT_SPACE", "gct-space|gctspace", "CP", \
 	"size", \
 	"Define the minimal space for the code part of {--gct-move}. This" \
 	" value is ignored, if it is smaller than the size of the cheat codes." \
-	" This option was only implemented to test the  memory allocation by" \
-	" {--gct-move} with large blocks." )
+	" This debug option was only implemented to test the  memory" \
+	" allocation by {--gct-move} with large blocks." )
 
 #:def_opt( "ALLOW_USER_GCH", "allow-user-gch|allowusergch", "CO", \
 	"[=mode]", \

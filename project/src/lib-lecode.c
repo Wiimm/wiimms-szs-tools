@@ -1302,7 +1302,6 @@ enumError SaveTextFileLPAR
 {
     DASSERT(lpar);
     DASSERT(f);
-    PRINT("SaveTextFileLPAR(%s,%d)\n",fname,set_time);
 
 
     //--- print header + syntax info

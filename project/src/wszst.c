@@ -2766,6 +2766,9 @@ static enumError cmd_features()
 {
     static ccp def_path = "\1P/\1F\1?T";
     CheckOptDest("-",false);
+    if (!strcmp(opt_dest,"-"))
+	SetupPager();
+
     char dest[PATH_MAX];
     enumError max_err = ERR_OK;
     if (!strcmp(opt_dest,"-"))
@@ -2856,8 +2859,8 @@ static enumError cmd_features()
 	//--- print result
 
 	PrintScriptVars(&ps,1,"file=\"%s\"\n",dest);
-	PrintFeaturesSZS( &ps, &fs, false, comments, long_count,
-				opt_pmodes, opt_fmodes_include, opt_fmodes_exclude );
+	PrintFeaturesSZS( &ps, &fs, false, comments, 1,
+				long_count, opt_fmodes_include, opt_fmodes_exclude );
 	PutScriptVars(&ps,2,0);
 
 	if (!script_array)
@@ -5750,7 +5753,6 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_ARRAY:		script_array++; break;
 	case GO_AVAR:		script_array++; script_varname = optarg; break;
 	case GO_CASE:		err += ScanOptCase(optarg); break;
-	case GO_PMODES:		opt_pmodes++; break;
 	case GO_FMODES:		err += ScanOptFModes(optarg); break;
 	case GO_INSTALL:	opt_install++; break;
 

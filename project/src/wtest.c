@@ -4142,6 +4142,66 @@ static enumError test_test_prefix ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_pf_expand()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_pf_expand ( int argc, char ** argv )
+{
+    if ( argc <= 1 )
+    {
+	printf(	"\nSyntax: PFE [ [-r] [-i] [-a] [pattern] ]...\n"
+		"\n"
+		"  -r : reset param-field.\n"
+		"  -i : Set mode to INSERT (default).\n"
+		"  -a : Set mode to APPEND.\n"
+		"\n");
+	exit(1);
+    }
+
+
+    ParamField_t pf = {0};
+    InitializeParamField(&pf);
+
+    bool append = false;
+    putchar('\n');
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	if (!strcmp(arg,"-r"))
+	{
+	    printf(">> --- RESET ---\n");
+	    ResetParamField(&pf);
+	}
+	else if (!strcmp(arg,"-a"))
+	    append = true;
+	else if (!strcmp(arg,"-i"))
+	    append = false;
+	else
+	{
+	    if (append)
+	    {
+		printf(">> APPEND %s\n",arg);
+		AppendParamFieldExpand(&pf,arg,0,false,i,0);
+	    }
+	    else
+	    {
+		printf(">> INSERT %s\n",arg);
+		InsertParamFieldExpand(&pf,arg,0,false,i,0);
+	    }
+	    
+	    const ParamFieldItem_t *ptr = pf.field;
+	    for ( int idx = 0; idx < pf.used; idx++, ptr++ )
+		printf("%5d: %3d %s\n",idx,ptr->num,ptr->key);
+	}
+
+    }
+    ResetParamField(&pf);
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4424,6 +4484,7 @@ enum
     CMD_XCODE_HEX,		// test_xcode_hex(argc,argv)
     CMD_IS_CHECKSUM,		// test_is_checksum(argc,argv)
     CMD_TEST_PREFIX,		// test_test_prefix(argc,argv)
+    CMD_PF_EXPAND,		// test_pf_expand(argc,argv)
 
  #ifdef HAVE_WIIMM_EXT
     CMD_WIIMM,			// test_wiimm(argc,argv)
@@ -4499,6 +4560,7 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_XCODE_HEX,	"XCODE-HEX",	"XH",		0 },
 	{ CMD_IS_CHECKSUM,	"IS-CHECKSUM",	"ICSUM",	0 },
 	{ CMD_TEST_PREFIX,	"TEST-PREFIX",	"TP",		0 },
+	{ CMD_PF_EXPAND,	"PF-EXPAND",	"PFE",		0 },
 
  #ifdef HAVE_WIIMM_EXT
 	{ CMD_WIIMM,		"WIIMM",	"W",		0 },
@@ -4671,6 +4733,7 @@ int main ( int argc, char ** argv )
 	case CMD_XCODE_HEX:		test_xcode_hex(argc,argv); break;
 	case CMD_IS_CHECKSUM:		test_is_checksum(argc,argv); break;
 	case CMD_TEST_PREFIX:		test_test_prefix(argc,argv); break;
+	case CMD_PF_EXPAND:		test_pf_expand(argc,argv); break;
 
  #ifdef HAVE_WIIMM_EXT
 	case CMD_WIIMM:			test_wiimm(argc,argv); break;

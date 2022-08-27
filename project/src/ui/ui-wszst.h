@@ -129,7 +129,6 @@ typedef enum enumOptions
 	OPT_SORT,
 	OPT_TRANSFORM,
 	OPT_STRIP,
-	OPT_PMODES,
 	OPT_FMODES,
 	OPT_INSTALL,
 	OPT_ANALYZE,
@@ -193,7 +192,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 137
+	OPT__N_SPECIFIC, // == 136
 
 	//----- global options -----
 
@@ -278,7 +277,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 217
+	OPT__N_TOTAL // == 216
 
 } enumOptions;
 
@@ -366,7 +365,6 @@ typedef enum enumOptions
 //	OB_SORT			= 1llu << OPT_SORT,
 //	OB_TRANSFORM		= 1llu << OPT_TRANSFORM,
 //	OB_STRIP		= 1llu << OPT_STRIP,
-//	OB_PMODES		= 1llu << OPT_PMODES,
 //	OB_FMODES		= 1llu << OPT_FMODES,
 //	OB_INSTALL		= 1llu << OPT_INSTALL,
 //	OB_ANALYZE		= 1llu << OPT_ANALYZE,
@@ -748,7 +746,6 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_IGNORE
 //				| OB_GRP_SCRIPT
-//				| OB_PMODES
 //				| OB_FMODES
 //				| OB_DEST
 //				| OB_DEST2,
@@ -1230,7 +1227,6 @@ typedef enum enumGetOpt
 	GO_ARRAY,
 	GO_AVAR,
 	GO_CASE,
-	GO_PMODES,
 	GO_FMODES,
 	GO_INSTALL,
 	GO_ANALYZE,

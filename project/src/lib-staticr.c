@@ -5056,7 +5056,7 @@ static enumError AddSectionHelper2
 
     if ( verbose > 0 )
 	fprintf(stdlog,
-	    "- Create section %s [%08x..%08x], file offset 0x%06x, size 0x%x\n",
+	    "- Create section %s [0x%08x..0x%08x], file offset 0x%06x, size 0x%x\n",
 	    di.name, seg->addr,  seg->addr+seg_size, offset, seg_size );
 
     dh->sect_off [di.section] = htonl(offset);
@@ -5078,7 +5078,7 @@ static enumError AddSectionHelper2
     {
 	if ( verbose >= 1 )
 	    fprintf(stdlog,
-		"- Change entry point from %08x to %08x\n",
+		"- Change entry point from 0x%08x to 0x%08x\n",
 		ntohl(dh->entry_addr), seg->main_entry );
 	write_be32(&dh->entry_addr,seg->main_entry);
     }
@@ -5112,11 +5112,11 @@ static enumError AddSectionHelper2
 	    }
 
 	    const u32 code = ( seg->vbi_entry - patch_addr ) & 0x3ffffff | 0x48000000;
-	    PRINT("PATCH addr %08x (off %08x, VBI) from %08x to %08x\n",
+	    PRINT("PATCH address 0x%08x (file offset 0x%08x, VBI) from 0x%08x to 0x%08x\n",
 		patch_addr, offset, be32(str->data+offset), code );
 	    if ( verbose > 0 )
 		fprintf(stdlog,
-			"- Patch address %08x (off %08x, VBI) from %08x to %08x\n",
+			"- Patch address 0x%08x (offset 0x%08x, VBI) from 0x%08x to 0x%08x\n",
 			patch_addr, offset, be32(str->data+offset), code );
 	    write_be32(str->data+offset,code);
 	}
@@ -6962,8 +6962,7 @@ int ScanOptAllRanks ( ccp arg )
 
     static const KeywordTab_t tab[] =
     {
-	{ -1,	"RETORE",	"NINTENDO",	0 },
-	{ -1,	"RESET",	0,		0 }, // [obsolete]] in 2015
+	{ -1,	"RESTORE",	"NINTENDO",	0 },
 	{ 0,	"NONE",		0,		0 },
 	{ 1,	"ON",		0,		0 },
 	{ 0,0,0,0 }

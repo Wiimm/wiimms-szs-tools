@@ -484,9 +484,9 @@ void WAIT_ARG_FUNC ( ccp format, va_list arg );
 
 // always disabled
 #define HAVE_PRINT0	0
-#define PRINT0		TRACE
-#define PRINT_IF0	TRACE_IF
-#define PRINT_SIZEOF0	TRACE_SIZEOF
+#define PRINT0(...)	
+#define PRINT_IF0(...)	
+#define PRINT_SIZEOF0(...)
 #define BINGO0		TRACELINE
 
 // always enabled

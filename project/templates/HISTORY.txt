@@ -575,6 +575,30 @@ szs v2.28a.beta r8612 - 2022-07-09
    LE-STR, SHA1REF and PREFIX.
 
 
+szs v2.28a.beta2 r8627 - 2022-08-06
+
+ - There is a new LEX section called "FEAT". It declares the special features
+   of a track file. CTGP-R uses this declaration to manage ghost.
+    - Command "wszst FEATURES" prints the feature list to standard output.
+    - Command "wlect CREATE FEAT" creates a LEX template with section FEAT.
+    - Patching option --lex-features adds or updates LEX section FEAT if any
+      relevant feature is set.
+    - Patching option --lex-rm-features removes LEX section FEAT.
+ - Continuing the implementation of wlect DISTRIBUTION:
+    - Fixed a use after free bug (Cygwin only, fixed with r8614).
+    - Export of prefix list supports color_index now.
+    - Improved filename normalisation (Cygwin only).
+    - The file formats LE-REF and LE-DIS changed. They are *NOT* compatible
+      to v2.28a.beta.
+    - Support of lap count and speed factor for file formats LE-DEF and LE-REF.
+    - New instruction: SEPARATOR=string. Define a separator that is used by
+      other instructions (e.g. COPY=).
+    - New instruction: SPLIT=DEST,SRC,FORMAT.
+      Visit https://szs.wiimm.de/opt/printf for details.
+ - New option: wszst SPLIT --printf=format: Use the split filename to create
+   a formatted string. See https://szs.wiimm.de/opt/printf for details.
+
+
 @@MODULE(last-history.txt)@@
 
 

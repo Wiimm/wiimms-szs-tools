@@ -1636,7 +1636,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_ADD_CTCODE:	opt_add_ctcode = true; break;
 	case GO_CT_DIR:		AppendStringField(&ct_dir_list,optarg,false); break;
 	case GO_MOVE_D8:	opt_move_d8 = true; break;
-	case GO_ADD_SECTION:	AppendStringField(&opt_sect_list,optarg,false); break;
+	case GO_ADD_SECTION:	AppendStringFieldExpand(&opt_sect_list,optarg,0,false); break;
 	case GO_FULL_GCH:	opt_full_gch = true; break;
 
 	case GO_GCT_SEP:	opt_gct_sep = true; break;
@@ -1649,7 +1649,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_GCT_NO_SEP:	opt_gct_scan_sep = false; break;
 
 	case GO_CREATE_SECT:	err += ScanOptCreateSect(optarg); break;
-	case GO_WPF:		AppendStringField(&opt_wpf_list,optarg,false); break;
+	case GO_WPF:		AppendStringFieldExpand(&opt_wpf_list,optarg,0,false); break;
 
 	case GO_HTTPS:		err += ScanOptHttps(optarg); break;
 	case GO_DOMAIN:		err += ScanOptDomain(0,optarg); break;
@@ -1657,7 +1657,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_TWIIMMFI:	err += ScanOptDomain("domain","test.wiimmfi.de"); break;
 	case GO_WC24:		opt_wc24 = true; break;
 	case GO_WCODE:		err += ScanOptWCode(optarg); break;
-	case GO_ADD_WCODE:	AppendStringField(&opt_wcode_list,optarg,false); break;
+	case GO_ADD_WCODE:	AppendStringFieldExpand(&opt_wcode_list,optarg,0,false); break;
 	case GO_PB_MODE:	err += ScanOptPBMode(optarg); break;
 	case GO_PATCHED_BY:	err += ScanOptPatchedBy(optarg); break;
 	case GO_VS:		err += ScanOptVS(0,0,optarg); break;
@@ -1733,6 +1733,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 
  #ifdef DEBUG
     DumpUsedOptions(&InfoUI_wstrt,TRACE_FILE,11);
+    //WriteStringField(stderr,0,&opt_sect_list,"#>> ",0);
  #endif
     NormalizeOptions( verbose > 3 && !is_env );
 
