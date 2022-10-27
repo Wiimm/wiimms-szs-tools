@@ -373,6 +373,7 @@ typedef struct szs_file_t
     bool		links;		// true: support of hardlinks enabled
     bool		readonly;	// true: file was opened for readonnly purpose
     bool		cache_used;	// true: compression by cache copy
+    bool		check_only;	// true: analysing or checking the file
 
 
     //--- parent
@@ -409,6 +410,9 @@ typedef struct szs_file_t
     //--- statistics, determined by LoadObjFileListSZS()
 
     UsedFileFILE_t	*used_file;	// NULL or alloced and set vector
+    DbFlags_t		found_flags;	// summery (or'ed) of 'used_file'
+    MissedFile_t	missed_file;	// missed files by DBT_* groups
+    MissedFile_t	modified_file;	// modified files by DBT_* groups
     ParamField_t	*required_file;	// list with required files by setting
     int			n_cannon;	// number of defined cannons, -1: unknown
     IsArena_t		is_arena;	// one of ARENA_*
@@ -753,6 +757,8 @@ enumError LoadObjFileListSZS
     CheckMode_t		check_mode,	// param for LoadKMP()/ScanKMP()
     lex_info_t		*lexinfo	// NULL or valid LEX info
 );
+
+ccp GetStatusMissedFile ( MissedFile_t miss );
 
 ParamFieldItem_t * IsFileRequiredSZS
 (
@@ -1440,72 +1446,6 @@ enumError CompressBZ ( szs_file_t * szs, bool remove_uncompressed );
 
 #define BRASD_MAGIC		"RASD"
 #define BRASD_MAGIC_NUM		0x52415344
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			analyse_szs_t			///////////////
-///////////////////////////////////////////////////////////////////////////////
-// [[analyse_szs_t]]
-
-typedef struct analyse_szs_t
-{
-    //--- db+sha1 check sums
-
-    char	db64[CHECKSUM_DB_SIZE+1];
-					// DB64 checksum
-    sha1_hex_t	sha1_szs;		// SHA1 of SZS file
-    sha1_hex_t	sha1_szs_norm;		// SHA1 of normed SZS file
-    sha1_hex_t	sha1_kmp;		// SHA1 of KMP file
-    sha1_hex_t	sha1_kmp_norm;		// SHA1 of normed KMP file
-    sha1_hex_t	sha1_kcl;		// SHA1 of KCL file
-    sha1_hex_t	sha1_course;		// SHA1 of course-model
-    sha1_hex_t	sha1_vrcorn;		// SHA1 of vrcorn
-    sha1_hex_t	sha1_minimap;		// SHA1 of minimap
-
-    //--- slots of orgiginal tracks: 0:none, 11.84:track 111..125:arena
-
-    u8		sha1_kmp_slot;
-    u8		sha1_kmp_norm_slot;
-    u8		sha1_kcl_slot;
-    u8		sha1_minimap_slot;
-
-    //--- sub files
-
-    lex_info_t		lexinfo;	// LEX info
-    slot_ana_t		slotana;	// slot data
-    slot_info_t		slotinfo;	// slot data
-    kmp_finish_t	kmp_finish;	// finish line
-    kmp_usedpos_t	used_pos;	// used positions
-    szs_have_t		have;		// complete have status, copy of szs_file_t::have
-
-
-    //--- more stats
-
-    int		ckpt0_count;		// number of LC in CKPT, -1 unknown
-    int		lap_count;		// STGI lap counter
-    float	speed_factor;		// STGI speed factor
-    u16		speed_mod;		// STGI speed mod
-    u8		valid_track;		// 1: valid track or arena file
-
-    char	gobj_info[20];		// gobj counters
-    char	ct_attrib[300];		// collected ct attributes
-
-    u_usec_t	duration_usec;		// duration of AnalyseSZS() in usec
-}
-analyse_szs_t;
-
-//-----------------------------------------------------------------------------
-
-void InitializeAnalyseSZS ( analyse_szs_t * as );
-void ResetAnalyseSZS ( analyse_szs_t * as );
-
-void AnalyseSZS
-(
-    analyse_szs_t	*as,		// result
-    bool		init_sa,	// true: init 'as', false: reset 'as'
-    szs_file_t		*szs,		// SZS file to analysze
-    ccp			fname		// NULL or fname for slot analysis
-);
 
 //
 ///////////////////////////////////////////////////////////////////////////////

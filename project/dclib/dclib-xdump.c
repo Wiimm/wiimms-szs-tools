@@ -1532,8 +1532,6 @@ static int XDiffHelper
     #endif
 	uint donesize = dumpsize1 > dumpsize2 ? dumpsize1 : dumpsize2;
 
-//DEL fprintf(stderr,">>> %d,%d done=%d, donesize=%d, diffsize=%d\n",size1,size2,done,donesize,diffsize);
-
     #if !OPTIMIZED_SEARCH
 	if ( diffsize > 0
 		&& ( diffsize < xd->bytes_per_line || memcmp(p1,p2,diffsize) ))

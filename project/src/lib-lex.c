@@ -103,7 +103,7 @@ bool LEX_ACTION_LOG ( bool is_patch, const char * format, ... )
 typedef struct feature_var_t
 {
     u16 offset;		// offset for features_szs_t
-    u8  index;		// index or bit number of related analyse_szs_t
+    u8  index;		// index or bit number of related analyze_szs_t
     u8  no_lex;		// suppress output for lex files
     ccp name;		// name of variable
     ccp comment;	// comment for variable
@@ -194,7 +194,7 @@ typedef struct feature_list_t
 {
     const feature_var_t	*var;		// var list
     uint		var_type;	// one of enum feature_list_var_type
-    uint		offset;		// offset in analyse_szs_t
+    uint		offset;		// offset in analyze_szs_t
     uint		max_value;	// maximum possible value
     ccp			ref_prefix;	// prefix for references
     ccp			heading1;	// heading1
@@ -1487,7 +1487,7 @@ static const struct FuncTable_t lex_func_tab[] =
 
 const VarMap_t * SetupVarsLEX()
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
     {
 	DefineMkwVars(&vm);

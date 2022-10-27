@@ -2334,7 +2334,7 @@ static const struct FuncTable_t kmp_func_tab[] =
 
 const VarMap_t * SetupVarsKMP()
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
     {
 	//--- setup parser function get()
@@ -5590,7 +5590,7 @@ enumError ScanTextKMP
 )
 {
     PRINT("ScanTextKMP(init=%d)\n",init_kmp);
-    KMP_ACTION_LOG(false,"ScanTextKMP() %s\n",kmp->fname);
+    KMP_ACTION_LOG(kmp,false,"ScanTextKMP() %s\n",kmp->fname);
 
     DASSERT(kmp);
     if (init_kmp)
@@ -6380,7 +6380,7 @@ enumError SaveTextKMP
     DASSERT(kmp);
     DASSERT(fname);
     PRINT("SaveTextKMP(%s,%d) mtime=%lu\n",fname,set_time,kmp->fatt.mtime.tv_sec);
-    KMP_ACTION_LOG(false,"SaveTextKMP() %s\n",fname);
+    KMP_ACTION_LOG(kmp,false,"SaveTextKMP() %s\n",fname);
 
     char temp_buf[100];
 
@@ -7131,7 +7131,6 @@ enumError SaveTextKMP
 			    fprintf(F.f," = %s",oi->name);
 			else
 			    fprintf(F.f," = %#06x | %s",gobj->obj_id&GOBJ_M_FLAGS,oi->name);
-		//DEL	    fprintf(F.f," = %s | %#06x",oi->name,gobj->obj_id&GOBJ_M_FLAGS);
 		    }
 		}
 		fputs("\r\n",F.f);

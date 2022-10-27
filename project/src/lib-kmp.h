@@ -1209,8 +1209,9 @@ int   ScanOptKtpt2 ( ccp arg );
 u16   SpeedMod2u16 ( float speed );
 float SpeedMod2float ( u16 hex );
 
-bool KMP_ACTION_LOG ( bool is_patch, const char * format, ... )
-	__attribute__ ((__format__(__printf__,2,3)));
+struct kmp_t;
+bool KMP_ACTION_LOG ( const struct kmp_t *kmp, bool is_patch, const char * format, ... )
+	__attribute__ ((__format__(__printf__,3,4)));
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1290,6 +1291,7 @@ typedef struct kmp_t
     //--- error control: if >0: suppress warnings for ...
 
     int			nowarn_format;		// .. invalid file formats
+    bool		check_only;		// true: analysing or checking the file
 
     //--- data
 

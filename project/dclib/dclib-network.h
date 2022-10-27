@@ -117,27 +117,30 @@ bool ResolveHostMem
 typedef enum PrintModeIP_t
 {
     // characters for ScanPrintModeIP(): nria
-    PMIP_NEVER		= 0x000,  ///< '/Bits' unterdrücken.
-    PMIP_RELEVANT	= 0x001,  ///< '/Bits' nur falls relevant.
-    PMIP_IF_SET		= 0x002,  ///< '/Bits' nur falls gesetzt.
-    PMIP_ALWAYS		= 0x003,  ///< '/Bits' immer ausgeben.
-     PMIP_M_BITS	= 0x003,  ///< Maske für Bit-Modi.
+    PMIP_NEVER		= 0x0000,  ///< '/Bits' unterdrücken.
+    PMIP_RELEVANT	= 0x0001,  ///< '/Bits' nur falls relevant.
+    PMIP_IF_SET		= 0x0002,  ///< '/Bits' nur falls gesetzt.
+    PMIP_ALWAYS		= 0x0003,  ///< '/Bits' immer ausgeben.
+     PMIP_M_BITS	= 0x0003,  ///< Maske für Bit-Modi.
 
     // characters for ScanPrintModeIP(): psmb
-    PMIP_PORT		= 0x004,  ///< Flag: Print port if >0.
-    PMIP_SERVICE	= 0x008,  ///< Flag: Print service instead of port number.
-    PMIP_MASK		= 0x010,  ///< Flag: Print netmask instead of bits for IPv4.
-    PMIP_BRACKETS	= 0x020,  ///< Flag: Print bracktes if [IPv6].
+    PMIP_PORT		= 0x0004,  ///< Flag: Print port if >0.
+    PMIP_SERVICE	= 0x0008,  ///< Flag: Print service instead of port number.
+    PMIP_MASK		= 0x0010,  ///< Flag: Print netmask instead of bits for IPv4.
+    PMIP_BRACKETS	= 0x0020,  ///< Flag: Print bracktes if [IPv6].
 
     // characters for ScanPrintModeIP(): f
-    PMIP_FULL_IPV6	= 0x100,  ///< Print IPv6 without short numbers.
+    PMIP_FULL_IPV6	= 0x0100,  ///< Print IPv6 without short numbers.
 
     // characters for ScanPrintModeIP(): 0123
-    PMIP_0DOTS		= 0x200,  ///< Print IPv4 as single number (highest priority).
-    PMIP_1DOT		= 0x400,  ///< Print IPv4 as "1.2" (A-Class notation).
-    PMIP_2DOTS		= 0x800,  ///< Print IPv4 as "1.2.3" (B-Class notation).
-    PMIP_3DOTS		=     0,  ///< Print IPv4 as "1.2.3.4" (C-Class notation, default).
-     PMIP_M_DOTS	= 0xc00   ///< Maske für Dot-Modi.
+    PMIP_0DOTS		= 0x0200,  ///< Print IPv4 as single number (highest priority).
+    PMIP_1DOT		= 0x0400,  ///< Print IPv4 as "1.2" (A-Class notation).
+    PMIP_2DOTS		= 0x0800,  ///< Print IPv4 as "1.2.3" (B-Class notation).
+    PMIP_3DOTS		=      0,  ///< Print IPv4 as "1.2.3.4" (C-Class notation, default).
+     PMIP_M_DOTS	= 0x0c00,  ///< Maske für Dot-Modi.
+
+    // flags for advanced usage
+    PMIP_F_RESOLVE	= 0x1000,  ///< If set: resolve address or name if missed
 }
 PrintModeIP_t;
 
@@ -154,9 +157,12 @@ typedef enum IPClass_t
 {
     IPCL_INVALID,	// 0.0.0.0					::
     IPCL_LOOPBACK,	// 127.0/8					::1
-    IPCL_LOCAL,		// 10.0/8 172.16/12 192.168/16 169.254/16	fe80::/10
-    IPCL_STANDARD,	// *						*
+    IPCL_LOCAL,		// 10.0/8 172.16/12 192.168/16 169.254/16	-
+    IPCL_LINK_LOCAL,	// -						fe80::/64
+    IPCL_UNIQUE_LOCAL,	// -						fc00::/7
     IPCL_SPECIAL,	// 224.0.0.0/3					f00::/8
+    IPCL_STANDARD,	// *						2000::/3
+    IPCL_UNUSED,	// -						*
     IPCL__N,
 }
 IPClass_t;
@@ -403,6 +409,7 @@ ManageIP_t GetAddrInfoMIP ( ccp addr, int protocol, IpMode_t ipm );
 
 sockaddr_in46_t GetSockaddrMIP ( const ManageIP_t *mip );
 ccp GetNameInfoMIP ( ManageIP_t *mip );
+ccp GetNameInfoExMIP ( ManageIP_t *mip, PrintModeIP_t pmode ); // respect PMIP_F_RESOLVE
 
 void ApplyMaskMIP ( ManageIP_t *mip, int bits );
 void MaskPrefixMIP ( ManageIP_t *mip ); // includes ApplyMaskMIP()

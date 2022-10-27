@@ -1431,6 +1431,76 @@ uint ScanEscapedString
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+uint EncodeVersion ( ccp arg )
+{
+    if (!arg)
+	return 0;
+
+    if ( *arg =='v' || *arg == 'V' )
+	arg++;
+    
+    char *next;
+    uint major = str2ul(arg,&next,10);
+    if ( major > 4293 )
+	major = major;
+
+    uint minor = 0, letter = 0, beta = ~0;
+    if ( *next == '.' )
+    {
+	if (isdigit(*++next))
+	{
+	    minor = str2ul(next,&next,10);
+	    if ( minor > 99 )
+		minor = 99;
+	}
+	
+	if (!strncasecmp(next,"beta",4))
+	    beta = str2ul(next+4,0,10);
+	else if (islower(*next))
+	    letter = *next++ -'a' + 1;
+	else if (isupper(*next))
+	    letter = *next++ -'A' + 27;
+
+    }
+
+    if ( *next == '.' )
+	next++;
+    if ( beta == ~0 && !strncasecmp(next,"beta",4) )
+	beta = str2ul(next+4,0,10);
+
+    if (!beta)
+	beta = 1;
+    else if ( beta > 99 )
+	beta = 99;
+    
+    return 1000000 * major + 10000 * minor + 100 * letter + beta;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp DecodeVersion ( uint code )
+{
+    const uint major	= code / 1000000;
+    const uint minor	= code / 10000 % 100;
+    const uint letter	= code / 100 % 100;
+    const uint beta	= code % 100;
+
+    char xletter[2] = { 0x60+letter, 0 };
+    if (!letter)
+	*xletter = 0;
+    else if (letter>52)
+	*xletter = '?';
+    else if (letter>26)
+	*xletter += 'A'-'z'-1;
+
+    return beta > 0 && beta < 99
+	? PrintCircBuf("%u.%02u%s.beta%u",major,minor,xletter,beta)
+	: PrintCircBuf("%u.%02u%s%s",major,minor,xletter,beta?"":"*");
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
 u32 CalcCRC32 ( u32 crc, cvp buf, uint size )
 {
  #if HAVE_PRINT0
@@ -4217,7 +4287,8 @@ char * ScanDateTime
     time_t	*res_time,	// not NULL: store seconds here
     u32		*res_usec,	// not NULL: store useconds of second here
     ccp		source,		// source text
-    bool	allow_delta	// true: allow +|- interval
+    bool	allow_delta,	// true: allow +|- interval
+    bool	use_localtime	// false: UTC, true: local time
 )
 {
     //--- scan date
@@ -4232,12 +4303,12 @@ char * ScanDateTime
     memset(&tm,0,sizeof(tm));
     src = strptime(src,"%Y-%m-%d",&tm);
 
-    noPRINT(" %4u-%02u-%02u %2u:%02u:%02u |%s|\n",
+    PRINT1(" %4u-%02u-%02u %2u:%02u:%02u |%s|\n",
 	tm.tm_year+1900, tm.tm_mon+1, tm.tm_mday,
 	tm.tm_hour, tm.tm_min, tm.tm_sec, src );
 
     if (src)
-	total_time = mktime(&tm);
+	total_time = use_localtime ? mktime(&tm) : timegm(&tm);
     else
 	src = source ? source : "";
     noPRINT_TIME(total_time,"DATE");
@@ -4277,9 +4348,9 @@ char * ScanDateTime
 	total_time -= delta + timezone;
 	src = src2 + 5;
     }
-    else
+    else if (use_localtime)
     {
-	PRINT("timezone=%ld\n",timezone);
+	PRINT0("timezone=%ld, total_time=%ld\n",timezone,(long)total_time);
 	struct tm *tm = localtime(&total_time);
 	if (tm->tm_isdst)
 	    total_time -= 3600;
@@ -4337,12 +4408,13 @@ char * ScanDateTime64
 (
     u64		*res_usec,	// not NULL: store total microseconds
     ccp		source,		// source text
-    bool	allow_delta	// true: allow +|- interval
+    bool	allow_delta,	// true: allow +|- interval
+    bool	use_localtime	// false: UTC, true: local time
 )
 {
     time_t time;
     u32 usec;
-    char *src = ScanDateTime(&time,&usec,source,allow_delta);
+    char *src = ScanDateTime(&time,&usec,source,allow_delta,use_localtime);
     if (res_usec)
 	*res_usec = time * 1000000ull + usec;
     return src;

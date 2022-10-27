@@ -720,6 +720,16 @@ ccp StringCenterE
 
 ///////////////////////////////////////////////////////////////////////////////
 
+char * StringLower ( ccp src )
+{
+    if (src)
+	for ( char *ptr = (char*)src; *ptr; ptr++ )
+	    *ptr = tolower(*ptr);
+    return (char*)src;
+}
+
+//-----------------------------------------------------------------------------
+
 char * StringLowerE ( char * buf, ccp buf_end, ccp src )
 {
     // RESULT: end of copied string pointing to NULL
@@ -780,6 +790,16 @@ char * MemLowerS ( char * buf, ssize_t buf_size, mem_t src )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+char * StringUpper ( ccp src )
+{
+    if (src)
+	for ( char *ptr = (char*)src; *ptr; ptr++ )
+	    *ptr = toupper(*ptr);
+    return (char*)src;
+}
+
+//-----------------------------------------------------------------------------
 
 char * StringUpperE ( char * buf, ccp buf_end, ccp src )
 {
@@ -3477,8 +3497,7 @@ void DumpArgManager ( FILE *f, int indent, const ArgManager_t *am, ccp title )
 	char buf[10];
 	int fw = snprintf(buf,sizeof(buf),"%u",am->argc-1)+2;
 
-	uint i;
-	for ( i = 0; i < am->argc; i++ )
+	for ( int i = 0; i < am->argc; i++ )
 	    fprintf(f,"%*s%*u: |%s|\n", indent,"", fw,i, am->argv[i] );
     }
 }
@@ -6074,22 +6093,40 @@ const KeywordTab_t *GetKewordByIdAndOpt
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-const KeywordTab_t * ScanKeyword
+const KeywordTab_t * ScanKeywordEx
 (
     int			* res_abbrev,	// NULL or pointer to result 'abbrev_count'
     ccp			arg,		// argument to scan
+    int			arg_len,	// length of 'arg', if <0 then terminate at null, comma or semicolon
+    LowerUpper_t	force_case,	// change case of scanned arg if LOUP_LOWER|LOUP_UPPER
     const KeywordTab_t	* key_tab	// valid pointer to command table
 )
 {
-    DASSERT(arg);
-    char key_buf[KEYWORD_NAME_MAX];
+    if ( !arg || !key_tab )
+	return 0;
 
+    char key_buf[KEYWORD_NAME_MAX];
     char *dest = key_buf;
     char *end  = key_buf + sizeof(key_buf) - 1;
-    while ( *arg && *arg != ',' && *arg != ';' && dest < end )
-	*dest++ = toupper((int)*arg++);
+
+    if ( arg_len < 0 )
+    {
+	while ( *arg && *arg != ',' && *arg != ';' && dest < end )
+	    *dest++ = *arg++;
+    }
+    else
+    {
+	ccp arg_end = arg + arg_len;
+	while ( *arg && arg < arg_end && dest < end )
+	    *dest++ = *arg++;
+    }
     *dest = 0;
     const int key_len = dest - key_buf;
+
+    if ( force_case == LOUP_UPPER )
+	StringUpper(key_buf);
+    else if ( force_case == LOUP_LOWER )
+	StringLower(key_buf);
 
     int favor_count = 0, abbrev_count = 0;
     const KeywordTab_t *ct, *key_ct = 0;
@@ -6638,6 +6675,146 @@ int ScanKeywordOffOn
 	PrintKeywordError(keytab,arg,status,0,object);
 
     return -2;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			KeywordTabManager_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void InitializeKTM ( KeywordTabManager_t *ktm, int grow, bool sort )
+{
+    DASSERT(ktm);
+    memset(ktm,0,sizeof(*ktm));
+    ktm->sort = sort;
+    ktm->grow = grow > 10 ? grow : 10;
+    ktm->size = ktm->grow;
+    ktm->list = CALLOC(ktm->size+1,sizeof(*ktm->list));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ResetKTM ( KeywordTabManager_t *ktm )
+{
+    if (ktm)
+    {
+	for ( int idx = 0; idx < ktm->used; idx++ )
+	{
+	    KeywordTab_t *key = ktm->list + idx;
+	    FreeString(key->name1);
+	    FreeString(key->name2);
+	}
+	FREE(ktm->list);
+	memset(ktm,0,sizeof(*ktm));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ClearKTM ( KeywordTabManager_t *ktm )
+{
+    if (ktm)
+    {
+	if (!ktm->list)
+	    InitializeKTM(ktm,10,true);
+	DASSERT(ktm->list);
+	ktm->used = 0;
+	memset(ktm->list,0,sizeof(*ktm->list));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static ccp ktm_dup_name ( const KeywordTabManager_t *ktm, ccp name, int namelen )
+{
+    ccp res = namelen < 0 ? STRDUP(name) : MEMDUP(name,namelen);
+    if ( ktm->force_case == LOUP_UPPER )
+	StringUpper(res);
+    else if ( ktm->force_case == LOUP_LOWER )
+	StringLower(res);
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static KeywordTab_t * insert_ktm_helper
+	( KeywordTabManager_t *ktm, uint idx, ccp name, int namelen, s64 id, s64 opt )
+{
+    DASSERT(ktm);
+    if ( ktm->used == ktm->size )
+    {
+	if ( ktm->grow < 10 )
+	     ktm->grow = 10;
+	ktm->size += ktm->size/2 + ktm->grow;
+	ktm->list = REALLOC( ktm->list, (ktm->size+1) * sizeof(*ktm->list)) ;
+    }
+
+    if ( idx >= ktm->used )
+	idx = ktm->used;
+    KeywordTab_t *key = ktm->list + idx;
+
+    if ( idx < ktm->used )
+	memmove( key+1, key, (ktm->used-idx)*sizeof(*ktm->list) );
+    memset(ktm->list + ++ktm->used, 0, sizeof(*key) );
+
+    key->id	= id;
+    key->opt	= opt;
+    key->name1	= ktm_dup_name(ktm,name,namelen);
+    key->name2	= 0;
+    return key;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+KeywordTab_t * InsertKTM
+	( KeywordTabManager_t *ktm, ccp name, int namelen, s64 id, s64 opt )
+{
+    DASSERT(ktm);
+    if (!ktm->sort)
+	return AppendKTM(ktm,name, namelen,id,opt);
+
+    int idx;
+    KeywordTab_t *key = ktm->list;
+
+    // find first occurance
+    for ( idx = 0; idx < ktm->used; idx++, key++ )
+	if ( key->id == id && key->opt == opt )
+	{
+	    // skip same entries
+	    for ( ; idx < ktm->used; idx++, key++ )
+		if ( key->id != id || key->opt != opt )
+		    break;
+
+	    key--;
+	    if ( !key->name2 )
+	    {
+		key->name2 = ktm_dup_name(ktm,name,namelen);
+		return key;
+	    }
+	    break;
+	}
+
+    return insert_ktm_helper(ktm,idx,name,namelen,id,opt);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+KeywordTab_t * AppendKTM
+	( KeywordTabManager_t *ktm, ccp name, int namelen, s64 id, s64 opt )
+{
+    DASSERT(ktm);
+
+    if ( ktm->used > 0 )
+    {
+	KeywordTab_t *key = ktm->list + ktm->used - 1;
+	if ( !key->name2 && key->id == id && key->opt == opt )
+	{
+	    key->name2 = ktm_dup_name(ktm,name,namelen);
+	    return key;
+	}
+    }
+
+    return insert_ktm_helper(ktm,ktm->used,name,namelen,id,opt);
 }
 
 //

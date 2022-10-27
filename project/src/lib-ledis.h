@@ -96,6 +96,9 @@
 #define LE_PREFIX_MAGIC8	"#PREFIX1"
 #define LE_PREFIX_MAGIC8_NUM	0x2350524546495831ull
 
+#define LE_MTCAT_MAGIC8		"#MTCAT03"
+#define LE_MTCAT_MAGIC8_NUM	0x234d544341543033ull
+
 #define LE_MAX_TRACKS		(MKW_MAX_TRACK_SLOT+1)
 #define LE_TRACK_STRING_MAX	500
 
@@ -508,7 +511,7 @@ static inline bool IsExportLT ( const le_track_t *lt )
 	{ return lt && lt->track_status >= LTS_EXPORT; }
 
 static inline bool IsVisibleLT ( const le_track_t *lt )
-	{ return lt && lt->track_status >= LTS_ACTIVE && !IsHiddenLETF(lt->flags); }
+	{ return lt && lt->track_status >= LTS_ACTIVE && !IsHiddenLEFL(lt->flags); }
 
 //-----------------------------------------------------------------------------
 // SetListLT(), SetText*LT(): use 'opt & LEO_LTT_SELECTOR' to select text
@@ -592,6 +595,7 @@ typedef struct le_track_arch_t
 {
     le_track_t		lt;		// usual track data
     le_group_t		group;		// group id
+// [[mtcat]]
 
     // all string alloced
 
@@ -600,9 +604,9 @@ typedef struct le_track_arch_t
 
     // order := attr_order plus_order name_order game_order
 
-    s16			attr_order;	// order by attribute, default=1000
-    uint		plus_order;	// order by plus prefix
-    uint		game_order;	// order by game prefix
+    int			attr_order;	// order by attribute, default=1000
+    int			plus_order;	// order by plus prefix
+    int			game_order;	// order by game prefix
 }
 le_track_arch_t;
 
@@ -899,16 +903,16 @@ enumError ImportFileLD
 
 void ImportOptionsLD	( le_distrib_t *ld );
 
-void ImportLD		( le_distrib_t *ld, const le_distrib_t	*src );
+//void ImportLD		( le_distrib_t *ld, const le_distrib_t	*src );
 void ImportLparLD	( le_distrib_t *ld, const le_lpar_t	*lpar );
-void ImportAnaLD	( le_distrib_t *ld, const le_analyse_t	*ana );
+void ImportAnaLD	( le_distrib_t *ld, const le_analyze_t	*ana );
 void ImportCtcodeLD	( le_distrib_t *ld, const ctcode_t	*ctcode );
 void ImportBmgLD	( le_distrib_t *ld, const bmg_t		*bmg, const le_strpar_t *par );
 
 //-----------------------------------------------------------------------------
 
-bool ExportAnaLD	( const le_distrib_t *ld, le_analyse_t *ana );
-bool ExportCtCodeLD	( const le_distrib_t *ld, ctcode_t     *ctcode );
+bool ExportAnaLD	( const le_distrib_t *ld, le_analyze_t *ana );
+//bool ExportCtCodeLD	( const le_distrib_t *ld, ctcode_t     *ctcode );
 
 //-----------------------------------------------------------------------------
 // create files
@@ -917,7 +921,7 @@ enumError CreateDumpLD    ( FILE *f, le_distrib_t *ld );
 enumError CreateRefLD     ( FILE *f, le_distrib_t *ld, bool add_strings );
 enumError CreateStringsLD ( FILE *f, le_distrib_t *ld );
 enumError CreateNamesLD   ( FILE *f, le_distrib_t *ld, bool use_xname );
-enumError CreateInfoLD    ( FILE *f, le_distrib_t *ld, bool use_xname );
+enumError CreateInfoLD    ( FILE *f, le_distrib_t *ld, bool use_xname, bool add_rating );
 enumError CreateSha1LD    ( FILE *f, le_distrib_t *ld, bool use_xname, bool add_comments );
 enumError CreateCtDefLD   ( FILE *f, le_distrib_t *ld );
 enumError CreateLeDefLD   ( FILE *f, le_distrib_t *ld );
@@ -972,7 +976,7 @@ mem_t GetLecodeLD    ( const le_distrib_t *ld, le_region_t reg );
 int EnableLDUMP ( ccp filename );
 enumError CloseLDUMP();
 
-void ImportAnaLDUMP	( const le_analyse_t *ana );
+void ImportAnaLDUMP	( const le_analyze_t *ana );
 void ImportCtcodeLDUMP	( const ctcode_t *ctcode );
 
 //

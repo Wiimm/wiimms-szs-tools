@@ -140,7 +140,7 @@ void DefineParserVars ( VarMap_t * vm )
 
 const VarMap_t * SetupParserVars()
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
 	DefineParserVars(&vm);
     return &vm;
@@ -183,10 +183,22 @@ void DefineMkwVars ( VarMap_t * vm )
 	{ "SLOT$RND_CUSTOM",	LE_SLOT_RND_CUSTOM },
 	{ "SLOT$RND_NEW",	LE_SLOT_RND_NEW },
 
-	{ "LE$F_NEW",		LETF_NEW },
-	{ "LE$F_HEAD",		LETF_RND_HEAD },
-	{ "LE$F_GROUP",		LETF_RND_GROUP },
-	{ "LE$F_ALIAS",		LETF_ALIAS },
+	{ "LE$F_NEW",		LEFL_NEW },
+	{ "LE$F_HEAD",		LEFL_RND_HEAD },
+	{ "LE$F_GROUP",		LEFL_RND_GROUP },
+	{ "LE$F_ALIAS",		LEFL_ALIAS },
+	{ "LE$F_TEXTURE",	LEFL_TEXTURE },
+	{ "LE$F_HIDDEN",	LEFL_HIDDEN },
+
+	{ "LE$DISABLE",		LE_DISABLED },
+	{ "LE$DISABLED",	LE_DISABLED },
+	{ "LE$ENABLE",		LE_ENABLED },
+	{ "LE$ENABLED",		LE_ENABLED },
+	{ "LE$ALTERABLE",	LE_ALTERABLE },
+	{ "LE$EXCLUDE",		LE_EXCLUDED },
+	{ "LE$EXCLUDED",	LE_EXCLUDED },
+	{ "LE$INCLUDE",		LE_INCLUDED },
+	{ "LE$INCLUDED",	LE_INCLUDED },
 
 	{ "LE$PRODUCTIVE",	LPM_PRODUCTIVE },
 	{ "LE$TESTING",		LPM_TESTING },
@@ -245,8 +257,6 @@ void DefineMkwVars ( VarMap_t * vm )
 	{ "CHAT$USE_ENGINE_3",	 CHATMD_USE_ENGINE_3 },
 	{ "CHAT$RESET",		CHATMD_RESET },
 
-
-
 	{ "LC",			8 },		// LC has no own music slot
 
 	{ "T0",			0 },		// unknown track or arena
@@ -261,6 +271,9 @@ void DefineMkwVars ( VarMap_t * vm )
     for ( ip = inttab; ip->name; ip++ )
 	DefineIntVar(vm,ip->name,ip->val);
 
+    for ( int slot = MKW_LE_RANDOM_BEG; slot < MKW_LE_RANDOM_END; slot++ )
+	DefineIntVar(vm,GetLecodeRandomName(slot,0),slot);
+	
 
     //--- setup basic parser variables
 

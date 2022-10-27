@@ -773,6 +773,7 @@ file_format_t GetByMagicFF
 	    case LE_STRINGS_MAGIC8_NUM:		return FF_LESTR;
 	    case LE_SHA1REF_MAGIC8_NUM:		return FF_SHA1REF;
 	    case LE_PREFIX_MAGIC8_NUM:		return FF_PREFIX;
+	    case LE_MTCAT_MAGIC8_NUM:		return FF_MTCAT;
 	}
     }
 
@@ -3625,10 +3626,12 @@ void DumpSlotInfo
 	"%*s" "Slot attrib: %s\n"
 	"%*s" "Race info:   %4u [%u] %s\n"
 	"%*s" "Arena info:  %4u [%u] %s\n"
+	"%*s" "Edit info:   %4u [%u] %s\n"
 	"%*s" "Music info:  %#4x [%u] %s\n"
 	,indent,"" ,si->slot_attrib
 	,indent,"" ,si->race_slot   ,si->race_mode  ,si->race_info
 	,indent,"" ,si->arena_slot  ,si->arena_mode ,si->arena_info
+	,indent,"" ,si->edit_slot   ,si->edit_mode  ,si->edit_info
 	,indent,"" ,si->music_index ,si->music_mode ,si->music_info
 	);
 }
@@ -3648,8 +3651,7 @@ void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
     mem_t list[MAX_ATTRIB];
     const uint n_attrib = SplitByCharMem(list,MAX_ATTRIB,attrib,',');
 
-    uint i;
-    for ( i = 0; i < n_attrib; i++ )
+    for ( int i = 0; i < n_attrib; i++ )
     {
 	ccp  src = list[i].ptr;
 	uint len = list[i].len;
@@ -3690,6 +3692,12 @@ void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
 		si->arena_slot = strtoul(src+1,0,10);
 		StringCopySM(si->arena_info,sizeof(si->arena_info),src,3);
 	    }
+	    else if ( src[0]=='e' && src[1]>='1' && src[1]<='8' && src[2]>='1' && src[2]<='4' )
+	    {
+		si->edit_mode = SIT_RECOMMEND;
+		si->edit_slot = strtoul(src+1,0,10);
+		StringCopySM(si->edit_info,sizeof(si->edit_info),src,3);
+	    }
 	    else if ( src[0]=='m' && src[1]>='1' && src[1]<='8' && src[2]>='1' && src[2]<='4' )
 	    {
 		si->music_mode = SIT_RECOMMEND;
@@ -3703,7 +3711,14 @@ void AnalyzeSlotAttrib ( slot_info_t *si, bool reset_si, mem_t attrib )
 	    break;
 
 	 case 4:
-	    if ( src[0] == 'm' && src[1] == 'a'
+	    if ( src[0] == 'e' && src[1] == 'a'
+			&& src[2] >= '1' && src[2] <= '2' && src[3] >= '1' && src[3] <= '5' )
+	    {
+		si->edit_mode = SIT_MANDATORY;
+		si->edit_slot = strtoul(src+2,0,10) + 100;
+		StringCopySM(si->edit_info,sizeof(si->edit_info),src,4);
+	    }
+	    else if ( src[0] == 'm' && src[1] == 'a'
 			&& src[2] >= '1' && src[2] <= '2' && src[3] >= '1' && src[3] <= '5' )
 	    {
 		si->music_mode = SIT_MANDATORY;
@@ -3819,13 +3834,28 @@ void FinalizeSlotInfo ( slot_info_t *si, bool minus_for_empty )
     }
 
 
+    //--- remove edit info if same as race or arena slot
+
+    if ( si->edit_slot )
+    {
+	if ( si->edit_slot == si->race_slot || si->edit_slot == si->arena_slot + 100 )
+	{
+	    si->edit_slot = 0;
+	    StringCopyS(si->edit_info,sizeof(si->edit_info),"e0");
+	}
+    }
+
+
     //--- create slot info
 
-    char slot_attrib[24], *dest = slot_attrib, *end = slot_attrib + sizeof(slot_attrib);
+    char slot_attrib[sizeof(si->slot_attrib)+4],
+		*dest = slot_attrib, *end = slot_attrib + sizeof(slot_attrib);
     if (si->race_info[0])
 	dest = StringCat2E(dest,end,",",si->race_info);
     if (si->arena_info[0])
 	dest = StringCat2E(dest,end,",",si->arena_info);
+    if (si->edit_info[0])
+	dest = StringCat2E(dest,end,",",si->edit_info);
     if ( si->music_info[0] && strcmp(si->music_info,music_info) )
 	dest = StringCat2E(dest,end,",",si->music_info);
     if ( dest > slot_attrib )
@@ -3836,8 +3866,9 @@ void FinalizeSlotInfo ( slot_info_t *si, bool minus_for_empty )
 
     if (minus_for_empty)
     {
-	if (!*si->race_info)  si->race_info[0]  = '-', si->race_info[1] = 0;
+	if (!*si->race_info)  si->race_info[0]  = '-', si->race_info[1]  = 0;
 	if (!*si->arena_info) si->arena_info[0] = '-', si->arena_info[1] = 0;
+	if (!*si->edit_info)  si->edit_info[0]  = '-', si->edit_info[1]  = 0;
 	if (!*si->music_info) si->music_info[0] = '-', si->music_info[1] = 0;
     }
 }
@@ -4131,11 +4162,342 @@ enumError SavePrefixTableFN ( ccp fname, const mkw_prefix_t * tab )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			mkw_category_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#include "category.inc"
+
+mkw_category_list_t mkw_category_list = {0};
+
+///////////////////////////////////////////////////////////////////////////////
+
+int TranslateSpecialCategory ( int special )
+{
+    if ( special > 0 && special & MKW_CAT_SPECIAL )
+    {
+	const mkw_category_list_t *clist = GetCategoryList();
+	for ( int idx = 0; idx < clist->used; idx++ )
+	{
+	    const mkw_category_t *tcat = clist->list + idx;
+	    if ( tcat->mode & special )
+		return idx;
+	}
+    }
+    return special;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const mkw_category_t * GetCategory ( int cat, int fallback )
+{
+    const mkw_category_list_t *clist = GetCategoryList();
+    DASSERT(clist);
+
+    cat = TranslateSpecialCategory(cat);
+    if ( (uint)cat < clist->used )
+    {
+	const mkw_category_t *tcat = clist->list + cat;
+	if ( tcat->mtcat >= 0 ) 
+	    return tcat;
+    }
+
+    fallback = TranslateSpecialCategory(fallback);
+    if ( (uint)fallback < clist->used )
+    {
+	const mkw_category_t *tcat = clist->list + fallback;
+	if ( tcat->mtcat >= 0 ) 
+	    return tcat;
+    }
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ResetCategoryList ( mkw_category_list_t *clist )
+{
+    if (clist)
+    {
+	if (clist->list)
+	{
+	    mkw_category_t *ptr = clist->list; 
+	    for ( int i = 0; i < clist->used; i++, ptr++ )
+	    {
+		FreeString(ptr->name);
+		FreeString(ptr->info);
+		FreeString(ptr->attrib);
+	    }
+	    FREE((void*)clist->list);
+	}
+
+	ResetKTM(&clist->atm);
+
+	memset(clist,0,sizeof(*clist));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const mkw_category_list_t * GetCategoryList(void)
+{
+    if (!mkw_category_list.list)
+    {
+	DecodeBZIP2Manager(&category_inc_mgr);
+	DefineCategoryList(category_inc_mgr.data,category_inc_mgr.size);
+    }
+
+    return &mkw_category_list;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const KeywordTab_t * GetCategoryKeywordTab ( mkw_category_list_t * clist )
+{
+    if (!clist)
+	clist = (mkw_category_list_t*)GetCategoryList();
+    if (!clist)
+	return 0;
+
+    if (!clist->atm.list)
+	InitializeKTM(&clist->atm,10,true);
+
+    if (!clist->atm.used)
+    {
+	for ( int idx = 0; idx < clist->used; idx++ )
+	{
+	    const mkw_category_t *tcat = clist->list + idx;
+	    if ( tcat->mtcat < 0 )
+		continue;
+
+	    if ( tcat->attrib && *tcat->attrib )
+	    {
+		const uint MAX_ATTRIB = 100;
+		mem_t list[MAX_ATTRIB];
+		const uint n_attrib = SplitByCharMem(list,MAX_ATTRIB,MemByString0(tcat->attrib),',');
+		for ( int i = 0; i < n_attrib; i++ )
+		    AppendKTM(&clist->atm,list[i].ptr,list[i].len,tcat->mtcat,0);
+	    }
+	}
+
+	#if HAVE_PRINT0
+	{
+	    printf("N=%d/%d, grow=%d, sort=%d, list=%s\n",
+		clist->atm.used, clist->atm.size, clist->atm.grow, clist->atm.sort,
+		clist->atm.list ? "yes" : "no" );
+	    for ( int idx = 0; idx <= clist->atm.used; idx++ )
+	    {
+		KeywordTab_t *key = clist->atm.list + idx;
+		printf("%8lld %8lld : %-10s : %s\n",key->id,key->opt,key->name1,key->name2);
+	    }
+	    putchar('\n');
+	}
+	#endif
+    }
+
+    return clist->atm.list;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int ScanOptLoadCategory ( ccp arg )
+{
+    if ( !arg || !*arg )
+	return 0;
+
+    raw_data_t raw;
+    enumError err = LoadRawData(&raw,true,arg,0,opt_ignore>0,0);
+    if ( !err && raw.fform == FF_MTCAT )
+	DefineCategoryList(raw.data,raw.data_size);
+    ResetRawData(&raw);
+    return err > ERR_WARNING;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+mkw_category_list_t ScanCategoryList ( struct ScanText_t *st )
+{
+    mkw_category_list_t clist = {0};
+    DASSERT(st);
+    if (!st)
+	return clist;
+
+    enum
+    {
+	IDX_MTCAT,
+	IDX_MODE,
+	IDX_BAN,
+	IDX_CHAR1,
+	IDX_CHAR2,
+	IDX_ABBREV,
+	IDX_NAME,
+	IDX_INFO,
+	IDX_FG_COL,
+	IDX_BG_COL,
+	IDX_COL_NAME,
+	IDX_ATTRIB,
+	IDX__N
+    };
+
+    st->detect_sections++;
+
+    while ( NextLineScanText(st) )
+    {
+	mem_t srcline = { .ptr = st->line, .len = st->eol - st->line };
+	mem_t src[IDX__N+2];
+	const uint n = SplitByCharMem(src,IDX__N+1,srcline,'|');
+	if ( n <= IDX_INFO )
+	    continue;
+
+	PRINT0("LINE: %.*s | %.*s | %.*s | %.*s | %.*s | %.*s | %.*s | %.*s | %.*s | %.*s | %.*s | %.*s |\n",
+		src[IDX_MTCAT].len, src[IDX_MTCAT].ptr,
+		src[IDX_MODE].len, src[IDX_MODE].ptr,
+		src[IDX_BAN].len, src[IDX_BAN].ptr,
+		src[IDX_CHAR1].len, src[IDX_CHAR1].ptr,
+		src[IDX_CHAR2].len, src[IDX_CHAR2].ptr,
+		src[IDX_ABBREV].len, src[IDX_ABBREV].ptr,
+		src[IDX_NAME].len, src[IDX_NAME].ptr,
+		src[IDX_INFO].len, src[IDX_INFO].ptr,
+		src[IDX_FG_COL].len, src[IDX_FG_COL].ptr,
+		src[IDX_BG_COL].len, src[IDX_BG_COL].ptr,
+		src[IDX_COL_NAME].len, src[IDX_COL_NAME].ptr,
+		src[IDX_ATTRIB].len, src[IDX_ATTRIB].ptr );
+
+	const uint mtcat = str2l(src[IDX_MTCAT].ptr,0,10);
+	if ( mtcat >= MAX_MTCAT )
+	    continue;
+
+	if ( clist.size <= mtcat )
+	{
+	    while ( clist.size <= mtcat )
+		clist.size = 3*clist.size/2 + 16;
+	    if ( clist.size > MAX_MTCAT )
+		 clist.size = MAX_MTCAT;
+	    clist.list = REALLOC(clist.list,clist.size*sizeof(*clist.list));
+	    PRINT0("ScanCategoryList() new size=%d\n",clist.size);
+	}
+
+	while ( clist.used <= mtcat )
+	{
+	    mkw_category_t *ptr = clist.list + clist.used++;
+	    memset(ptr,0,sizeof(*ptr));
+	    ptr->mtcat = -1;
+	}
+
+	mkw_category_t *ptr = clist.list + mtcat;
+	ptr->mtcat	= mtcat;
+	ptr->mode	= str2l(src[IDX_MODE].ptr,0,10);
+	ptr->ban_type	= str2l(src[IDX_BAN].ptr,0,10);
+	ptr->fg_color	= str2l(src[IDX_FG_COL].ptr,0,10);;
+	ptr->bg_color	= str2l(src[IDX_BG_COL].ptr,0,10);;
+
+	StringCopySMem(ptr->ch1,sizeof(ptr->ch1),src[IDX_CHAR1]);
+	StringCopySMem(ptr->ch2,sizeof(ptr->ch1),src[IDX_CHAR2]);
+	StringCopySMem(ptr->abbrev,sizeof(ptr->abbrev),src[IDX_ABBREV]);
+
+	ptr->name	= MEMDUP(src[IDX_NAME].ptr,src[IDX_NAME].len);
+	ptr->info	= MEMDUP(src[IDX_INFO].ptr,src[IDX_INFO].len);
+	ptr->color_name	= MEMDUP(src[IDX_COL_NAME].ptr,src[IDX_COL_NAME].len);
+	ptr->attrib	= MEMDUP(src[IDX_ATTRIB].ptr,src[IDX_ATTRIB].len);
+    }
+
+    st->detect_sections--;
+    return clist;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+mkw_category_list_t DefineCategoryList ( cvp source, uint len )
+{
+    ResetCategoryList(&mkw_category_list);
+
+    ScanText_t st;
+    SetupScanText(&st,source,len);
+    mkw_category_list = ScanCategoryList(&st);
+
+    ResetScanText(&st);
+    return mkw_category_list;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError SaveCategoryList ( FILE *f, const mkw_category_list_t * clist )
+{
+    if (!clist)
+	clist = GetCategoryList();
+    if ( !clist || !f )
+	return ERR_MISSING_PARAM;
+
+    fprintf(f,
+	"#MTCAT03\r\n"
+	"#> category|mode|ban|char1|char2|abbrev|name|info|fg_color|bg_color|color_name|attribs|\r\n"
+	"# Category: Unique category identifier\r\n"
+	"# Mode is a bit field: 1: Unknown, 2: Default, 4: Custom,\r\n"
+	"#                      0x10: Nintendo, 0x20: Hack of Nintendo, 0x40: Created to cheat\r\n"
+	"# Attribs: Comma separated list of attributes that identify the category\r\n"
+	"#%.88s\r\n"
+	,Minus300 );
+
+    int count = 0;
+    for ( int idx = 0; idx < clist->used; idx++ )
+    {
+	const mkw_category_t *tcat = clist->list + idx;
+	if ( tcat->mtcat == -1 )
+	    continue;
+	if ( tcat->mtcat < 0 )
+	    break;
+	count++;
+
+	exmem_t ch1	= EscapeStringPipeCircS(tcat->ch1);
+	exmem_t ch2	= EscapeStringPipeCircS(tcat->ch2);
+	exmem_t abbrev	= EscapeStringPipeCircS(tcat->abbrev);
+	exmem_t name	= EscapeStringPipeCircS(tcat->name);
+	exmem_t info	= EscapeStringPipeCircS(tcat->info);
+	exmem_t attrib	= EscapeStringPipeCircS(tcat->attrib);
+	exmem_t colname	= EscapeStringPipeCircS(tcat->color_name);
+
+	fprintf(f,"%u|%u|%u|%s|%s|%s|%s|%s|0x%06x|0x%06x|%s|%s|\r\n",
+		tcat->mtcat, tcat->mode, tcat->ban_type,
+		ch1.data.ptr, ch2.data.ptr, abbrev.data.ptr, name.data.ptr, info.data.ptr,
+		tcat->fg_color, tcat->bg_color, colname.data.ptr, attrib.data.ptr );
+
+	FreeExMem(&ch1);
+	FreeExMem(&ch2);
+	FreeExMem(&abbrev);
+	FreeExMem(&name);
+	FreeExMem(&info);
+	FreeExMem(&attrib);
+	FreeExMem(&colname);
+    }
+
+    fprintf(f,
+	"#---------------------\r\n"
+	"# %u categor%s total\r\n",
+	count, count == 1 ? "y" : "ies" );
+
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError SaveCategoryListFN ( ccp fname, const mkw_category_list_t * clist )
+{
+    File_t F;
+    enumError err = CreateFileOpt(&F,true,fname,false,0);
+    if (!err)
+	err = SaveCategoryList(F.f,clist);
+    CloseFile(&F,0);
+    return err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			split_filename_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp opt_plus = "+";
-ccp opt_printf = 0;
+ccp opt_plus	= "+";
+int opt_split	= 0;
+ccp opt_printf	= 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4148,6 +4510,39 @@ void ResetSPF ( split_filename_t *spf )
 	FreeString(spf->norm.ptr);
 	InitializeSPF(spf);
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static bool analyse_extra ( split_filename_t *spf, char *name, char **p_end )
+{
+    //--- check extra
+
+    DASSERT(spf);
+    DASSERT(name);
+    DASSERT(p_end&&*p_end);
+
+    char *end  = *p_end;
+    while ( end > name && end[-1] == ' ' )
+	end--;
+    if ( end <= name )
+	return false;
+
+    if ( end[-1] != '}' )
+	return false;
+
+    int nlen = end-name;
+    char *p1 = memrchr(name,'{',nlen);
+    if (!p1)
+	return false;
+
+    DASSERT(p1<end);    
+    spf->extra.ptr = p1+1;
+    spf->extra.len = end-1 - spf->extra.ptr;
+    while ( p1 > name && p1[-1] == ' ' )
+	p1--;
+    *p_end = p1;
+    return true;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4181,15 +4576,6 @@ void AnalyseSPF
 
     //--- store input data
 
-    if ( cpm == CPM_COPY )
-    {
-	// optimization: we need only the base name
-	const int nlen = src_end ? src_end - source : strlen(source);
-	char *slash = memrchr(source,'/',nlen);
-	if (slash)
-	    source = slash+1;
-    }
-
     int nlen = src_end ? src_end - source : strlen(source);
     spf->input = CopyData(source,nlen,cpm,&spf->input_alloced);
 
@@ -4203,8 +4589,10 @@ void AnalyseSPF
     if (slash)
     {
 	slash++;
-	nlen -= slash - name;
-	name = slash;
+	spf->directory.ptr = name;
+	spf->directory.len = slash - name;
+	nlen -= spf->directory.len;
+	name  = slash;
     }
 
     spf->source.ptr = name;
@@ -4280,6 +4668,7 @@ void AnalyseSPF
 
     //--- attributes
 
+    spf->track_cat = TranslateSpecialCategory(MKW_CAT_UNKNOWN);
     p1 = memrchr(name,'[',nlen);
     if (p1)
     {
@@ -4294,6 +4683,8 @@ void AnalyseSPF
 	    end--;
 	nlen = end - name;
 
+	const KeywordTab_t * cattab = GetCategoryKeywordTab(0);
+
 	mem_t attrib_list[max_attrib+2];
 	const uint n = SplitByCharMem(attrib_list,max_attrib+1,spf->attribs,',');
 	for ( int i = 0; i < n; i++ )
@@ -4307,13 +4698,47 @@ void AnalyseSPF
 	    else if (!memcmp(p.ptr,"×",2))
 		speed = strtof(p.ptr+2,&end);
 	    if ( speed > 0.0 && end == p.ptr + p.len )
+	    {
 		spf->speed_factor = speed;
+		continue;
+	    }
 
 	    if ( p.len == 4 && !memcmp(p.ptr+1,"lap",3) || p.len == 5 && !memcmp(p.ptr+1,"laps",4) )
 	    {
 		const uint laps = p.ptr[0] - '0';
 		if ( laps < 10 )
 		    spf->lap_count = laps;
+		continue;
+	    }
+
+	    if (!memcmp(p.ptr,"head=",5))
+	    {
+		spf->le_flags |= LEFL_RND_HEAD;
+		spf->le_group = MidMem(p,5,p.len);
+	    }
+	    else if (!memcmp(p.ptr,"grp=",4))
+	    {
+		spf->le_flags |= LEFL_RND_GROUP;
+		if (!spf->le_group.len)
+		    spf->le_group = MidMem(p,4,p.len);
+	    }
+	    else if ( spf->le_group.len && !StrCmpMem(p,"grp") )
+	    {
+		spf->le_flags |= LEFL_RND_GROUP;
+	    }
+	    else if ( !StrCmpMem(p,"new") )
+		spf->le_flags |= LEFL_NEW;
+	    else if ( !StrCmpMem(p,"texture") || !StrCmpMem(p,"temp-allow") )
+		spf->le_flags |= LEFL_TEXTURE;
+	    else if ( !StrCmpMem(p,"hidden") )
+		spf->le_flags |= LEFL_HIDDEN;
+	    else if (!memcmp(p.ptr,"order=",6))
+		spf->attrib_order = str2l(p.ptr+6,0,10);
+	    else
+	    {
+		const KeywordTab_t * key = ScanKeywordEx(0,p.ptr,p.len,LOUP_AUTO,cattab);
+		if (key)
+		    spf->track_cat = key->id;
 	    }
 	}
     }
@@ -4334,7 +4759,26 @@ void AnalyseSPF
 	while ( end > name && end[-1] == ' ' )
 	    end--;
 	nlen = end - name;
+
+	p1 = memmem(spf->authors.ptr,spf->authors.len,",,",2);
+	if (p1)
+	{
+	    const ccp p2 = spf->authors.ptr + spf->authors.len;
+	    spf->authors.len = p1 - spf->authors.ptr;
+
+	    while ( p1 < p2 && *p1 == ',' )
+		p1++;
+	    spf->editors.ptr = p1;
+	    spf->editors.len = p2 - p1;
+	}
     }
+
+
+    //--- check extra behind version number
+
+    const bool extra_done = analyse_extra(spf,name,&end);
+    if (extra_done)
+	nlen = end - name;
 
 
     //--- check version number
@@ -4396,28 +4840,10 @@ void AnalyseSPF
     }
 
 
-    //--- check extra
+    //--- check extra before version number
 
-    p1 = memrchr(name,'{',nlen);
-    if (!p1)
-	p1 = memrchr(name,'(',nlen);
-    if (p1)
-    {
-	p2 = memrchr(p1,'}',end-p1);
-	if (!p2)
-	    p2 = memrchr(p1,')',end-p1);
-	if (!p2)
-	    p2 = end;
-	if ( p1 < p2 )
-	{
-	    spf->extra.ptr = p1+1;
-	    spf->extra.len = p2 - spf->extra.ptr;
-	    end = p1;
-	    while ( end > name && end[-1] == ' ' )
-		end--;
-	    nlen = end - name;
-	}    
-    }
+    if ( !extra_done && analyse_extra(spf,name,&end) )
+	nlen = end - name;
 
 
     //--- plus
@@ -4469,6 +4895,7 @@ void AnalyseSPF
     if (p1)
     {
 	const mkw_prefix_t *pre1 = FindPrefix(name,p1-name,true);
+// [[mtcat]]
 	if (pre1)
 	{
 	    spf->game1.ptr	= name;
@@ -4541,17 +4968,36 @@ exmem_t PrintSPF
     char fbuf[500];
     if (par)
     {
-	par->u_item	= 0;
+	par->u_item = 0;
 
 	if (par->format)
 	{
 	    ScanEscapedString(fbuf,sizeof(fbuf),par->format,-1,true,0,0);
 	    format = fbuf;
 	}
+	else
+	{
+	    switch(par->split_level)
+	    {
+		case  1: format = "%y%Y|"; break;
+		case  2: format = "%y%|%Y|"; break;
+		case  3: format = "%y%|%F%|%D%E|"; break;
+		case  4: format = "%y%|%N%v%{e%c%|%!A%|%D%E|"; break;
+		case  5: format = "%y%|%N%v%{e%|%!c%|%!A%|%D%E|"; break;
+		case  6: format = "%y%|%N%{e%|%v%|%!c%|%!A%|%D%E|"; break;
+		case  7: format = "%y%|%N%{e%|%v%|%!a%|%!d%|%!A%|%D%E|"; break;
+		case  8: format = "%y%|%N%|%v%|%!e%|%!a%|%!d%|%!A%|%D%E|"; break;
+		case  9: format = "%y%|%P%b%p%|%n%|%v%|%!e%|%!a%|%!d%|%!A%|%D%E|"; break;
+		case 10: format = "%y%|%P%b%p%|%n%|%v%|%!e%|%!a%|%!d%|%!A%|%D%|%E|"; break;
+		case 11: format = "%y%|%P%|%b%p%|%n%|%v%|%!e%|%!a%|%!d%|%!A%|%D%|%E|"; break;
+		case 12: format = "%y%|%P%|%b%|%p%|%n%|%v%|%!e%|%!a%|%!d%|%!A%|%D%|%E|"; break;
+		case 13: format = "%y%|%P%|%b%|%g%|%G%|%n%|%v%|%!e%|%!a%|%!d%|%!A%|%D%|%E|"; break;
+	    }
+	}
     }
 
     char buf[2000], tempbuf[20];
-    char *end_buf = buf + sizeof(buf) - 1, *ptr = buf;
+    char *begin = buf, *end_buf = buf + sizeof(buf) - 1, *ptr = buf;
 
     char destbuf[200];
     exmem_dest_t exdest = { .buf = destbuf, .buf_size = sizeof(destbuf), .try_circ = true };
@@ -4583,7 +5029,7 @@ exmem_t PrintSPF
 		//--- scan flags
 
 		bool left_adjust	= false;
-		int  add_space		= 0;	// -1:suppres, 0:auto, 1:force
+		int  add_space		= 0;	// -1:suppress, 0:auto, 1:force
 		int  add_colors		= 0;
 		bool no_braces		= false;
 		ccp  force_braces	= 0;
@@ -4657,18 +5103,25 @@ exmem_t PrintSPF
 		}
 
 		mem_t src	= {0};	// source string
+		mem_t pre2	= {0};	// prefix for 'src2'
+		mem_t src2	= {0};	// second source string
 		int color	= 0;	// >0: color index
 		ccp braces	= 0;	// NULL or kind of default braces
 		bool auto_space	= true;	// add additional space before
 
 		switch(*format++)
 		{
+		  case '|':
+		    *ptr++ = '|';
+		    begin = ptr;
+		    continue;
+
 		  case 'a':	// authors: list of authors, format "(authors)", options=raw, curly braces
 		    src = spf->authors;
 		    braces = "()";
 		    break;
 
-		  case 'A':	// attribs: list of attributes, format "(authors)", options=raw
+		  case 'A':	// attribs: list of attributes, format "[attrib])", options=raw
 		    src = spf->attribs;
 		    braces = "[]";
 		    break;
@@ -4677,6 +5130,19 @@ exmem_t PrintSPF
 		    src = spf->boost;
 		    if (add_colors)
 			color = 0x32; // RED3
+		    break;
+
+		  case 'c':	// combined authors + editors: format "(authors,,editors)", options=raw
+		    src  = spf->authors;
+		    src2 = spf->editors;
+		    pre2.ptr = ",,";
+		    pre2.len = 2;
+		    braces = "()";
+		    break;
+
+		  case 'd':	// editors: list of editors, format "(editors)", options=raw
+		    src = spf->editors;
+		    braces = "()";
 		    break;
 
 		  case 'D':	// f_d: empty or "_d"
@@ -4698,6 +5164,10 @@ exmem_t PrintSPF
 			add_space = -1;
 		    break;
 
+		  case 'F':	// f_name: source name, stripped
+		    src = spf->f_name;
+		    break;
+
 		  case 'g':	// game1: first game prefix
 		    src = spf->game1;
 		    if (add_colors)
@@ -4708,10 +5178,6 @@ exmem_t PrintSPF
 		    src = spf->game2;
 		    if (add_colors)
 			color = spf->game2_color;
-		    break;
-
-		  case 'F':	// f_name: source name, stripped
-		    src = spf->f_name;
 		    break;
 
 		  case 'l':	// lap_count
@@ -4768,9 +5234,9 @@ exmem_t PrintSPF
 		  case 'R':	// RACE ALIAS
 		    saved_format[saved_index++] = format;
 		    format = add_colors > 1
-				? "%##L\n%!a" : add_colors
-				? "%#L\n%!a"
-				: "%L\n%!a";
+				? "%##L\n%!a%(d" : add_colors
+				? "%#L\n%!a%(d"
+				: "%L\n%!a%(d";
 		    break;
 
 		  case 's':	// speed_factor
@@ -4802,6 +5268,23 @@ exmem_t PrintSPF
 		    if (add_colors)
 			color = 0x21; // BLUE1
 		    break;
+
+		  case 'y':	// directory
+		    src = spf->directory;
+		    add_space = -1;
+		    break;
+
+		  case 'Y':	// source
+		    src = spf->source;
+		    add_space = -1;
+		    break;
+		}
+
+		exmem_t combi = {{0}};
+		if (src2.len)
+		{
+		    combi = ExMemCat3(0,NullMem,src,pre2,src2);
+		    src   = combi.data;
 		}
 
 		if ( skip && multi_use )
@@ -4813,7 +5296,7 @@ exmem_t PrintSPF
 		    else if (no_braces)
 			braces = 0;
 
-		    if ( add_space > 0 || add_space == 0 && auto_space && ptr > buf && (u8)ptr[-1] > ' ' )
+		    if ( add_space > 0 || add_space == 0 && auto_space && ptr > begin && (u8)ptr[-1] > ' ' )
 			*ptr++ = ' ';
 
 		    if ( color != active_color )
@@ -4841,6 +5324,8 @@ exmem_t PrintSPF
 		    if (braces)
 			*ptr++ = braces[1];
 		}
+
+		FreeExMem(&combi);
 	    } // while
 	    if (!saved_index)
 		break;
@@ -4864,7 +5349,7 @@ exmem_t PrintNameSPF
     print_split_par_t	*par		// valid struct with parameters
 )
 {
-    
+
     split_filename_t spf;
     AnalyseSPF(&spf,true,source,src_end,CPM_LINK,par?par->plus_mode:0);
     exmem_t res = PrintSPF(dest,&spf,par);

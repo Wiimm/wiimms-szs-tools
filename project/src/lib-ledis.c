@@ -38,7 +38,7 @@
 #include "dclib-utf8.h"
 #include "dclib-regex.h"
 #include "lib-ledis.h"
-#include "lib-checksum.h"
+#include "lib-analyze.h"
 #include "lib-szs.h"
 #include "db-mkw.h"
 #include "crypt.h"
@@ -958,7 +958,8 @@ void SetupByTrackInfoLT ( le_track_t *lt, const TrackInfo_t *ti )
 
 void SetupLecodeRandomTrackLT ( le_track_t *lt, uint setup_slot )
 {
-    if (IsLecodeRandom(setup_slot))
+    ccp info = GetLecodeRandomInfo(setup_slot,0);
+    if (info)
     {
 	lt->track_status = LTS_ACTIVE;
 	lt->track_type	= LTTY_RANDOM|LTTY_TRACK;
@@ -966,16 +967,7 @@ void SetupLecodeRandomTrackLT ( le_track_t *lt, uint setup_slot )
 	lt->property	= 0;
 	lt->music	= MKW_MUSIC_MIN_ID;
 
-	static ccp names[] =
-	{
-		"Random: All Tracks",
-		"Random: Original Tracks",
-		"Random: Custom Tracks",
-		"Random: New Tracks",
-	};
-
-	if (IsLecodeRandom(setup_slot))
-	    SetNameLT(lt,0,names[setup_slot-MKW_LE_RANDOM_BEG]);
+	SetNameLT(lt,0,info);
     }
 }
 
@@ -1466,12 +1458,10 @@ ccp GetSlotNameLT ( const le_track_t *lt )
     if (!lt)
 	return 0;
 
-    static const char rslot_name[][6] = { "rAll", "rOrig", "rCust", "rNew" };
-
-    ccp pre = GetNameLTTY(lt->track_type);
-    return lt->track_slot >= MKW_LE_RANDOM_BEG && lt->track_slot <= MKW_LE_RANDOM_END
-		? rslot_name[ lt->track_slot - MKW_LE_RANDOM_BEG ]
-		: PrintCircBuf( "%s%u",  pre, lt->track_slot );
+    ccp name = GetLecodeRandomName(lt->track_slot,0);
+    return name
+		? name
+		: PrintCircBuf( "%s%u", GetNameLTTY(lt->track_type), lt->track_slot );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1481,7 +1471,7 @@ ccp GetCupLT ( const le_track_t *lt, ccp return_on_empty )
     if (!lt)
 	return return_on_empty;
 
-    const bool hidden = IsHiddenLETF(lt->flags);
+    const bool hidden = IsHiddenLEFL(lt->flags);
     if (!lt->cup_slot)
 	return hidden ? "H" : "-";
 
@@ -1495,8 +1485,11 @@ ccp GetCupLT ( const le_track_t *lt, ccp return_on_empty )
 
 ccp GetCupAlignLT ( const le_track_t *lt )
 {
+    if (!lt->cup_slot)
+	return IsHiddenLEFL(lt->flags) ? "hidden  " : "no-cup  ";
+
     ccp res = GetCupLT(lt,"-");
-    return IsHiddenLETF(lt->flags)
+    return IsHiddenLEFL(lt->flags)
 	? PrintCircBuf("%8s",res)
 	: PrintCircBuf("%6s  ",res);
 }
@@ -1737,13 +1730,13 @@ void AutoSetupLD ( le_distrib_t *ld, le_auto_setup_t auto_setup )
 
 		    if ( i == 3 )
 		    {
-			lt->flags = LETF_RND_HEAD;
+			lt->flags = LEFL_RND_HEAD;
 			SetNameLT(lt,0,"Head of a group");
 			*ref++ = lt->track_slot;
 		    }
 		    else if ( i == 4 || i == 5 )
 		    {
-			lt->flags = LETF_RND_GROUP;
+			lt->flags = LEFL_RND_GROUP;
 			snprintf(buf,sizeof(buf),"Group Track #%u (hidden)",i-3);
 			SetNameLT(lt,0,buf);
 			SetIdentOptLT(lt,"SHA1 of SZS",false,false,0);
@@ -1915,6 +1908,7 @@ le_track_t * DefineTrackLD ( le_distrib_t *ld, int slot, bool mark_export )
     if ( !ld || !IsValidLecodeSlot(slot) )
 	return 0;
 
+
     if (!ld->is_initialized)
 	InitializeLD(ld);
 
@@ -1939,7 +1933,7 @@ le_track_t * DefineTrackLD ( le_distrib_t *ld, int slot, bool mark_export )
     }
 
     DASSERT( slot >= 0 && slot <= MKW_MAX_TRACK_SLOT );
-    DASSERT( slot < ld->tlist_size );
+    ASSERT( slot < ld->tlist_size );
 
     if ( ld->tlist_used <= slot )
 	ld->tlist_used = slot + 1;
@@ -2861,7 +2855,7 @@ static enumError ScanLeDefTRACKS
 		    le_track_t *lt
 			    = next_slot >= 0
 			    ? DefineTrackLD(ld,next_slot,true)			// SLOT has highest priority
-			    : IsRandomLETF(temp.flags)
+			    : IsRandomLEFL(temp.flags)
 			    ? DefineGroupTrackLD(ld,temp.track_type,true)	// append random tracks always
 			    : DefineFreeTrackLD(ld,temp.track_type,true);	// fallback: search a free slot
 		    get_track_nsec += GetTimerNSec();
@@ -3502,12 +3496,12 @@ void update_cup_helper
 	    if ( lt && !lt->cup_slot && lt->track_type & ltty )
 	    {
 		lt->cup_slot = GetCupSlotLECUP(lc,ptr);
-		if ( lt->flags & LETF_RND_HEAD )
+		if ( lt->flags & LEFL_RND_HEAD )
 		{
 		    for ( int hslot = lt->track_slot+1; hslot < ld->tlist_used; hslot++ )
 		    {
 			le_track_t *hlt = GetTrackLD(ld,hslot);
-			if ( IsActiveLT(hlt) && IsHiddenLETF(hlt->flags) )
+			if ( IsActiveLT(hlt) && IsHiddenLEFL(hlt->flags) )
 			    hlt->cup_slot = lt->cup_slot;
 			else
 			    break;
@@ -3655,9 +3649,9 @@ static void AddToGroup ( le_distrib_t *ld, le_track_arch_t *ta, mem_t grp )
 
     //-- append index to list;
 
-    if ( ta->lt.flags & LETF_RND_HEAD && !gi->n_head++ )
+    if ( ta->lt.flags & LEFL_RND_HEAD && !gi->n_head++ )
 	gi->head1 = ta->lt.track_slot;
-    if ( ta->lt.flags & LETF_RND_GROUP )
+    if ( ta->lt.flags & LEFL_RND_GROUP )
 	gi->n_group++;
 
     if ( gi->used >= gi->size )
@@ -3719,12 +3713,13 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
     szs_file_t szs;
     AssignSZS(&szs,true,raw->data,raw->data_size,false,raw->fform,raw->fname);
 
-    analyse_szs_t as;
-    AnalyseSZS(&as,true,&szs,raw->fname);
+    analyze_szs_t as;
+    AnalyzeSZS(&as,true,&szs,raw->fname);
     PRINT0("SHA1: %s, slots: r=%d a=%d m=%d\n",
 	as.sha1_szs,
 	as.slotinfo.race_slot, as.slotinfo.arena_slot, as.slotinfo.music_index );
 
+// [[split-le-flags]]
     split_filename_t spf;
     AnalyseSPF(&spf,true,raw->fname,0,CPM_LINK,opt_plus);
 
@@ -3772,8 +3767,9 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 			? as.slotinfo.music_index
 			: NormalizeMusicID(ta->lt.property);
 
+// [[split-le-flags]]
 	if (spf.plus.len)
-	    ta->lt.flags |= LETF_NEW;
+	    ta->lt.flags |= LEFL_NEW;
 
 
 	//-- setup basic strings
@@ -3795,12 +3791,25 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 	StringCopySM(buf,sizeof(buf),spf.norm.ptr,spf.norm.len);
 	SetXNameLT(&ta->lt,&spar,buf);
 
+
 	//-- setup arch extensions
 
 	mem_t sum = MemCatSep3A(space,spf.name,spf.version,spf.extra);
 	ta->name_order = sum.ptr;
 	ta->version = MEMDUP(spf.version.ptr,spf.version.len);
 
+
+	//-- setup by spf
+#if 1
+	ta->lt.flags	= spf.le_flags;
+	ta->attr_order	= spf.attrib_order;
+	ta->plus_order	= spf.plus_order;
+	ta->game_order	= spf.game_order;
+//	ta->game_color	= spf.game1_color;
+
+	if (spf.le_group.len)
+	    AddToGroup(ld,ta,spf.le_group);
+#else
 	//-- setup order & group
 
 	mem_t grp = {0};
@@ -3812,23 +3821,24 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 	    if ( !attr.ptr || !attr.len )
 		continue;
 
+// [[split-le-flags]]
 	    if (!memcmp(attr.ptr,"head=",5))
 	    {
-		ta->lt.flags |= LETF_RND_HEAD;
+		ta->lt.flags |= LEFL_RND_HEAD;
 		grp = MidMem(attr,5,attr.len);
 	    }
 	    else if (!memcmp(attr.ptr,"grp=",4))
 	    {
-		ta->lt.flags |= LETF_RND_GROUP;
+		ta->lt.flags |= LEFL_RND_GROUP;
 		if (!grp.len)
 		    grp = MidMem(attr,4,attr.len);
 	    }
 	    else if ( grp.len && !StrCmpMem(attr,"grp") )
 	    {
-		ta->lt.flags |= LETF_RND_GROUP;
+		ta->lt.flags |= LEFL_RND_GROUP;
 	    }
 	    else if ( !StrCmpMem(attr,"new") )
-		ta->lt.flags |= LETF_NEW;
+		ta->lt.flags |= LEFL_NEW;
 	    else if (!memcmp(attr.ptr,"order=",6))
 		ta->attr_order = str2l(attr.ptr+6,0,10);
 	}
@@ -3841,6 +3851,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 	ta->plus_order = spf.plus_order;
 	ta->game_order = spf.game_order;
 //	ta->game_color = spf.game1_color;
+#endif
 
 
 	//-- clean
@@ -3853,7 +3864,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
     //-- clean & return
 
     ResetSPF(&spf);
-    ResetAnalyseSZS(&as);
+    ResetAnalyzeSZS(&as);
     ResetSZS(&szs);
     return err;
 }
@@ -3923,18 +3934,18 @@ bool CloseArchLD ( le_distrib_t *ld )
 	    le_track_arch_t *ta = ld->arch + index;
 	    if (clear_group)
 	    {
-		if ( ta->lt.flags & LETF_RND_GROUP )
+		if ( ta->lt.flags & LEFL_RND_GROUP )
 		{
-		    ta->lt.flags &= ~LETF__RND;
+		    ta->lt.flags &= ~LEFL__RND;
 		    ta->group = 0;
 		}
 		else
 		    ta->lt.track_status = LTS_VALID; // deactivate track
 	    }
 	    else if ( index == gi->head1 )
-		ta->lt.flags |= LETF_RND_HEAD;
-	    else if ( ta->lt.flags & LETF_RND_GROUP )
-		ta->lt.flags &= ~LETF_RND_HEAD;
+		ta->lt.flags |= LEFL_RND_HEAD;
+	    else if ( ta->lt.flags & LEFL_RND_GROUP )
+		ta->lt.flags &= ~LEFL_RND_HEAD;
 	    else
 		ta->lt.track_status = LTS_VALID; // deactivate track
 	}
@@ -3949,7 +3960,7 @@ bool CloseArchLD ( le_distrib_t *ld )
     le_track_arch_t *ta  = ld->arch;
     le_track_arch_t *end = ta + ld->arch_used;
     for ( ; ta < end; ta++ )
-	if ( ta->lt.track_status >= LTS_EXPORT && !IsHiddenLETF(ta->lt.flags) )
+	if ( ta->lt.track_status >= LTS_EXPORT && !IsHiddenLEFL(ta->lt.flags) )
 	    *ptr++ = ta;
     *ptr = 0;
 
@@ -3963,7 +3974,7 @@ bool CloseArchLD ( le_distrib_t *ld )
     for ( ptr = order; *ptr; ptr++ )
     {
 	le_track_arch_t *ta = *ptr;
-	le_track_t *lt	= IsRandomLETF(ta->lt.flags)
+	le_track_t *lt	= IsRandomLEFL(ta->lt.flags)
 			? DefineGroupTrackLD(ld,ta->lt.track_type,true)
 			: DefineFreeTrackLD(ld,ta->lt.track_type,true);
 	ta->lt.track_slot = lt->track_slot;
@@ -3986,7 +3997,7 @@ bool CloseArchLD ( le_distrib_t *ld )
 			ASSERT( index < ld->arch_used );
 
 			le_track_arch_t *ta2 = ld->arch + index;
-			if ( ta2 != ta && IsHiddenLETF(ta2->lt.flags) )
+			if ( ta2 != ta && IsHiddenLEFL(ta2->lt.flags) )
 			{
 			    le_track_t *lt2 = DefineFreeTrackLD(ld,0,true);
 			    ta2->lt.track_slot = lt2->track_slot;
@@ -4014,11 +4025,14 @@ bool CloseArchLD ( le_distrib_t *ld )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////		le_distrib_t: import			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+#if 0
 
 void ImportLD ( le_distrib_t *ld, const le_distrib_t *src )
 {
-    // [[2do]] ???
+    // [[disabled]] ???
 }
+
+#endif
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4049,7 +4063,7 @@ void ImportLparLD ( le_distrib_t *ld, const le_lpar_t *lpar )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void ImportAnaLD ( le_distrib_t *ld, const le_analyse_t *ana )
+void ImportAnaLD ( le_distrib_t *ld, const le_analyze_t *ana )
 {
     if ( !ld || !ana || !ana->valid )
 	return;
@@ -4058,7 +4072,7 @@ void ImportAnaLD ( le_distrib_t *ld, const le_analyse_t *ana )
     //--- import lecode binary + lpar
 
     if ( ld->spar.opt & LEO_IN_LECODE )
-	AssignLecodeLD(ld,GetLERegion(ana),ana->data,ana->size);
+	AssignLecodeLD(ld,GetLERegion(ana),ana->data,ana->data_size);
     ImportLparLD(ld,&ana->lpar);
 
 
@@ -4340,16 +4354,20 @@ enumError ImportRawDataLD
 
 	 case FF_LE_BIN:
 	    {
-		le_analyse_t ana;
-		err = AnalyseLEBinary(&ana,raw->data,raw->data_size);
+		le_analyze_t ana;
+		err = AnalyzeLEBinary(&ana,raw->data,raw->data_size);
 		if (!err)
 		    ImportAnaLD(ld,&ana);
-		ResetLEAnalyse(&ana);
+		ResetLEAnalyze(&ana);
 	    }
 	    break;
 
 	 case FF_PREFIX:
 	    DefinePrefixTable(raw->data,raw->data_size);
+	    break;
+
+	 case FF_MTCAT:
+	    DefineCategoryList(raw->data,raw->data_size);
 	    break;
 
 	 case FF_LPAR:
@@ -4509,7 +4527,7 @@ void ImportOptionsLD ( le_distrib_t *ld )
 ///////////////		le_distrib_t: export			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-bool ExportAnaLD ( const le_distrib_t *ld, le_analyse_t *ana )
+bool ExportAnaLD ( const le_distrib_t *ld, le_analyze_t *ana )
 {
     if ( !ld && !ana )
 	return false;
@@ -4621,13 +4639,15 @@ bool ExportAnaLD ( const le_distrib_t *ld, le_analyse_t *ana )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+#if 0 
 
 bool ExportCtCodeLD ( const le_distrib_t *ld, ctcode_t *ctc )
 {
-    // [[2do]] ???
+    //[[disabled]]  ???
     return false;
 }
 
+#endif
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////		le_distrib_t: reference list		///////////////
@@ -4730,6 +4750,8 @@ static int cmp_cup_lt ( const le_track_t **pa, const le_track_t **pb )
 	res = a->cup_slot - b->cup_slot;
 	if (!res)
 	    res = a->track_slot - b->track_slot;
+	else if ( !a->cup_slot || !b->cup_slot ) // no cup => show last
+	    res = -1;
     }
     return res;
 }
@@ -4889,7 +4911,7 @@ enumError CreateRefLD ( FILE *f, le_distrib_t *ld, bool add_strings )
 		lt->is_original,
 		lt->cup_slot, GetCupLT(lt,""),
 		lt->property, lt->music,
-		lt->flags, IsHiddenLETF(lt->flags),
+		lt->flags, IsHiddenLEFL(lt->flags),
 		lt->lap_count, lt->speed_factor,
 		GetSha1LT(lt,0,""),
 		no_d ? 0 : GetSha1LT(lt,1,"") );
@@ -4988,6 +5010,7 @@ enumError CreateStringsLD ( FILE *f, le_distrib_t *ld )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// [[mtcat]]
 
 static u32 GetPrefixIdByName ( ccp name, bool is_arena )
 {
@@ -5072,7 +5095,7 @@ enumError CreateNamesLD ( FILE *f, le_distrib_t *ld, bool use_xname  )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError CreateInfoLD ( FILE *f, le_distrib_t *ld, bool use_xname )
+enumError CreateInfoLD ( FILE *f, le_distrib_t *ld, bool use_xname, bool add_rating )
 {
     if ( !f || !ld )
 	return ERR_MISSING_PARAM;
@@ -5081,9 +5104,9 @@ enumError CreateInfoLD ( FILE *f, le_distrib_t *ld, bool use_xname )
     SortByCupLD( ld, use_xname ? filter_xname2_td : filter_name_td, ld->spar.opt );
     DumpCupSlots(ld,"behind sort");
 
-    uint fw = GetNameFw(ld,use_xname) + 33;
-    fprintf(f,"\r\n%.*s\r\n()\t   Cup   Prop\tMusic\tName\r\n%.*s\r\n",
-		fw, Minus300, fw, Minus300 );
+    const uint fw = GetNameFw(ld,use_xname) + 33 + ( add_rating ? 8 : 0 );
+    fprintf(f,"\r\n%.*s\r\n%s  Cup   Prop\tMusic\tFlags\tName\r\n%.*s\r\n",
+		fw, Minus300, add_rating ? "()\t" : "",  fw, Minus300 );
 
     u32 prev_id = 0;
     int count = 0, prev_cup = -1;
@@ -5111,10 +5134,12 @@ enumError CreateInfoLD ( FILE *f, le_distrib_t *ld, bool use_xname )
 	}
 
 	exmem_t esc = EscapeStringEx(name,-1,EmptyString,EmptyString,CHMD__MODERN,0,false);
-	fprintf(f,"()\t%s %s\t%s\t%s\r\n",
+	fprintf(f,"%s%s %s\t%s\t%s\t%s\r\n",
+		add_rating ? "()\t" : "",
 		GetCupAlignLT(lt),
 		PrintPropertyID(lt->property,false),
 		PrintMusicID(lt->music,false),
+		PrintLEFL8(lt->flags,true),
 		esc.data.ptr );
 	FreeExMem(&esc);
     }
@@ -5187,8 +5212,8 @@ enumError CreateSha1LD
 		fprintf(f,"%s %c%c%c%c %s %4d %s  %s\r\n",
 		    GetNameLTTY(lt->track_type),
 		    d ? 'd' : '-',
-		    IsTitleLETF(lt->flags) ? 't' : '-',
-		    IsHiddenLETF(lt->flags) ? 'h' : '-',
+		    IsTitleLEFL(lt->flags) ? 't' : '-',
+		    IsHiddenLEFL(lt->flags) ? 'h' : '-',
 		    lti->orig_sha1 ? 'o' : '-',
 		    hex, lt->track_slot, GetCupAlignLT(lt),
 		    esc.data.ptr );
@@ -5221,7 +5246,7 @@ enumError CreateCtDefLD ( FILE *f, le_distrib_t *ld )
 	if ( !lt || lt->track_status < LTS_EXPORT )
 	    continue;
 	char type;
-	if (IsHiddenLETF(lt->flags))
+	if (IsHiddenLEFL(lt->flags))
 	    type = 'H';
 	else
 	{
@@ -5303,7 +5328,7 @@ static void print_ledef_track
     char comment[30], *dest = comment;
     if ( lt->lti[0].orig_sha1 )
 	dest = StringCopyE(dest,comment+sizeof(comment),", original");
-    if ( IsHiddenLETF(lt->flags) )
+    if ( IsHiddenLEFL(lt->flags) )
 	dest = StringCopyE(dest,comment+sizeof(comment),", hidden");
     *dest = 0;
 
@@ -5314,7 +5339,7 @@ static void print_ledef_track
 		type,
 		PrintPropertyID(lt->property,false),
 		PrintMusicID(lt->music,false),
-		PrintLEFT(lt->flags),
+		PrintLEFL8(lt->flags,true),
 		*comment ? "\t#" : "",
 		*comment ? comment+1 : "" );
 
@@ -5550,7 +5575,7 @@ enumError CreateLeDefLD ( FILE *f, le_distrib_t *ld )
     if (be_verbose)
 	fprintf(f,text_ledis_ledef_cup_list_cr);
     else
-	fprintf(f,"\n\r\n[CUP-LIST]\r\n\r\n");
+	fprintf(f,"\r\n\r\n[CUP-LIST]\r\n\r\n");
 
     // battle cups
 
@@ -5633,9 +5658,9 @@ enumError CreateLecodeLD ( FILE *f, le_distrib_t *ld, le_region_t region )
     if (!lecode.ptr)
 	return ERR_MISSING_PARAM;
 
-    le_analyse_t ana;
+    le_analyze_t ana;
     u8 *data = MEMDUP(lecode.ptr,lecode.len);
-    if (!AnalyseLEBinary(&ana,data,lecode.len))
+    if (!AnalyzeLEBinary(&ana,data,lecode.len))
     {
 	ExportAnaLD(ld,&ana);
 	fwrite(data,lecode.len,1,f);
@@ -5879,22 +5904,22 @@ enumError CreateDebugLD ( FILE *f, const le_distrib_t *ld )
      #endif
     }
 
-    fprintf(f,"%s  Summaries by track status:%s\n",colset->heading,colset->reset);
+    fprintf(f,"%s  Summaries by track status:%s\r\n",colset->heading,colset->reset);
     for ( int i = 0; i < LTS__N; i++ )
 	if (n_status[i])
-	    fprintf(f,"%8u of status %s\n",n_status[i],GetNameLTS(i));
+	    fprintf(f,"%8u of status %s\r\n",n_status[i],GetNameLTS(i));
 
-    fprintf(f,"%s  Summaries by track type:%s\n",colset->heading,colset->reset);
-    if (n_arena)  fprintf(f,"%8u of type BATTLE ARENA\n",n_arena);
-    if (n_track)  fprintf(f,"%8u of type VERSUS TRACK\n",n_track);
-    if (n_random) fprintf(f,"%8u of type RANDOM\n",n_random);
+    fprintf(f,"%s  Summaries by track type:%s\r\n",colset->heading,colset->reset);
+    if (n_arena)  fprintf(f,"%8u of type BATTLE ARENA\r\n",n_arena);
+    if (n_track)  fprintf(f,"%8u of type VERSUS TRACK\r\n",n_track);
+    if (n_random) fprintf(f,"%8u of type RANDOM\r\n",n_random);
 
-    fprintf(f,"%s  String usage:%s\n",colset->heading,colset->reset);
+    fprintf(f,"%s  String usage:%s\r\n",colset->heading,colset->reset);
     if (n_sha1)
-	fprintf(f,"%8u string%c of type SHA1   (not alloced)\n",
+	fprintf(f,"%8u string%c of type SHA1   (not alloced)\r\n",
 			n_sha1, n_sha1 == 1 ? ' ' : 's' );
     if (n_sha1_d)
-	fprintf(f,"%8u string%c of type D-SHA1 (not alloced)\n",
+	fprintf(f,"%8u string%c of type D-SHA1 (not alloced)\r\n",
 			n_sha1_d, n_sha1_d == 1 ? ' ' : 's' );
 
     for ( int ltt = 0; ltt < LTT__N; ltt++ )
@@ -5903,7 +5928,7 @@ enumError CreateDebugLD ( FILE *f, const le_distrib_t *ld )
 	{
 	    char type[20];
 	    snprintf(type,sizeof(type),"%s,",GetUpperNameLTT(ltt));
-	    fprintf(f,"%8u string%c of type %-8s %s\n",
+	    fprintf(f,"%8u string%c of type %-8s %s\r\n",
 		n_text[ltt], n_text[ltt] == 1 ? ' ' : 's',
 		type, PrintSize1000(0,0,size_text[ltt],DC_SFORM_ALIGN));
 	}
@@ -5912,12 +5937,12 @@ enumError CreateDebugLD ( FILE *f, const le_distrib_t *ld )
  #if LE_STRING_SET_ENABLED
     if (str_count.used)
     {
-	fprintf(f,"%s  String set usage:%s\n",colset->heading,colset->reset);
+	fprintf(f,"%s  String set usage:%s\r\n",colset->heading,colset->reset);
 	exmem_key_t *end = str_count.list + str_count.used;
 	for ( exmem_key_t *ek = str_count.list; ek < end; ek++ )
 	{
 	    count_t *cnt = (count_t*)ek->data.data.ptr;
-	    fprintf(f,"%8u, %s : %s\n",
+	    fprintf(f,"%8u, %s : %s\r\n",
 		cnt->n, PrintSize1000(0,0,cnt->size,DC_SFORM_ALIGN), ek->key );
 	}
     }
@@ -6423,7 +6448,7 @@ enumError CloseLDUMP()
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void ImportAnaLDUMP ( const le_analyse_t *ana )
+void ImportAnaLDUMP ( const le_analyze_t *ana )
 {
     if ( ledis_dump_enabled > 0 )
 	ImportAnaLD(&ledis_dump,ana);
@@ -6884,30 +6909,24 @@ void ScanOptLeDefine ( ccp arg )
 	AppendStringField(&le_define_list,arg,false);
 }
 
-///////////////////////////////////////////////////////////////////////////////
-
-ccp PrintLEFT ( le_flags_t flags )
-{
-    char *buf = GetCircBuf(5);
-    buf[0] = flags & LETF_NEW	    ? 'N' : '-';
-    buf[1] = flags & LETF_RND_HEAD  ? 'H' : '-';
-    buf[2] = flags & LETF_RND_GROUP ? 'G' : '-';
-    buf[3] = flags & LETF_ALIAS	    ? 'A' : '-';
-    buf[4] = 0;
-    return buf;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 
 le_flags_t ScanLEFT ( ccp text )
 {
+    // automatic flags are not scannend!
+
     le_flags_t res = 0;
     if (text)
     {
-	if ( strchr(text,'N') || strchr(text,'n') ) res |= LETF_NEW;
-	if ( strchr(text,'H') || strchr(text,'h') ) res |= LETF_RND_HEAD;
-	if ( strchr(text,'G') || strchr(text,'g') ) res |= LETF_RND_GROUP;
-	if ( strchr(text,'A') || strchr(text,'a') ) res |= LETF_ALIAS;
+	if ( strchr(text,'N') || strchr(text,'n') ) res |= LEFL_NEW;
+	if ( strchr(text,'H') || strchr(text,'h') ) res |= LEFL_RND_HEAD;
+	if ( strchr(text,'G') || strchr(text,'g') ) res |= LEFL_RND_GROUP;
+	if ( strchr(text,'X') || strchr(text,'x') ) res |= LEFL_RND_HEAD | LEFL_RND_GROUP;
+	if ( strchr(text,'A') || strchr(text,'a') ) res |= LEFL_ALIAS;
+	if ( strchr(text,'T') || strchr(text,'t') ) res |= LEFL_TEXTURE;
+	if ( strchr(text,'2') || strchr(text,'t') ) res |= LEFL_ALIAS | LEFL_TEXTURE;
+	if ( strchr(text,'I') || strchr(text,'i') ) res |= LEFL_HIDDEN;
     }
     return res;
 }

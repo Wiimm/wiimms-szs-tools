@@ -333,18 +333,18 @@ static enumError cmd_dump ( int long_level )
 
 	if ( verbose >= 0 )
 	{
-	    fprintf(stdlog,"\nDUMP %s:%s\n", GetNameFF(raw.fform,0), raw.fname );
+	    fprintf(stdlog,"\nDUMP %s:%s\n\n", GetNameFF(raw.fform,0), raw.fname );
 	    fflush(stdlog);
 	}
 
 	if ( raw.fform == FF_LE_BIN )
 	{
-	    le_analyse_t ana;
-	    AnalyseLEBinary(&ana,raw.data,raw.data_size);
+	    le_analyze_t ana;
+	    AnalyzeLEBinary(&ana,raw.data,raw.data_size);
 	    ApplyLEFile(&ana);
 	    PatchLECODE(&ana);
-	    DumpLEAnalyse(stdlog,2,&ana);
-	    ResetLEAnalyse(&ana);
+	    DumpLEAnalyse(stdlog,1,&ana);
+	    ResetLEAnalyze(&ana);
 	}
 	else if ( raw.fform == FF_LEX )
 	{
@@ -378,6 +378,7 @@ static enumError cmd_dump ( int long_level )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			command bin-diff		///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[lecode_bin_diff_t]]
 
 typedef struct lecode_bin_diff_t
 {
@@ -403,7 +404,7 @@ lecode_bin_diff_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static enumError LoadLECODE ( raw_data_t *raw, le_analyse_t *ana, ccp fname )
+static enumError LoadLECODE ( raw_data_t *raw, le_analyze_t *ana, ccp fname )
 {
     DASSERT(raw);
     DASSERT(ana);
@@ -430,7 +431,7 @@ static enumError LoadLECODE ( raw_data_t *raw, le_analyse_t *ana, ccp fname )
 	goto abort;
     }
 
-    err = AnalyseLEBinary(ana,raw->data,raw->data_size);
+    err = AnalyzeLEBinary(ana,raw->data,raw->data_size);
     if (err)
     {
 	err = ERROR0(ERR_INVALID_DATA,"Invalid LECODE data: %s\n",raw->fname);
@@ -440,7 +441,7 @@ static enumError LoadLECODE ( raw_data_t *raw, le_analyse_t *ana, ccp fname )
     return ERR_OK;
 
    abort:
-    ResetLEAnalyse(ana);
+    ResetLEAnalyze(ana);
     ResetRawData(raw);
     return err;
 }
@@ -448,7 +449,7 @@ static enumError LoadLECODE ( raw_data_t *raw, le_analyse_t *ana, ccp fname )
 ///////////////////////////////////////////////////////////////////////////////
 
 static int BinDiffLECODE
-	( lecode_bin_diff_t *bd, const le_analyse_t *a1, const le_analyse_t *a2 )
+	( lecode_bin_diff_t *bd, const le_analyze_t *a1, const le_analyze_t *a2 )
 {
     DASSERT(bd);
     DASSERT(a1);
@@ -459,7 +460,7 @@ static int BinDiffLECODE
 
     static const char search[] = "built on ";
 
-    const int bodysize1 = a1->size - a1->param_offset;
+    const int bodysize1 = a1->data_size - a1->param_offset;
     u8 *body1 = (u8*)a1->data + a1->param_offset;
 
     if ( bodysize1 > 0 )
@@ -474,7 +475,7 @@ static int BinDiffLECODE
 	}
     }
 
-    const int bodysize2 = a2->size - a2->param_offset;
+    const int bodysize2 = a2->data_size - a2->param_offset;
     u8 *body2 = (u8*)a2->data + a2->param_offset;
 
     if ( bodysize2 > 0 )
@@ -495,8 +496,24 @@ static int BinDiffLECODE
     const le_binary_head_t *h1 = a1->head;
     const le_binary_head_t *h2 = a2->head;
 
-    bd->stat_size   = a1->size != a2->size;
-    bd->stat_header = memcmp(h1,h2,sizeof(*h1)) != 0;
+    bd->stat_size   = a1->data_size != a2->data_size;
+
+    if ( h1->version != h2->version || a1->header_size != a2->header_size )
+	bd->stat_header = true;
+    else if ( h1->version <= 4 )
+	bd->stat_header = memcmp(h1,h2,sizeof(*h1)) != 0;
+    else
+    {
+	DASSERT( h1->version >= 5 );
+	DASSERT(a1->header_size == a2->header_size );
+
+	le_binary_head_v5_t *h5	= MEMDUP(a1->head,a1->header_size);
+	h5->edit_version	= a2->head_v5->edit_version;
+	h5->creation_time	= a2->head_v5->creation_time;
+	h5->edit_time		= a2->head_v5->edit_time;
+	bd->stat_header		= memcmp(h5,a2->head_v5,a1->header_size) != 0;
+	FREE(h5);
+    }
 
     bd->stat_body
 		=  bodysize1 < 0
@@ -504,15 +521,18 @@ static int BinDiffLECODE
 		|| bodysize1 != bodysize2
 		|| memcmp( body1, body2, bodysize1 );
 
-    ccp ts1 = h1->version == 4 ? a1->head_v4->timestamp : 0;
-    ccp ts2 = h2->version == 4 ? a2->head_v4->timestamp : 0;
-    bd->stat_timestamp = !ts1 || !ts2 || strcmp(ts1,ts2);
+    bd->stat_timestamp	= h1->version != h2->version
+			? true
+			: h1->version >= 5
+			? a1->head_v5->creation_time != a2->head_v5->creation_time
+			: strcmp(a1->head_v4->timestamp,a2->head_v4->timestamp) != 0;
 
     bd->stat_param = memcmp(&a1->lpar,&a2->lpar,sizeof(a1->lpar));
 
     bd->stat_data = a1->n_cup_track	!= a2->n_cup_track
 		 || a1->n_cup_arena	!= a2->n_cup_arena
-		 || a1->n_slot		!= a2->n_slot;
+		 || a1->n_slot		!= a2->n_slot
+		 || a1->flags_bits	!= a2->flags_bits;
     if (!bd->stat_data)
     {
 	bd->stat_data
@@ -536,18 +556,18 @@ static int BinDiffLECODE
 		body1 - a1->data,
 		a1->beg_of_data - a1->data,
 		a1->end_of_data - a1->data,
-		a1->size );
+		a1->data_size );
     PRINT0("CODE2: %zx..%zx + %zx..%x\n",
 		body2 - a2->data,
 		a2->beg_of_data - a2->data,
 		a2->end_of_data - a2->data,
-		a2->size );
+		a2->data_size );
 
     bd->stat_code
 		=  body1 - a1->data		!= body2 - a2->data
 		|| a1->beg_of_data - a1->data	!= a2->beg_of_data - a2->data
 		|| a1->end_of_data - a1->data	!= a2->end_of_data - a2->data
-		|| a1->size			!= a2->size
+		|| a1->data_size		!= a2->data_size
 		;
 
     if (!bd->stat_code)
@@ -559,7 +579,7 @@ static int BinDiffLECODE
 	else
 	{
 	    off1 = a1->end_of_data - a1->data;
-	    off2 = a1->size;
+	    off2 = a1->data_size;
 	    if ( off1 < off2 && memcmp(a1->data+off1,a2->data+off1,off2-off1))
 		bd->stat_code = true;
 	}
@@ -638,7 +658,7 @@ static enumError cmd_bin_diff()
     NORMALIZE_FILENAME_PARAM(param);
 
     raw_data_t raw1;
-    le_analyse_t ana1;
+    le_analyze_t ana1;
 
     enumError err = LoadLECODE(&raw1,&ana1,param->arg);
     if (err)
@@ -651,7 +671,7 @@ static enumError cmd_bin_diff()
     NORMALIZE_FILENAME_PARAM(param);
 
     raw_data_t raw2;
-    le_analyse_t ana2;
+    le_analyze_t ana2;
 
     err = LoadLECODE(&raw2,&ana2,param->arg);
     if (err)
@@ -692,8 +712,8 @@ static enumError cmd_bin_diff()
 
     //-- terminate
 
-    ResetLEAnalyse(&ana1);
-    ResetLEAnalyse(&ana2);
+    ResetLEAnalyze(&ana1);
+    ResetLEAnalyze(&ana2);
     ResetRawData(&raw1);
     ResetRawData(&raw2);
     return err;
@@ -747,14 +767,14 @@ static enumError cmd_patch()
 	if ( raw.fform != FF_LE_BIN )
 	    return ERROR0(ERR_INVALID_DATA,"Invalid file format: %s",raw.fname);
 
-	le_analyse_t ana;
-	AnalyseLEBinary(&ana,raw.data,raw.data_size);
+	le_analyze_t ana;
+	AnalyzeLEBinary(&ana,raw.data,raw.data_size);
 	ApplyLEFile(&ana);
 	PatchLECODE(&ana);
 	err = SaveFILE( dest, 0, dest_is_source||opt_overwrite,
 				raw.data, raw.data_size, 0 );
 	ImportAnaLDUMP(&ana);
-	ResetLEAnalyse(&ana);
+	ResetLEAnalyze(&ana);
 	CloseLDUMP();
     }
 
@@ -788,7 +808,7 @@ static void help_create ( enumError exit_code )
 	" The sub-commands are logically divided into several groups:\n"
 	"\n"
 	"\tCreate a LEX file:\t|{name|LEX}, {name|LEX+}, {name|SET1}, {name|CANNONS}, {name|HIPT}, {name|TEST}.\n"
-	"\tCreate another file:\t|{name|LPAR}, {name|LE-DEF}, {name|PREFIX}.\n"
+	"\tCreate another file:\t|{name|LPAR}, {name|LE-DEF}, {name|PREFIX}, {name|CATEGORY}.\n"
 	"\tPrint an information:\t|{name|LE-INFO}.\n"
  #if HAVE_WIIMM_EXTxx
 	 "\tHidden sub-commands:\t|{name|DEVELOP}, {name|FEATURES}.\n"
@@ -806,7 +826,7 @@ static void help_create ( enumError exit_code )
  #if HAVE_WIIMM_EXTxx
 	"\n|[4,14]"
  #else
-	"\n|[4,13]"
+	"\n|[4,14]"
  #endif
 	"  |The following sub-commands create a LEX file with one or all sections:\n"
 	"\n"
@@ -820,7 +840,7 @@ static void help_create ( enumError exit_code )
 		" but includes all devoloper sections.\n"
  #endif
 	"\n"
-	"\t{info|FEATURES}:\t|"
+	"\t{name|FEATURES}:\t|"
 		"Create a LEX text file with section »FEAT« only.\n"
 	"\t{name|SET1}:\t|"
 		"Create a LEX text file with section »SET1« only.\n"
@@ -845,6 +865,9 @@ static void help_create ( enumError exit_code )
 	"\t{name|PREFIX}:\t|"
 		"Create a machine readable prefix list."
 		" {file|https://ct.wiimm.de/export/prefix} is the authoritative source for this.\n"
+	"\t{name|CATEGORY}:\t|"
+		"Create a machine readable category list."
+		" {file|https://ct.wiimm.de/export/category} is the authoritative source for this.\n"
 	"\n"
 
 	//---------------------------------------------------------------------
@@ -883,7 +906,7 @@ static enumError cmd_create()
 
     enum { C_HELP,
 		C_LEX, C_FEATURES, C_SET1, C_CANNON, C_HIDE_PT, C_TEST,
-		C_LPAR, C_LEDEF, C_PREFIX,
+		C_LPAR, C_LEDEF, C_PREFIX, C_CATEGORY,
 		C_LEINFO,
     };
 
@@ -903,6 +926,7 @@ static enumError cmd_create()
 	{ C_LPAR,	"LPAR",		0,		0 },
 	{ C_LEDEF,	"LE-DEF",	"LEDEF",	0 },
 	{ C_PREFIX,	"PREFIX",	0,		0 },
+	{ C_CATEGORY,	"CATEGORY",	0,		0 },
 
 	{ C_LEINFO,	"LE-INFO",	"LEINFO",	0 },
 
@@ -1004,6 +1028,10 @@ static enumError cmd_create()
 
      case C_PREFIX:
 	SavePrefixTableFN(opt_dest,0);
+	break;
+
+     case C_CATEGORY:
+	SaveCategoryListFN(opt_dest,0);
 	break;
 
      //-------------------------
@@ -1213,11 +1241,17 @@ static void help_distrib ( enumError exit_code )
 		"Same as {name|NAMES}, but use extended names if available.\n"
 	"\n"
 	"\t{name|INFO}:\t|"
-		"Create a human readable reference file with cup info slots and track names."
+		"Create a human readable reference file with cup info slots, flags and track names."
 		" Only tracks with known name (not empty) are printed."
 		" The tracks are ordered by cups.\n"
 	"\t{name|XINFO}:\t|"
 		"Same as {name|INFO}, but use extended names if available.\n"
+	"\n"
+	"\t{name|RATING}:\t|"
+		"Same as {name|INFO}, but with additional first column »{par|()}«"
+		" to rate the tracks. The tracks are ordered by cups.\n"
+	"\t{name|XRATING}:\t|"
+		"Same as {name|RATING}, but use extended names if available.\n"
 	"\n"
 	"\t{name|LE-INFO}:\t|"
 		"Print information about current LE-CODE binaries.\n"
@@ -1663,7 +1697,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 {
     u_nsec_t start_nsec = GetTimerNSec();
 
-    enum { C_NAMES, C_INFO, C_LEINFO, C_SHA1, C_DISTRIB,
+    enum { C_NAMES, C_INFO, C_RATING, C_LEINFO, C_SHA1, C_DISTRIB,
 		C_CTDEF, C_LEDEF, C_LEREF, C_STRINGS, C_DUMP, 
 		C_LECODE, C_LECODE4, C_LPAR,
 		C_BMG, C_SEPARATOR, C_COPY, C_SPLIT, C_SUBST,
@@ -1684,6 +1718,8 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_NAMES,	"XNAMES",		0,		 1 },
 	{ C_INFO,	"INFO",			0,		0  },
 	{ C_INFO,	"XINFO",		0,		 1 },
+	{ C_RATING,	"RATING",		0,		0  },
+	{ C_RATING,	"XRATING",		0,		 1 },
 	{ C_LEINFO,	"LE-INFO",		"LEINFO",	0 },
 
 	{ C_SHA1,	"SHA1",			0,		0  },
@@ -1733,6 +1769,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ 0,		"TEST",			0,		O_LOG|O_TEST  },
 	{ 0,0,0,0 }
     };
+
 
     if ( !ld || !mode  || !arg || !*arg )
 	return ERROR0(ERR_MISSING_PARAM,0);
@@ -1918,7 +1955,8 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	    switch (cmd->id)
 	    {
 	      case C_NAMES:   err = CreateNamesLD(F.f,ld,variant); break;
-	      case C_INFO:    err = CreateInfoLD(F.f,ld,variant); break;
+	      case C_INFO:    err = CreateInfoLD(F.f,ld,variant,false); break;
+	      case C_RATING:  err = CreateInfoLD(F.f,ld,variant,true); break;
 	      case C_LEINFO:  err = CreateLeInfoLD(F.f,ld,false); break;
 	      case C_SHA1:    err = CreateSha1LD(F.f,ld,variant,true); break;
 	      case C_DISTRIB: err = CreateDistribLD(F.f,ld,variant); break;
@@ -2000,9 +2038,9 @@ static enumError cmd_distrib()
 		*fname++ = 0;
 		if (!*fname)
 		{
-		    param = param->next;
-		    if (param)
+		    if (param->next)
 		    {
+			param = param->next;
 			NORMALIZE_FILENAME_PARAM(param);
 			fname = param->arg;
 		    }
@@ -2141,12 +2179,12 @@ static enumError cmd_lpar()
 	if ( raw.fform != FF_LE_BIN )
 	    return ERROR0(ERR_INVALID_DATA,"Invalid file format: %s",raw.fname);
 
-	le_analyse_t ana;
-	AnalyseLEBinary(&ana,raw.data,raw.data_size);
+	le_analyze_t ana;
+	AnalyzeLEBinary(&ana,raw.data,raw.data_size);
 	ApplyLEFile(&ana);
 	PatchLECODE(&ana);
 	SaveTextLPAR(&ana.lpar,"-",false);
-	ResetLEAnalyse(&ana);
+	ResetLEAnalyze(&ana);
     }
 
     ResetRawData(&raw);
@@ -2292,6 +2330,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_IGNORE:		opt_ignore++; break;
 
 	case GO_LOAD_PREFIX:	err += ScanOptLoadPrefix(optarg); break;
+	case GO_LOAD_CATEGORY:	err += ScanOptLoadCategory(optarg); break;
 	case GO_PLUS:		opt_plus = optarg; break;
 
 	case GO_LOAD_BMG:	err += ScanOptLoadBMG(optarg); break;

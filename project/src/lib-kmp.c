@@ -55,8 +55,11 @@
 ///////////////			    KMP action log		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-bool KMP_ACTION_LOG ( bool is_patch, const char * format, ... )
+bool KMP_ACTION_LOG ( const kmp_t *kmp, bool is_patch, const char * format, ... )
 {
+    if ( kmp && kmp->check_only )
+	return false;
+
     #if HAVE_PRINT
     {
 	char buf[200];
@@ -1990,7 +1993,7 @@ void InitializeKMP ( kmp_t * kmp )
 	// do this only once
 	done = true;
 	SetKmpMode(KMP_MODE);
-	KMP_ACTION_LOG(false,"Global KMP Modes: %s\n",GetKmpMode());
+	KMP_ACTION_LOG(0,false,"Global KMP Modes: %s\n",GetKmpMode());
 	noPRINT("Global KMP Modes: %s\n",GetKmpMode());
     }
 
@@ -2384,7 +2387,8 @@ static const void * get_kmp_pointer
     uint max = ( (u8*)data + data_size - elem ) / kmp_entry_size[sect];
     if ( n > max )
     {
-	ERROR0(ERR_WARNING,
+	if ( verbose >= -2 )
+	    ERROR0(ERR_WARNING,
 		"Number of [%s] entries exceed file size (%u>%u): %s\n",
 		kmp_section_name[sect].name1, n, max, kmp->fname );
 	n = max;
@@ -2694,7 +2698,7 @@ enumError ScanRawKMP
 	return ERR_INVALID_DATA;
     }
 
-    KMP_ACTION_LOG(false,"ScanRawKMP() %s\n",kmp->fname);
+    KMP_ACTION_LOG(kmp,false,"ScanRawKMP() %s\n",kmp->fname);
     kmp->fform = FF_KMP;
     kmp->kmp_version = be32( data + 0x0c );
     kmp->max_scanned  = 0;
@@ -3102,7 +3106,7 @@ bool ShrinkRawKMP
 	return false;
 
     if (log)
-	KMP_ACTION_LOG(false,"ShrinkKMP() n-sect=%u/%u, size=%u+%u\n",
+	KMP_ACTION_LOG(0,false,"ShrinkKMP() n-sect=%u/%u, size=%u+%u\n",
 		n_sect, be16(&kfile->n_sect),
 		head_size, total_size-head_size );
 
@@ -3369,7 +3373,7 @@ enumError CreateRawKMP
 	data_size += kmp_entry_size[sect] * kmp->dlist[sect].used;
 
     PRINT("CREATE KMP: size = %#x = %u\n",data_size,data_size);
-    KMP_ACTION_LOG(false,"CreateRawKMP() size=%u\n",data_size);
+    KMP_ACTION_LOG(kmp,false,"CreateRawKMP() size=%u\n",data_size);
 
 
     //--- alloc data
@@ -3595,7 +3599,7 @@ enumError SaveRawKMP
     DASSERT(kmp);
     DASSERT(fname);
     PRINT("SaveRawKMP(%s,%d)\n",fname,set_time);
-    KMP_ACTION_LOG(false,"SaveRawKMP() %s\n",fname);
+    KMP_ACTION_LOG(kmp,false,"SaveRawKMP() %s\n",fname);
 
     //--- create raw data
 
@@ -3992,7 +3996,7 @@ bool TransformKMP
     if ( have_patch_count <= 0 || !transform_active || disable_transformation > 0 )
 	return false;
 
-    KMP_ACTION_LOG(true,"Transform KMP\n");
+    KMP_ACTION_LOG(kmp,true,"Transform KMP\n");
     PRINT("** TransformKMP() **\n");
     int n;
 
@@ -4394,7 +4398,7 @@ static bool FixPH
     FREE(saved_data);
 
     if (dirty)
-	KMP_ACTION_LOG(true,"Section %s fixed.\n",kmp_section_name[sect_ph].name1);
+	KMP_ACTION_LOG(kmp,true,"Section %s fixed.\n",kmp_section_name[sect_ph].name1);
     return dirty;
 }
 
@@ -4667,7 +4671,7 @@ bool PatchKMP
     if ( have_patch_count <= 0 || have_kmp_patch_count <= 0 && !transform_active )
 	return dirty;
 
-    KMP_ACTION_LOG(false,"PatchKMP()\n");
+    KMP_ACTION_LOG(kmp,false,"PatchKMP()\n");
     PRINT("** PatchKMP() **\n");
 
     dirty |= TransformKMP(kmp);
@@ -4839,39 +4843,39 @@ bool PatchKMP
 			" Lap counter set to '%u'.",new_lap_count);
 
 	if ( pole_modified && narrow_modified )
-	    KMP_ACTION_LOG(true,
+	    KMP_ACTION_LOG(kmp,true,
 		"STGI:%s Pole position set to '%s' and narrow mode to '%s'.\n",
 		lap_count_info, pole_modified, narrow_modified );
 	else if ( pole_modified )
-	    KMP_ACTION_LOG(true,"STGI:%s Pole position set to '%s'.\n",
+	    KMP_ACTION_LOG(kmp,true,"STGI:%s Pole position set to '%s'.\n",
 		lap_count_info, pole_modified );
 	else if ( narrow_modified )
-	    KMP_ACTION_LOG(true,"STGI:%s Narrow mode set to '%s'.\n",
+	    KMP_ACTION_LOG(kmp,true,"STGI:%s Narrow mode set to '%s'.\n",
 		lap_count_info, narrow_modified);
 	else if (laps_modified)
-	    KMP_ACTION_LOG(true,"STGI:%s\n",lap_count_info);
+	    KMP_ACTION_LOG(kmp,true,"STGI:%s\n",lap_count_info);
 
 	if (speed_modified)
 	{
 	    if ( n == 1 )
 	    {
 		if (speed_mod_val)
-		    KMP_ACTION_LOG(true,
+		    KMP_ACTION_LOG(kmp,true,
 			"STGI: Speed modifier set from %5.3f to %5.3f (%04x->%04x/hex).\n",
 			    SpeedMod2float(old_speed_mod), speed_mod_factor,
 			    old_speed_mod, speed_mod_val );
 		else
-		    KMP_ACTION_LOG(true,
+		    KMP_ACTION_LOG(kmp,true,
 			"STGI: Speed modifier cleared (old: %5.3f = %04x/hex).\n",
 			SpeedMod2float(old_speed_mod), old_speed_mod );
 	    }
 	    else
 	    {
 		if (speed_mod_val)
-		    KMP_ACTION_LOG(true,"STGI: Speed modifier set to %5.3f (%04x/hex).\n",
+		    KMP_ACTION_LOG(kmp,true,"STGI: Speed modifier set to %5.3f (%04x/hex).\n",
 			    speed_mod_factor, speed_mod_val );
 		else
-		    KMP_ACTION_LOG(true,"STGI: Speed modifier cleard.\n");
+		    KMP_ACTION_LOG(kmp,true,"STGI: Speed modifier cleard.\n");
 	    }
 	}
     }
@@ -4900,7 +4904,7 @@ bool PatchKMP
 	    const kmp_ktpt_entry_t *ktpt
 			= (kmp_ktpt_entry_t*)kmp->dlist[KMP_KTPT].list + 1;
 
-	    KMP_ACTION_LOG(true,
+	    KMP_ACTION_LOG(kmp,true,
 		"KTPT: Second KTPT %s: position %1.0f,%1.0f,%1.0f (%4.2f°)\n",
 		stat == 1 ? "inserted" : "replaced",
 		ktpt->position[0], ktpt->position[1], ktpt->position[2],
@@ -4938,7 +4942,7 @@ bool PatchKMP
 	if (count)
 	{
 	    dirty = true;
-	    KMP_ACTION_LOG(true,"%u special item%s for players removed.\n",
+	    KMP_ACTION_LOG(kmp,true,"%u special item%s for players removed.\n",
 			count, count == 1 ? "" : "s" );
 	}
     }
@@ -4998,7 +5002,7 @@ bool PatchKMP
 		FREE(saved_data);
 		dirty |= pt_dirty;
 		if (pt_dirty)
-		    KMP_ACTION_LOG(true,"'prev' and 'next' of section CKPT fixed.\n");
+		    KMP_ACTION_LOG(kmp,true,"'prev' and 'next' of section CKPT fixed.\n");
 	    }
 
 	    if ( KMP_MODE & KMPMD_FIX_CKJGPT )
@@ -5022,7 +5026,7 @@ bool PatchKMP
 		if (count)
 		{
 		    dirty = true;
-		    KMP_ACTION_LOG(true,
+		    KMP_ACTION_LOG(kmp,true,
 			"Section CKPT: %u invalid respawn link%s fixed.\n",
 			count, count==1 ? "" : "s" );
 		}
@@ -5054,13 +5058,13 @@ bool PatchKMP
 	if (count_pflags)
 	{
 	    dirty = true;
-	    KMP_ACTION_LOG(true,"GOBJ: %u presence flag%s masked by value 0x3f.\n",
+	    KMP_ACTION_LOG(kmp,true,"GOBJ: %u presence flag%s masked by value 0x3f.\n",
 			count_pflags, count_pflags == 1 ? "" : "s" );
 	}
 	if (count_padding)
 	{
 	    dirty = true;
-	    KMP_ACTION_LOG(true,"GOBJ: Padding %u element%s set to 0.\n",
+	    KMP_ACTION_LOG(kmp,true,"GOBJ: Padding %u element%s set to 0.\n",
 			count_padding, count_padding == 1 ? "" : "s" );
 	}
     }
@@ -5099,13 +5103,13 @@ bool PatchKMP
 	if (count_lecode)
 	{
 	    dirty = true;
-	    KMP_ACTION_LOG(true,"GOBJ: %u LE-CODE object%s removed.\n",
+	    KMP_ACTION_LOG(kmp,true,"GOBJ: %u LE-CODE object%s removed.\n",
 			count_lecode, count_lecode == 1 ? "" : "s" );
 	}
 	if (count_invalid)
 	{
 	    dirty = true;
-	    KMP_ACTION_LOG(true,"GOBJ: %u invalid object%s removed.\n",
+	    KMP_ACTION_LOG(kmp,true,"GOBJ: %u invalid object%s removed.\n",
 			count_invalid, count_invalid == 1 ? "" : "s" );
 	}
     }
@@ -5123,7 +5127,7 @@ bool PatchKMP
 	if (n)
 	{
 	    dirty = true;
-	    KMP_ACTION_LOG(true,"GOBJ: Padding of %u element%s set to random value.\n",
+	    KMP_ACTION_LOG(kmp,true,"GOBJ: Padding of %u element%s set to random value.\n",
 			n, n == 1 ? "" : "s" );
 	}
     }
@@ -5147,7 +5151,7 @@ bool PatchKMP
 	if (count)
 	{
 	    dirty = true;
-	    KMP_ACTION_LOG(true,"GOBJ: %u element%s set to invalid id ≥0x1000.\n",
+	    KMP_ACTION_LOG(kmp,true,"GOBJ: %u element%s set to invalid id ≥0x1000.\n",
 			count, count == 1 ? "" : "s" );
 	}
     }
@@ -5268,7 +5272,7 @@ bool PatchRawDataKMP
     if ( have_patch_count <= 0 || have_kmp_patch_count <= 0 && !transform_active )
 	return false;
 
-    KMP_ACTION_LOG(false,"PatchRawDataKMP()\n");
+    KMP_ACTION_LOG(0,false,"PatchRawDataKMP()\n");
     PRINT("** PatchRawDataKMP() **\n");
 
     kmp_t kmp;

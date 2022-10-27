@@ -599,6 +599,22 @@ szs v2.28a.beta2 r8627 - 2022-08-06
    a formatted string. See https://szs.wiimm.de/opt/printf for details.
 
 
+szs v2.28a r8636 - 2022-08-27
+
+ - Continuing the implementation of LEX/FEAT:
+    - Command wszst FEATURES: Options for value 3 (impact) are printed always.
+    - Option --print-modes removed.
+    - Option --long (-l and -ll) used to append human readable flags.
+ - wlect DISTRIBUTION: Minor optimizations.
+ - Updated internal prefix database.
+ - Tool wstrt: Option --add-section=PATH supports now wildcards. In this case
+   PATH is used as search pattern and all found files are added. In order to
+   use this variant, the calling shell must not interpret the wildcards.
+   Therefore, PATH must usually be enclosed in single or double quotes.
+ - Bug fix: Option --all-ranks accepts keyword RESTORE now. Due to a spelling
+   mistake, only RETORE was recognized so far.
+
+
 @@MODULE(last-history.txt)@@
 
 

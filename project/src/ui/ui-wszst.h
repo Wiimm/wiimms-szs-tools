@@ -57,6 +57,7 @@ typedef enum enumOptions
 	//----- command specific options -----
 
 	OPT_PLUS,
+	OPT_SPLIT,
 	OPT_PRINTF,
 	OPT_TOUCH,
 	OPT_AUTO,
@@ -192,7 +193,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 136
+	OPT__N_SPECIFIC, // == 137
 
 	//----- global options -----
 
@@ -217,6 +218,7 @@ typedef enum enumOptions
 	OPT_CT_CODE,
 	OPT_LE_CODE,
 	OPT_LOAD_PREFIX,
+	OPT_LOAD_CATEGORY,
 	OPT_CHDIR,
 	OPT_CONST,
 	OPT_BATTLE,
@@ -277,7 +279,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 216
+	OPT__N_TOTAL // == 218
 
 } enumOptions;
 
@@ -293,6 +295,7 @@ typedef enum enumOptions
 //	//----- command specific options -----
 //
 //	OB_PLUS			= 1llu << OPT_PLUS,
+//	OB_SPLIT		= 1llu << OPT_SPLIT,
 //	OB_PRINTF		= 1llu << OPT_PRINTF,
 //	OB_TOUCH		= 1llu << OPT_TOUCH,
 //	OB_AUTO			= 1llu << OPT_AUTO,
@@ -732,6 +735,7 @@ typedef enum enumOptions
 //				| OB_DEST2,
 //
 //	OB_CMD_SPLIT		= OB_PLUS
+//				| OB_SPLIT
 //				| OB_PRINTF
 //				| OB_IGNORE
 //				| OB_GRP_SCRIPT
@@ -1112,7 +1116,9 @@ typedef enum enumGetOpt
 	GO_CT_CODE,
 	GO_LE_CODE,
 	GO_LOAD_PREFIX,
+	GO_LOAD_CATEGORY,
 	GO_PLUS,
+	GO_SPLIT,
 	GO_PRINTF,
 	GO_CHDIR,
 	GO_TOUCH,

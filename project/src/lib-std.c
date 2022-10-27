@@ -808,6 +808,16 @@ char * PrintOptCompatible()
     return buf;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+uint GetEncodedVersion()
+{
+    static uint code = 0;
+    if (!code)
+	code = EncodeVersion(VERSION);
+    return code;
+}
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			warnings			///////////////
@@ -4444,7 +4454,7 @@ enumError cmd_float()
 	    }
 	}
 
-	printf(" %04x %04x = %12.9g : %04x %04x %04x %04x = %22.18g : |%s|\n",
+	printf(" %04x %04x = %12.9g : %04x %04x %04x %04x = %24.18g : |%s|\n",
 		be16(w4+0), be16(w4+1), bef4(w4),
 		be16(w8+0), be16(w8+1), be16(w8+2), be16(w8+3), bef8(w8),
 		arg );

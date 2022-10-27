@@ -1347,7 +1347,7 @@ void DumpCTCODE ( FILE *f, uint indent, ctcode_t * ctcode )
 
 const VarMap_t * SetupVarsCTCODE()
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
 	DefineMkwVars(&vm);
     return &vm;
@@ -1537,8 +1537,7 @@ static ctcode_crs1_data_t * GetNextArenaSlot
 	return 0;
     }
 
-    const uint arena = prop - MKW_N_TRACKS;
-    if ( arena >= MKW_N_ARENAS )
+    if (!IsMkwArena(prop))
     {
 	ERROR0(ERR_WARNING,
 		"Invalid arena slot 0x%02x, use A11..A25 (0x%x..0x%x) instead: %s @%u\n",
@@ -1547,6 +1546,7 @@ static ctcode_crs1_data_t * GetNextArenaSlot
 	return 0;
     }
 
+    const uint arena = prop - MKW_N_TRACKS;
     if (ctcode->arena_usage[arena])
     {
 	ERROR0(ERR_WARNING,
@@ -1909,9 +1909,13 @@ static enumError ScanRTL_Track
     err = ScanUValueSI(si,(long*)&property_id,0);
     if (err)
 	return err;
-
     if ( NextCharSI(si,false) == '!' )
 	si->cur_file->ptr++;
+    else if ( property_id >= MKW_ARENA_BEG && property_id < MKW_ARENA_END )
+    {
+	if (!is_arena)
+	    hidden = true;
+    }
     else if (!is_arena)
 	property_id &= 0x1f;
     SkipCharSI(si,';');
@@ -2013,6 +2017,7 @@ static enumError ScanRTL_Track
     if (!td)
 	return ERR_WARNING;
 
+
     const int tidx = td - ctcode->crs->data;
     if (ctcode->replace_at)
     {
@@ -2107,7 +2112,7 @@ enumError ScanSetupArena ( ctcode_arena_t *ca, ScanInfo_t * si )
 	if (err)
 	    return err;
 
-	if ( property_id > 0 && !IsMkwArena(property_id) )
+	if ( property_id > 0 && !IsMkwArenaOrRandom(property_id) )
 	{
 	    ccp eol = FindNextLineFeedSI(si,true);
 	    if ( si->no_warn <= 0 )
@@ -2126,10 +2131,24 @@ enumError ScanSetupArena ( ctcode_arena_t *ca, ScanInfo_t * si )
 	if ( NextCharSI(si,false) == ';' )
 	    sf->ptr++;
 
-	int music_id = -1;
+	int music_idx = -1;
 	if (NextCharSI(si,false))
 	{
-	    err = ScanIntValueSI(si,&music_id);
+	    err = ScanIntValueSI(si,&music_idx);
+	    if (err)
+		return err;
+	}
+
+
+	//--- flags
+
+	if ( NextCharSI(si,false) == ';' )
+	    sf->ptr++;
+
+	int flags = -1;
+	if (NextCharSI(si,false))
+	{
+	    err = ScanIntValueSI(si,&flags);
 	    if (err)
 		return err;
 	}
@@ -2137,11 +2156,15 @@ enumError ScanSetupArena ( ctcode_arena_t *ca, ScanInfo_t * si )
 
 	//--- store data id
 
-	slot -= MKW_ARENA_BEG;
+	const int idx = slot - MKW_ARENA_BEG;
+	PRINT0(">>>> i=%d, p=%0d, m=%03d, f:%03d\n",idx, property_id, music_idx, flags );
+
 	if ( property_id >= 0 )
-	    ca->prop[slot] = property_id;
-	if ( music_id >= 0 )
-	    ca->music[slot] = NormalizeMusicID(music_id);
+	    ca->prop[idx] = property_id;
+	if ( music_idx >= 0 )
+	    ca->music[idx] = NormalizeMusicID(music_idx);
+	if ( flags >= 0 )
+	    ca->flags[idx] = flags | CT_ARENA_FLAGS_VALID;
 
 	CheckEolSI(si);
 	if ( max_err < err )
@@ -2878,8 +2901,8 @@ enumError ScanLEBinCTCODE
     }
     ResetDataCTCODE(ctcode,true);
 
-    le_analyse_t ana;
-    AnalyseLEBinary(&ana,data,data_size);
+    le_analyze_t ana;
+    AnalyzeLEBinary(&ana,data,data_size);
 
 
     //--- copy racing cups
@@ -2944,7 +2967,7 @@ enumError ScanLEBinCTCODE
     const le_property_t	*prop	= ana.property;
     const le_music_t	*music	= ana.music;
     const le_flags_t	*flags	= ana.flags;
-    le_flags_t	     *ct_flags	= ctcode->le_flags;
+    le_flags8_t	*ct_flags	= ctcode->le_flags;
 
     if ( td && prop && music && flags )
     {
@@ -2994,7 +3017,7 @@ enumError ScanLEBinCTCODE
 
     //--- terminate
 
-    ResetLEAnalyse(&ana);
+    ResetLEAnalyze(&ana);
     CalcCupRefCTCODE(ctcode,true);
     CheckLEFlagsUsage(ctcode);
 

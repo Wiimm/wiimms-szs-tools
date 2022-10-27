@@ -1354,6 +1354,17 @@ Var_t * InsertVarMap
 	return 0;
     }
 
+    if ( vm->force_case == LOUP_UPPER || vm->force_case == LOUP_LOWER )
+    {
+	char *myname = move_varname ? (char*)varname : STRDUP(varname);
+	if ( vm->force_case == LOUP_UPPER )
+	    StringUpper(myname);
+	else
+	    StringLower(myname);
+	varname = myname;
+	move_varname = true;
+    }
+
     bool my_found;
     const int idx = FindVarMapHelper(vm,&my_found,varname);
     if (found)

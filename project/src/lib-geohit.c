@@ -740,8 +740,6 @@ enumError SaveTextGEOHIT
 	    {
 		fputs("\r\n #ORIG:",F.f);
 		PrintParamGEOHIT(F.f,fw,ref->param,bin->param,n_param);
-//DEL		HexDump16(stderr,0,0,bin,row_size);
-//DEL		HexDump16(stderr,0,0,ref,row_size);
 	    }
 	}
 

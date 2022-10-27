@@ -49,6 +49,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 // [[UsedObject_t]] [[UsedFile_t]] [[UsedFileSZS_t]]
 // [[UsedFileSHA1_t]] [[UsedFileFILE_t]] [[UsedFileGROUP_t]]
+// [[MissedFile_t]]
 
 typedef struct UsedObject_t	{ u8 d[N_KMP_GOBJ];	} UsedObject_t;
 typedef struct UsedFile_t	{ u8 d[N_DB_FILE];	} UsedFile_t;
@@ -56,6 +57,8 @@ typedef struct UsedFileSZS_t	{ u8 d[N_DB_FILE_SZS];	} UsedFileSZS_t;
 typedef struct UsedFileSHA1_t	{ u8 d[N_DB_FILE_SHA1]; } UsedFileSHA1_t;
 typedef struct UsedFileFILE_t	{ u8 d[N_DB_FILE_FILE]; } UsedFileFILE_t;
 typedef struct UsedFileGROUP_t	{ u8 d[N_DB_FILE_GROUP];} UsedFileGROUP_t;
+
+typedef u8 MissedFile_t[DBT__N];
 
 //
 ///////////////////////////////////////////////////////////////////////////////

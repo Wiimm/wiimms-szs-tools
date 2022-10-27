@@ -524,6 +524,7 @@ const sizeof_info_t sizeof_info_dclib[] =
 	SIZEOF_INFO_ENTRY(sizeof_info_t)
 	SIZEOF_INFO_ENTRY(PointerList_t)
 	SIZEOF_INFO_ENTRY(KeywordTab_t)
+	SIZEOF_INFO_ENTRY(KeywordTabManager_t)
 	SIZEOF_INFO_ENTRY(StringField_t)
 	SIZEOF_INFO_ENTRY(ParamFieldItem_t)
 	SIZEOF_INFO_ENTRY(ParamField_t)

@@ -145,7 +145,7 @@
 		" In plus-mode, a test is enabled, in minus-mode it is disabled."
 		" Scanning starts in plus-mode."
 		"\n "
-		" Example: @a-t@: compare all except timestamps."
+		" Example: @a-t@: compare all except timestamps and edit infos."
 		"\n "
 		" The exist status is @OK@ (0) if nothing differ,"
 		" @DIFFER@ (2) if at least one test failed, or an error code." },
@@ -274,6 +274,9 @@
 		" It only exists due to compatibility with the other tools." },
 
   { T_OPT_GP,	"LOAD_PREFIX",	"load-prefix|loadprefix",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_GP,	"LOAD_CATEGORY","load-category|loadcategory",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_CP,	"PLUS",		"plus",
@@ -932,6 +935,7 @@
 
   { T_CMD_BEG,	"DISTRIBUTION",	0,0,0 },
   { T_COPT,	"LOAD_PREFIX",	0,0,0 },
+  { T_COPT,	"LOAD_CATEGORY",0,0,0 },
   { T_COPT,	"PLUS",		0,0,0 },
   { T_COPY_GRP,	"TRACK_COPY",	0,0,0 },
   { T_COPT,	"SZS_MODE",	0,0,0 },

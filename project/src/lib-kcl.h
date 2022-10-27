@@ -424,6 +424,7 @@ typedef struct kcl_t
     file_format_t	fform;			// FF_KCL | FF_KCL_TXT
     file_format_t	fform_outfile;		// planned output format
     int			revision;		// tool revision
+    bool		check_only;		// true: analysing or checking the file
     char		signature_info[9];	// info text of signature, found in vertex #0
     float		signature;		// >0.0: signature number, found in vertex #0
 
@@ -628,8 +629,8 @@ kcl_flag_t * CreatePatchFlagKCL
     bool null_on_orig	    // TRUE: return NULL on no flag modifications
 );
 
-bool KCL_ACTION_LOG ( const char * format, ... )
-	__attribute__ ((__format__(__printf__,1,2)));
+bool KCL_ACTION_LOG ( const kcl_t *kcl, const char * format, ... )
+	__attribute__ ((__format__(__printf__,2,3)));
 
 ///////////////////////////////////////////////////////////////////////////////
 

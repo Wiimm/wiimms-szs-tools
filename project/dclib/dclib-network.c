@@ -335,10 +335,12 @@ ccp GetIPClassColor ( const ColorSet_t *colset, IPClass_t ipc )
     switch (ipc)
     {
 	case IPCL_INVALID:	return colset->b_red;
-	case IPCL_LOOPBACK:	return colset->b_cyan;
-	case IPCL_LOCAL:	return colset->b_green;
-	case IPCL_STANDARD:	return colset->reset;
+	case IPCL_LOOPBACK:	return colset->b_blue;
+	case IPCL_LINK_LOCAL:	return colset->b_cyan;
+	case IPCL_LOCAL:	return colset->b_green_cyan;
+	case IPCL_UNIQUE_LOCAL:	return colset->b_green;
 	case IPCL_SPECIAL:	return colset->b_yellow;
+	case IPCL_STANDARD:	return colset->reset;
 	default:		return colset->b_magenta;
     }
 }
@@ -588,6 +590,7 @@ IPClass_t GetIPClassBIP ( const BinIP_t * bip )
 	{ 0xc0a80000, 0xffff0000, IPCL_LOCAL	}, // 192.168.0.0/16
 	{ 0xa9fe0000, 0xffff0000, IPCL_LOCAL	}, // 169.254.0.0/16
 	{ 0xe0000000, 0xe0000000, IPCL_SPECIAL	}, // 224.0.0.0/3
+	// IPCL_STANDARD is fallback
 	{ 0,0,IPCL__N },
     };
 
@@ -601,10 +604,13 @@ IPClass_t GetIPClassBIP ( const BinIP_t * bip )
 
     static struct ip6_tab ip6_tab[] =
     {
-	{ IPCL_INVALID,  "::" },
-	{ IPCL_LOOPBACK, "::1" },
-	{ IPCL_LOCAL,    "fe80::/10" },
-	{ IPCL_SPECIAL,  "f00::/8" },
+	{ IPCL_INVALID,		"::" },
+	{ IPCL_LOOPBACK,	"::1" },
+	{ IPCL_LINK_LOCAL,	"fe80::/64" },
+	{ IPCL_UNIQUE_LOCAL,	"fc00::/7" },
+	{ IPCL_STANDARD,	"2000::/3" },
+	{ IPCL_SPECIAL,		"f00::/8" },
+	// IPCL_UNUSED is fallback
 	{ 0,0 },
     };
 
@@ -651,7 +657,7 @@ IPClass_t GetIPClassBIP ( const BinIP_t * bip )
 		    return ptr->ipc;
 		}
 	    }
-	    return IPCL_STANDARD;
+	    return IPCL_UNUSED;
 	}
     }
 
@@ -1244,6 +1250,20 @@ ccp GetNameInfoMIP ( ManageIP_t *mip )
 	    mip->decoded_name = stat && *host2 && strcmp(host1,host2) ? STRDUP(host2) : 0;
 	}
     }
+    return mip->name;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetNameInfoExMIP ( ManageIP_t *mip, PrintModeIP_t pmode )
+{
+    DASSERT(mip);
+
+    if ( pmode & PMIP_F_RESOLVE )
+	return GetNameInfoMIP(mip);
+
+    if ( !mip->name && mip->bin.ipvers )
+	mip->name = STRDUP(PrintAddrMIP(mip,pmode));
     return mip->name;
 }
 

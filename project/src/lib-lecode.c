@@ -74,6 +74,20 @@ bool	opt_complete		= false;
 ///////////////			    helpers			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+ccp GetLecodeSupportWarning ( const le_analyze_t *ana )
+{
+    DASSERT(ana);
+    return !( ana->valid & LE_HEAD_VALID )
+	? "LE-CODE file header is invalid"
+	: GetEncodedVersion() < ana->szs_version
+	? PrintCircBuf("SZS Tools v%s or younger required",DecodeVersion(ana->szs_version))
+	: IsLecodeSupported(ana->valid)
+	? 0
+	: PrintCircBuf("LE-CODE v%u is not supported",ana->header_vers);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 uint GetNextRacingTrackLE ( uint tid )
 {
     if ( ++tid == 0xff )
@@ -438,12 +452,12 @@ int ScanOptEngine ( ccp arg )
 
 const VarMap_t * SetupVarsLECODE()
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
     {
 	DefineMkwVars(&vm);
-	//DefineParserFuncTab(lex_func_tab,FF_LPAR);
 	DefineParserVars(&vm);
+
 
 	//--- setup integer variables
 
@@ -472,11 +486,6 @@ const VarMap_t * SetupVarsLECODE()
 	    { "BT",			LTTY_ARENA },
 	    { "VS",			LTTY_TRACK },
 	    { "FILL",			-1 },
-
-	    { "RALL",			MKW_LE_RANDOM_BEG+0 },
-	    { "RORIG",			MKW_LE_RANDOM_BEG+1 },
-	    { "RCUST",			MKW_LE_RANDOM_BEG+2 },
-	    { "RNEW",			MKW_LE_RANDOM_BEG+3 },
 
 	    { "LE$STRING_LIST_ENABLED",	LE_STRING_LIST_ENABLED },
 	    { "LE$STRING_SET_ENABLED",	LE_STRING_SET_ENABLED },
@@ -565,7 +574,9 @@ bool GetNextDebugMode ( lecode_debug_info_t *ldi )
 	{ LEDEB_ITEM_POINT,	0,			"ITEM-POINT"	},
 	{ LEDEB_KCL_TYPE,	0,			"KCL-TYPE"	},
 	{ LEDEB_LAP_POS,	0,			"LAP-POS"	},
+	{ LEDEB_TRACK_ID,	0,			"TRACK-ID"	},
 	{ LEDEB_XPF,		LEDEB_S_XPF,		"XPF"		},
+	// [[new-debug]]
     };
 
     while ( ldi->index >= 0 && ldi->index < sizeof(tab)/sizeof(*tab) )
@@ -610,7 +621,9 @@ lecode_debug_t DecodeLecodeDebug ( lecode_debug_ex_t *lde, lecode_debug_t mode )
     lde->item_point	= ( mode & LEDEB_ITEM_POINT ) > 0;
     lde->kcl_type	= ( mode & LEDEB_KCL_TYPE ) > 0;
     lde->lap_pos	= ( mode & LEDEB_LAP_POS ) > 0;
+    lde->track_id	= ( mode & LEDEB_TRACK_ID ) > 0;
     lde->xpf		= mode >> LEDEB_S_XPF & LEDEB_M_XPF;
+    // [[new-debug]]
 
     lde->have_output	= isDebugModeOutput(mode);
     lde->is_active	= isDebugModeActive(mode);
@@ -635,6 +648,8 @@ lecode_debug_t EncodeLecodeDebug ( lecode_debug_ex_t *lde )
     if ( lde->item_point )	mode |= LEDEB_ITEM_POINT;
     if ( lde->kcl_type )	mode |= LEDEB_KCL_TYPE;
     if ( lde->lap_pos )		mode |= LEDEB_LAP_POS;
+    if ( lde->track_id )	mode |= LEDEB_TRACK_ID;
+    // [[new-debug]]
 
     return DecodeLecodeDebug(lde,mode); // normalize all settings
 }
@@ -694,7 +709,9 @@ bool SetupLecodeDebugLPAR
 	{ PREDEBUG_VERTICAL, 4, LEDEB_KCL_TYPE },
 	{ PREDEBUG_VERTICAL, 5, LEDEB_LAP_POS },
 	{ PREDEBUG_VERTICAL, 6, LEDEB_POSITION },
-	{ PREDEBUG_VERTICAL, 7, LEDEB_LONG_XPF },
+	{ PREDEBUG_VERTICAL, 7, LEDEB_TRACK_ID },
+	{ PREDEBUG_VERTICAL, 8, LEDEB_LONG_XPF },
+	// [[new-debug]]
 
 	{0,0,0}
     };
@@ -718,7 +735,6 @@ bool SetupLecodeDebugLPAR
 		else
 		    debug_list[ptr->line] = ptr->mode | LEDEB_ENABLED;
 	    }
-
 	    if (hide_speedo)
 		*hide_speedo = my_hide_speedo;
 
@@ -889,13 +905,13 @@ ccp GetInfoLECODE ( mem_t lecode )
 			region, debug,
 			ntohl(head->version),
 			ntohl(head->build_number),
-			ntohl(head->size) )
+			ntohl(head->file_size) )
 	: PrintCircBuf("%s%s v%u, build %u (%s UTC), %u bytes",
 			region, debug,
 			ntohl(head->version),
 			ntohl(head->build_number),
 			head->timestamp,
-			ntohl(head->size) );
+			ntohl(head->file_size) );
 }
 
 //
@@ -1150,6 +1166,9 @@ void InitializeLPAR ( le_lpar_t *lpar, bool load_lpar )
     lpar->enable_xpflags	=   1;
     lpar->drag_blue_shell	=   1;
     lpar->thcloud_frames	= 300;
+    lpar->block_textures	=   1;
+
+    // [[new-lpar]]
 
     if ( load_lpar && opt_lpar )
 	LoadLPAR(lpar,false,0,false);
@@ -1191,6 +1210,13 @@ static void NormalizeLPAR ( le_lpar_t * lp )
     lp->block_track		= lp->block_track < LE_MAX_BLOCK_TRACK
 				? lp->block_track : LE_MAX_BLOCK_TRACK;
     lp->drag_blue_shell		= lp->drag_blue_shell > 0;
+    lp->bt_worldwide		= lp->bt_worldwide > 0;
+    lp->vs_worldwide		= lp->vs_worldwide > 0;
+    lp->bt_textures		= lp->bt_textures & LE_M_TEXTURE;
+    lp->vs_textures		= lp->vs_textures & LE_M_TEXTURE;
+    lp->block_textures		= lp->block_textures > 0;
+
+    // [[new-lpar]]
 
  #if 0
     for ( int c = 0; c < LEDEB__N_CONFIG; c++ )
@@ -1198,14 +1224,21 @@ static void NormalizeLPAR ( le_lpar_t * lp )
 	    lp->debug[c][l] &= LEDEB__ALL;
  #endif
 
-    // [[new-lpar]]
 }
+
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void CopyLPAR2Data ( le_analyse_t * ana )
+static void CopyLPAR2Data ( le_analyze_t * ana )
 {
     DASSERT(ana);
+
+    ccp warn = GetLecodeSupportWarning(ana);
+    if (warn)
+    {
+	ERROR0(ERR_INVALID_DATA,"Can't patch LE-CODE because %s.",warn);
+	return;
+    }
 
     NormalizeLPAR(&ana->lpar);
     const le_lpar_t *lp = &ana->lpar;
@@ -1261,6 +1294,18 @@ static void CopyLPAR2Data ( le_analyse_t * ana )
 
     if ( offsetof(le_binpar_v1_t,thcloud_frames) < ana->param_size )
 	h->thcloud_frames = htons(lp->thcloud_frames);
+
+    if ( offsetof(le_binpar_v1_t,bt_worldwide) < ana->param_size )
+	h->bt_worldwide = lp->bt_worldwide;
+    if ( offsetof(le_binpar_v1_t,vs_worldwide) < ana->param_size )
+	h->vs_worldwide = lp->vs_worldwide;
+
+    if ( offsetof(le_binpar_v1_t,bt_textures) < ana->param_size )
+	h->bt_textures = lp->bt_textures;
+    if ( offsetof(le_binpar_v1_t,vs_textures) < ana->param_size )
+	h->vs_textures = lp->vs_textures;
+    if ( offsetof(le_binpar_v1_t,block_textures) < ana->param_size )
+	h->block_textures = lp->block_textures;
 
     // [[new-lpar]]
 }
@@ -1357,6 +1402,17 @@ static ccp PrintChatMode ( u16 msg, u16 mode1, u16 mode2, int numeric )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static ccp lpar_std_flags ( uint flags )
+{
+    return PrintCircBuf("LE$%sABLE%s%s%s",
+		flags & LE_ENABLED	? "EN"			: "DIS",
+		flags & LE_ALTERABLE	? " | LE$ALTERABLE"	: "",
+		flags & LE_EXCLUDED	? " | LE$EXCLUDE"	: "",
+		flags & LE_INCLUDED	? " | LE$INCLUDE"	: "" );
+}
+
+//-----------------------------------------------------------------------------
+
 enumError WriteSectionLPAR
 (
     FILE		*f,		// output files
@@ -1391,6 +1447,10 @@ enumError WriteSectionLPAR
 		,lpar->item_cheat
 		,lpar->drag_blue_shell
 		,lpar->thcloud_frames,lpar->thcloud_frames/60.0
+		// [[worldwide]] should be included here, see below for a temporary solution
+		,lpar_std_flags( lpar->bt_textures & LE_M_TEXTURE )
+		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
+		,lpar->block_textures
 		);
     }
     else
@@ -1411,6 +1471,10 @@ enumError WriteSectionLPAR
 	       "ITEM-CHEAT	= %u\r\n"
 	       "DRAG-BLUE-SHELL	= %u\r\n"
 	       "THCLOUD-TIME	= %u # %.2fs\r\n"
+	       "BT-TEXTURES	= %s\r\n"
+	       "VS-TEXTURES	= %s\r\n"
+	       "BLOCK-TEXTURES	= %u\r\n"
+	       // [[worldwide]] should be included here, see below for a temporary solution
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
 		,lpar->cheat_mode
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
@@ -1424,8 +1488,21 @@ enumError WriteSectionLPAR
 		,lpar->item_cheat
 		,lpar->drag_blue_shell
 		,lpar->thcloud_frames,lpar->thcloud_frames/60.0
+		,lpar_std_flags( lpar->bt_textures & LE_M_TEXTURE )
+		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
+		,lpar->block_textures
 		);
+
     }
+
+    // [[worldwide]]
+    if ( lpar->bt_worldwide || lpar->vs_worldwide )
+	fprintf(f,
+	       "BT-WORLDWIDE	= %u\r\n"
+	       "VS-WORLDWIDE	= %u\r\n"
+		,lpar->bt_worldwide,
+		lpar->vs_worldwide
+		);
 
 
     //--- chat modes
@@ -1457,7 +1534,7 @@ enumError WriteSectionLPAR
 		fputs("\r\n",f);
 	    }
 
-	    fprintf(f,"%s\n",PrintChatMode(i,mode1,mode2,export_count));
+	    fprintf(f,"%s\r\n",PrintChatMode(i,mode1,mode2,export_count));
 	}
     }
 
@@ -1472,11 +1549,11 @@ enumError WriteSectionLPAR
     {
 	fprintf(f,"\r\n#\f\r\n%.79s\r\n\r\n[DEBUG-%u]\r\n",Hash200,conf+1);
 	if (verbose)
-	    fputs("# See section [DEBUG-DOCU] for details.\n",f);
+	    fputs("# See section [DEBUG-DOCU] for details.\r\n",f);
 
 	fprintf(f,"\r\n"
-		"SETUP\t\t= DEBUG$%s\n"
-		"HIDE-SPEEDO\t= %u\n",
+		"SETUP\t\t= DEBUG$%s\r\n"
+		"HIDE-SPEEDO\t= %u\r\n",
 		GetPredefDebugName(lpar->debug_predef[conf]),
 		( 1<<conf & lpar->no_speedo_if_debug ) != 0 );
 
@@ -1508,7 +1585,7 @@ enumError WriteSectionLPAR
 	    {
 		if (!line_printed)
 		{
-		    fprintf(f,"\nLINE\t\t= %u\r\n",idx);
+		    fprintf(f,"\r\nLINE\t\t= %u\r\n",idx);
 		    line_printed = true;
 		}
 		fprintf(f,"%s%.*s= %u\r\n",
@@ -1527,11 +1604,12 @@ enumError WriteSectionLPAR
 ///////////////			    analyse			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void ResetLEAnalyse ( le_analyse_t *ana )
+void ResetLEAnalyze ( le_analyze_t *ana )
 {
     if (ana)
     {
-	ResetLEAnalyseUsage(ana);
+	ResetLEAnalyzeUsage(ana);
+	FREE(ana->flags);
 	memset(ana,0,sizeof(*ana));
 	InitializeLPAR(&ana->lpar,false);
     }
@@ -1539,7 +1617,7 @@ void ResetLEAnalyse ( le_analyse_t *ana )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void ResetLEAnalyseUsage ( le_analyse_t *ana )
+void ResetLEAnalyzeUsage ( le_analyze_t *ana )
 {
     if (ana)
     {
@@ -1554,34 +1632,56 @@ void ResetLEAnalyseUsage ( le_analyse_t *ana )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void ApplyArena ( le_analyse_t * ana, const ctcode_arena_t * ca )
+static void ApplyArena ( le_analyze_t * ana, const ctcode_arena_t * ca )
 {
     DASSERT(ana);
     DASSERT(ca);
 
     if (!ana->arena_setup)
-	SetupArenasLEAnalyse(ana,false);
+	SetupArenasLEAnalyze(ana,false);
 
-    if (ana->property)
+    if ( ana->property && ana->music && ana->flags)
+    {
 	for ( int a = 0; a < MKW_N_ARENAS; a++ )
+	{
+	    const int slot = MKW_ARENA_BEG + a;
 	    if (ca->prop[a])
 	    {
-		ana->property[a+MKW_ARENA_BEG] = ca->prop[a];
+		const le_property_t prop = ca->prop[a];
+		if (IsLecodeRandom(prop))
+		{
+		    for ( int idx = 0; idx < 10; idx++ )
+			if ( ntohl(ana->cup_arena[idx]) == slot )
+			{
+			    ana->cup_arena[idx] = htonl(prop);
+			    break;
+			}
+		}
+		else
+		{
+		    ana->property[slot] = prop;
+		    ana->arena_applied = true;
+		}
+	    }
+
+	    if (ca->music[a])
+	    {
+		ana->music[slot] = ca->music[a];
 		ana->arena_applied = true;
 	    }
 
-    if (ana->music)
-	for ( int a = 0; a < MKW_N_ARENAS; a++ )
-	    if (ca->music[a])
+	    if ( ca->flags[a] & CT_ARENA_FLAGS_VALID )
 	    {
-		ana->music[a+MKW_ARENA_BEG] = ca->music[a];
+		ana->flags[slot] = ca->flags[a] & LEFL__ALL;
 		ana->arena_applied = true;
 	    }
+	}
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SetupArenasLEAnalyse ( le_analyse_t *ana, bool force )
+void SetupArenasLEAnalyze ( le_analyze_t *ana, bool force )
 {
     DASSERT(ana);
     if ( ana->property && ana->music )
@@ -1614,19 +1714,19 @@ void SetupArenasLEAnalyse ( le_analyse_t *ana, bool force )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError AnalyseLEBinary
+enumError AnalyzeLEBinary
 (
-    le_analyse_t	*ana,		// NULL or destination of analysis
+    le_analyze_t	*ana,		// NULL or destination of analysis
     const void		*data,		// data pointer
     uint		data_size	// data size
 )
 {
     //--- setup analyse
 
-    le_analyse_t ana0 = {0};
+    le_analyze_t ana0 = {0};
     if (!ana)
     {
-	ResetLEAnalyse(&ana0);
+	ResetLEAnalyze(&ana0);
 	ana = &ana0;
     }
     memset(ana,0,sizeof(*ana));
@@ -1639,40 +1739,66 @@ enumError AnalyseLEBinary
     }
 
     le_binary_head_t *head = (le_binary_head_t*)data;
-    const uint head_size = ntohl(head->size);
-    if ( head_size > data_size )
+    const uint file_size = ntohl(head->file_size);
+    if ( file_size > data_size )
 	return ERR_INVALID_DATA;
 
     ana->valid		= LE_HEAD_FOUND;
     ana->version	= head->phase;
     ana->region		= GetLEREG(head->region);
     ana->data		= data;
-    ana->size		= data_size;
+    ana->data_size	= data_size;
     ana->head		= head;
-    ana->head_vers	= ntohl(head->version);
-    ana->head_size	= head_size;
-    ana->end_of_data	= (u8*)data + head_size;
+    ana->header_vers	= ntohl(head->version);
+    ana->end_of_data	= (u8*)data + file_size;
+    ana->flags_bits	= ntohl(head->build_number) < 35 ? 8 : 16;
+    ana->le_random_beg	= MKW_LE_RANDOM_BEG;
+    ana->le_random_end	= MKW_LE_RANDOM_END;
 
     uint off_param = 0;
-    switch(ana->head_vers)
+    switch(ana->header_vers)
     {
      case 4:
-	if ( ana->size > sizeof(le_binary_head_v4_t) )
+	if ( ana->data_size > sizeof(le_binary_head_v4_t) )
 	{
-	    ana->valid |= LE_HEAD_VALID | LE_HEAD_KNOWN;
-	    off_param = ntohl(ana->head_v4->off_param);
+	    off_param		=  ntohl(ana->head_v4->off_param);
+	    ana->header_size	=  sizeof(le_binary_head_v4_t);
+	    ana->le_random_beg	= MKW_LE_RANDOM_BY_CUP;
+	    ana->valid		|= LE_HEAD_VALID | LE_HEAD_KNOWN;
+
+	    time_t tim;
+	    ScanDateTime(&tim,0,ana->head_v4->timestamp,false,0);
+	    ana->creation_time	= tim;
+	}
+	break;
+
+     case 5:
+	if ( ana->data_size > sizeof(le_binary_head_v5_t) )
+	{
+	    off_param		=  ntohl(ana->head_v5->off_param);
+	    ana->szs_version	=  ntohl(ana->head_v5->szs_version);
+	    ana->edit_version	=  ntohl(ana->head_v5->edit_version);
+	    ana->header_size	=  ntohl(ana->head_v5->head_size);
+	    ana->creation_time	=  ntohl(ana->head_v5->creation_time);
+	    ana->edit_time	=  ntohl(ana->head_v5->edit_time);
+
+	    if ( ana->edit_version != 0x32303232 ) // first 4 bytes of "2022-10-23" => invalid
+		ana->valid	|= LE_HEAD_VALID | LE_HEAD_KNOWN;
 	}
 	break;
 
      default:
-	// at least v4
-	if ( ana->head_vers > 4 && ana->size > sizeof(le_binary_head_t) )
+	if ( ana->header_vers > 5 && ana->data_size > sizeof(le_binary_head_t) )
 	{
-	    ana->valid |= LE_HEAD_VALID;
-	    off_param = ntohl(head->off_param);
+	    off_param		=  ntohl(head->off_param);
+	    ana->header_size	=  ntohl(ana->head_v5->head_size);
+	    ana->valid		|= LE_HEAD_VALID;
 	}
 	break;
     }
+
+    if ( GetEncodedVersion() >= ana->szs_version )
+	    ana->valid |= LE_HEAD_VERSION;
 
 
     //--- analyse parameters (prepare)
@@ -1685,7 +1811,7 @@ enumError AnalyseLEBinary
     ptr_ana_t;
 
     #undef DEF_TAB
-    #define DEF_TAB(s,o,p) { offsetof(s,o), offsetof(le_analyse_t,p) },
+    #define DEF_TAB(s,o,p) { offsetof(s,o), offsetof(le_analyze_t,p) },
 
     const u8 *ptr_list[8];	// for section-size analysis
     uint n_ptr = 0;		// number of used pointers
@@ -1695,13 +1821,13 @@ enumError AnalyseLEBinary
 
     if ( off_param
 	&& !(off_param&3)
-	&& ana->size >= off_param + sizeof(le_binary_param_t)
+	&& ana->data_size >= off_param + sizeof(le_binary_param_t)
 	&& !memcmp(data+off_param,LE_PARAM_MAGIC,4) )
     {
 	le_binary_param_t *param = (le_binary_param_t*)(data+off_param);
 	const uint param_size = ntohl(param->size);
 	if (   off_param + param_size <= data_size
-	    && off_param + param_size <= ana->head_size )
+	    && off_param + param_size <= ana->data_size )
 	{
 	    ana->valid		|= LE_PARAM_FOUND;
 	    ana->param		= param;
@@ -1709,7 +1835,7 @@ enumError AnalyseLEBinary
 	    ana->param_vers	= ntohl(param->version);
 	    ana->param_size	= param_size;
 
-	    const uint max_off = ana->head_size - off_param;
+	    const uint max_off = ana->data_size - off_param;
 
 	    switch(ana->param_vers)
 	    {
@@ -1725,7 +1851,7 @@ enumError AnalyseLEBinary
 			DEF_TAB( le_binpar_v1_35_t, off_course_par,	course_par )
 			DEF_TAB( le_binpar_v1_35_t, off_property,	property )
 			DEF_TAB( le_binpar_v1_35_t, off_music,		music )
-			DEF_TAB( le_binpar_v1_35_t, off_flags,		flags )
+			DEF_TAB( le_binpar_v1_35_t, off_flags,		flags_bin )
 			{-1,-1}
 		    };
 
@@ -1807,7 +1933,19 @@ enumError AnalyseLEBinary
 //		    ana->lpar.thcloud_frames	= 300;
 //		}
 
-		break; // [[new-lpar]]
+		if ( param_size >= sizeof(le_binpar_v1_26c_t) )
+		{
+		    le_binpar_v1_26c_t *p	= (le_binpar_v1_26c_t*)(data+off_param);
+		    ana->lpar.bt_worldwide	= p->bt_worldwide;
+		    ana->lpar.vs_worldwide	= p->vs_worldwide;
+		    ana->lpar.bt_textures	= p->bt_textures;
+		    ana->lpar.vs_textures	= p->vs_textures;
+		    ana->lpar.block_textures	= p->block_textures;
+		}
+
+		// [[new-lpar]]
+
+		break;
 
 	     default:
 		// at least v1
@@ -1827,7 +1965,7 @@ enumError AnalyseLEBinary
 
     if (ana->end_of_data)
     {
-	const int size = ana->data + ana->size - ana->end_of_data;
+	const int size = ana->data + ana->data_size - ana->end_of_data;
 	if ( size >= 0 )
 	{
 	    ana->bin_data = ana->end_of_data;
@@ -1848,9 +1986,9 @@ enumError AnalyseLEBinary
     ana_n_max_t;
 
     #undef DEF_TAB
-    #define DEF_TAB(p,n,m,s) {	offsetof(le_analyse_t,p), \
-				offsetof(le_analyse_t,n), \
-				offsetof(le_analyse_t,m), \
+    #define DEF_TAB(p,n,m,s) {	offsetof(le_analyze_t,p), \
+				offsetof(le_analyze_t,n), \
+				offsetof(le_analyze_t,m), \
 				sizeof(*ana->p)*s },
 
     static const ana_n_max_t n_max_tab[] =
@@ -1859,7 +1997,7 @@ enumError AnalyseLEBinary
 	DEF_TAB( cup_arena,	n_cup_arena,	max_cup_arena,	5 )
 	DEF_TAB( property,	n_slot,		max_property,	1 )
 	DEF_TAB( music,		n_slot,		max_music,	1 )
-	DEF_TAB( flags,		n_slot,		max_flags,	1 )
+	DEF_TAB( flags_bin,	n_slot,		max_flags,	1 )
 	{-1,-1,-1}
     };
 
@@ -1875,7 +2013,7 @@ enumError AnalyseLEBinary
     for ( pnm = n_max_tab; pnm->off_ptr >= 0; pnm++ )
     {
 	const u8 *ptr = *(u8**)((u8*)ana+pnm->off_ptr);
-	const u8 *end = data + ana->head_size;
+	const u8 *end = data + ana->data_size;
 	uint i;
 	for ( i = 0; i < n_ptr; i++ )
 	    if ( ptr_list[i] > ptr && ptr_list[i] < end )
@@ -1886,8 +2024,30 @@ enumError AnalyseLEBinary
 	     *(uint*)((u8*)ana+pnm->off_max) = max;
     }
 
-    SetupArenasLEAnalyse(ana,false);
+
+    //--- setup flags
+
+    if ( ana->flags_bits == 16 )
+    {
+	ana->max_flags /= 2;
+	ana->flags = MALLOC(ana->max_flags*sizeof(*ana->flags));
+	const le_flags_t *src = (le_flags_t*)ana->flags_bin;
+	if (src)
+	    for ( int i = 0; i < ana->max_flags; i++ )
+		ana->flags[i] = be16(src++);
+    }
+    else
+    {
+	ana->flags = MALLOC(ana->max_flags*sizeof(*ana->flags));
+	const le_flags8_t *src = (le_flags8_t*)ana->flags_bin;
+	if (src)
+	    for ( int i = 0; i < ana->max_flags; i++ )
+		ana->flags[i] = *src++;
+    }
+
+    SetupArenasLEAnalyze(ana,false);
     CalculateStatsLE(ana);
+
 
     //--- return
 
@@ -1898,7 +2058,7 @@ enumError AnalyseLEBinary
 
 ///////////////////////////////////////////////////////////////////////////////
 
-le_region_t GetLERegion ( const le_analyse_t *ana )
+le_region_t GetLERegion ( const le_analyze_t *ana )
 {
     if (ana->valid)
     {
@@ -1916,9 +2076,9 @@ le_region_t GetLERegion ( const le_analyse_t *ana )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void CalculateStatsLE ( le_analyse_t *ana )
+void CalculateStatsLE ( le_analyze_t *ana )
 {
-    ResetLEAnalyseUsage(ana);
+    ResetLEAnalyzeUsage(ana);
 
     ana->used_rslots	= 0;
     ana->max_rslots	= 0;
@@ -1968,11 +2128,11 @@ void CalculateStatsLE ( le_analyse_t *ana )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc )
+const le_usage_t * GetLEUsage ( const le_analyze_t *ana0, bool force_recalc )
 {
-    le_analyse_t *ana = (le_analyse_t*)ana0;
+    le_analyze_t *ana = (le_analyze_t*)ana0;
     if ( force_recalc && ana->usage )
-	ResetLEAnalyseUsage(ana);
+	ResetLEAnalyzeUsage(ana);
 
     if ( ana->usage || ana->max_slot < LE_FIRST_CT_SLOT )
 	return ana->usage;
@@ -1983,18 +2143,18 @@ const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc )
     memset(usage,LEU_S_UNUSED,ana->usage_size);
 
 
-    //-- special slots
+    //-- random slots, can be overwritten by special slots
+
+    memset( usage + ana->le_random_beg,
+		LEU_S_LE_RANDOM|LEU_F_ONLINE,
+		ana->le_random_end - ana->le_random_beg );
+
+
+    //-- special slots, may overwrite random slots
 
     memset(usage+0x36,LEU_S_SPECIAL,5);
     usage[0x42] = LEU_S_SPECIAL;
     usage[0x43] = LEU_S_NETWORK|LEU_F_ONLINE;
-
-
-    //-- random slots
-
-    memset( usage + LE_FIRST_RANDOM_SLOT,
-		LEU_S_WIIMM|LEU_F_ONLINE,
-		LE_LAST_RANDOM_SLOT - LE_FIRST_RANDOM_SLOT+1 );
 
 
     //-- check racing slots
@@ -2008,16 +2168,27 @@ const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc )
     {
 	if (IsLESlotUsed(ana,slot))
 	{
-	    const le_flags_t flags = ana->flags ? ana->flags[slot] : 0;
-	    usage[slot] = flags & LETF_ALIAS     ? LEU_S_ALIAS
-			: flags & LETF_RND_HEAD  ? LEU_S_TRACK_RND
-			: flags & LETF_RND_GROUP ? LEU_S_TRACK_HIDE
-			:			   LEU_S_TRACK;
+	    const le_flags_t flags = ana->flags[slot];
+
+	    if ( flags & LEFL_ALIAS )
+		 usage[slot] = LEU_S_ALIAS;
+	    else if ( IsLEBattleSlot(ana,slot) )
+		usage[slot]
+			= flags & LEFL_RND_HEAD			? LEU_S_ARENA_RND
+			: flags & (LEFL_RND_GROUP|LEFL_HIDDEN)	? LEU_S_ARENA_HIDE
+			:					  LEU_S_ARENA;
+	    else
+		usage[slot]
+			= flags & LEFL_RND_HEAD			? LEU_S_TRACK_RND
+			: flags & (LEFL_RND_GROUP|LEFL_HIDDEN)	? LEU_S_TRACK_HIDE
+			:					  LEU_S_TRACK;
 	}
 
 	if ( ana->version > 1 || slot < 0xff
 		|| slot >= LE_FIRST_UPPER_CT_SLOT && slot <= LE_LAST_UPPER_CT_SLOT )
+	{
 	    usage[slot] |= LEU_F_ONLINE;
+	}
     }
 
 
@@ -2027,10 +2198,10 @@ const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc )
     {
 	if (IsLESlotUsed(ana,slot))
 	{
-	    const le_flags_t flags = ana->flags ? ana->flags[slot] : 0;
-	    usage[slot] = flags & LETF_ALIAS      ? LEU_S_ALIAS
-			: flags & LETF_RND_HEAD   ? LEU_S_ARENA_RND
-			: flags & LETF_RND_GROUP  ? LEU_S_ARENA_HIDE
+	    const le_flags_t flags = ana->flags[slot];
+	    usage[slot] = flags & LEFL_ALIAS      ? LEU_S_ALIAS
+			: flags & LEFL_RND_HEAD   ? LEU_S_ARENA_RND
+			: flags & LEFL_RND_GROUP  ? LEU_S_ARENA_HIDE
 			:			    LEU_S_ARENA;
 	}
     }
@@ -2046,11 +2217,11 @@ const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static const char usage_ch[] = "-AraTRtsn*W>----";
+static const char usage_ch[] = "-AarTtRLsn>-----";
 
 char GetLEUsageChar ( le_usage_t usage )
 {
-    return usage_ch[usage & LEU_S_MASK];
+    return usage_ch[ usage & LEU_S_MASK ];
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2064,20 +2235,20 @@ ccp GetLEUsageCharCol ( le_usage_t usage, const ColorSet_t *colset, ccp * prev_c
 	ccp col;
 	switch ( usage & LEU_S_MASK )
 	{
+	    case LEU_S_SPECIAL:
+	    case LEU_S_NETWORK:
 	    case LEU_S_UNUSED:		col = colset->reset; break;
 
 	    case LEU_S_ARENA:		col = colset->b_cyan; break;
-	    case LEU_S_ARENA_RND:	col = colset->b_yellow; break;
-	    case LEU_S_ARENA_HIDE:	col = colset->b_green; break;
-	    case LEU_S_TRACK:		col = colset->b_cyan_blue; break;
-	    case LEU_S_TRACK_RND:	col = colset->b_yellow; break;
-	    case LEU_S_TRACK_HIDE:	col = colset->green_cyan; break;
+	    case LEU_S_ARENA_HIDE:	col = colset->b_blue; break;
+	    case LEU_S_TRACK:		col = colset->b_yellow; break;
+	    case LEU_S_TRACK_HIDE:	col = colset->b_green; break;
 
-	    case LEU_S_SPECIAL:		col = colset->reset; break;
-	    case LEU_S_NETWORK:		col = colset->b_orange; break;
-	    case LEU_S_RANDOM:		col = colset->b_yellow; break;
-	    case LEU_S_WIIMM:		col = colset->b_orange; break;
-	    case LEU_S_ALIAS:		col = colset->b_red; break;
+	    case LEU_S_ARENA_RND:	col = colset->orange; break;
+	    case LEU_S_TRACK_RND:	col = colset->b_orange; break;
+	    case LEU_S_LE_RANDOM:	col = colset->red; break;
+
+	    case LEU_S_ALIAS:
 	    default:			col = colset->b_magenta; break;
 	}
 
@@ -2106,7 +2277,8 @@ typedef enum
 {
     CHECK_OFF,		// don't check
     CHECK_TRACK,	// check for racing tracks
-    CHECK_ARENA		// check for battle arenas
+    CHECK_ARENA,	// check for battle arenas
+    HIGHLIGHT_ARENA,	// highlight arenas
 }
 slot_check_t;
 
@@ -2114,16 +2286,18 @@ slot_check_t;
 
 ccp GetLEValid ( le_valid_t valid )
 {
-    char *buf = GetCircBuf(7);
+    char *buf = GetCircBuf(8);
     DASSERT(buf);
+    char *d = buf;
 
-    buf[0] = valid & LE_HEAD_FOUND  ? 'F' : '-';
-    buf[1] = valid & LE_HEAD_VALID  ? 'V' : '-';
-    buf[2] = valid & LE_HEAD_KNOWN  ? 'K' : '-';
-    buf[3] = valid & LE_PARAM_FOUND ? 'f' : '-';
-    buf[4] = valid & LE_PARAM_VALID ? 'v' : '-';
-    buf[5] = valid & LE_PARAM_KNOWN ? 'k' : '-';
-    buf[6] = 0;
+    *d++ = valid & LE_HEAD_FOUND   ? 'F' : '-';
+    *d++ = valid & LE_HEAD_VALID   ? 'V' : '-';
+    *d++ = valid & LE_HEAD_KNOWN   ? 'K' : '-';
+    *d++ = valid & LE_HEAD_VERSION ? 'L' : '-';
+    *d++ = valid & LE_PARAM_FOUND  ? 'f' : '-';
+    *d++ = valid & LE_PARAM_VALID  ? 'v' : '-';
+    *d++ = valid & LE_PARAM_KNOWN  ? 'k' : '-';
+    *d = 0;
     return buf;
 }
 
@@ -2131,16 +2305,22 @@ ccp GetLEValid ( le_valid_t valid )
 
 static ccp GetSlotInfo
 (
-    const le_analyse_t	*ana,		// valid structure
+    const le_analyze_t	*ana,		// valid structure
     int			tid,		// track id
     ColorSet_t		*col,		// NULL or color set for warnings
     slot_check_t	check,		// check modus
     uint		*warnings	// not NULL: increment on warnings
 )
 {
+    if (IsLecodeRandom(tid))
+	return PrintCircBuf("[%s%-7.7s%s,%s] ",
+		col->info, GetLecodeRandomName(tid,"random"), col->reset,
+		PrintLEFL(ana->flags_bits,ana->flags[tid],true));
+
     if ( tid < ana->n_slot || IsMkwArena(tid) )
     {
 	uint warn = 0;
+
 
 	//-- property slot
 
@@ -2160,10 +2340,17 @@ static ccp GetSlotInfo
 	}
 	else if ( IsMkwOriginal(tid) && tid != prop )
 	{
-	    warn |= 1;
 	    if (col)
 	    {
-		prop1 = col->hint;
+		prop1 = col->info;
+		prop0 = col->reset;
+	    }
+	}
+	else if ( check == HIGHLIGHT_ARENA && IsMkwArena(prop) )
+	{
+	    if (col)
+	    {
+		prop1 = col->info;
 		prop0 = col->reset;
 	    }
 	}
@@ -2185,7 +2372,7 @@ static ccp GetSlotInfo
 		    music0 = col->reset;
 		}
 	    }
-	    else if ( !(music&1) || IsMkwArena(tid) && MusicID2TrackId(music,0,0) != tid )
+	    else if ( !(music&1) )
 	    {
 		warn |= 1;
 		if (col)
@@ -2194,51 +2381,36 @@ static ccp GetSlotInfo
 		    music0 = col->reset;
 		}
 	    }
-	}
-
-
-	//-- flags slot
-
-	ccp flags;
-	char flags_buf[8];
-	bool is_alias = false;
-	if (ana->flags)
-	{
-	    const le_flags_t fl = ana->flags[tid];
-	    if ( fl & ~LETF__ALL )
-		snprintf(flags_buf,sizeof(flags_buf),"?%03x",fl);
-	    else
+	    else if ( IsMkwTrack(prop) != IsMkwTrack(MusicID2TrackId(music,0,0)) )
 	    {
-		if ( fl & LETF_ALIAS )
-		    is_alias = true;
-
-		snprintf(flags_buf,sizeof(flags_buf),"%c%c%c%c",
-			fl & LETF_NEW		? 'N' : '-',
-			fl & LETF_RND_HEAD	? 'H' : '-',
-			fl & LETF_RND_GROUP	? 'G' : '-',
-			fl & LETF_ALIAS		? 'A' : '-' );
+		if (col)
+		{
+		    music1 = col->info;
+		    music0 = col->reset;
+		}
 	    }
-	    flags = flags_buf;
 	}
-	else
-	    flags = "-?-";
+
+
+	//-- flags
 
 	static const char warn_list[] = " <!!";
-	return is_alias
+	const le_flags_t flags = ana->flags[tid];
+	return flags & LEFL_ALIAS
 		? PrintCircBuf("[%s->%4x %s,%s] ",
 				col->differ, TrackByAliasLE(prop,music),
-				col->reset, flags )
+				col->reset, PrintLEFL(ana->flags_bits,flags,true) )
 		: PrintCircBuf("[%s%s%s,%s%s%s,%s]%c",
 				prop1, propx, prop0,
 				music1, musicx, music0,
-				flags, warn_list[warn] );
+				PrintLEFL(ana->flags_bits,flags,true), warn_list[warn] );
     }
 
     if (col)
     {
 	static char fail[40] = {0};
 	if (!*fail)
-	    snprintf(fail,sizeof(fail),"[%s---,---,----%s]!",col->bad,col->reset);
+	    snprintf(fail,sizeof(fail),"[%s---,---,------%s]!",col->bad,col->reset);
 	return fail;
     }
     return "[---,---,---]!";
@@ -2249,7 +2421,7 @@ static ccp GetSlotInfo
 static le_cup_track_t * DumpLECup
 (
     FILE		*f,		// print file
-    const le_analyse_t	*ana,		// valid structure
+    const le_analyze_t	*ana,		// valid structure
     const le_cup_track_t *cp,		// pointer to cup
     uint		n_track,	// number of tracks in cup
     ColorSet_t		*col,		// NULL or color set for warnings
@@ -2265,7 +2437,19 @@ static le_cup_track_t * DumpLECup
     for ( tr = 0; tr < n_track; tr++ )
     {
 	const uint tid = htonl(*cp++);
-	fprintf(f," %3x%s",tid,GetSlotInfo(ana,tid,col,check,warnings));
+	bool highlight;
+	switch (check)
+	{
+	    case CHECK_TRACK:	highlight = !IsLecodeTrack(tid); break;
+	    case CHECK_ARENA:	highlight = !IsMkwArena(tid); break;
+	    default:		highlight = IsMkwSpecial(tid); break;
+	}
+
+	fprintf(f," %s%3x%s%s",
+		highlight ? col->info : "",
+		tid,
+		highlight ? col->reset : "",
+		GetSlotInfo(ana,tid,col,check,warnings) );
 
 	if ( done && tid < ana->n_slot )
 	    done[tid]++;
@@ -2276,12 +2460,21 @@ static le_cup_track_t * DumpLECup
 //-----------------------------------------------------------------------------
 
 static void DumpLETracks
-	( FILE *f, uint indent, ColorSet_t *col, const le_analyse_t *ana )
+	( FILE *f, uint indent, ColorSet_t *col, const le_analyze_t *ana )
 {
     DASSERT(f);
     DASSERT(indent>=2);
     DASSERT(col);
     DASSERT(ana);
+
+    ccp warn = GetLecodeSupportWarning(ana);
+    if (warn)
+    {
+	fprintf(f,"\n%*s%s"
+		"Can't print track infos because %s.%s\n\n",
+		indent-2,"", col->warn, warn, col->reset );
+	return;
+    }
 
     u16 *done = CALLOC(sizeof(*done),ana->n_slot);
     DASSERT(done);
@@ -2294,17 +2487,65 @@ static void DumpLETracks
 	    done[i]++;
     }
 
-    static const char id_info[] = "id[prop,music,new+head+group+alias]";
+
+    //--- intro
+
+    fprintf(f,"\n%*s%s"
+	"Description of the following track information with %u-bit flags:%s\n"
+	"%*s" "The general syntax is: %shex_id [ property_slot, music_index, flags ] warning%s\n",
+	indent-2,"", col->heading, ana->flags_bits, col->reset,
+	indent,"", col->param, col->reset );
+
+    if ( ana->flags_bits == 16 )
+	fprintf(f,
+		"%*s%sFlag   1%s:  %sB%s: battle arena, %sV%s: versus track, %sr%s: random slot.\n"
+		"%*s%sFlag   2%s:  Used in: %so%s: original cup, %sc%s custom cup, %sb%s: both.\n"
+		"%*s%sFlag   3%s:  %sH%s: header of group, %sG%s: group member,"
+				 " %sX%s: header of group and group member.\n"
+		"%*s%sFlags  4%s:  %sN%s: new track, %sT%s: texture hack, %s2%s: both.\n"
+		"%*s%sFlags 5+6%s: %sA%s: alias, %si%s: invisible/hidden.\n"
+		,indent+2,"", col->param, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+		,indent+2,"", col->param, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+		,indent+2,"", col->param, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+		,indent+2,"", col->param, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+		,indent+2,"", col->param, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+		);
+    else
+	fprintf(f,"%*s%sFlags%s: "
+		"%sN%s: new, %sH%s: group header, %sG%s: group member,"
+		" %sA%s: alias, %sT%s: texture hack, %si%s: hidden.\n"
+		,indent,"", col->param, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+			,col->info, col->reset
+		);
 
 
     //--- battle cups
 
     if ( ana->n_cup_arena && ana->cup_arena )
     {
-	fprintf(f,"\n%*s%s" "%u cup%s with battle tracks (%s):%s\n",
+	fprintf(f,"\n%*s%s" "%u cup%s with %u battle arenas:%s\n",
 		indent-2,"", col->heading,
 		ana->n_cup_arena, ana->n_cup_arena == 1 ? "" : "s",
-		id_info, col->reset );
+		ana->n_cup_arena*5, col->reset );
 
 	uint cup, hidden = 0;
 	const le_cup_track_t *cp = ana->cup_arena;
@@ -2334,10 +2575,10 @@ static void DumpLETracks
 
     if ( ana->n_cup_track && ana->cup_track )
     {
-	fprintf(f,"\n%*s%s" "%u cup%s with racing tracks (%s):%s\n",
+	fprintf(f,"\n%*s%s" "%u cup%s with %u racing tracks:%s\n",
 		indent-2,"", col->heading,
 		ana->n_cup_track, ana->n_cup_track == 1 ? "" : "s",
-		id_info, col->reset );
+		ana->n_cup_track*4, col->reset );
 
 	uint cup, hidden = 0;
 	const le_cup_track_t *cp = ana->cup_track;
@@ -2372,35 +2613,43 @@ static void DumpLETracks
     done[18] =  0;
  #endif
 
-    uint i, max_used_slot = 0, n_multi = 0, n_group = 0, n_unused = 0;
+    uint i, max_viewed_slot = 0, n_multi = 0, n_group = 0, n_unused = 0;
     for ( i = 0; i < ana->n_slot; i++ )
 	if (IsRacingTrackLE(i))
 	{
 	    if (done[i])
 	    {
-		max_used_slot = i;
+		max_viewed_slot = i;
 		if ( done[i] > 1 )
 		     n_multi++;
 	    }
-	    else if ( !done[i] )
+	    else // if ( !done[i] )
 	    {
-		if ( ana->flags && ana->flags[i] & LETF_RND_GROUP )
+		const typeof(*ana->flags) flags = ana->flags ? ana->flags[i] : 0;
+		if ( flags & LEFL_RND_GROUP )
+		{
 		    n_group++;
+		    max_viewed_slot = i;
+		}
 		else
+		{
 		    n_unused++;
+		    if ( flags & LEFL_TEXTURE )
+			max_viewed_slot = i;
+		}
 	    }
 	}
-    PRINT0("m=%d, g=%d, u=%d /%d\n",n_multi,n_group,n_unused,max_used_slot);
+    PRINT0("m=%d, g=%d, u=%d /%d\n",n_multi,n_group,n_unused,max_viewed_slot);
 
 
     //--- multi used tracks
 
     if (n_multi)
     {
-	fprintf(f,"\n%*s%s" "%u multiple used track slot%s (%s):%s\n",
+	fprintf(f,"\n%*s%s" "%u multiple used track slot%s:%s\n",
 		indent-2,"", col->heading,
 		n_multi, n_multi == 1 ? "" : "s",
-		id_info, col->reset );
+		col->reset );
 
 	for ( i = 0; i < ana->n_slot; i++ )
 	    if ( done[i] > 1 && IsRacingTrackLE(i) )
@@ -2413,13 +2662,13 @@ static void DumpLETracks
 
     if (n_group)
     {
-	fprintf(f,"\n%*s%s" "%u track slot%s reserved for random groups (%s):%s\n",
+	fprintf(f,"\n%*s%s" "%u track slot%s reserved for random groups:%s\n",
 		indent-2,"", col->heading,
 		n_group, n_group == 1 ? "" : "s",
-		id_info, col->reset );
+		col->reset );
 
 	for ( i = 0; i < ana->n_slot; i++ )
-	    if ( !done[i] && IsRacingTrackLE(i) && ana->flags[i] & LETF_RND_GROUP )
+	    if ( !done[i] && IsRacingTrackLE(i) && ana->flags[i] & LEFL_RND_GROUP )
 	    {
 		done[i]++;
 		fprintf(f,"%*sSlot %4d/dec : %3x%s\n",
@@ -2427,24 +2676,44 @@ static void DumpLETracks
 	    }
     }
 
+    //HexDump16(stdout,0,0,done,ana->n_slot*sizeof(*done));
+
 
     //--- unused used track slots
 
-    if ( n_unused)
+    if (n_unused)
     {
-	fprintf(f,"\n%*s%s" "%u unused track slot%s (%s):%s\n",
-		indent-2,"", col->heading,
-		n_unused, n_unused == 1 ? "" : "s",
-		id_info, col->reset );
-	for ( i = 0; i <= max_used_slot; i++ )
-	{
+	int count = 0;
+	for ( int i = 0; i <= max_viewed_slot; i++ )
 	    if ( !done[i] && IsRacingTrackLE(i) )
-		fprintf(f,"%*sSlot %4d/dec : %3x%s\n",
-			indent,"", i, i, GetSlotInfo(ana,i,col,CHECK_OFF,0) );
+		count++;
+
+	if ( count > 0 )
+	{
+	    fprintf(f,"\n%*s%s" "%u track%s without cup reference:%s",
+		    indent-2,"", col->heading,
+		    count,  count == 1 ? "" : "s",
+		    col->reset );
+
+	    int prev = -1, line_count = 99;
+	    for ( int i = 0; i <= max_viewed_slot; i++ )
+	    {
+		if ( !done[i] && IsRacingTrackLE(i) )
+		{
+		    if ( ++line_count > 4 || i != prev+1 )
+		    {
+//DEL			if ( i == prev+1 ) fputs("...",f);
+			fprintf(f,"\n%*sSlot %4d/dec :", indent,"", i );
+			line_count = 1;
+		    }
+		    fprintf(f," %3x%s", i, GetSlotInfo(ana,i,col,HIGHLIGHT_ARENA,0) );
+		    prev = i;
+		}
+	    }
+	    putchar('\n');
 	}
 
-
-	uint first_unused_slot = max_used_slot + 1;
+	uint first_unused_slot = max_viewed_slot + 1;
 	if (!IsRacingTrackLE(first_unused_slot))
 	    first_unused_slot = LE_FIRST_CT_SLOT;
 	const int unused_slots = ana->n_slot - first_unused_slot;
@@ -2464,7 +2733,7 @@ static void DumpLETracks
 //-----------------------------------------------------------------------------
 
 static void DumpLEUsageMap
-	( FILE *f, uint indent, ColorSet_t *col, const le_analyse_t *ana )
+	( FILE *f, uint indent, ColorSet_t *col, const le_analyze_t *ana )
 {
     DASSERT(f);
     DASSERT(indent>=2);
@@ -2475,31 +2744,61 @@ static void DumpLEUsageMap
     if (!usage)
 	return;
 
+    int max_view = ana->n_slot > MKW_LE_SLOT_BEG ? ana->n_slot : MKW_LE_SLOT_BEG;
+    if ( max_view > ana->usage_size )
+	 max_view = ana->usage_size;
+
+ #if 1
     fprintf(f,"\n%*s%s"	"Slot usage map for %u slots%s\n"
-		"%*s"	"%s%s=Arena, %s%s=Random Arena, %s%s=Hidden Arena,  "
-			"%s%s=Wiimm Cup (random), %s%s=Alias,%s\n"
-		"%*s"	"%s%s=Track, %s%s=Random Track, %s%s=Hidden Track,  "
-			"%s%s=Network, %s%s=Special, %s%s=unused.%s\n",
-		indent-2,"", col->heading, ana->n_slot, col->reset,
+		"%*s"	"%s: Arena%s, %s: Hidden Arena%s, %s: Random Arena%s, "
+			"%s: LE-CODE random%s, %s: Alias%s,\n"
+		"%*s"	"%s: Track%s, %s: Hidden Track%s, %s: Random Track%s, "
+			"%s: Network%s, %s: Special%s, %s: unused%s.\n",
+
+		indent-2,"", col->heading, max_view, col->reset,
 		indent,"",
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA,		col,0 ), col->info,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_RND,	col,0 ), col->info,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_HIDE,	col,0 ), col->info,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_WIIMM,		col,0 ), col->info,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ALIAS,		col,0 ), col->info,
-		col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA,		col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_HIDE,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_RND,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_LE_RANDOM,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ALIAS,		col,0 ), col->reset,
 		indent,"",
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK,		col,0 ), col->info,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_RND,	col,0 ), col->info,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_HIDE,	col,0 ), col->info,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_NETWORK,	col,0 ), col->info,
-		 GetLEUsageCharCol(		   LEU_S_SPECIAL,	col,0 ), col->info,
-		 GetLEUsageCharCol(		   LEU_S_UNUSED,	col,0 ), col->info,
-		col->reset );
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK,		col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_HIDE,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_RND,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_NETWORK,	col,0 ), col->reset,
+		 GetLEUsageCharCol(		   LEU_S_SPECIAL,	col,0 ), col->reset,
+		 GetLEUsageCharCol(		   LEU_S_UNUSED,	col,0 ), col->reset );
+
+ #else
+    fprintf(f,"\n%*s%s"	"Slot usage map for %u slots%s\n"
+		"%*s"	"%s: Arena%s, %s: Hidden Arena%s, %s: Random Arena%s, "
+			"%s: LE-CODE arena random%s,\n"
+		"%*s"	"%s: Track%s, %s: Hidden Track%s, %s: Random Track%s, "
+			"%s: LE-CODE track random%s,\n"
+		"%*s"	"%s: Alias%s, %s: Network%s, %s: Special%s, %s: unused%s.\n",
+
+		indent-2,"", col->heading, max_view, col->reset,
+		indent,"",
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA,		col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_HIDE,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_RND,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_LE_RND,	col,0 ), col->reset,
+		indent,"",
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK,		col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_HIDE,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_RND,	col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_LE_RND,	col,0 ), col->reset,
+		indent,"",
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ALIAS,		col,0 ), col->reset,
+		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_NETWORK,	col,0 ), col->reset,
+		 GetLEUsageCharCol(		   LEU_S_SPECIAL,	col,0 ), col->reset,
+		 GetLEUsageCharCol(		   LEU_S_UNUSED,	col,0 ), col->reset );
+ #endif
 
     uint slot;
     ccp prev_col = 0;
-    for ( slot = 0; slot < ana->usage_size; slot++ )
+    for ( slot = 0; slot < max_view; slot++ )
     {
 	if (!(slot&63))
 	{
@@ -2515,7 +2814,19 @@ static void DumpLEUsageMap
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
+static ccp ana_std_flags ( uint flags )
+{
+    return PrintCircBuf("%u (%sabled%s%s%s)",
+		flags,
+		flags & LE_ENABLED	? "en"		: "dis",
+		flags & LE_ALTERABLE	? ",alterable"	: "",
+		flags & LE_EXCLUDED	? ",excluded"	: "",
+		flags & LE_INCLUDED	? ",included"	: "" );
+}
+
+//-----------------------------------------------------------------------------
+
+void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 {
     DASSERT(f);
     DASSERT(ana);
@@ -2526,7 +2837,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 
     fprintf(f,"%*s%sLE-CODE binary, valid=%s, file size: %x/hex = %u bytes%s\n",
 		indent,"",
-		col.caption, GetLEValid(ana->valid), ana->size, ana->size,
+		col.caption, GetLEValid(ana->valid), ana->data_size, ana->data_size,
 		col.reset );
     indent += 4;
 
@@ -2564,23 +2875,25 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 	fprintf(f,
 		"\n%*s%s" "File header:%s\n"
 		"%*s" "Magic:             %.4s\n"
-		"%*s" "Version:           %u\n"
-		"%*s" "Build number:      %u\n"
-		"%*s" "Base address:      %8x/hex\n"
-		"%*s" "Entry point:       %8x/hex\n"
-		"%*s" "Total size:        %8x/hex = %u bytes\n"
-		"%*s" "Offset param:      %8x/hex\n"
-		"%*s" "Region code:       %c = %s\n"
-		"%*s" "Debug flag:        %c = %s\n"
-		"%*s" "LE version/phase:  %u\n"
 		,indent-2,"", col.heading, col.reset
 		,indent,"", h->magic
+		);
+
+	if ( h->phase != 2 )
+	fprintf(f,"%*s" "Phase:             %u\n",indent,"",h->phase);
+
+	fprintf(f,
+		"%*s" "Version:           %u\n"
+		"%*s" "Build number:      %u\n"
+		"%*s" "Region code:       %c = %s\n"
+		"%*s" "Debug flag:        %c = %s\n"
+		"%*s" "Header size:       %8x/hex = %6u bytes\n"
+		"%*s" "Total size:        %8x/hex = %6u bytes\n"
+		"%*s" "Offset param:      %8x/hex\n"
+		"%*s" "Base address:      %8x/hex\n"
+		"%*s" "Entry point:       %8x/hex\n"
 		,indent,"", ntohl(h->version)
 		,indent,"", ntohl(h->build_number)
-		,indent,"", ntohl(h->base_address)
-		,indent,"", ntohl(h->entry_point)
-		,indent,"", ntohl(h->size), ntohl(h->size)
-		,indent,"", ntohl(h->off_param)
 		,indent,"", h->region
 			,h->region == 'P' ? "PAL"
 			:h->region == 'E' ? "USA"
@@ -2591,26 +2904,39 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 			,h->debug == 'R' ? "Release"
 			:h->debug == 'D' ? "Debug"
 			: "?"
-		,indent,"", h->phase
+		,indent,"", ana->header_size ,ana->header_size
+		,indent,"", ntohl(h->file_size), ntohl(h->file_size)
+		,indent,"", ntohl(h->off_param)
+		,indent,"", ntohl(h->base_address)
+		,indent,"", ntohl(h->entry_point)
 		);
-    }
 
-    switch (ana->head_vers)
-    {
-     case 4:
-      {
-	const le_binary_head_v4_t *h = ana->head_v4;
-	DASSERT(h);
-	fprintf(f,
-		"%*s" "Timestamp:         %s UTC\n"
-		,indent,"", h->timestamp
+	if (ana->creation_time)
+	    fprintf(f,
+		"%*s" "Time of creation:  %s\n",
+		indent,"", PrintTimeByFormat("%F %T %Z",ana->creation_time));
+
+	if (ana->edit_time)
+	    fprintf(f,
+		"%*s" "Time of last edit: %s\n",
+		indent,"", PrintTimeByFormat("%F %T %Z",ana->edit_time));
+
+	if (ana->szs_version)
+	{
+	    const bool valid = GetEncodedVersion() >= ana->szs_version;
+	    fprintf(f,
+		"%*s" "SZS Tool required: v%s  (current: %sv%s,%s%s)\n"
+		,indent,""
+			,DecodeVersion(ana->szs_version)
+			,valid ? col.success : col.warn, BASE_VERSION
+			,valid ? "ok" : "outdated", col.reset
 		);
-      }
-      break;
+	}
 
-      default:
-	fprintf(f,"%*s" ">>> other parameters unknown!\n",indent,"");
-	break;
+	if (ana->edit_version)
+	    fprintf(f,
+		"%*s" "Last edit by SZS:  v%s\n",
+		indent,"", DecodeVersion(ana->edit_version) );
     }
 
 
@@ -2708,6 +3034,27 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 		"%*s" "Thundercloud time: %u frames = %.2fs\n"
 		,indent,"", h->drag_blue_shell, h->drag_blue_shell ? "en" : "dis"
 		,indent,"", nframes, nframes/60.0
+		);
+	}
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_26c_t)  )
+	{
+	    // [[worldwide]]
+	 #if !HAVE_WIIMM_EXT
+	    if ( h->bt_worldwide || h->vs_worldwide )
+	 #endif
+		fprintf(f,
+			"%*s" "Worldwide:         bt=%u, vs=%u  (planned)\n"
+			,indent,"", h->bt_worldwide, h->vs_worldwide
+			);
+
+	    fprintf(f,
+		"%*s" "Textures:          bt=%s, vs=%s\n"
+		"%*s" "Block textures:    %u\n"
+		,indent,""
+			,ana_std_flags( h->bt_textures & LE_M_TEXTURE )
+			,ana_std_flags( h->vs_textures & LE_M_TEXTURE )
+		,indent,"", h->block_textures
 		);
 	}
 
@@ -2821,9 +3168,9 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 
     if ( ana->flags )
 	fprintf(f,
-		"%*s" "Flags list:        %5x/hex, %4u / %4u%s\n",
-		indent,"", PTR_DISTANCE_INT(ana->flags,ana->data),
-			ana->n_slot, ana->max_flags,
+		"%*s" "Flags list:        %5x/hex, %4u / %4u (%u bits)%s\n",
+		indent,"", PTR_DISTANCE_INT(ana->flags_bin,ana->data),
+			ana->n_slot, ana->max_flags, ana->flags_bits,
 			ana->n_slot > ana->max_flags ? fail : "" );
 
     if ( ana->end_of_data )
@@ -2833,7 +3180,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana )
 
     fprintf(f,
 		"%*s" "End of file:       %5x/hex\n",
-		indent,"", ana->size );
+		indent,"", ana->data_size );
 
 
     //--- settings
@@ -2995,10 +3342,10 @@ const ctcode_t * LoadLEFile ( uint le_phase )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError ApplyLEFile ( le_analyse_t * ana )
+enumError ApplyLEFile ( le_analyze_t * ana )
 {
     DASSERT(ana);
-    SetupArenasLEAnalyse(ana,false);
+    SetupArenasLEAnalyze(ana,false);
 
     const ctcode_t *ctcode = LoadLEFile(ana->version);
     return ctcode ? ApplyCTCODE(ana,ctcode) : ERR_ERROR;
@@ -3009,7 +3356,7 @@ enumError ApplyLEFile ( le_analyse_t * ana )
 ///////////////			ApplyCTCODE()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode )
+enumError ApplyCTCODE ( le_analyze_t * ana, const ctcode_t * ctcode )
 {
     DASSERT(ana);
     DASSERT(ctcode);
@@ -3112,7 +3459,7 @@ enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode )
 
     //--- arena setup (override)
 
-    SetupArenasLEAnalyse(ana,false);
+    SetupArenasLEAnalyze(ana,false);
     ApplyArena(ana,&ctcode->arena);
 
 
@@ -3149,7 +3496,7 @@ enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-bool DefineAliasLE ( le_analyse_t * ana, uint slot, uint alias )
+bool DefineAliasLE ( le_analyze_t * ana, uint slot, uint alias )
 {
     if ( !ana->property || !ana->music || !ana->flags )
 	return false;
@@ -3171,9 +3518,9 @@ bool DefineAliasLE ( le_analyse_t * ana, uint slot, uint alias )
 	}
 
 	const le_flags_t fl = ana->flags[alias];
-	if ( !(fl & LETF_ALIAS) )
+	if ( !(fl & LEFL_ALIAS) )
 	{
-	    ana->flags[slot]   |= LETF_ALIAS;
+	    ana->flags[slot]   |= LEFL_ALIAS;
 	    ana->property[slot] = alias >> 8;
 	    ana->music[slot]    = alias & 0xff;
 	    return true;
@@ -3185,7 +3532,7 @@ bool DefineAliasLE ( le_analyse_t * ana, uint slot, uint alias )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint PatchAliasLE ( le_analyse_t * ana, ccp list )
+uint PatchAliasLE ( le_analyze_t * ana, ccp list )
 {
     DASSERT(ana);
 
@@ -3253,10 +3600,106 @@ void PatchLPAR ( le_lpar_t * lp )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void PatchLECODE ( le_analyse_t * ana )
+void UpdateLecodeFlags ( le_analyze_t * ana )
+{
+    DASSERT(ana);
+    if (!ana->flags)
+	return;
+
+
+    //--- calculate flags LEFL_BATTLE and LEFL_VERSUS, reset other flags
+
+    for ( int slot = 0; slot < ana->max_flags; slot++ )
+    {
+	le_flags_t flags = ana->flags[slot] & LEFL__ALL;
+	if ( slot < ana->max_property )
+	{
+	    if ( slot < MKW_ARENA_END || slot >= MKW_LE_SLOT_BEG )
+		flags |= IsMkwTrack(ana->property[slot]) ? LEFL_VERSUS : LEFL_BATTLE;
+	}
+	ana->flags[slot] = flags;
+    }
+
+
+    //--- define LEFL_RANDOM
+
+    for ( int slot = LE_SLOT_RND_BEG; slot < LE_SLOT_RND_END; slot++ )
+	ana->flags[slot] |= LEFL_RANDOM;
+
+
+    //--- calculate flags LEFL_CUP, LEFL_ORIG_CUP, LEFL_CUSTOM_CUP
+
+    if ( ana->n_cup_track && ana->cup_track )
+    {
+	if ( ana->n_cup_track & 1 )
+	    ana->n_cup_track++;
+
+	const le_cup_track_t *src = ana->cup_track;
+	const int max_tr = ana->n_cup_track * 4;
+	for ( int tr = 0; tr < max_tr; tr++ )
+	{
+	    const uint slot = ntohl(*src++);
+	    if ( slot < ana->max_flags && ana->flags[slot] & (LEFL_VERSUS|LEFL_RANDOM) )
+		ana->flags[slot] |= LEFL_CUP | ( tr < MKW_N_TRACKS ? LEFL_ORIG_CUP : LEFL_CUSTOM_CUP );
+	}
+    }
+
+    if ( ana->n_cup_arena && ana->cup_arena )
+    {
+	const le_cup_track_t *src = ana->cup_arena;
+	const int max_tr = ana->n_cup_arena * 5;
+	for ( int tr = 0; tr < max_tr; tr++ )
+	{
+	    const uint slot = ntohl(*src++);
+	    if ( slot < ana->max_flags && ana->flags[slot] & (LEFL_BATTLE|LEFL_RANDOM) )
+		ana->flags[slot] |= LEFL_CUP | ( tr < MKW_N_ARENAS ? LEFL_ORIG_CUP : LEFL_CUSTOM_CUP );
+	}
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void CopyLecodeFlags ( le_analyze_t * ana )
+{
+    DASSERT(ana);
+    UpdateLecodeFlags(ana);
+
+
+    //--- store flags intoLE-CODE binary
+
+    if ( !ana->flags || !ana->flags_bin )
+	return;
+
+    const le_flags_t *src = ana->flags;
+    if ( ana->flags_bits == 16 )
+    {
+	le_flags_t *dest = (le_flags_t*)ana->flags_bin;
+	for ( int i = 0; i < ana->max_flags; i++ )
+		write_be16(dest++,*src++);
+    }
+    else
+    {
+	le_flags8_t *dest = (le_flags8_t*)ana->flags_bin;
+	for ( int i = 0; i < ana->max_flags; i++ )
+		*dest++ = *src++;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void PatchLECODE ( le_analyze_t * ana )
 {
     DASSERT(ana);
     PRINT("PatchLECODE() opt_lpar=%s\n",opt_lpar);
+
+    ccp warn = GetLecodeSupportWarning(ana);
+    if (warn)
+    {
+	ERROR0(ERR_INVALID_DATA,"Can't use or patch LE-CODE because %s.",warn);
+	return;
+    }
+
+    u8 *saved = MEMDUP(ana->data,ana->data_size);
 
     if (opt_lpar)
 	LoadLPAR(&ana->lpar,false,0,false);
@@ -3270,7 +3713,17 @@ void PatchLECODE ( le_analyse_t * ana )
 	break;
     }
 
+    CopyLecodeFlags(ana);
     CopyLPAR2Data(ana);
+
+    if ( ana->header_vers >= 5 && memcmp(ana->data,saved,ana->data_size) )
+    {
+	le_binary_head_v5_t *h5 = (le_binary_head_v5_t*)ana->data;
+	h5->edit_version = htonl(GetEncodedVersion());
+	h5->edit_time = htonl(GetTimeSec(false));
+    }
+
+    FREE(saved);
 }
 
 //
@@ -3309,7 +3762,14 @@ static enumError ScanTextLPAR_PARAM
 	{ "ITEM-CHEATS",	SPM_U8,	 &lpar->item_cheat }, // bug in 2021-04, [[obsolete]] in 2022
 	{ "DRAG-BLUE-SHELL",	SPM_U8,  &lpar->drag_blue_shell },
 	{ "THCLOUD-TIME",	SPM_U16, &lpar->thcloud_frames },
-	{0} // [[new-lpar]]
+	{ "BT-WORLDWIDE",	SPM_U8,  &lpar->bt_worldwide },
+	{ "VS-WORLDWIDE",	SPM_U8,  &lpar->vs_worldwide },
+	{ "BT-TEXTURES",	SPM_U8,  &lpar->bt_textures },
+	{ "VS-TEXTURES",	SPM_U8,  &lpar->vs_textures },
+	{ "BLOCK-TEXTURES",	SPM_U8,  &lpar->block_textures },
+
+	// [[new-lpar]]
+	{0}
     };
 
 
@@ -3471,7 +3931,9 @@ static enumError ScanTextLPAR_DEBUG
 	{ "KCL-TYPE",		SPM_U8,  &debug.kcl_type },
 	{ "RESPAWN",		SPM_U8,  &debug.respawn },
 	{ "LAP-POS",		SPM_U8,  &debug.lap_pos },
+	{ "TRACK-ID",		SPM_U8,  &debug.track_id },
 	{ "XPF",		SPM_U8,  &debug.xpf },
+	// [[new-debug]]
 	{0}
     };
 

@@ -159,7 +159,7 @@ typedef struct analyze_item_t
 
 #define MAX_ANA_ITEM 10000
 
-typedef struct analyze_t
+typedef struct xanalyze_t
 {
     szs_file_t		* szs;
     u8			* data;
@@ -172,7 +172,7 @@ typedef struct analyze_t
     analyze_item_t	list[MAX_ANA_ITEM];
     uint		used;
 
-} analyze_t;
+} xanalyze_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -201,7 +201,7 @@ static int cmp_analyze_item ( const void * va, const void * vb )
 
 static analyze_item_t * add_item
 (
-    analyze_t		* ana,		// analyse
+    xanalyze_t		* ana,		// analyse
     ccp			info,		// short item info
     brres_group_t	* grp,		// pointer to group
     uint		grp_index,	// index of group/section
@@ -242,7 +242,7 @@ static int collect_raw_data
 )
 {
     DASSERT(it);
-    analyze_t * ana = it->param;
+    xanalyze_t * ana = it->param;
     DASSERT(ana);
 
     // additional data
@@ -265,7 +265,7 @@ static int collect_group_data
 )
 {
     DASSERT(it);
-    analyze_t * ana = it->param;
+    xanalyze_t * ana = it->param;
     DASSERT(ana);
     add_item(ana,"group",grp,0xffff,0,grp->entry,(u8*)grp);
     return 0;
@@ -287,7 +287,7 @@ static int collect_entry_data
 )
 {
     DASSERT(it);
-    analyze_t * ana = it->param;
+    xanalyze_t * ana = it->param;
     DASSERT(ana);
 
     analyze_item_t * item	= add_item(ana,"section",grp,grp_index,0,entry,data);
@@ -623,9 +623,9 @@ void AnalyzeBRSUB ( szs_file_t * szs, u8 * data, uint data_size, ccp name )
     }
 
 
-    //--- setup analyze_t
+    //--- setup xanalyze_t
 
-    analyze_t ana;
+    xanalyze_t ana;
     memset(&ana,0,sizeof(ana));
     ana.szs		= szs;
     ana.data		= data;

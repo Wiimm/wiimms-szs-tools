@@ -1319,6 +1319,39 @@ ccp GetVehicleName4 ( u8 vehicle )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			random slots			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetLecodeRandomName ( uint slot, ccp return_on_err )
+{
+    _Static_assert( MKW_N_LE_RANDOM == 5,"GetLecodeRandomName()");
+    static const char name[][6] = { "rTex", "rAll", "rOrig", "rCust", "rNew" };
+    return IsLecodeRandom(slot)
+		? name[ slot - MKW_LE_RANDOM_BEG ]
+		: return_on_err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetLecodeRandomInfo ( uint slot, ccp return_on_err )
+{
+    _Static_assert( MKW_N_LE_RANDOM == 5,"GetLecodeRandomInfo()");
+    static ccp info[] =
+    {
+	    "Random: Texture Hacks",
+	    "Random: All Tracks",
+	    "Random: Original Tracks",
+	    "Random: Custom Tracks",
+	    "Random: New Tracks",
+    };
+
+    return IsLecodeRandom(slot)
+		? info[ slot - MKW_LE_RANDOM_BEG ]
+		: return_on_err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			sizeof_info_t: mkw		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[sizeof_info_mkw]]

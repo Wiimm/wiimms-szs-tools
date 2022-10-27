@@ -1268,7 +1268,7 @@ static int test_scan_string ( int argc, char ** argv )
 
 static int test_scan_file ( int argc, char ** argv )
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
 	DefineParserVars(&vm);
 
@@ -4202,6 +4202,55 @@ static enumError test_pf_expand ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_coded_version()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_coded_version ( int argc, char ** argv )
+{
+    if ( argc <= 1 )
+    {
+	printf(	"\nSyntax: VERSIONCODE | VC [number]...\n\n");
+	exit(1);
+    }
+
+    int fw = 11;
+    for ( int i = 1; i < argc; i++ )
+    {
+	const int len = strlen8(argv[i]);
+	if ( fw < len )
+	    fw = len;
+    }
+
+    uint code = GetEncodedVersion();
+    printf("\n %-*s %10u  %s\n\n",fw+3,"Coded version:",code,DecodeVersion(code));
+
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	if (!strcmp(arg,"-"))
+	    putchar('\n');
+	else
+	{
+	    char *end;
+	    const uint num = str2ul(argv[i],&end,10);
+	    if (*end)
+	    {
+		uint code = EncodeVersion(arg);
+		printf(" %-*s -> %10u  %s\n",fw,arg,code,DecodeVersion(code));
+	    }
+	    else
+	    {
+		ccp vers = DecodeVersion(num);
+		printf(" %*u -> %10u  %s\n",fw,num,EncodeVersion(vers),vers);
+	    }
+	}
+    }
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4485,6 +4534,7 @@ enum
     CMD_IS_CHECKSUM,		// test_is_checksum(argc,argv)
     CMD_TEST_PREFIX,		// test_test_prefix(argc,argv)
     CMD_PF_EXPAND,		// test_pf_expand(argc,argv)
+    CMD_CODED_VERSION,		// test_coded_version(argc,argv)
 
  #ifdef HAVE_WIIMM_EXT
     CMD_WIIMM,			// test_wiimm(argc,argv)
@@ -4561,6 +4611,7 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_IS_CHECKSUM,	"IS-CHECKSUM",	"ICSUM",	0 },
 	{ CMD_TEST_PREFIX,	"TEST-PREFIX",	"TP",		0 },
 	{ CMD_PF_EXPAND,	"PF-EXPAND",	"PFE",		0 },
+	{ CMD_CODED_VERSION,	"CVERSION",	"CV",		0 },
 
  #ifdef HAVE_WIIMM_EXT
 	{ CMD_WIIMM,		"WIIMM",	"W",		0 },
@@ -4734,6 +4785,7 @@ int main ( int argc, char ** argv )
 	case CMD_IS_CHECKSUM:		test_is_checksum(argc,argv); break;
 	case CMD_TEST_PREFIX:		test_test_prefix(argc,argv); break;
 	case CMD_PF_EXPAND:		test_pf_expand(argc,argv); break;
+	case CMD_CODED_VERSION:		test_coded_version(argc,argv); break;
 
  #ifdef HAVE_WIIMM_EXT
 	case CMD_WIIMM:			test_wiimm(argc,argv); break;

@@ -70,35 +70,46 @@ typedef enum le_valid_t // bit field
     LE_HEAD_FOUND	= 0x01,
     LE_HEAD_VALID	= 0x02,
     LE_HEAD_KNOWN	= 0x04,
+    LE_HEAD_VERSION	= 0x08,
 
     LE_PARAM_FOUND	= 0x10,
     LE_PARAM_VALID	= 0x20,
     LE_PARAM_KNOWN	= 0x40,
+
+    LE_M_ALL_VALID	= 0x7f,
 }
 le_valid_t;
+
+static inline bool IsLecodeSupported ( le_valid_t mode )
+	{ return ( mode & LE_M_ALL_VALID ) == LE_M_ALL_VALID; }
 
 //-----------------------------------------------------------------------------
 // [[le_usage_t]]
 
 typedef enum le_usage_t
 {
-    LEU_S_UNUSED	=  0,	// - slot not used
-    LEU_S_ARENA		=  1,	// A arena slot
-    LEU_S_ARENA_RND	=  2,	// r arena slot
-    LEU_S_ARENA_HIDE	=  3,	// a arena slot
-    LEU_S_TRACK		=  4,	// T track slot
-    LEU_S_TRACK_RND	=  5,	// R track slot
-    LEU_S_TRACK_HIDE	=  6,	// t track slot
-    LEU_S_SPECIAL	=  7,	// s special slot
-    LEU_S_NETWORK	=  8,	// n network slot
-    LEU_S_RANDOM	=  9,	// * network slot
-    LEU_S_WIIMM		= 10,	// W random slot
-    LEU_S_ALIAS		= 11,	// > is alias
-     LEU_S_MASK		= 15,
+    LEU_S_UNUSED =  0,	// - slot not used
+
+    LEU_S_ARENA,	// A arena slot
+    LEU_S_ARENA_HIDE,	// a arena slot
+    LEU_S_ARENA_RND,	// r arena slot
+
+    LEU_S_TRACK,	// T track slot
+    LEU_S_TRACK_HIDE,	// t track slot
+    LEU_S_TRACK_RND,	// R track slot
+
+    LEU_S_LE_RANDOM,	// L network slot
+    LEU_S_SPECIAL,	// s special slot
+    LEU_S_NETWORK,	// n network slot
+    LEU_S_ALIAS,	// > is alias	    <<< last element!
+
+     LEU_S_MASK		= 0xf,
 
     LEU_F_ONLINE	= 0x10,  // Flag: used online
 }
 __attribute__ ((packed)) le_usage_t;
+
+_Static_assert( LEU_S_ALIAS <= LEU_S_MASK,"le_usage_t");
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -121,12 +132,14 @@ typedef enum lecode_debug_t
      LEDEB_LONG_XPF	= 0x0200,
     LEDEB_ITEM_POINT	= 0x0400,
     LEDEB_KCL_TYPE	= 0x0800,
+    LEDEB_TRACK_ID	= 0x1000,
+    // [[new-debug]]
 
     //--- derived values
 
-    LEDEB__STD		= 0x0ff9,   // standard output
-    LEDEB__OUTPUT	= 0x0ff8,   // flags that produce output
-    LEDEB__ALL		= 0x0fff,   // all flags
+    LEDEB__STD		= 0x1ff9,   // standard output
+    LEDEB__OUTPUT	= 0x1ff8,   // flags that produce output
+    LEDEB__ALL		= 0x1fff,   // all flags
 
     LEDEB_S_CHECK_POINT	= 4,	// shift for LEDEB_CHECK_POINT
     LEDEB_M_CHECK_POINT	= 3,	// mask after shift
@@ -189,7 +202,9 @@ typedef struct lecode_debug_ex_t
     u8 item_point;
     u8 kcl_type;
     u8 lap_pos;
+    u8 track_id;
     u8 xpf;
+    // [[new-debug]]
 
     // status
     bool have_output;	// would produce output if ENABLED
@@ -303,6 +318,11 @@ typedef struct le_lpar_t
     u8	no_speedo_if_debug;	// 1 bit for each debug configuration
     u8  item_cheat;		// 0:disabled, 1:enabled
     u8  drag_blue_shell;	// >0: allow dragging of blue shell
+    u8  bt_worldwide;		// >0: enable worldwide battles
+    u8  vs_worldwide;		// >0: enable worldwide versus races
+    u8  bt_textures;		// &1: enable texture hacks for battles, &2:alternable
+    u8  vs_textures;		// &1: enable texture hacks for versus, &2:alternable
+    u8  block_textures;		// >0: enable blocking of recent texture hacks
 
     u8  debug_mode;		// debug mode
     u8  debug_predef[LEDEB__N_CONFIG];
@@ -396,7 +416,7 @@ typedef struct le_binary_head_t
  /*08*/  u32	build_number;	// current code version
  /*0c*/  u32	base_address;	// memory address of binary (destination)
  /*10*/  u32	entry_point;	// memory address (prolog function)
- /*14*/  u32	size;		// size of complete file
+ /*14*/  u32	file_size;	// size of complete file
  /*18*/  u32	off_param;	// offset of param section
  /*1c*/  char	region;		// one of: P, E, J, K
  /*1d*/  char	debug;		// one of: D (debug) or R (release)
@@ -415,7 +435,7 @@ typedef struct le_binary_head_v4_t
  /*08*/  u32	build_number;	// current code version
  /*0c*/  u32	base_address;	// memory address of binary (destination)
  /*10*/  u32	entry_point;	// memory address (prolog function)
- /*14*/  u32	size;		// size of complete file
+ /*14*/  u32	file_size;	// size of complete file
  /*18*/  u32	off_param;	// offset of param section
  /*1c*/  char	region;		// one of: P, E, J, K
  /*1d*/  char	debug;		// one of: D (debug) or R (release)
@@ -424,6 +444,31 @@ typedef struct le_binary_head_v4_t
  /*20*/  char	timestamp[];	// timestamp of build in ASCII
 }
 __attribute__ ((packed)) le_binary_head_v4_t;
+
+//-----------------------------------------------------------------------------
+// [[le_binary_head_v5_t]]
+
+typedef struct le_binary_head_v5_t
+{
+ /*00*/  char	magic[4];	// LE_BINARY_MAGIC
+ /*04*/  u32	version;	// always 5 for v5
+ /*08*/  u32	build_number;	// current code version
+ /*0c*/  u32	base_address;	// memory address of binary (destination)
+ /*10*/  u32	entry_point;	// memory address (prolog function)
+ /*14*/  u32	file_size;	// size of complete file
+ /*18*/  u32	off_param;	// offset of LPAR section
+ /*1c*/  char	region;		// one of: P, E, J, K
+ /*1d*/  char	debug;		// one of: D (debug) or R (release)
+ /*1e*/  u8	phase;		// >0: PHASE (usually 2)
+ /*1f*/  char	unknown_1f;
+
+ /*20*/  u32	szs_version;	// minimal encoded version number of szs-tools required to edit
+ /*24*/  u32	edit_version;	// >0: encoded version number of szs-tools, that did last edit
+ /*28*/	 u32	head_size;	// size of file header
+ /*2c*/	 u32	creation_time;	// unixtime of LE-CODE creation
+ /*30*/	 u32	edit_time;	// >0: unixtime of last LE-CODE edit
+}
+__attribute__ ((packed)) le_binary_head_v5_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -444,10 +489,10 @@ __attribute__ ((packed)) le_binary_param_t;
 
 typedef struct le_binpar_v1_35_t
 {
- /*00*/  char magic[8];	// LE_PARAM_MAGIC
- /*08*/  u32  version;	// always 1 for v1
+ /*00*/  char magic[8];		// LE_PARAM_MAGIC
+ /*08*/  u32  version;		// always 1 for v1
  /*0c*/  u32  size;		// size (and minor version)
- /*10*/  u32  off_eod;	// offset of end-of-data
+ /*10*/  u32  off_eod;		// offset of end-of-data
 
  /*14*/  u32  off_cup_par;	// offset to cup param
  /*18*/  u32  off_cup_track;	// offset of cup-track list
@@ -686,9 +731,66 @@ __attribute__ ((packed)) le_binpar_v1_264_t;
 _Static_assert(sizeof(le_binpar_v1_264_t)==0x264,"le_binpar_v1_264_t");
 
 //-----------------------------------------------------------------------------
+// [[le_binpar_v1_26c_t]]
+
+typedef struct le_binpar_v1_26c_t
+{
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*008*/ u32  version;			// always 1 for v1
+ /*00c*/ u32  size;			// size (and minor version)
+ /*010*/ u32  off_eod;			// offset of end-of-data
+
+ /*014*/ u32  off_cup_par;		// offset to cup param
+ /*018*/ u32  off_cup_track;		// offset of cup-track list
+ /*01c*/ u32  off_cup_arena;		// offset of cup-arena list
+ /*020*/ u32  off_course_par;		// offset of course param
+ /*024*/ u32  off_property;		// offset of property list
+ /*028*/ u32  off_music;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of flags
+
+ /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
+ /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
+ /*034*/ u8   enable_perfmon;		// >0: performance monitor enabled; >1: for dolphin too
+ /*035*/ u8   enable_custom_tt;		// TRUE: time trial for cusotm tracks enabled
+ /*036*/ u8   enable_xpflags;		// TRUE: extended presence flags enabled
+ /*037*/ u8   block_track;		// block used track for 0.. tracks
+ /*038*/ u16  chat_mode_1[BMG_N_CHAT];	// mode for each chat message
+ /*0f8*/ u16  chat_mode_2[BMG_N_CHAT];	// mode for each chat message
+ /*1b8*/ u8   enable_speedo;		// speedometer selection (0..2), see SPEEDO_*
+ /*1b9*/ u8   no_speedo_if_debug;	// if bit is set: suppress speedometer
+ /*1ba*/ u8   debug_mode;		// debug mode (0..), see DEBUGMD_*
+ /*1bb*/ u8   item_cheat;		// 0:disabled, 1:enabled
+
+ /*1bc*/ u8   debug_predef[LEDEB__N_CONFIG];
+					// information about used predefined mode
+ /*1c0*/ u32  debug[LEDEB__N_CONFIG][LEDEB__N_LINE];
+					// debug line settings, see LEDEB_*
+
+ /*260*/ u8   cheat_mode;		// 0:off, 1:debug only, 2:allow all
+ /*261*/ u8   drag_blue_shell;		// >0: allow dragging of blue shell
+ /*262*/ u16  thcloud_frames;		// number of frames a player is small after thundercloud hit
+
+ /*264*/ u8   bt_worldwide;		// >0: enable worldwide battles
+ /*265*/ u8   vs_worldwide;		// >0: enable worldwide versus races
+ /*266*/ u8   bt_textures;		// &1: enable texture hacks for battles, &2:alternable
+ /*267*/ u8   vs_textures;		// &1: enable texture hacks for versus, &2:alternable
+ /*268*/ u8   block_textures;		// >0: enable blocking of recent texture hacks
+
+ /*269*/ u8   padding_269;
+ /*26a*/ u8   padding_26a;
+ /*26b*/ u8   padding_26b;
+
+ /*268*/
+
+}
+__attribute__ ((packed)) le_binpar_v1_26c_t;
+
+_Static_assert(sizeof(le_binpar_v1_26c_t)==0x26c,"le_binpar_v1_26c_t");
+
+//-----------------------------------------------------------------------------
 // [[le_binpar_v1_t]] [[new-lpar]]
 
-typedef struct le_binpar_v1_264_t le_binpar_v1_t;
+typedef struct le_binpar_v1_26c_t le_binpar_v1_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -718,27 +820,31 @@ __attribute__ ((packed)) le_course_par_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			le_analyse_t			///////////////
+///////////////			le_analyze_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[le_analyse_t]]
+// [[le_analyze_t]]
 
-typedef struct le_analyse_t
+typedef struct le_analyze_t
 {
     //--- header data
 
     le_valid_t	valid;		// see LE_VALID_* above
     uint	version;	// version = phase
     le_region_t	region;		// one of LEREG_*
+    u32		creation_time;	// unixtime of LE-CODE creation
+    u32		edit_time;	// >0: unixtime of last LE-CODE edit
+    uint	szs_version;	// minimal encoded version number of szs-tools required to edit
+    uint	edit_version;	// >0: encoded version number of szs-tools, that did last edit
 
     const u8	*data;		// pointer to raw data
-    u32		size;		// data size
+    u32		data_size;	// data size
 
-    uint	head_vers;	// not NULL: version number of header
-    uint	head_size;	// not NULL: size told by header
+    uint	header_vers;	// not NULL: version number of header
+    uint	header_size;	// not NULL: size told by header
 
-    uint	param_offset;	// not NULL: offset of param
-    uint	param_vers;	// not NULL: version number of param
-    uint	param_size;	// not NULL: size told by param
+    uint	param_offset;	// not NULL: offset of LPAR
+    uint	param_vers;	// not NULL: version number of LPAR
+    uint	param_size;	// not NULL: size told by LPAR
 
 
     //--- working data
@@ -753,18 +859,23 @@ typedef struct le_analyse_t
     uint	max_property;	// max possible properties
     uint	max_music;	// max possible music slots
     uint	max_flags;	// max possible flags
+    uint	flags_bits;	// number of bits for flags: 8|16
 
     uint	used_rslots;	// used racing slots
     uint	max_rslots;	// max racing slots
     uint	used_bslots;	// used battle slots
     uint	max_bslots;	// max battle slots
 
+    uint	le_random_beg;	// first LE-CODE random slot
+    uint	le_random_end;	// last LE-CODE random slot + 1
+    
     le_lpar_t	lpar;		// LPAR parameters
+    le_flags_t	*flags;		// alloced list of flags, N=max_flags
 
     le_usage_t	*usage;		// NULL or alloced list[n_slot], setup by GetLEUsage()
     uint	usage_size;	// number of alloed 'usage' elements
 
-    bool	arena_setup;	// set by SetupArenasLEAnalyse()
+    bool	arena_setup;	// set by SetupArenasLEAnalyze()
     bool	arena_applied;	// set by ApplyArena()
 
 
@@ -774,7 +885,7 @@ typedef struct le_analyse_t
     uint	bin_size;	// size of binary data
 
 
-    //--- pointers
+    //--- pointers into LE-CODE binary
 
     le_cup_par_t	*cup_par;	// NULL or cup parameters
     le_course_par_t	*course_par;	// NULL or course parameters
@@ -782,7 +893,7 @@ typedef struct le_analyse_t
     le_cup_track_t	*cup_arena;	// NULL or list of cup arenas
     le_property_t	*property;	// NULL or list of properties
     le_music_t		*music;		// NULL or list of music slots
-    le_flags_t		*flags;		// NULL or list of flags
+    le_flags8_t		*flags_bin;	// NULL or list of flags
 
     u8			*beg_of_data;	// NULL or begin of data
     u8			*end_of_data;	// NULL or end of data
@@ -791,6 +902,7 @@ typedef struct le_analyse_t
     {
 	le_binary_head_t	* head;
 	le_binary_head_v4_t	* head_v4;
+	le_binary_head_v5_t	* head_v5;
     };
 
     union
@@ -799,46 +911,56 @@ typedef struct le_analyse_t
 	le_binpar_v1_t		* param_v1;
     };
 }
-le_analyse_t;
+le_analyze_t;
 
 //-----------------------------------------------------------------------------
 
-void ResetLEAnalyse ( le_analyse_t *ana );
-void ResetLEAnalyseUsage ( le_analyse_t *ana );
-void SetupArenasLEAnalyse ( le_analyse_t *ana, bool force );
+void ResetLEAnalyze ( le_analyze_t *ana );
+void ResetLEAnalyzeUsage ( le_analyze_t *ana );
+void SetupArenasLEAnalyze ( le_analyze_t *ana, bool force );
 
-enumError AnalyseLEBinary
+enumError AnalyzeLEBinary
 (
-    le_analyse_t	*ana,		// NULL or destination of analysis
+    le_analyze_t	*ana,		// NULL or destination of analysis
     const void		*data,		// data pointer
     uint		data_size	// data size
 );
 
-le_region_t GetLERegion ( const le_analyse_t *ana );
+ccp GetLecodeSupportWarning ( const le_analyze_t *ana );
+le_region_t GetLERegion ( const le_analyze_t *ana );
 
-void CalculateStatsLE ( le_analyse_t *ana );
-const le_usage_t * GetLEUsage ( const le_analyse_t *ana0, bool force_recalc );
+void CalculateStatsLE ( le_analyze_t *ana );
+const le_usage_t * GetLEUsage ( const le_analyze_t *ana0, bool force_recalc );
 char GetLEUsageChar ( le_usage_t usage );
 ccp GetLEUsageCharCol ( le_usage_t usage, const ColorSet_t *colset, ccp * prev_col );
 
 ccp GetLEValid ( le_valid_t valid );
-void CalculateStatsLE ( le_analyse_t *ana );
-void DumpLEAnalyse ( FILE *f, uint indent, const le_analyse_t *ana );
+void CalculateStatsLE ( le_analyze_t *ana );
+void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana );
 
 void TransferTrackFile   ( LogFile_t *log, uint dest_slot, ccp  src_name, TransferMode_t flags );
 void TransferTrackBySlot ( LogFile_t *log, uint dest_slot, uint src_slot, TransferMode_t flags );
 
-static inline bool IsLESlotUsed ( const le_analyse_t *ana, uint slot )
+static inline bool IsLESlotUsed ( const le_analyze_t *ana, uint slot )
 	{ return slot < ana->n_slot && ana->music[slot]; }
+
+static inline bool IsLERacingSlot ( const le_analyze_t *ana, uint slot )
+	{ return slot < ana->n_slot && ana->music[slot] && ana->property[slot] < MKW_TRACK_END; }
+
+static inline bool IsLEBattleSlot ( const le_analyze_t *ana, uint slot )
+	{ return slot < ana->n_slot && ana->music[slot] && ana->property[slot] >= MKW_ARENA_BEG; }
 
 ///////////////////////////////////////////////////////////////////////////////
 
 const ctcode_t * LoadLEFile ( uint le_phase );
 
-enumError ApplyLEFile ( le_analyse_t * ana );
-enumError ApplyCTCODE ( le_analyse_t * ana, const ctcode_t * ctcode );
-void PatchLECODE ( le_analyse_t * ana );
+enumError ApplyLEFile ( le_analyze_t * ana );
+enumError ApplyCTCODE ( le_analyze_t * ana, const ctcode_t * ctcode );
+void PatchLECODE ( le_analyze_t * ana );
 void PatchLPAR ( le_lpar_t * lp );
+
+void UpdateLecodeFlags	( le_analyze_t * ana );
+void CopyLecodeFlags	( le_analyze_t * ana );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -848,8 +970,7 @@ void PatchLPAR ( le_lpar_t * lp );
 const VarMap_t * SetupVarsLECODE();
 
 static inline bool IsRacingTrackLE ( uint tid )
-	{ return tid < MKW_N_TRACKS
-		|| tid >= LE_FIRST_CT_SLOT && tid != 0xff; }
+	{ return tid < MKW_N_TRACKS || tid >= LE_FIRST_CT_SLOT; }
 
 uint GetNextRacingTrackLE ( uint tid );
 

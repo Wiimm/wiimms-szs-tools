@@ -1,17 +1,23 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Continuing the implementation of LEX/FEAT:
-    - Comamnd wszst FEATURES: Options for value 3 (impact) are printed always.
-    - Option --print-modes removed.
-    - Option --long (-l and -ll) used to append human readable flags.
- - Updated internal prefix database.
- - Tool wstrt: Option --add-section=PATH supports now wildcards. In this case
-   PATH is used as search pattern and all found files are added. In order to
-   use this variant, the calling shell must not interpret the wildcards.
-   Therefore, PATH must usually be enclosed in single or double quotes.
- - Bug fix: Option --all-ranks accepts keyword RESTORE now. Due to a spelling
-   mistake, only RETORE was recognized so far.
- 
+ - Updated prefix, object and porting databases.
+ - Updated integrated LE-CODE binaries to v4 build 34.
+ - Support of LE-CODE v4.b34 and v5.b35 with 16-bits flags.
+ - Added LE-CODE protection against changes by SZS tools that are too old.
+ - LPAR: Support of new features BT-TEXTURES, VS-TEXTURES and BLOCK-TEXTURES.
+ - Bug fix: If creating a LPAR file (by "wlect create lpar" or by decoding),
+   some lines are terminated by LF instead of CR+LF. This could lead to
+   problems with some Windows editors and other Windows programs.
+ - Bug fix: The wildcard ** did not work correctly. The recursion depth was
+   always 1 level higher than specified. So level 0 was never possible.
+   See https://szs.wiimm.de/doc/wildcards#2stars for details.
+ - wszst ANALYZE: Added support of LE-CODE binaries.
+ - wszst ANALYZE: A track can be valid, even if vrcorn_model.brres is missed.
+ - wszst ANALYZE: Support of edit-slot ('e12' or 'ea12').
+ - wszst SPLIT: Added support for "(author1,author2,,editor1,editor2)",
+   LE-CODE flags + group, order by attribute, and for track category.
+ - New file type: MTCAT: Import and export 'MKW Track Category' files.
+
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it
 ~   is possible to create a binary MDL by reading the internal data. This is

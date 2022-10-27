@@ -102,7 +102,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			LE-CODE support			///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[le_cup_track_t]] [[le_property_t]] [[le_music_t]] [[le_flags_t]]
+// [[le_cup_track_t]] [[le_property_t]] [[le_music_t]]
 
 #define LE_CODE_MIN_PHASE	CTM_LECODE_MIN - CTM_LECODE_BASE
 #define LE_CODE_STD_PHASE	CTM_LECODE_DEF - CTM_LECODE_BASE
@@ -111,13 +111,11 @@
 typedef u32 le_cup_track_t;	// for tracks and arenas
 
 typedef u8  le_property_t;	// type of properties
-typedef u8  le_music_t;		// type of music slots
-typedef u8  le_flags_t;		// type of ttack flags
+typedef u8  le_music_t;		// type of music indices
 
 static inline int TrackByAliasLE ( le_property_t prop, le_music_t music )
 	{ return prop << 8 | music; }
 
-ccp PrintLEFT ( le_flags_t flags );
 le_flags_t ScanLEFT ( ccp text );
 
 //
@@ -234,10 +232,13 @@ ctcode_cupref_t;
 ///////////////////////////////////////////////////////////////////////////////
 // [[ctcode_arena_t]]
 
+enum { CT_ARENA_FLAGS_VALID = 0x1000 };
+
 typedef struct ctcode_arena_t
 {
-    le_property_t	prop[MKW_N_ARENAS];	// only valid if !=0
-    le_music_t		music[MKW_N_ARENAS];	// only valid if prop[]!=0
+    le_property_t	prop[MKW_N_ARENAS];	// only valid if >0
+    le_music_t		music[MKW_N_ARENAS];	// only valid if >0
+    s16			flags[MKW_N_ARENAS];	// only valid bit CT_ARENA_FLAGS_VALID is set
 }
 ctcode_arena_t;
 
@@ -296,7 +297,7 @@ typedef struct ctcode_t
     // property, music and le_flags
     le_property_t	property[CODE_MAX_TRACKS];	// not in use yet!!
     le_music_t		music[CODE_MAX_TRACKS];		// not in use yet!!
-    le_flags_t		le_flags[CODE_MAX_TRACKS];
+    le_flags8_t		le_flags[CODE_MAX_TRACKS];
     u8			hidden[CODE_MAX_TRACKS];
 
 
@@ -306,8 +307,8 @@ typedef struct ctcode_t
     ctcode_cupref_t	cupref[CODE_MAX_TRACKS];
 					// cross reference track to cup
     uint		used_tracks;	// number of active racing tracks (used by cup)
-    uint		used_arenas;	// number of active battle tracks
-    uint		assigned_arenas;// number of assigned battle tracks
+    uint		used_arenas;	// number of active battle arenas
+    uint		assigned_arenas;// number of assigned battle arenas
     u8			arena_usage[BMG_N_CT_ARENA];
 					// 1: arena assigned
 

@@ -976,6 +976,22 @@ enumError CreateSZS
 ///////////////			LoadCreateSZS()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+enum
+{
+	F_REQUIRED	=    1,
+	F_REQUIRED2	=    2,
+	F_OPTIONAL	=    4,
+	F_IS_OBJECT	=    8,
+	F_FOUND		= 0x10,
+	F_NOT_FOUND	= 0x20,
+	F_MODIFIED	= 0x40,
+
+	F_M_ADDITIONAL	= F_REQUIRED | F_REQUIRED2 | F_OPTIONAL | F_FOUND,
+	F_M_OPTIONAL	= F_OPTIONAL | F_FOUND,
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
 enumError LoadCreateSZS
 (
     szs_file_t		* szs,		// valid szs
@@ -1040,6 +1056,7 @@ enumError LoadObjFileListSZS
     if (kmp_data)
     {
 	InitializeKMP(&kmp);
+	kmp.check_only = szs->check_only;
 	kmp.fname = STRDUP2(szs->fname,"/course.kmp");
 	kmp.lexinfo = lexinfo;
 	err = ScanKMP(&kmp,false,kmp_data,data_size,check_mode);
@@ -1142,8 +1159,115 @@ enumError LoadObjFileListSZS
     FindDbGroupByObjects(&used_group,true,&used_obj);
     FindDbFileByGroups(szs->used_file,false,&used_group);
 
+
+    //--- test files
+
+    szs->found_flags = 0;
+    szs_subfile_t *file, *file_end = szs->subfile.list + szs->subfile.used;
+    for ( file = szs->subfile.list; file < file_end; file++ )
+    {
+	if (file->is_dir)
+	    continue;
+
+	ccp path = file->path;
+	if ( path[0] == '.' && path[1] == '/' )
+	    path += 2;
+	int fidx = FindDbFile(path);
+	if ( fidx < 0 )
+	{
+	    bool found = false;
+	    int i;
+	    for ( i = 0; i < HAVESZS__N; i++ )
+		if (strcasecmp(path,have_szs_file[i]))
+		{
+		    found = true;
+		    break;
+		}
+
+	    if (!found)
+		szs->used_file->d[fidx] |= F_NOT_FOUND;
+	}
+	else
+	{
+	    u8 *flags = szs->used_file->d + fidx;
+	    *flags |= F_FOUND;
+
+	    const DbFileFILE_t *ptr = DbFileFILE + fidx;
+	    szs->found_flags |= ptr->flags;
+
+	    if (IsFileOptionalSZS(szs,ptr))
+		*flags |= F_OPTIONAL;
+	    if ( ptr->flags & DBF_REQUIRED )
+		*flags |= F_REQUIRED;
+	    if ( ptr->flags & DBF_REQUIRED2 )
+		*flags |= F_REQUIRED2;
+
+	    if (DBF_ARCH_SUPPORT(ptr->flags))
+	    {
+		*flags |= F_IS_OBJECT;
+
+		sha1_hash_t hash;
+		SHA1( szs->data+file->offset, file->size, hash );
+
+		bool found = false;
+		const s16 *ref = DbFileRefFILE + ptr->ref;
+		while ( !found && *ref >= 0 )
+		{
+		    DASSERT( *ref < N_DB_FILE );
+		    const DbFile_t *db = DbFile + *ref++;
+		    DASSERT( db->sha1 < N_DB_FILE_SHA1 );
+		    found = !memcmp(hash,DbFileSHA1[db->sha1].sha1,sizeof(hash));
+		}
+		if (!found)
+		    *flags |= F_MODIFIED;
+	    }
+	}
+    }
+
+
+    //--- count missed and modified files
+
+    memset(szs->missed_file,0,sizeof(szs->missed_file));
+    memset(szs->modified_file,0,sizeof(szs->modified_file));
+
+    const DbFileFILE_t *ptr = DbFileFILE;
+    for ( int i = 0; i < N_DB_FILE_FILE; i++, ptr++ )
+    {
+	const u8 flag = szs->used_file->d[i];
+	if ( flag & F_MODIFIED )
+	{
+	    szs->modified_file[ptr->subtype]++;
+	}
+	else if ( !(flag & F_FOUND)
+		&& ( flag & F_REQUIRED || ptr->flags & DBF_REQUIRED )
+		&& !IsFileOptionalSZS(szs,ptr)
+		)
+	{
+	    szs->missed_file[ptr->subtype]++;
+	}
+    }
+
+    //HexDump16(stdout,0,0,szs->missed_file,sizeof(szs->missed_file));
+    //HexDump16(stdout,0,0,szs->modified_file,sizeof(szs->modified_file));
+
     ResetKMP(&kmp);
     return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetStatusMissedFile ( MissedFile_t miss )
+{
+    char buf[4*DBT__N], *dest = buf;
+    for ( int i = 1; i < DBT__N; i++ )
+    {
+	const int n = miss[i];
+	if ( n == 1 )
+	    *dest++ = DbTypeChars[i];
+	else if (n)
+	    dest = snprintfE(dest,buf+sizeof(buf),"%u%c",n,DbTypeChars[i]);
+    }
+    return dest == buf ? EmptyString : CopyCircBuf0(buf,dest-buf);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1903,7 +2027,7 @@ void AddSectionsLEX ( szs_file_t *szs, szs_norm_t *norm, const szs_have_t * have
     }
 
     if (add_course_lex)
-	AddMissingFileSZS(szs,"course.lex",FF_LEX,norm,verbose<1?-1:0);
+	AddMissingFileSZS(szs,"course.lex", FF_LEX, norm, verbose >= 1 ? 0 : -1 );
 }
 
 //
@@ -2474,12 +2598,12 @@ static int transform_collect_func
 			PATCH_ACTION_LOG("Patch","KCL","%s\n",it->name);
 			if ( it->size == kcl.raw_data_size )
 			{
-			    KCL_ACTION_LOG("Overwrite KCL, size %u.\n",it->size);
+			    KCL_ACTION_LOG(&kcl,"Overwrite KCL, size %u.\n",it->size);
 			    memcpy(data,kcl.raw_data,it->size);
 			}
 			else
 			{
-			    KCL_ACTION_LOG("Replace KCL, size %u -> %u.\n",
+			    KCL_ACTION_LOG(&kcl,"Replace KCL, size %u -> %u.\n",
 						it->size, kcl.raw_data_size );
 			    szs_subfile_t * file
 				    = AppendSubFileList(&szs->ext_data,it->path,false);
@@ -2526,12 +2650,12 @@ static int transform_collect_func
 			PATCH_ACTION_LOG("Patch","KMP","%s\n",it->name);
 			if ( it->size == kmp.raw_data_size )
 			{
-			    KCL_ACTION_LOG("Overwrite KMP, size %u.\n",it->size);
+			    KMP_ACTION_LOG(&kmp,false,"Overwrite KMP, size %u.\n",it->size);
 			    memcpy(data,kmp.raw_data,it->size);
 			}
 			else
 			{
-			    KMP_ACTION_LOG(false,"Replace KMP, size %u -> %u.\n",
+			    KMP_ACTION_LOG(&kmp,false,"Replace KMP, size %u -> %u.\n",
 						it->size, kmp.raw_data_size );
 
 			    szs_subfile_t * file
@@ -2702,23 +2826,6 @@ bool CanBeATrackSZS ( szs_file_t * szs )
     return szs->course_kcl_data
 	&& szs->course_kmp_data
 	&& ( szs->course_model_data || szs->course_d_model_data );
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void CalcHaveSZS ( szs_file_t * szs )
-{
-    DASSERT(szs);
-    if ( szs->data && !szs->have.valid && CanBeATrackSZS(szs) )
-    {
-	szs_file_t temp;
-	CopySZS(&temp,true,szs);
-	analyse_szs_t as;
-	AnalyseSZS(&as,true,&temp,temp.fname);
-	szs->have = temp.have;
-	ResetAnalyseSZS(&as);
-	ResetSZS(&temp);
-    }
 }
 
 //
@@ -3173,19 +3280,6 @@ int CheckSZS
     chk.szs  = szs;
     chk.mode = szs_mode;
 
-    enum
-    {
-	F_REQUIRED	=    1,
-	F_REQUIRED2	=    2,
-	F_OPTIONAL	=    4,
-	F_IS_OBJECT	=    8,
-	F_FOUND		= 0x10,
-	F_MODIFIED	= 0x20,
-
-	F_M_ADDITIONAL	= F_REQUIRED | F_REQUIRED2 | F_OPTIONAL | F_FOUND,
-	F_M_OPTIONAL	= F_OPTIONAL | F_FOUND,
-    };
-
 
     //--- check BRRES + BRSUB
 
@@ -3287,73 +3381,6 @@ int CheckSZS
     chk.hint_count += global_hint_count;
     chk.info_count += global_info_count;
 
-
-    //--- test unknown files
-
-    DbFlags_t found_flags = 0;
-    szs_subfile_t *file, *file_end = szs->subfile.list + szs->subfile.used;
-    for ( file = szs->subfile.list; file < file_end; file++ )
-    {
-	if (file->is_dir)
-	    continue;
-
-	ccp path = file->path;
-	if ( path[0] == '.' && path[1] == '/' )
-	    path += 2;
-	int fidx = FindDbFile(path);
-	if ( fidx < 0 )
-	{
-	    bool found = false;
-	    int i;
-	    for ( i = 0; i < HAVESZS__N; i++ )
-		if (strcasecmp(path,have_szs_file[i]))
-		{
-		    found = true;
-		    break;
-		}
-
-	    if (!found)
-		print_check_error( &chk, CMOD_HINT,
-			"Unknown file:    ./%s\n", path );
-	}
-	else
-	{
-	    u8 *flags = szs->used_file->d + fidx;
-	    *flags |= F_FOUND;
-
-	    const DbFileFILE_t *ptr = DbFileFILE + fidx;
-	    found_flags |= ptr->flags;
-
-	    if (IsFileOptionalSZS(szs,ptr))
-		*flags |= F_OPTIONAL;
-	    if ( ptr->flags & DBF_REQUIRED )
-		*flags |= F_REQUIRED;
-	    if ( ptr->flags & DBF_REQUIRED2 )
-		*flags |= F_REQUIRED2;
-
-	    if (DBF_ARCH_SUPPORT(ptr->flags))
-	    {
-		*flags |= F_IS_OBJECT;
-
-		sha1_hash_t hash;
-		SHA1( szs->data+file->offset, file->size, hash );
-
-		bool found = false;
-		const s16 *ref = DbFileRefFILE + ptr->ref;
-		while ( !found && *ref >= 0 )
-		{
-		    DASSERT( *ref < N_DB_FILE );
-		    const DbFile_t *db = DbFile + *ref++;
-		    DASSERT( db->sha1 < N_DB_FILE_SHA1 );
-		    found = !memcmp(hash,DbFileSHA1[db->sha1].sha1,sizeof(hash));
-		}
-		if (!found)
-		    *flags |= F_MODIFIED;
-	    }
-	}
-    }
-
-
     if ( chk.mode & CMOD_HINT )
     {
 	//--- test special files
@@ -3422,7 +3449,7 @@ int CheckSZS
 
     //--- test missing files
 
-    if ( !(found_flags & DBF_REQUIRED2) )
+    if ( !(szs->found_flags & DBF_REQUIRED2) )
 	print_check_error( &chk, CMOD_WARNING,
 		"Missing file:    ./course_model.brres (or '_d' variant)\n" );
 
@@ -4838,352 +4865,6 @@ ccp GetOptBasedir()
     }
 
     return opt_basedir;
-}
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			analyse_szs_t			///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-void InitializeAnalyseSZS ( analyse_szs_t * as )
-{
-  #ifdef DEBUG
-    static bool done = false;
-    if (!done)
-    {
-	done = true;
-	TRACE_SIZEOF(analyse_szs_t);
-	TRACE_SIZEOF(lex_info_t);
-	TRACE_SIZEOF(slot_ana_t);
-	TRACE_SIZEOF(slot_info_t);
-	TRACE_SIZEOF(kmp_finish_t);
-	TRACE_SIZEOF(kmp_usedpos_t);
-	TRACE_SIZEOF(szs_have_t);
-	TRACE_SIZEOF(szs_have_t);
-	TRACE_SIZEOF(have_file_mode_t);
-	TRACE_SIZEOF(szs_special_t);
-	TRACE_SIZEOF(kmp_special_t);
-	TRACE("-\n");
-    }
- #endif
-
-    DASSERT(as);
-    memset(as,0,sizeof(*as));
-
-    InitializeLexInfo(&as->lexinfo);
-    InitializeFinishLine(&as->kmp_finish);
-    InitializeUsedPos(&as->used_pos);
-
-    as->ckpt0_count	= -1;		// number of LC in CKPT
-    as->lap_count	= 3;		// STGI lap counter
-    as->speed_factor	= 1.0;		// STGI speed factor
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void ResetAnalyseSZS ( analyse_szs_t * as )
-{
-    if (as)
-    {
-	ResetLexInfo(&as->lexinfo);
-	InitializeAnalyseSZS(as);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
-void AnalyseSZS
-(
-    analyse_szs_t	*as,		// result
-    bool		init_sa,	// true: init 'as', false: reset 'as'
-    szs_file_t		*szs,		// SZS file to analysze
-    ccp			fname		// NULL or fname for slot analysis
-)
-{
-    //--- setup
-
-    const u_usec_t start_usec = GetTimerUSec();
-
-    analyse_szs_t as0;
-    if (!as)
-    {
-	as = &as0;
-	init_sa = true;
-    }
-
-    DASSERT(as);
-    if (init_sa)
-	InitializeAnalyseSZS(as);
-    else
-	ResetAnalyseSZS(as);
-
-    if (!szs)
-	return;
-
-    char *ct_dest = as->ct_attrib;
-    char *ct_end  = as->ct_attrib + sizeof(as->ct_attrib);
-
-
-    //--- checksums
-
-    sha1_size_t sha1_data;
-    SHA1(szs->data,szs->size,sha1_data.hash);
-    Sha1Bin2Hex(as->sha1_szs,sha1_data.hash);
-    memcpy(as->sha1_szs_norm,as->sha1_szs,sizeof(as->sha1_szs_norm));
-
-    sha1_data.size = htonl(szs->size);
-    CreateSSChecksumDB(as->db64,sizeof(as->db64),&sha1_data);
-    FindSpecialFilesSZS(szs,false);
-
-
-    //--- scan LEX
-
-    InitializeLexInfo(&as->lexinfo);
-
-    if (szs->course_lex_data)
-    {
-	lex_t lex;
-	InitializeLEX(&lex);
-	ScanLEX(&lex,false,szs->course_lex_data,szs->course_lex_size);
-	szs->have.lex_sect = lex.have_sect;
-	szs->have.lex_feat = lex.have_feat;
-	SetupLexInfo(&as->lexinfo,&lex);
-	ResetLEX(&lex);
-    }
-
-
-    //--- scan slots
-
-    AnalyzeSlot(&as->slotana,szs);
-    if (fname)
-	AnalyzeSlotByName(&as->slotinfo,true,MemByString(fname));
-    if (as->slotana.mandatory_slot[0])
-	AnalyzeSlotAttrib(&as->slotinfo,false,MemByString(as->slotana.mandatory_slot));
-    FinalizeSlotInfo(&as->slotinfo,true);
-    if (*as->slotinfo.slot_attrib)
-	ct_dest = StringCat2E(ct_dest,ct_end,",",as->slotinfo.slot_attrib);
-
-
-    //--- scan KMP
-
-    bool valid_track = true; // use temp var because of early 'return'
-
-    if (szs->course_kmp_data)
-    {
-	SHA1(szs->course_kmp_data,szs->course_kmp_size,sha1_data.hash);
-	Sha1Bin2Hex(as->sha1_kmp,sha1_data.hash);
-	memcpy(as->sha1_kmp_norm,as->sha1_kmp,sizeof(as->sha1_kmp_norm));
-	as->sha1_kmp_slot = as->sha1_kmp_norm_slot
-		= GetSha1Slot(SHA1T_KMP,sha1_data.hash);
-
-	kmp_t kmp;
-	InitializeKMP(&kmp);
-	kmp.lexinfo = &as->lexinfo;
-	const enumError err
-	    = ScanKMP(&kmp,false,szs->course_kmp_data,szs->course_kmp_size,0);
-	if ( err <= ERR_WARNING )
-	{
-	    if (kmp.stgi)
-	    {
-		kmp_stgi_entry_t *stgi = (kmp_stgi_entry_t*)kmp.stgi;
-		as->lap_count = stgi->lap_count;
-		as->speed_mod = stgi->speed_mod;
-		stgi->lap_count = 3;
-		stgi->speed_mod = 0;
-
-		SHA1(szs->data,szs->size,sha1_data.hash);
-		Sha1Bin2Hex(as->sha1_szs_norm,sha1_data.hash);
-
-		SHA1(szs->course_kmp_data,szs->course_kmp_size,sha1_data.hash);
-		Sha1Bin2Hex(as->sha1_kmp_norm,sha1_data.hash);
-		as->sha1_kmp_norm_slot = GetSha1Slot(SHA1T_KMP,sha1_data.hash);
-
-		stgi->lap_count = as->lap_count;
-		stgi->speed_mod = as->speed_mod;
-	    }
-
-	    CheckFinishLine(&kmp,&as->kmp_finish);
-	    CheckWarnKMP(&kmp,&as->used_pos);
-	    szs->warn_bits |= kmp.warn_bits;
-
-	    const uint n_ckpt = kmp.dlist[KMP_CKPT].used;
-	    if (n_ckpt)
-	    {
-		const kmp_ckpt_entry_t *ckpt
-		    = (kmp_ckpt_entry_t*)kmp.dlist[KMP_CKPT].list;
-		uint i;
-		as->ckpt0_count = 0;
-		for ( i = 0; i < n_ckpt; i++, ckpt++ )
-		    if (!ckpt->mode)
-			as->ckpt0_count++;
-	    }
-
-	    const kmp_stgi_entry_t *stgi = (kmp_stgi_entry_t*)kmp.dlist[KMP_STGI].list;
-	    if ( kmp.dlist[KMP_STGI].used > 0 )
-	    {
-		as->lap_count = stgi->lap_count;
-		if (!szs->is_arena)
-		{
-		    if ( as->ckpt0_count > 1 )
-		    {
-			if ( as->lap_count == 1 )
-			    ct_dest = StringCopyE(ct_dest,ct_end,",1lap");
-			ct_dest = snprintfE(ct_dest,ct_end,",%ulc",as->ckpt0_count);
-		    }
-		    else if ( as->lap_count != 0 && as->lap_count != 3 )
-			ct_dest = snprintfE(ct_dest,ct_end,",%ulap%s",
-				    as->lap_count, as->lap_count == 1 ? "" : "s" );
-		}
-
-		if (stgi->speed_mod)
-		{
-		    as->speed_mod = stgi->speed_mod;
-		    as->speed_factor = SpeedMod2float(stgi->speed_mod);
-		    char buf[20];
-		    snprintf(buf,sizeof(buf),",x%4.2f",as->speed_factor);
-		    char *ptr = buf + strlen(buf) - 1;
-		    while ( *ptr == '0' )
-			*ptr-- = 0;
-		    if ( *ptr == '.' )
-			*ptr = 0;
-		    if ( strcmp(buf,",x0") && strcmp(buf,",x1") )
-			ct_dest = StringCopyE(ct_dest,ct_end,buf);
-		}
-	    }
-	    else if ( !szs->is_arena && as->ckpt0_count > 1 )
-		ct_dest = snprintfE(ct_dest,ct_end,",%ulc",as->ckpt0_count);
-
-	    if ( as->kmp_finish.n_ktpt_m > 1 )
-		ct_dest = StringCopyE(ct_dest,ct_end,",2ktpt");
-
-	    kmp_ana_pflag_t ap;
-	    AnalysePFlagScenarios(&ap,&kmp,GMD_M_DEFAULT);
-	    snprintf(as->gobj_info,sizeof(as->gobj_info),"%d %d %d %d",
-		    ap.ag.n_gobj, ap.n_version, ap.n_res_std, ap.n_res_ext );
-	    ResetPFlagScenarios(&ap);
-	}
-
-	DetectSpecialKMP(&kmp,szs->have.kmp);
-	if (  szs->have.kmp[HAVEKMP_WOODBOX_HT]
-	   || szs->have.kmp[HAVEKMP_MUSHROOM_CAR]
-	   || szs->have.kmp[HAVEKMP_PENGUIN_POS]
-	   || szs->have.kmp[HAVEKMP_EPROP_SPEED]
-	   || szs->have.kmp[HAVEKMP_GOOMBA_SIZE]
-	)
-	{
-	    ct_dest = StringCopyE(ct_dest,ct_end,",gobj");
-	}
-
-	if (  szs->have.kmp[HAVEKMP_X_PFLAGS]
-	   || szs->have.kmp[HAVEKMP_X_COND]
-	   || szs->have.kmp[HAVEKMP_X_DEFOBJ]
-	   || szs->have.kmp[HAVEKMP_X_RANDOM]
-	)
-	{
-	    ct_dest = StringCopyE(ct_dest,ct_end,",xpf");
-	}
-
-	if (szs->have.kmp[HAVEKMP_COOB_R])
-	    ct_dest = StringCopyE(ct_dest,ct_end,",coob-r");
-	if (szs->have.kmp[HAVEKMP_COOB_K])
-	    ct_dest = StringCopyE(ct_dest,ct_end,",coob-k");
-	if (szs->have.kmp[HAVEKMP_UOOB])
-	    ct_dest = StringCopyE(ct_dest,ct_end,",uoob");
-
-	ResetKMP(&kmp);
-    }
-    else
-	valid_track = false;
-
-
-    if ( szs->have.szs[HAVESZS_ITEM_SLOT_TABLE] >= HFM_MODIFIED )
-	ct_dest = StringCopyE(ct_dest,ct_end,",itemslot");
-
-    if ( szs->have.szs[HAVESZS_OBJFLOW] >= HFM_MODIFIED )
-	ct_dest = StringCopyE(ct_dest,ct_end,",objflow");
-
-    if (  szs->have.szs[HAVESZS_GHT_ITEM]	>= HFM_MODIFIED
-       || szs->have.szs[HAVESZS_GHT_ITEM_OBJ]	>= HFM_MODIFIED
-       || szs->have.szs[HAVESZS_GHT_KART]	>= HFM_MODIFIED
-       || szs->have.szs[HAVESZS_GHT_KART_OBJ]	>= HFM_MODIFIED
-    )
-    {
-	ct_dest = StringCopyE(ct_dest,ct_end,",geohit");
-    }
-
-    if ( szs->have.szs[HAVESZS_MINIGAME] >= HFM_MODIFIED )
-	ct_dest = StringCopyE(ct_dest,ct_end,",minigame");
-
-    if ( szs->have.szs[HAVESZS_AIPARAM_BAA] >= HFM_ORIGINAL
-	|| szs->have.szs[HAVESZS_AIPARAM_BAS] >= HFM_ORIGINAL
-    )
-    {
-	ct_dest = StringCopyE(ct_dest,ct_end,",aiparam");
-    }
-
-    //--- scan KCL
-
-    if (szs->course_kcl_data)
-    {
-	SHA1(szs->course_kcl_data,szs->course_kcl_size,sha1_data.hash);
-	Sha1Bin2Hex(as->sha1_kcl,sha1_data.hash);
-	as->sha1_kcl_slot = GetSha1Slot(SHA1T_KCL,sha1_data.hash);
-    }
-    else
-	valid_track = false;
-
-
-    //--- course model (course_model.brres, course_d_model.brres)
-
-    if (szs->course_model_data)
-    {
-	SHA1(szs->course_model_data,szs->course_model_size,sha1_data.hash);
-	Sha1Bin2Hex(as->sha1_course,sha1_data.hash);
-    }
-    else if (szs->course_d_model_data)
-    {
-	SHA1(szs->course_d_model_data,szs->course_d_model_size,sha1_data.hash);
-	Sha1Bin2Hex(as->sha1_course,sha1_data.hash);
-    }
-    else
-	valid_track = false;
-
-
-    //--- vrcorn (vrcorn_model.brres)
-
-    if (szs->vrcorn_model_data)
-    {
-	SHA1(szs->vrcorn_model_data,szs->vrcorn_model_size,sha1_data.hash);
-	Sha1Bin2Hex(as->sha1_vrcorn,sha1_data.hash);
-    }
-    else
-	valid_track = false;
-
-
-    //--- minimap (map_model.brres)
-
-    if (szs->map_model_data)
-    {
-	SHA1(szs->map_model_data,szs->map_model_size,sha1_data.hash);
-	Sha1Bin2Hex(as->sha1_minimap,sha1_data.hash);
-	as->sha1_minimap_slot = GetSha1Slot(SHA1T_MAP,sha1_data.hash);
-    }
-    else
-	szs->warn_bits |= 1 << WARNSZS_NO_MINIMAP;
-
-
-    //--- finalize ct_attrib by "lex" and "warn"
-
-    if (szs->course_lex_data)
-	ct_dest = StringCopyE(ct_dest,ct_end,",lex");
-
-    if (szs->warn_bits)
-	ct_dest = StringCat2E(ct_dest,ct_end,",warn=",GetWarnSZSNames(szs->warn_bits,'+'));
-
-    szs->have.valid	= true;
-    as->have		= szs->have;
-    as->valid_track	= valid_track;
-    as->duration_usec	= GetTimerUSec() - start_usec;
 }
 
 //

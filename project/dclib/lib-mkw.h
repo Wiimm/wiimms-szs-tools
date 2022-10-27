@@ -91,9 +91,14 @@ enum mkw_consts_t // some constants
 
 	//--- LE-CODE random tracks
 
-	MKW_N_LE_RANDOM		= 0x04,
-	MKW_LE_RANDOM_BEG	= 0x3e,
-	MKW_LE_RANDOM_END	= MKW_LE_RANDOM_BEG + MKW_N_LE_RANDOM,
+	MKW_LE_RANDOM_BEG	= 0x3d,
+	MKW_LE_RANDOM_TEXTURE	= MKW_LE_RANDOM_BEG,
+	MKW_LE_RANDOM_BY_CUP,
+	MKW_LE_RANDOM_ORIG,
+	MKW_LE_RANDOM_CUSTOM,
+	MKW_LE_RANDOM_NEW,
+	MKW_LE_RANDOM_END,
+	MKW_N_LE_RANDOM		= MKW_LE_RANDOM_END - MKW_LE_RANDOM_BEG,
 
 	//--- LE-CODE extended slots
 
@@ -110,11 +115,23 @@ enum mkw_consts_t // some constants
 
 //-----------------------------------------------------------------------------
 
+ccp GetLecodeRandomName ( uint slot, ccp return_on_err );
+ccp GetLecodeRandomInfo ( uint slot, ccp return_on_err );
+
+//-----------------------------------------------------------------------------
+
 static inline bool IsMkwTrack ( uint tid )
 	{ return tid < MKW_TRACK_END; }
 
+static inline bool IsLecodeTrack ( uint tid )
+	{ return tid < MKW_TRACK_END || tid >= MKW_LE_SLOT_BEG; }
+
 static inline bool IsMkwArena ( uint tid )
 	{ return tid >= MKW_ARENA_BEG && tid < MKW_ARENA_END; }
+
+static inline bool IsMkwArenaOrRandom ( uint tid )
+	{ return   tid >= MKW_ARENA_BEG && tid < MKW_ARENA_END
+		|| tid >= MKW_LE_RANDOM_BEG && tid < MKW_LE_RANDOM_END; }
 
 static inline bool IsMkwOriginal ( uint tid )
 	{ return tid < MKW_ARENA_END; }
@@ -129,6 +146,9 @@ static inline bool IsValidLecodeSlot ( uint tid )
 	{ return tid < MKW_ARENA_END
 		|| tid >= MKW_LE_SLOT_BEG && tid < MKW_LE_SLOT_END
 		|| tid >= MKW_LE_RANDOM_BEG && tid < MKW_LE_RANDOM_END; }
+
+static inline bool IsMkwSpecial ( uint tid )
+	{ return tid >= MKW_ARENA_END && tid < MKW_LE_SLOT_BEG; }
 
 //
 ///////////////////////////////////////////////////////////////////////////////

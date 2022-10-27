@@ -128,6 +128,7 @@ typedef enum enumOptions
 	OPT_CT_CODE,
 	OPT_LE_CODE,
 	OPT_LOAD_PREFIX,
+	OPT_LOAD_CATEGORY,
 	OPT_CHDIR,
 	OPT_CONST,
 	OPT_MAX_FILE_SIZE,
@@ -147,7 +148,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 86
+	OPT__N_TOTAL // == 87
 
 } enumOptions;
 
@@ -438,6 +439,7 @@ typedef enum enumGetOpt
 	GO_CT_CODE,
 	GO_LE_CODE,
 	GO_LOAD_PREFIX,
+	GO_LOAD_CATEGORY,
 	GO_PLUS,
 	GO_CHDIR,
 	GO_ROUND,

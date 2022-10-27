@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.28a
+VERSION_NUM		= 2.29a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -237,7 +237,7 @@ XOBJ_KCL	= lib-kcl.o db-kcl.o
 XOBJ_KMP	= lib-kmp.o lib-kmp-text.o lib-kmp-pflags.o lib-kmp-diff.o lib-kmp-draw.o
 XOBJ_COMMON	= lib-common.o lib-geohit.o lib-itemslot.o lib-minigame.o lib-objflow.o
 
-XOBJ_LIB	= analyze.o lib-szs-create.o lib-xbmg.o \
+XOBJ_LIB	= analyze.o lib-szs-create.o lib-analyze.o lib-xbmg.o \
 			lib-mdl.o lib-pat.o lib-transform.o \
 			lib-ctcode.o lib-lex.o lib-lecode.o lib-ledis.o \
 			lib-staticr.o db-dol.o db-ctcode.o getopt.o \
@@ -960,6 +960,7 @@ templates.sed: Makefile
 		's|@@VERSION@@|$(VERSION)|g;' \
 		's|@@VERSION-NUM@@|$(VERSION_NUM)|g;' \
 		's|@@VERSION-INT@@|$(VERSION_INT)|g;' \
+		's|@@VERSION-CODE@@|$(VERSION_CODE)|g;' \
 		's|@@BETA-VERSION@@|$(BETA_VERSION)|g;' \
 		's|@@BETA-SUFFIX@@|$(BETA_SUFFIX)|g;' \
 		's|@@REV@@|$(REVISION)|g;' \

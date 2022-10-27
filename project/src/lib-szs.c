@@ -3723,7 +3723,6 @@ int FindFileSZS
 
     int stat = IterateFilesSZS(szs,find_subfile_iter,&fsub,p_itpar,recurse);
     DASSERT(szs);
-//DEL printf("FindFileSZS(%s): %d\n",path,stat);
     if ( stat >= 0 )
     {
 	if (result)

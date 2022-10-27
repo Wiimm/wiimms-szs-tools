@@ -113,6 +113,12 @@
 #				of all group members is done.
 #		  LE$F_GROUP  : Track is marked as »additional group member«
 #				and is not added to a cup.
+#		  LE$F_TEXTURE: Track is a texture hack of a Nintendo track or
+#				arena and can be used for a random selection.
+#		  LE$F_HIDDEN : The track is considered hidden and not
+#				included into cups. This flag is only used by
+#				Wiimms SZS Tools and other distribution
+#				generators, but ignored by LE-CODE.
 #
 #	 * file_name
 #		The SZS file name without extension as string. If no file name

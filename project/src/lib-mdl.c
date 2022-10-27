@@ -1090,7 +1090,7 @@ ccp GetStringItMDL
 
 const VarMap_t * SetupVarsMDL()
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
     {
  #if 0

@@ -641,6 +641,12 @@
 	" the content. https://ct.wiimm.de/export/prefix is the authoritative" \
 	" source for this." )
 
+#:def_opt( "LOAD_CATEGORY", "load-category|loadcategory", "GP", \
+	"file", \
+	"Read in a CATEGORY file and replace the internal category database" \
+	" with the content. https://ct.wiimm.de/export/category is the" \
+	" authoritative source for this." )
+
 #:def_opt( "PLUS", "plus", "CP", \
 	"chars", \
 	"If a name begins with a plus sign, then all characters up to the" \
@@ -653,6 +659,13 @@
 	" The first character from the second part determines the lower value." \
 	" If it is in parameter CHARS then the position determines the value," \
 	" otherwise the ASCII value to which 500 is added." )
+
+#:def_opt( "SPLIT", "split", "CP", \
+	"num", \
+	"Only one line with the standardized name is output. The components" \
+	" are divided into NUM (1-13) parts with predifined format strings." \
+	" The pipe sign (@|@) is used as a separator. An alternative output" \
+	" format can be defined with the {--printf} option." )
 
 #:def_opt( "PRINTF", "printf", "CP", \
 	"format", \
@@ -5399,7 +5412,15 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SPLIT", "LOAD_CATEGORY", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SPLIT", "PLUS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "SPLIT", \
 	"", \
 	"" )
 
@@ -11659,6 +11680,10 @@
 #:def_cmd_opt( "VEHICLE", "BRIEF", \
 	"", \
 	"Suppress min/max counts on dumps." )
+
+#:def_cmd_opt( "VEHICLE", "DE", \
+	"", \
+	"" )
 
 
 ##
@@ -20127,7 +20152,7 @@
 	" b:body, p:parameters, d:data, c:code and a:all. In plus-mode, a test" \
 	" is enabled, in minus-mode it is disabled. Scanning starts in" \
 	" plus-mode.\n" \
-	"  Example: @a-t@: compare all except timestamps.\n" \
+	"  Example: @a-t@: compare all except timestamps and edit infos.\n" \
 	"  The exist status is @OK@ (0) if nothing differ, @DIFFER@ (2) if at" \
 	" least one test failed, or an error code." )
 
@@ -20300,6 +20325,12 @@
 	"Read in a PREFIX file and replace the internal prefix database with" \
 	" the content. https://ct.wiimm.de/export/prefix is the authoritative" \
 	" source for this." )
+
+#:def_opt( "LOAD_CATEGORY", "load-category|loadcategory", "GP", \
+	"file", \
+	"Read in a CATEGORY file and replace the internal category database" \
+	" with the content. https://ct.wiimm.de/export/category is the" \
+	" authoritative source for this." )
 
 #:def_opt( "PLUS", "plus", "CP", \
 	"chars", \
@@ -21272,6 +21303,10 @@
 	"" )
 
 #:def_cmd_opt( "DISTRIBUTION", "LOAD_PREFIX", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "LOAD_CATEGORY", \
 	"", \
 	"" )
 

@@ -39,6 +39,7 @@
 #include <dirent.h>
 
 #include "dclib-utf8.h"
+#include "lib-analyze.h"
 #include "lib-szs.h"
 #include "lib-brres.h"
 #include "lib-xbmg.h"
@@ -455,6 +456,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(le_lpar_t)
 	SIZEOF_INFO_ENTRY(le_binary_head_t)
 	SIZEOF_INFO_ENTRY(le_binary_head_v4_t)
+	SIZEOF_INFO_ENTRY(le_binary_head_v5_t)
 	SIZEOF_INFO_ENTRY(le_binary_param_t)
 	SIZEOF_INFO_ENTRY(le_binpar_v1_35_t)
 	SIZEOF_INFO_ENTRY(le_binpar_v1_37_t)
@@ -466,11 +468,12 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(le_binpar_v1_t)
 	SIZEOF_INFO_ENTRY(le_cup_par_t)
 	SIZEOF_INFO_ENTRY(le_course_par_t)
-	SIZEOF_INFO_ENTRY(le_analyse_t)
+	SIZEOF_INFO_ENTRY(le_analyze_t)
 	SIZEOF_INFO_ENTRY(le_region_t)
 	SIZEOF_INFO_ENTRY(le_cup_track_t)
 	SIZEOF_INFO_ENTRY(le_property_t)
 	SIZEOF_INFO_ENTRY(le_music_t)
+	SIZEOF_INFO_ENTRY(le_flags8_t)
 	SIZEOF_INFO_ENTRY(le_flags_t)
 
     SIZEOF_INFO_TITLE("LE-CODE distribution")
@@ -597,9 +600,12 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(szs_extract_t)
 	SIZEOF_INFO_ENTRY(raw_data_t)
 	SIZEOF_INFO_ENTRY(wbz_header_t)
-	SIZEOF_INFO_ENTRY(analyse_szs_t)
+	SIZEOF_INFO_ENTRY(analyze_param_t)
+	SIZEOF_INFO_ENTRY(analyze_szs_t)
 	SIZEOF_INFO_ENTRY(file_type_t)
 	SIZEOF_INFO_ENTRY(mkw_prefix_t)
+	SIZEOF_INFO_ENTRY(mkw_category_t)
+	SIZEOF_INFO_ENTRY(mkw_category_list_t)
 	SIZEOF_INFO_ENTRY(split_filename_t)
 	SIZEOF_INFO_ENTRY(print_split_par_t)
 
@@ -2303,28 +2309,21 @@ static enumError cmd_analyze()
     if (!strcmp(opt_dest,"-"))
 	fputc('\n',stdout);
 
-    szs_file_t szs;
-    InitializeSZS(&szs);
-
-    analyse_szs_t as;
-    InitializeAnalyseSZS(&as);
-
-    File_t fo;
-    InitializeFile(&fo);
-
-    PrintScript_t ps;
-    SetupPrintScriptByOptions(&ps);
+    analyze_param_t ap = {0};
+    InitializeSZS(&ap.szs);
+    InitializeFile(&ap.fo);
+    SetupPrintScriptByOptions(&ap.ps);
 
     patch_action_log_disabled++;
-    CheckTextureRefSZS(&szs,0);
+    CheckTextureRefSZS(&ap.szs,0);
 
     ParamList_t *param;
     for ( param = first_param; param; param = param->next )
     {
 	NORMALIZE_FILENAME_PARAM(param);
 
-	ResetSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	ResetSZS(&ap.szs);
+	enumError err = LoadCreateSZS(&ap.szs,param->arg,true,opt_ignore>0,true);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2334,7 +2333,7 @@ static enumError cmd_analyze()
 	    continue;
 	}
 
-	if (!fo.f)
+	if (!ap.fo.f)
 	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
 			GetExtFF(script_fform,0),false);
 
@@ -2342,19 +2341,10 @@ static enumError cmd_analyze()
 	{
 	    fprintf(stdlog,"%sANALYZE %s:%s => %s:%s\n",
 			verbose > 0 ? "\n" : "",
-			GetNameFF(szs.fform_file,szs.fform_arch), szs.fname,
+			GetNameFF(ap.szs.fform_file,ap.szs.fform_arch), ap.szs.fname,
 			GetNameFF(script_fform,0), dest );
 	    fflush(stdlog);
 	}
-
-
-	//--- analyse szs
-
-	const u_usec_t start_usec = GetTimerUSec();
-	AnalyseSZS(&as,false,&szs,param->arg);
-
-
-	//--- status
 
 	if ( err >= ERR_WARNING )
 	{
@@ -2363,204 +2353,47 @@ static enumError cmd_analyze()
 	    continue;
 	}
 
-	if (!fo.f)
+	if (!ap.fo.f)
 	{
-	    enumError err = CreateFile(&fo,false,dest,FM_STDIO|FM_OVERWRITE);
+	    enumError err = CreateFile(&ap.fo,false,dest,FM_STDIO|FM_OVERWRITE);
 	    if (err)
 	    {
 		max_err = err;
 		break;
 	    }
-	    ps.f = fo.f;
-	    PrintScriptHeader(&ps);
+	    ap.ps.f = ap.fo.f;
+	    PrintScriptHeader(&ap.ps);
 	}
 
+	ap.fname	= param->arg;
 
-	//--- name attributes ('dest' can be used now)
 
-	PrintEscapedString(dest,sizeof(dest),param->arg,-1,CHMD_UTF8,'"',0);
+	//--- analyze by file format
 
-	uint name_attrib_len = 0;
-	ccp name_attrib = strrchr(dest,'[');
-	if (name_attrib)
+	switch(ap.szs.fform_arch)
 	{
-	    name_attrib++;
-	    ccp end = strrchr(name_attrib,']');
-	    if (end)
-	    {
-		name_attrib_len = end - name_attrib;
-		for ( ccp ptr = name_attrib; ptr < end; )
-		{
-		    ccp sep = strchr(ptr,',');
-		    if (!sep)
-			sep = end;
-		    switch ( sep-ptr )
-		    {
-		     case 4:
-			if (!memcmp(ptr,"edit",4)) szs.have.attrib |= 1 << HAVEATT_EDIT;
-			break;
+	    case FF_U8:
+	    case FF_WU8:	err = ExecAnalyzeSZS(&ap); break;
+	    case FF_LE_BIN:	err = ExecAnalyzeLECODE(&ap); break;
 
-		     case 5:
-			if (!memcmp(ptr,"cheat",5)) szs.have.attrib |= 1 << HAVEATT_CHEAT;
-			break;
-
-		     case 7:
-			if (!memcmp(ptr,"reverse",7)) szs.have.attrib |= 1 << HAVEATT_REVERSE;
-			break;
-		    }
-		    ptr = sep + 1;
-		}
-	    }
+	    default:
+		PrintHeaderAP(&ap,"");
+		PrintFooterAP(&ap,false,0,"File format not supported.");
+		break;
 	}
-	else
-	    name_attrib = EmptyString;
-
-
-	ccp texture_info = 0;
-	PrepareCheckTextureSZS(&szs);
-	CheckTextureRefSZS(&szs,&texture_info);
-
-	const u_usec_t duration_usec = GetTimerUSec() - start_usec;
-
-
-	//--- print result
-
-	PrintScriptVars(&ps,1,
-		"file=\"%s\"\n"
-		"size=%zd\n"
-		 "db64=\"%s\"\n"
-		 "sha1=\"%s\"\n"
-		 "sha1_norm=\"%s\"\n"
-		 "sha1_kcl=\"%s\"\n"
-		 "sha1_kmp=\"%s\"\n"
-		 "sha1_kmp_norm=\"%s\"\n"
-		 "sha1_course=\"%s\"\n"
-		 "sha1_vrcorn=\"%s\"\n"
-		 "sha1_minimap=\"%s\"\n"
-		 "sha1_kcl_slot=%u\n"
-		 "sha1_kmp_slot=%u\n"
-		 "sha1_kmp_norm_slot=%u\n"
-		 "sha1_minimap_slot=%u\n"
-		"valid_track=%u\n"
-		"is_arena=\"%u %s\"\n"
-		"n_ckpt0=%d\n"
-		"lap_count=%d\n"
-		"speed_factor=%5.3f\n"
-		"slot_info=\"%s\"\n"
-		"slot_attributes=\"%s\"\n"
-		"race_slot=\"%u %s\"\n"
-		"arena_slot=\"%u %s\"\n"
-		"music_index=\"%u %s\"\n"
-		 "itempos_factors=\"%5.3f %5.3f %5.3f\"\n"
-		 "used_x_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
-		 "used_y_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
-		 "used_z_pos=\"%u=%s %3.2f %3.2f %3.2f %3.2f\"\n"
-		 "used_pos_suggest=\"%s\"\n"
-		"ktpt2=\"%s %4.2f %4.2f\"\n"
-		"gobj=\"%s\"\n"
-		"special_files=\"%s\"\n"
-		"original_files=\"%s\"\n"
-		"modified_files=\"%s\"\n"
-		"special_attrib=\"%s\"\n"
-		"special_kmp=\"%s\"\n"
-		"lex_sections=\"%s\"\n"
-		"lex_features=\"%s\"\n"
-		"warn=\"%u=%s\"\n"
-		"ct_attributes=\"%s\"\n"
-		"name_attributes=\"%.*s\"\n"
-
-		,dest
-		,szs.size
-		 ,as.db64
-		 ,as.sha1_szs
-		 ,as.sha1_szs_norm
-		 ,as.sha1_kcl
-		 ,as.sha1_kmp
-		 ,as.sha1_kmp_norm
-		 ,as.sha1_course
-		 ,as.sha1_vrcorn
-		 ,as.sha1_minimap
-		 ,as.sha1_kcl_slot
-		 ,as.sha1_kmp_slot
-		 ,as.sha1_kmp_norm_slot
-		 ,as.sha1_minimap_slot
-		,as.valid_track
-		,szs.is_arena
-		,is_arena_name[szs.is_arena]
-		,as.ckpt0_count
-		,as.lap_count
-		,as.speed_factor
-		,as.slotana.slot_info
-		,as.slotinfo.slot_attrib
-		,as.slotinfo.race_slot,as.slotinfo.race_info
-		,as.slotinfo.arena_slot,as.slotinfo.arena_info
-		,as.slotinfo.music_index,as.slotinfo.music_info
-		 ,as.lexinfo.item_factor.x,as.lexinfo.item_factor.y,as.lexinfo.item_factor.z
-		 ,as.used_pos.orig.rating[0]
-			,WarnLevelNameLo[as.used_pos.orig.rating[0]]
-		 ,as.used_pos.orig.min.x,as.used_pos.orig.max.x
-			,fabsf(as.used_pos.orig.max.x-as.used_pos.orig.min.x)
-			,(as.used_pos.orig.min.x+as.used_pos.orig.max.x)/2
-		 ,as.used_pos.orig.rating[1],WarnLevelNameLo[as.used_pos.orig.rating[1]]
-		 ,as.used_pos.orig.min.y,as.used_pos.orig.max.y
-			,fabsf(as.used_pos.orig.max.y-as.used_pos.orig.min.y)
-			,(as.used_pos.orig.min.y+as.used_pos.orig.max.y)/2
-		 ,as.used_pos.orig.rating[2],WarnLevelNameLo[as.used_pos.orig.rating[2]]
-		 ,as.used_pos.orig.min.z,as.used_pos.orig.max.z
-			,fabsf(as.used_pos.orig.max.z-as.used_pos.orig.min.z)
-			,(as.used_pos.orig.min.z+as.used_pos.orig.max.z)/2
-		 ,GetUsedPosObjSuggestion(as.used_pos.suggest,true,"")
-		,as.kmp_finish.warn ? "warn" : as.kmp_finish.hint ? "hint" : "ok"
-		,as.kmp_finish.distance
-		,as.kmp_finish.dir_delta
-		,as.gobj_info
-		,CreateSpecialFileInfo(&szs,~(1<<HFM_NONE),true,"")
-		,CreateSpecialFileInfo(&szs,1<<HFM_ORIGINAL,true,"")
-		,CreateSpecialFileInfo(&szs,1<<HFM_MODIFIED,true,"")
-		,CreateSpecialInfoAttrib(szs.have.attrib,true,"")
-		,CreateSpecialInfoKMP(szs.have.kmp,true,"")
-		,CreateSectionInfoLEX(szs.have.lex_sect,true,"")
-		,CreateFeatureInfoLEX(szs.have.lex_feat,true,"")
-		,szs.warn_bits,GetWarnSZSNames(szs.warn_bits,' ')
-		,as.ct_attrib+1
-		,name_attrib_len,name_attrib
-		);
-
-	if (texture_info)
-	    PrintScriptVars(&ps,0,"texture_hack=\"%s\"\n",texture_info);
-
-	if ( long_count > 0 )
-	{
-	    const uint n = szs.special_file ? szs.special_file->used : 0;
-	    PrintScriptVars(&ps,0,"subfile_n=%u\n",n);
-
-	    uint i;
-	    ParamFieldItem_t *ptr = szs.special_file->field;
-	    for (i = 0; i < n; i++, ptr++ )
-	    {
-		sha1_hex_t hex;
-		Sha1Bin2Hex(hex,(u8*)ptr->data);
-		PrintScriptVars(&ps,0,"subfile_%u=\"%u %s %s\"\n",
-			i, ptr->num, hex, ptr->key );
-	    }
-	}
-
-	PrintScriptVars(&ps,0,"duration_usec=%llu\n",duration_usec);
-	PutScriptVars(&ps,2,0);
 
 	if (!script_array)
 	{
-	    PrintScriptFooter(&ps);
-	    ps.f = 0;
-	    ResetFile(&fo,0);
+	    PrintScriptFooter(&ap.ps);
+	    ap.ps.f = 0;
+	    ResetFile(&ap.fo,0);
 	}
     }
 
-    PrintScriptFooter(&ps);
-    ResetPrintScript(&ps);
-    ResetFile(&fo,0);
-    ResetAnalyseSZS(&as);
-    ResetSZS(&szs);
+    PrintScriptFooter(&ap.ps);
+    ResetPrintScript(&ap.ps);
+    ResetFile(&ap.fo,0);
+    ResetSZS(&ap.szs);
     return max_err;
 }
 
@@ -2593,13 +2426,13 @@ static enumError cmd_split()
     CheckOptDest("-",false);
     char dest[PATH_MAX];
     enumError max_err = ERR_OK;
-    if (!strcmp(opt_dest,"-"))
+    if ( opt_split <= 0 && !strcmp(opt_dest,"-") )
 	fputc('\n',stdout);
 
     split_filename_t spf;
     InitializeSPF(&spf);
 
-    print_split_par_t psp = { .format = opt_printf, .u_use_list = true };
+    print_split_par_t psp = { .format = opt_printf, .split_level = opt_split, .u_use_list = true };
 
     File_t fo;
     InitializeFile(&fo);
@@ -2632,8 +2465,17 @@ static enumError cmd_split()
 	AnalyseSPF(&spf,false,param->arg,0,CPM_LINK,opt_plus);
 	const u_nsec_t duration_nsec = GetTimerNSec() - start_nsec;
 
+	if ( opt_split > 0 )
+	{
+	    exmem_t res = PrintSPF(0,&spf,&psp);
+	    printf("%s\n",res.data.ptr);
+	    FreeExMem(&res);
+	    continue;
+	}
+	
 	PutScriptVars(&ps,1,0);
 
+	print_split_val(&ps,"directory",spf.directory);
 	print_split_val(&ps,"source",spf.source);
 
 	print_split_val(&ps,"file_name",spf.f_name);
@@ -2655,8 +2497,19 @@ static enumError cmd_split()
 	print_split_val(&ps,"extra",spf.extra);
 	print_split_val(&ps,"version",spf.version);
 	print_split_val(&ps,"authors",spf.authors);
+	print_split_val(&ps,"editors",spf.editors);
 	print_split_val(&ps,"attribs",spf.attribs);
+	PrintScriptVars(&ps,0,"attrib_order=%d\n",spf.attrib_order);
 	
+	PrintScriptVars(&ps,0,"le_flags=\"%u %s\"\n",spf.le_flags,PrintLEFL8(spf.le_flags,false));
+	print_split_val(&ps,"le_group",spf.le_group);
+
+	const mkw_category_t *tcat = GetCategory(spf.track_cat,MKW_CAT_UNKNOWN);
+	if (tcat)
+	    PrintScriptVars(&ps,0,"track_cat=\"%u %s %u\"\n",spf.track_cat,tcat->name,tcat->mode);
+	else
+	    PrintScriptVars(&ps,0,"track_cat=\"%u - 0\"\n",spf.track_cat);
+
 	PrintScriptVars(&ps,0,"lap_count=%u\n",spf.lap_count);
 	if ( spf.speed_factor > 0.0 )
 	    PrintScriptVars(&ps,0,"speed_factor=%5.3f\n",spf.speed_factor);
@@ -2777,8 +2630,8 @@ static enumError cmd_features()
     szs_file_t szs;
     InitializeSZS(&szs);
 
-    analyse_szs_t as;
-    InitializeAnalyseSZS(&as);
+    analyze_szs_t as;
+    InitializeAnalyzeSZS(&as);
 
     features_szs_t fs;
     InitializeFeaturesSZS(&fs);
@@ -2825,7 +2678,7 @@ static enumError cmd_features()
 
 	//--- analyse szs
 
-	AnalyseSZS(&as,false,&szs,param->arg);
+	AnalyzeSZS(&as,false,&szs,param->arg);
 	SetupFeaturesSZS(&fs,&as.have,false);
 
 
@@ -2875,7 +2728,7 @@ static enumError cmd_features()
     ResetPrintScript(&ps);
     ResetFile(&fo,0);
     ResetFeaturesSZS(&fs);
-    ResetAnalyseSZS(&as);
+    ResetAnalyzeSZS(&as);
     ResetSZS(&szs);
     return max_err;
 }
@@ -5627,7 +5480,9 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_TOUCH:		break;
 	case GO_AUTO:		break;
 	case GO_LOAD_PREFIX:	err += ScanOptLoadPrefix(optarg); break;
+	case GO_LOAD_CATEGORY:	err += ScanOptLoadCategory(optarg); break;
 	case GO_PLUS:		opt_plus = optarg; break;
+	case GO_SPLIT:		opt_split = str2l(optarg,0,10); break;
 	case GO_PRINTF:		opt_printf = optarg; break;
 	case GO_SET_FLAGS:	err += ScanOptSetFlags(optarg); break;
 	case GO_SET_SCALE:	err += ScanOptSetScale(optarg); break;

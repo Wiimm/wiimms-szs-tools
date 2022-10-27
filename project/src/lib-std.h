@@ -60,6 +60,7 @@
 #include "lib-dol.h"
 #include "file-type.h"
 #include "lib-numeric.h"
+#include "lib-mkw-def.h"
 
 #if HAVE_XSRC
  #include "xsrc/x-std.h"
@@ -198,7 +199,11 @@ extern const compatible_info_t compatible_info[COMPAT__N];
 
 const compatible_info_t * ScanCompatible ( ccp arg );
 int ScanOptCompatible ( ccp arg );
-char * PrintOptCompatible(); // circ-buf
+char * PrintOptCompatible(void); // circ-buf
+
+//-----------------------------------------------------------------------------
+
+uint GetEncodedVersion(void);
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1340,7 +1345,7 @@ typedef enum slot_info_type_t
 {
     SIT_NOT,		// not defined
     SIT_GENERIC,	// generic slot: "arena" or music by race/arena slot
-    SIT_RECOMMEND,	// recommended slot: "r##" | "a##" | "m*"
+    SIT_RECOMMEND,	// recommended slot: "r##" | "a##" | "e*" | "m*"
     SIT_MANDATORY3,	// mandatory alternative: "31+42+71"
     SIT_MANDATORY2,	// mandatory alternative: "31+71"
     SIT_MANDATORY,	// mandatory slot: "##"
@@ -1357,18 +1362,22 @@ typedef struct slot_info_t
 
     u16			race_slot;	// 0 or 11..84
     u16			arena_slot;	// 0 or 11..25
+    u16			edit_slot;	// 0 or 11..84 or 111..125
     u16			music_index;	// 0 or 0x75..
 
     slot_info_type_t	race_mode;	// 0:not,            2:"r##", 3:"##"
     slot_info_type_t	arena_mode;	// 0:not, 1:"arena", 2:"a##"
+    slot_info_type_t	edit_mode;	// 0:not,            2:"e##" or "ea##"
     slot_info_type_t	music_mode;	// 0:not, 1:generic, 2:"m*"
+
     bool		have_31_71;	// true: "31+71" found!
     bool		have_31_42_71;	// true: "31+42+71" found!
 
-    char		race_info[9];	// race slot as text: "##" | "r##" | "31+71" | "31+41+71"
+    char		race_info[9];	// race slot as text:  "##" | "r##" | "31+71" | "31+41+71"
     char		arena_info[6];	// arena slot as text: "arena" | "a##"
+    char		edit_info[6];	// edit slot as text:  "e##" | "ea##"
     char		music_info[5];	// music slot as text: "m##" | "ma##"
-    char		slot_attrib[20];// normalized slot atribute, combi of race+arena+music
+    char		slot_attrib[24];// normalized slot atribute, combi of race+arena+edit+music
 
 }
 slot_info_t;
@@ -2121,6 +2130,7 @@ __attribute__ ((packed)) mkw_prefix_flags_t;
 ///////////////			mkw_prefix_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[mkw_prefix_t]]
+// search for [[mtcat]]
 
 typedef struct mkw_prefix_t
 {
@@ -2148,13 +2158,85 @@ enumError SavePrefixTableFN ( ccp fname, const mkw_prefix_t * tab );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			mkw_category_t			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[mkw_category_t]]
+
+typedef struct mkw_category_t
+{
+    s8			mtcat;		// -1: not used,  -2: end of list
+    u8			mode;
+    u8			ban_type;
+    char		ch1[4];
+    char		ch2[4];
+    char		abbrev[8];
+    u32			fg_color;
+    u32			bg_color;
+    ccp			color_name;	// alloced
+    ccp			name;		// alloced
+    ccp			info;		// alloced
+    ccp			attrib;		// alloced
+}
+mkw_category_t;
+
+//-----------------------------------------------------------------------------
+
+enum
+{
+    MKW_CAT_SPECIAL	= 0x100,
+    MKW_CAT_UNKNOWN	= MKW_CAT_SPECIAL | G_MTCAT_MD_UNKNOWN,
+    MKW_CAT_DEFAULT	= MKW_CAT_SPECIAL | G_MTCAT_MD_DEFAULT,
+    MKW_CAT_CUSTOM	= MKW_CAT_SPECIAL | G_MTCAT_MD_CUSTOM,
+    MKW_CAT_NINTENDO	= MKW_CAT_SPECIAL | G_MTCAT_MD_NINTENDO,
+};
+
+int TranslateSpecialCategory ( int special );
+const mkw_category_t * GetCategory ( int cat, int fallback );
+
+//-----------------------------------------------------------------------------
+// [[mkw_category_list_t]]
+
+enum { MAX_MTCAT = 100, MAX_MTCAT_MODE = 3 };
+
+typedef struct mkw_category_list_t
+{
+    mkw_category_t	*list;
+    int			used;
+    int			size;	// limited by MAX_MTCAT
+
+    KeywordTabManager_t	atm;	// attribute manager
+}
+mkw_category_list_t;
+
+extern mkw_category_list_t mkw_category_list;
+
+///////////////////////////////////////////////////////////////////////////////
+// search for [[mtcat]]
+
+int ScanOptLoadCategory ( ccp arg );
+
+void ResetCategoryList ( mkw_category_list_t *clist );
+const mkw_category_list_t * GetCategoryList(void);
+
+struct ScanText_t;
+mkw_category_list_t ScanCategoryList ( struct ScanText_t *st );
+mkw_category_list_t DefineCategoryList ( cvp source, uint len );
+
+// if clist==0: Use GetCategoryList()
+const KeywordTab_t * GetCategoryKeywordTab ( mkw_category_list_t * clist );
+enumError SaveCategoryList   ( FILE *f,   const mkw_category_list_t * clist );
+enumError SaveCategoryListFN ( ccp fname, const mkw_category_list_t * clist );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			split_filename_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[split_filename_t]]
 
 typedef struct split_filename_t
 {
-    mem_t source;		// full source without leading directories
+    mem_t directory;		// %y leading directories
+    mem_t source;		// %Y full source without leading directories
 
     //--- split source into 3 parts
 
@@ -2162,29 +2244,35 @@ typedef struct split_filename_t
     mem_t f_d;			// %D empty or "_d"
     mem_t f_ext;		// %E file extention
 
-    //--- split name into 3 parts
+    //--- split name into N parts
 
     mem_t norm;			// %O normalized name, alloced
 
-    mem_t plus;			// %P Plus prefix
+    mem_t plus;			// %P plus prefix
     mem_t boost;		// %b boost prefix
     mem_t game1;		// %g first game prefix
     mem_t game2;		// %G second game prefix
     mem_t game;			// %p combined game prefix
     mem_t name;			// %n name
-    mem_t extra;		// %x extra info
+    mem_t extra;		// %e extra info
     mem_t version;		// %v version nummber
     mem_t authors;		// %a list of authors
+    mem_t editors;		// %d list of editors
+				// $c := %a%d
     mem_t attribs;		// %A list of attributes
+    mem_t le_group;		// -- name of head= or grp= or group=
 
 
     //--- misc
 
-    uint	plus_order;
-    uint	game_order;
+    int		attrib_order;
+    int		plus_order;
+    int		game_order;
     uint	game1_color;
     uint	game2_color;
 
+    le_flags_t	le_flags;	// -- LE-CODE flags "number string"
+    u8		track_cat;	// -- track category "number mode string" 
     u8		lap_count;	// %l number of laps, valid if >0.0
     float	speed_factor;	// %s speed factor, valid if >0.0
 
@@ -2198,8 +2286,9 @@ split_filename_t;
 
 typedef struct print_split_par_t
 {
-    ccp			format;		// format string
     ccp			plus_mode;	// plus mode, only needed by PrintNameSPF()
+    int			split_level;	// >0: use it to get a default 'format' 
+    ccp			format;		// format string
 
     u8			lap_count;	// number of laps, valid if >0.0
     float		speed_factor;	// speed factor, valid if >0.0
@@ -2215,6 +2304,7 @@ print_split_par_t;
 ///////////////////////////////////////////////////////////////////////////////
 
 extern ccp opt_plus;
+extern int opt_split;
 extern ccp opt_printf;
 
 static inline void InitializeSPF ( split_filename_t *spf )
@@ -2257,6 +2347,8 @@ exmem_t PrintNameSPF
 //	%a  authors,	list of authors, format "(authors)", options=0, curly braces
 //	%A  attribs,	list of attributes, format "(authors)", options=0
 //	%b  boost,	boost prefix
+//	%c  auth+ed,	combined authors + editors, format "(authors,,editors)", options=0
+//	%d  editors,	list of editors, format "(editors)", options=0
 //	%D  f_d,	empty or "_d"
 //	%e  extra,	extra info, format "(extra)", options=0, curly braces
 //	%E  f_ext,	file extention, format ".ext", options=0

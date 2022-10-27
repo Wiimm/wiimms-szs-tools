@@ -423,7 +423,7 @@ enumError SaveImageKCL
 
     kcl->min_max_valid = kcl->stat_valid = kcl->octree_valid = false;
     CreateOctreeKCL(kcl);
-    KCL_ACTION_LOG("SaveImageKCL(%s) N=%u, model_modified=%d\n",
+    KCL_ACTION_LOG(kcl,"SaveImageKCL(%s) N=%u, model_modified=%d\n",
 		fname, kcl->tridata.used, kcl->model_modified );
 
 

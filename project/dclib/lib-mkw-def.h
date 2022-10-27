@@ -36,27 +36,53 @@ typedef enum MkwTrackCategory
 {
 	G_MTCAT_NINTENDO            = 0,
 	G_MTCAT_TEXTURE             = 1,
-	G_MTCAT_DENIED              = 2,
-	G_MTCAT_ORIG_KMP_KCL        = 2,
-	G_MTCAT_EDIT                = 3,
-	G_MTCAT_MODEL               = 4,
-	G_MTCAT_UNKNOWN             = 5,
+	G_MTCAT_TEMP_ALLOW          = 2,
+	G_MTCAT_TEMP_DENY           = 3,
+	G_MTCAT_DENY                = 4,
+	G_MTCAT_DENIED              = 5,	// [[obsolete]]
 	G_MTCAT_CHEAT               = 6,
-	G_MTCAT_CUSTOM              = 7,
-	G_MTCAT__N                  = 8,
+	G_MTCAT_EDIT                = 7,
+	G_MTCAT_MODEL               = 8,
+	G_MTCAT_CHEAT_EDIT          = 9,
+	G_MTCAT_UNKNOWN             = 10,
+	G_MTCAT_CUSTOM              = 11,
+	G_MTCAT_HNS                 = 12,
+	G_MTCAT_HNS_CT              = 13,
+	G_MTCAT_MISSION             = 14,
+	G_MTCAT_MISSION_CT          = 15,
+	G_MTCAT__N                  = 16,
 }
 MkwTrackCategory;
 
+// [[MkwTrackCatMode]]
+typedef enum MkwTrackCatMode
+{
+	G_MTCAT_MD_UNKNOWN             = 0x01,
+	G_MTCAT_MD_DEFAULT             = 0x02,
+	G_MTCAT_MD_CUSTOM              = 0x04,
+	G_MTCAT_MD_NINTENDO            = 0x10,
+	G_MTCAT_MD_HACK                = 0x20,
+	G_MTCAT_MD_CHEAT               = 0x40,
+	G_MTCAT_MD__MASK               = 0x77,
+}
+MkwTrackCatMode;
 
+// [[MkwTrackCategory_t]]
 typedef struct MkwTrackCategory_t
 {
-
     ccp  info;
+    ccp  attribs;
+    int  fg_color;
+    int  bg_color;
     int  color_offset;
     u8   id;
-    char color[9+1];
-    char ch[3+1];
-    char title[8+1];
+    char ch1[3+1];
+    char ch2[3+1];
+    u8   mode;
+    u8   ban;
+    char abbrev[7+1];
+    char title[12+1];
+    char color[15+1];
 }
 MkwTrackCategory_t;
 

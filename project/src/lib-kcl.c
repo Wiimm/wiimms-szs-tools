@@ -49,8 +49,11 @@
 ///////////////			    KCL action log		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-bool KCL_ACTION_LOG ( const char * format, ... )
+bool KCL_ACTION_LOG ( const kcl_t *kcl, const char * format, ... )
 {
+    if ( kcl && kcl->check_only )
+	return false;
+
     #if HAVE_PRINT
     {
 	char buf[200];
@@ -532,7 +535,7 @@ void LoadParametersKCL
 
     //--- logging
 
-    if ( !KCL_ACTION_LOG("Global KCL Modes: %s\n",GetKclMode())
+    if ( !KCL_ACTION_LOG(0,"Global KCL Modes: %s\n",GetKclMode())
 	&& log_prefix
 	&& KCL_MODE != KCLMD_M_DEFAULT
 	&& !(KCL_MODE & KCLMD_SILENT) )
@@ -2263,7 +2266,7 @@ void CalcStatisticsKCL
 
     DASSERT(kcl);
     ResetStatisticsKCL(kcl);
-    KCL_ACTION_LOG("CalcStatisticsKCL()\n");
+    KCL_ACTION_LOG(kcl,"CalcStatisticsKCL()\n");
     CreateOctreeKCL(kcl);
 
 
@@ -2474,7 +2477,7 @@ void CalcMinMaxKCL
 
     if (!kcl->min_max_valid)
     {
-	KCL_ACTION_LOG("CalcMinMaxKCL()\n");
+	KCL_ACTION_LOG(kcl,"CalcMinMaxKCL()\n");
 	kcl->min_max_valid = true;
 
 	const uint n_tri = kcl->tridata.used;
@@ -2958,7 +2961,7 @@ enumError CreateOctreeKCL
     TRACE_SIZEOF(oct_info_t);
 
     if (!kcl->silent_octree)
-	KCL_ACTION_LOG("Create KCL Octree [valid=%d,recreate=%d]\n",
+	KCL_ACTION_LOG(kcl,"Create KCL Octree [valid=%d,recreate=%d]\n",
 			kcl->octree_valid, kcl->recreate_octree );
 
     CalcMinMaxKCL(kcl);
@@ -3242,7 +3245,7 @@ enumError ScanFlagFile
     enumError err = OpenReadFILE(fname,0,true,&data,&data_size,0,0);
     if (!err)
     {
-	KCL_ACTION_LOG("Scan flag file: %s\n",fname);
+	KCL_ACTION_LOG(kcl,"Scan flag file: %s\n",fname);
 	FreeString(kcl->flag_fname);
 	kcl->flag_fname = STRDUP(fname);
 
@@ -3360,7 +3363,7 @@ void LoadFlagFileKCL
 	    {
 		FreeString(kcl->flag_fname);
 		kcl->flag_fname = 0;
-		KCL_ACTION_LOG("No flag file found for: %s\n",kcl->fname);
+		KCL_ACTION_LOG(kcl,"No flag file found for: %s\n",kcl->fname);
 	    }
 
 	    PRINT("KCL.FLAGS loaded, N=%u+%u, hex4=%d, hex23=%d\n",
@@ -3368,7 +3371,7 @@ void LoadFlagFileKCL
 		kcl->accept_hex4, kcl->accept_hex23 );
 	}
 	else
-	    KCL_ACTION_LOG("No flag file searched for: %s\n",kcl->fname);
+	    KCL_ACTION_LOG(kcl,"No flag file searched for: %s\n",kcl->fname);
     }
 }
 
@@ -3607,7 +3610,7 @@ enumError ScanTextKCL
 	    use_g = true;
     }
     DASSERT( use_g || use_usemtl );
-    KCL_ACTION_LOG("ScanTextKCL() %s [%s,%s]\n",
+    KCL_ACTION_LOG(kcl,"ScanTextKCL() %s [%s,%s]\n",
 		kcl->fname,GetNameFF(kcl->fform,0),
 		use_g && use_usemtl ? "'g'+'usemtl'" : use_g ? "'g'" : "'usemtl'" );
 
@@ -3922,7 +3925,7 @@ enumError ScanRawKCL
 		"Invalid KCL file: %s\n", kcl->fname ? kcl->fname : "?");
     }
 
-    KCL_ACTION_LOG("ScanRawKCL() %s\n",kcl->fname);
+    KCL_ACTION_LOG(kcl,"ScanRawKCL() %s\n",kcl->fname);
     kcl->fform = FF_KCL;
 
     if (!ka.order_ok)
@@ -4155,7 +4158,7 @@ enumError ScanKCL
 
     if (rm_octree)
     {
-	KCL_ACTION_LOG("Remove Octree\n");
+	KCL_ACTION_LOG(kcl,"Remove Octree\n");
 
 	if (kcl->octree_alloced)
 	    FREE(kcl->octree);
@@ -4584,7 +4587,7 @@ static enumError FastCreateRawKCL
     //--- compare number triangles
 
     const uint n_tri  = ( sect_off[3] - sect_off[2] ) / sizeof(kcl_triangle_t);
-    KCL_ACTION_LOG("FastCreateRawKCL() N=%u\n",n_tri);
+    KCL_ACTION_LOG(kcl,"FastCreateRawKCL() N=%u\n",n_tri);
     if ( n_tri != kcl->tridata.used )
     {
 	PRINT("N-TRI: %u != %u\n",n_tri,kcl->tridata.used );
@@ -4651,7 +4654,7 @@ enumError CreateRawKCL
     if ( CreateOctreeKCL(kcl) == ERR_OK )
 	add_sig = true;
 
-    KCL_ACTION_LOG("CreateRawKCL()\n");
+    KCL_ACTION_LOG(kcl,"CreateRawKCL()\n");
 
     //--- calculate vetex and normal lists
 
@@ -4724,7 +4727,7 @@ enumError CreateRawKCL
 	{
 	    if (start_normals)
 	    {
-		KCL_ACTION_LOG("Number of normals reduced from %u to %u [steps=%u]\n",
+		KCL_ACTION_LOG(kcl,"Number of normals reduced from %u to %u [steps=%u]\n",
 			start_normals, normal.used, round_steps );
 	    }
 	    break;
@@ -4743,7 +4746,7 @@ enumError CreateRawKCL
 	}
 
  #if defined(TEST) || 0
-	KCL_ACTION_LOG("Have %u normals: try to reduce to 65535 (level %u)\n",
+	KCL_ACTION_LOG(kcl,"Have %u normals: try to reduce to 65535 (level %u)\n",
 		normal.used, round );
  #endif
 
@@ -4887,7 +4890,7 @@ enumError SaveRawKCL
 	return err;
     DASSERT(kcl->raw_data);
     DASSERT(kcl->raw_data_size);
-    KCL_ACTION_LOG("SaveRawKCL(%s) N=%u, model_modified=%d\n",
+    KCL_ACTION_LOG(kcl,"SaveRawKCL(%s) N=%u, model_modified=%d\n",
 		fname, kcl->tridata.used, kcl->model_modified );
 
     //--- write to file
@@ -4923,7 +4926,7 @@ enumError SaveTextKCL
     DASSERT(kcl);
     DASSERT(fname);
 
-    KCL_ACTION_LOG("SaveTextKCL(%s) N=%u, model_modified=%d\n",
+    KCL_ACTION_LOG(kcl,"SaveTextKCL(%s) N=%u, model_modified=%d\n",
 		fname, kcl->tridata.used, kcl->model_modified );
 
     static ccp sep  = "#\f\r\n#-----------------------------------------------\r\n";
@@ -5467,7 +5470,7 @@ enumError DumpKCL
     CalcStatisticsKCL(kcl);
     CreateRawKCL(kcl,false);
     //const uint blow_size = CalcBlowSizeKCL(kcl);
-    KCL_ACTION_LOG("DumpKCL(%s,%d,%d)\n",fname,print_tridata,print_octree);
+    KCL_ACTION_LOG(kcl,"DumpKCL(%s,%d,%d)\n",fname,print_tridata,print_octree);
 
     PRINT("DumpKCL(%s,PT=%d,PO=%d) N(td)=%u\n",
 		fname, print_tridata, print_octree, kcl->tridata.used );
@@ -5671,7 +5674,7 @@ enumError DumpTrianglesKCL
     DASSERT(kcl);
     DASSERT(fname);
 
-    KCL_ACTION_LOG("DumpTrianglesKCL(%s)\n",fname);
+    KCL_ACTION_LOG(kcl,"DumpTrianglesKCL(%s)\n",fname);
     PRINT("DumpTrianglesKCL(%s)\n",fname);
     CalcNormalsKCL(kcl,false);
 
@@ -5709,7 +5712,7 @@ enumError ListTrianglesKCL
     CalcNormalsKCL(kcl,false);
     CalcStatisticsKCL(kcl);
 
-    KCL_ACTION_LOG("ListTrianglesKCL(%s,%d,%u)\n",fname,print_normals,precision);
+    KCL_ACTION_LOG(kcl,"ListTrianglesKCL(%s,%d,%u)\n",fname,print_normals,precision);
 
     PRINT("ListTrianglesKCL(%s,PN=%d,PREC=%u) N=%u\n",
 		fname, print_normals, precision, kcl->tridata.used );
@@ -6438,7 +6441,7 @@ bool DropSortHelper
     DASSERT(kcl);
     if (sort)
 	CalcNormalsKCL(kcl,false);
-    KCL_ACTION_LOG("DropSortTriangles(,drop=%x,sort=%d)\n",drop_mask,sort);
+    KCL_ACTION_LOG(kcl,"DropSortTriangles(,drop=%x,sort=%d)\n",drop_mask,sort);
 
 
     //--- setup list
@@ -6728,7 +6731,7 @@ static bool ScriptKCL
 	if ( data[i] && data_size[i] )
 	{
 	    ccp fname = kcl_script_list.field[i];
-	    KCL_ACTION_LOG("ScriptKCL() %s\n",fname);
+	    KCL_ACTION_LOG(kcl,"ScriptKCL() %s\n",fname);
 
 	    ScanInfo_t si;
 	    InitializeSI(&si,(ccp)data[i],data_size[i],fname,REVISION_NUM);
@@ -6787,7 +6790,7 @@ bool TransformKCL
     if ( have_patch_count <= 0 || !transform_active || disable_transformation > 0 )
 	return false;
 
-    KCL_ACTION_LOG("TransformKCL()\n");
+    KCL_ACTION_LOG(kcl,"TransformKCL()\n");
 
     const uint n_tri = kcl->tridata.used;
     if (!n_tri)
@@ -7089,7 +7092,7 @@ bool PatchRawDataKCL
     if ( IsValidKCL(&ka,data,data_size,data_size,0) >= VALID_ERROR )
 	return false;
 
-    KCL_ACTION_LOG("PatchRawDataKCL: %s\n",fname);
+    KCL_ACTION_LOG(0,"PatchRawDataKCL: %s\n",fname);
     PRINT("** PatchRawDataKCL() **\n");
 
     kcl_t kcl;
@@ -7105,7 +7108,7 @@ bool PatchRawDataKCL
 
 	if ( !err && kcl.raw_data_size > data_size )
 	{
-	    KCL_ACTION_LOG(
+	    KCL_ACTION_LOG(&kcl,
 		"New KCL is %u bytes too large => round normals.\n",
 		kcl.raw_data_size - data_size );
 
@@ -7117,7 +7120,7 @@ bool PatchRawDataKCL
  #if 0 // this has sometimes negative effect (enlarge the data)
 	if ( !err && kcl.raw_data_size > data_size )
 	{
-	    KCL_ACTION_LOG(
+	    KCL_ACTION_LOG(&kcl,
 		"New KCL is %u bytes too large => round points.\n",
 		kcl.raw_data_size - data_size );
 
@@ -7130,7 +7133,7 @@ bool PatchRawDataKCL
 
 	if ( !err && kcl.raw_data_size > data_size )
 	{
-	    KCL_ACTION_LOG(
+	    KCL_ACTION_LOG(&kcl,
 		"New KCL is %u bytes too large => enlarge triangle lists.\n",
 		kcl.raw_data_size - data_size );
 
@@ -7145,7 +7148,7 @@ bool PatchRawDataKCL
 
 	if ( !err && kcl.raw_data_size > data_size )
 	{
-	    KCL_ACTION_LOG(
+	    KCL_ACTION_LOG(&kcl,
 		"New KCL is %u bytes too large => new octree param.\n",
 		kcl.raw_data_size - data_size );
 
@@ -7161,7 +7164,7 @@ bool PatchRawDataKCL
 
 	if ( !err && kcl.raw_data_size > data_size )
 	{
-	    KCL_ACTION_LOG(
+	    KCL_ACTION_LOG(&kcl,
 		"New KCL is %u bytes too large => new octree param again.\n",
 		kcl.raw_data_size - data_size );
 
@@ -7182,7 +7185,7 @@ bool PatchRawDataKCL
 		kcl.raw_data_size, data_size, fname );
 	else
 	{
-	    KCL_ACTION_LOG("Replace KCL [inplace], size %u -> %u.\n",
+	    KCL_ACTION_LOG(&kcl,"Replace KCL [inplace], size %u -> %u.\n",
 				data_size, kcl.raw_data_size );
 	    memcpy(data,kcl.raw_data,kcl.raw_data_size);
 	    stat = true;
@@ -7204,7 +7207,7 @@ bool PatchKCL
     if ( have_patch_count <= 0 || have_kcl_patch_count <= 0 && !transform_active )
 	return false;
 
-    KCL_ACTION_LOG("PatchKCL() KCL=%d\n",kcl->fform_outfile == FF_KCL);
+    KCL_ACTION_LOG(kcl,"PatchKCL() KCL=%d\n",kcl->fform_outfile == FF_KCL);
 
     const bool stat
 	= ScriptKCL(kcl,true)
@@ -7505,7 +7508,7 @@ uint CalcBlowSizeKCL ( kcl_t *kcl )
 {
     DASSERT(kcl);
 
-    KCL_ACTION_LOG("CalcBlowSizeKCL()\n");
+    KCL_ACTION_LOG(kcl,"CalcBlowSizeKCL()\n");
 
     kcl_blow_t blow;
     memset(&blow,0,sizeof(blow));
@@ -8985,7 +8988,7 @@ static const struct FuncTable_t func_tab[] =
 
 const VarMap_t * SetupVarsKCL()
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
     {
 	//---- define functions

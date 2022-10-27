@@ -2859,9 +2859,6 @@ void RedirectLineBuffer
 		    fprintf(f,"%.*s\n",line->len-1,line->ptr);
 		    line++;
 		}
-//DEL		fprintf(f,"==> %zd %d\n",
-//DEL			line[-1].ptr + line[-1].len - (ccp)lb->buf.ptr,
-//DEL			lb->buf.used );
 	    }
 
 	    fflush(f);
@@ -3791,7 +3788,8 @@ static void search_paths_hit ( search_paths_t *sp, mem_t path, uint d_type )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void search_paths_dir ( search_paths_t *sp, ParamField_t *collect, int min, int max )
+static void search_paths_dir
+	( search_paths_t *sp, ParamField_t *collect, int min, int max )
 {
     DASSERT(sp);
     DASSERT(collect);
@@ -3905,41 +3903,52 @@ static void search_paths_helper ( search_paths_t *sp )
 
     if ( pattern.ptr[0] == '*' && pattern.ptr[1] == '*' )
     {
-	u32 n1 = 0, n2 = 100;
+	u32 min = 0, max = 100;
 	char *ptr = (char*)pattern.ptr+2;
 	if (*ptr)
 	{
 	    if (isdigit(*ptr))
-		n1 = str2ul(ptr,&ptr,10);
+		min = str2ul(ptr,&ptr,10);
 	    if (*ptr)
 	    {
 		if ( *ptr != '-' )
 		    goto terminate;
 		if ( *++ptr )
 		{
-		    n2 = str2ul(ptr,&ptr,10);
+		    max = str2ul(ptr,&ptr,10);
 		    if (*ptr)
 			goto terminate;
 		}
 	    }
 	    else
-		n2 = n1;
-	    if ( n2 > 100 )
-		n2 = 100;
-	    if ( n1 > n2 )
+		max = min;
+	    if ( max > 100 )
+		max = 100;
+	    if ( min > max )
 		goto terminate;
 	}
 
+	if (!min)
+	    InsertParamField(&collect,"",false,S_IFDIR,0);
+
 	local.path_star = path_ptr;
-	search_paths_dir(&local,&collect,n1,n2);
+	search_paths_dir(&local,&collect,min-1,max-1);
 	PRINT0("%sDIR: %d records for **%s\n",colerr->highlight,collect.used,colerr->reset);
 
 	ParamFieldItem_t *end = collect.field + collect.used;
 	for ( ParamFieldItem_t *ptr = collect.field; !local.status.abort && ptr < end; ptr++ )
 	{
-	    local.path_ptr = StringCopyE(path_ptr,sp->path_end,ptr->key);
+	    if (ptr->key[0])
+		local.path_ptr = StringCopyE(path_ptr,sp->path_end,ptr->key);
+	    else
+	    {
+		local.path_ptr = path_ptr-1;
+		*local.path_ptr = 0;
+	    }
 	    PRINT0("%sDIR: %s%s\n",colerr->highlight,local.path_buf,colerr->reset);
 	    search_paths_helper(&local);
+	    if (!ptr->key[0])
+		*local.path_ptr = '/';
 	    if (local.status.abort)
 	        break;
 	}

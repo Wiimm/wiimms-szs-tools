@@ -1865,14 +1865,6 @@ static void DumpBlockList ( const mc_t *mc, ccp title )
     uint cnt;
     for ( cnt = 0; blk; cnt++, blk = blk->next )
     {
-//DEL	char buf[20];
-//DEL	ccp info = "LAST";
-//DEL	if ( blk != &mc->last_block )
-//DEL	{
-//DEL	    snprintf(buf,sizeof(buf),"%4u",(int)(blk - mc->block_data));
-//DEL	    info = buf;
-//DEL	}
-
 	mcPRINT("%4u %s: len: %3u=0x%03x ** elem: %u..%u %3u/%u\n",
 		cnt, info, blk->max_len, blk->max_len,
 		(int)( blk->elem_beg - mc->elem ),

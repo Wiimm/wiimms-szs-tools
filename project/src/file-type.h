@@ -109,82 +109,83 @@ typedef enum file_format_t
 	FF_LESTR,	// 40
 	FF_SHA1REF,	// 41
 	FF_PREFIX,	// 42
+	FF_MTCAT,	// 43
 
-	FF_MDL_TXT,	// 43
+	FF_MDL_TXT,	// 44
 
-	FF_PAT_TXT,	// 44
+	FF_PAT_TXT,	// 45
 
-	FF_TPL,		// 45
-	FF_BTI,		// 46
-	FF_BREFT_IMG,	// 47
+	FF_TPL,		// 46
+	FF_BTI,		// 47
+	FF_BREFT_IMG,	// 48
 
-	FF_BMG,		// 48
-	FF_BMG_TXT,	// 49
+	FF_BMG,		// 49
+	FF_BMG_TXT,	// 50
 
-	FF_KCL,		// 50
-	FF_KCL_TXT,	// 51
-	FF_WAV_OBJ,	// 52
-	FF_SKP_OBJ,	// 53
+	FF_KCL,		// 51
+	FF_KCL_TXT,	// 52
+	FF_WAV_OBJ,	// 53
+	FF_SKP_OBJ,	// 54
 
-	FF_KMP,		// 54
-	FF_KMP_TXT,	// 55
+	FF_KMP,		// 55
+	FF_KMP_TXT,	// 56
 
-	FF_ITEMSLT,	// 56
-	FF_ITEMSLT_TXT,	// 57
+	FF_ITEMSLT,	// 57
+	FF_ITEMSLT_TXT,	// 58
 
-	FF_KMG,		// 58
-	FF_KMG_TXT,	// 59
+	FF_KMG,		// 59
+	FF_KMG_TXT,	// 60
 
-	FF_KRM,		// 60
-	FF_KRM_TXT,	// 61
+	FF_KRM,		// 61
+	FF_KRM_TXT,	// 62
 
-	FF_KRT,		// 62
-	FF_KRT_TXT,	// 63
+	FF_KRT,		// 63
+	FF_KRT_TXT,	// 64
 
-	FF_OBJFLOW,	// 64
-	FF_OBJFLOW_TXT,	// 65
+	FF_OBJFLOW,	// 65
+	FF_OBJFLOW_TXT,	// 66
 
-	FF_GH_ITEM,	// 66
-	FF_GH_ITEM_TXT,	// 67
+	FF_GH_ITEM,	// 67
+	FF_GH_ITEM_TXT,	// 68
 
-	FF_GH_IOBJ,	// 68
-	FF_GH_IOBJ_TXT,	// 69
+	FF_GH_IOBJ,	// 69
+	FF_GH_IOBJ_TXT,	// 70
 
-	FF_GH_KART,	// 70
-	FF_GH_KART_TXT,	// 71
+	FF_GH_KART,	// 71
+	FF_GH_KART_TXT,	// 72
 
-	FF_GH_KOBJ,	// 72
-	FF_GH_KOBJ_TXT,	// 73
+	FF_GH_KOBJ,	// 73
+	FF_GH_KOBJ_TXT,	// 74
 
-	FF_DRIVER,	// 74
-	FF_VEHICLE,	// 75
+	FF_DRIVER,	// 75
+	FF_VEHICLE,	// 76
 
-	FF_BRASD,	// 76
-	FF_RKG,		// 77
-	FF_RKCO,	// 78
+	FF_BRASD,	// 77
+	FF_RKG,		// 78
+	FF_RKCO,	// 79
 
-	FF_STATICR,	// 79
-	FF_DOL,		// 80
+	FF_STATICR,	// 80
+	FF_DOL,		// 81
 
-	FF_GCT,		// 81
-	FF_GCH,		// 82
-	FF_WCH,		// 83
-	FF_WPF,		// 84
-	FF_XPF,		// 85
-	FF_DISTRIB,	// 86
+	FF_GCT,		// 82
+	FF_GCH,		// 83
+	FF_WCH,		// 84
+	FF_WPF,		// 85
+	FF_XPF,		// 86
+	FF_DISTRIB,	// 87
 
-	FF_PNG,		// 87
-	FF_PORTDB,	// 88
+	FF_PNG,		// 88
+	FF_PORTDB,	// 89
 
-	FF_TXT,		// 89
-	FF_SCRIPT,	// 90
-	FF_JSON,	// 91
-	FF_SH,		// 92
-	FF_BASH,	// 93
-	FF_PHP,		// 94
-	FF_MAKEDOC,	// 95
+	FF_TXT,		// 90
+	FF_SCRIPT,	// 91
+	FF_JSON,	// 92
+	FF_SH,		// 93
+	FF_BASH,	// 94
+	FF_PHP,		// 95
+	FF_MAKEDOC,	// 96
 
-	FF_DIRECTORY,	// 96
+	FF_DIRECTORY,	// 97
 
 	//--- number of elements
 

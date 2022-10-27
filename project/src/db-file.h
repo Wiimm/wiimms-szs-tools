@@ -36,6 +36,28 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+//////////////////////////////   enum DbType_t   //////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// [[DbType_t]]
+typedef enum DbType_t
+{
+    DBT_NONE   =  0,  // -: none of below
+    DBT_BRRES  =  1,  // b: *.brres
+    DBT_KCL    =  2,  // k: *.kcl (not course.kcl)
+    DBT_BRASD  =  3,  // d: brasd/*/*.brasd
+    DBT_BREFF  =  4,  // f: effect/*/*.breff
+    DBT_BREFT  =  5,  // t: effect/*/*.breft
+    DBT_POSTEF =  6,  // p: posteffect/*
+    DBT__N     =  7,  // -: number types
+
+} DbType_t;
+
+#define DbTypeChars "-bkdftp-"
+
+
+//
+///////////////////////////////////////////////////////////////////////////////
 /////////////////////////////   enum DbFlags_t   //////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -168,7 +190,8 @@ typedef struct DbFileFILE_t
     u16		group;		// -1:none, >=0:index into 'DbFileGROUP'
     u32		flags;		// enum DbFlags_t
     u16		draw_index;	// index into draw list
-    u16		fform;		// file format
+    u8		fform;		// file format (FF_*)
+    u8		subtype;	// subfile type (DBT_*)
     ccp		file;		// internal filename without './' prefix
 }
 __attribute__ ((packed)) DbFileFILE_t;

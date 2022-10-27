@@ -42,6 +42,7 @@
 
 #include "dclib-types.h"
 #include "lib-ledis.h"
+#include "crypt.h"
 
 typedef struct szs_file_t szs_file_t;
 

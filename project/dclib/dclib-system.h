@@ -76,7 +76,7 @@ typedef enum enumSystemID
 #elif __APPLE__
 	#define SYSTEM_LINUX	0
 	#define SYSTEM		"mac"
-  #ifdef __aarch64__
+  #if defined(__arm64__) || defined(__aarch64__)
 	#define SYSTEM2		"mac/arm"
 	#define SYSTEMID	SYSID_MAC_ARM
   #elif __x86_64__

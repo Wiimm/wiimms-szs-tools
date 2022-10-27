@@ -4286,6 +4286,9 @@ enumError SaveTextFileBMG
 	{ MID_X_MESSAGE_BEG,		"new messages for CT/LE-CODE" },
 	{ MID_X_MESSAGE_END,		0 },
 
+	{ MID_LE_ALT_ARENA_BEG,		"LE-CODE: alternative arena names for random slots" },
+	{ MID_LE_ALT_ARENA_END,		0 },
+
 	{ MID_LE_CUP_BEG,		"LE-CODE: cup names" },
 	{ MID_LE_CUP_END,		0 },
 	{ MID_LE_TRACK_BEG,		"LE-CODE: track names" },

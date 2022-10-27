@@ -1532,6 +1532,10 @@ static inline char * StringCopySMem ( char *buf, ssize_t bufsize, mem_t mem )
 static inline char * StringCopyEMem ( char *buf, ccp buf_end, mem_t mem )
 	{ return StringCopyEM(buf,buf_end,mem.ptr,mem.len); }
 
+// change case of src. !src is allowed. return src
+char * StringLower ( ccp src );
+char * StringUpper ( ccp src );
+
 char * StringLowerS ( char * buf, ssize_t bufsize, ccp src );
 char * StringLowerE ( char * buf, ccp buf_end,     ccp src );
 char * StringUpperS ( char * buf, ssize_t bufsize, ccp src );
@@ -2178,11 +2182,11 @@ void ** DupPointerMgr ( PointerList_t *pl, bool reset );
 
 typedef struct ArgManager_t
 {
-    LowerUpper_t force_case;	// change case?
-    char	**argv;		// list of strings
-    int		argc;		// number of used elements in 'argv'
-    uint	size;		// >0: 'argv' is alloced to store # elements
-				// last NULL element is not counted here
+    LowerUpper_t	force_case;	// change case if LOUP_UPPER | LOUP_LOWER
+    char		**argv;		// list of strings
+    int			argc;		// number of used elements in 'argv'
+    uint		size;		// >0: 'argv' is alloced to store # elements
+					// last NULL element is not counted here
 }
 ArgManager_t;
 
@@ -2755,6 +2759,15 @@ __attribute__ ((__format__(__printf__,7,8)));
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			encoding/decoding		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// support of encoded version numbers: MMMMmmaabb
+//	MMMM: major, mm:minor, aa: empty|a-z|A-Z, bb: beta|beta##
+// Text formats: 1.23a | 1.23a.beta | 1.23a.beta## (letter 'a' is optional)
+
+uint EncodeVersion ( ccp arg );	  // arg can be 0 or empty
+ccp  DecodeVersion ( uint code ); // return circ-buf
+
 ///////////////////////////////////////////////////////////////////////////////
 
 extern const u32 TableCRC32[0x100];
@@ -3431,12 +3444,24 @@ static inline ccp GetKewordNameByIdAndOpt
 
 ///////////////////////////////////////////////////////////////////////////////
 
-const KeywordTab_t * ScanKeyword
+const KeywordTab_t * ScanKeywordEx
+(
+    int			* res_abbrev,	// NULL or pointer to result 'abbrev_count'
+    ccp			arg,		// argument to scan
+    int			arg_len,	// length of 'arg', if <0 then terminate at null, comma or semicolon
+    LowerUpper_t	force_case,	// change case of scanned arg if LOUP_LOWER|LOUP_UPPER
+    const KeywordTab_t	* key_tab	// valid pointer to command table
+);
+
+static inline const KeywordTab_t * ScanKeyword
 (
     int			*res_abbrev,	// NULL or pointer to result 'abbrev_count'
     ccp			arg,		// argument to scan
     const KeywordTab_t	*key_tab	// valid pointer to command table
-);
+)
+{
+    return ScanKeywordEx(res_abbrev,arg,-1,LOUP_UPPER,key_tab);
+}
 
 //-----------------------------------------------------------------------------
 
@@ -3570,6 +3595,34 @@ enumError Command_COLORS
     ColorSelect_t select,	// select color groups; if 0: use level
     uint	format		// output format => see PrintColorSet()
 );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			KeywordTabManager_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[KeywordTabManager_t]]
+
+typedef struct KeywordTabManager_t
+{
+    KeywordTab_t	*list;		// list of elements including terminator
+    uint		used;		// number of used elements without terminator
+    uint		size;		// number of alloced elements without terminator
+    int			grow;		// list grow value; max(10,grow) is used
+    LowerUpper_t	force_case;	// change case if LOUP_UPPER | LOUP_LOWER
+    bool		sort;		// true: sort equal id's together
+
+} KeywordTabManager_t;
+
+//-----------------------------------------------------------------------------
+
+void InitializeKTM ( KeywordTabManager_t *ktm, int grow, bool sort );
+void ResetKTM ( KeywordTabManager_t *ktm ); // Reset if 'ktm' not NULL
+void ClearKTM ( KeywordTabManager_t *ktm ); // Init or Clear if 'ktm' not NULL
+
+// if 'namelen' < 0, then use STRDUP(name), else MEMDUP(name,namelen)
+// AppendKTM() ignores 'sort'
+KeywordTab_t * InsertKTM ( KeywordTabManager_t *ktm, ccp name, int namelen, s64 id, s64 opt );
+KeywordTab_t * AppendKTM ( KeywordTabManager_t *ktm, ccp name, int namelen, s64 id, s64 opt );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -5203,7 +5256,8 @@ char * ScanDateTime
     time_t	*res_time,	// not NULL: store seconds
     u32		*res_usec,	// not NULL: store microseconds of second
     ccp		source,		// source text
-    bool	allow_delta	// true: allow +|- interval
+    bool	allow_delta,	// true: allow +|- interval
+    bool	use_localtime	// false: UTC, true: local time
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5212,7 +5266,8 @@ char * ScanDateTime64
 (
     u64		*res_usec,	// not NULL: store total microseconds
     ccp		source,		// source text
-    bool	allow_delta	// true: allow +|- interval
+    bool	allow_delta,	// true: allow +|- interval
+    bool	use_localtime	// false: UTC, true: local time
 );
 
 //

@@ -921,7 +921,7 @@ BZ2Manager_t * GetCommonBZ2Manager ( file_format_t fform )
 
 const VarMap_t * SetupVarsCOMMON()
 {
-    static VarMap_t vm = {0};
+    static VarMap_t vm = { .force_case = LOUP_UPPER };
     if (!vm.used)
     {
 	DefineObjectNameVars(&vm);

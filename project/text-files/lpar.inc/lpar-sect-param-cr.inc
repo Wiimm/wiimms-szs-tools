@@ -98,3 +98,21 @@ DRAG-BLUE-SHELL	= %u
 
 THCLOUD-TIME	= %u # %.2fs
 
+# Since build 34, LE-CODE supports texture hacks for original Nintendo tracks
+# and arenas. This new feature can be disabled by value LE$DISABLE (default)
+# or enabled by value LE$ENABLE. Additonally you can append »|LE$ALTERABLE«
+# to allow the user to enable or disable this feature by controller cheat
+# codes. Append »|LE$EXCLUDE« to exclude the original track from the random
+# selection.
+
+BT-TEXTURES	= %s
+VS-TEXTURES	= %s
+
+# Disable (0) or enable (1) the blocking of recent texture hacks. If disabled
+# all online players select always the same texture variant. If enabled, then
+# a texture variant will be blocked for the next 3 races. However, this has
+# the disadvantage that players with different pasts may select different
+# variants. But this should go away after a few races.
+
+BLOCK-TEXTURES	= %u
+

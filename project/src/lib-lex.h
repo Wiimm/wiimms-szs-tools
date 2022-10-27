@@ -396,6 +396,7 @@ typedef struct lex_t
     ccp			fname;		// alloced filename of loaded file
     FileAttrib_t	fatt;		// file attribute
     file_format_t	fform;		// FF_LEX | FF_LEX_TXT
+    bool		check_only;	// true: analysing or checking the file
     bool		develop;	// true: enable developer mode
     bool		modified;	// true: modified after loading
 

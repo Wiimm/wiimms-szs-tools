@@ -68,7 +68,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x002 */
-	{ "Psea", "The sea on <small>GCN</small> Peach Beach; for details see Object/Psea.",
+	{ "Psea", "The sea on GCN Peach Beach; for details see Object/Psea.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -82,7 +82,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{203,-1,-1}, "lensFX",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x004 */
-	{ "venice_nami", "The rising and dropping sea on Delfino Pier. It requires `pocha' if the player can interact with it, or else the game will freeze upon respawning. This object goes through five stages before it ends at its final height given in setting 2. Stages 1, 3 and 5 are active until a target height is reached, stages 2 and 4 are active for a given time period. The object has an ongoing additional cyclus of rising and dropping between -80 and 80 added to its current height. All target heights are relative to the placement height, the rising speed is in units per frame.",
+	{ "venice_nami", "The rising and dropping sea on Delfino Pier. It requires `pocha' if the player can interact with it, or else the game will freeze upon respawning. Slot A1.2 enables its SFX. This object goes through five stages before it ends at its final height given in setting 2. Stages 1, 3 and 5 are active until a target height is reached, stages 2 and 4 are active for a given time period. The object has an ongoing additional cyclus of rising and dropping between -80 and 80 added to its current height. All target heights are relative to the placement height, the rising speed is in units per frame.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_M_ARENA,
 		obj_charact_a,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -237,7 +237,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "[?] *unknown*",
 		  "[?] *unknown*" }},
     /* 0x017 */
-	{ "ice", "Generates ice around the player when respawned after falling in an icy water fall boundary flag; the location does not matter, the ice effect is always enabled. This object can be used to enable tracks for slot 6.1, but it only has impact in combination with an icy boundary flag. In this case, it only works on slot 6.1.",
+	{ "ice", "Generates ice around the player when respawned after falling in an icy water fall boundary flag; the location does not matter, the ice effect is always enabled. The ice's scale and position for each vehicle is defined in kartPartsDispParam.bin and bikePartsDispParam.bin. This object can be used to enable tracks for slot 6.1, but it only has impact in combination with an icy boundary flag. In this case, it only works on slot 6.1.",
 		OBF_OPTIONAL | OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -377,28 +377,28 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x06b */
-	{ "gnd_wave1", "Object not used in any track. Blue object that makes a wave animation. If CPUs touch down the object, they disappear.",
+	{ "gnd_wave1", "Object not used in any track. Blue object that makes a wave animation.",
 		OBF_OBJFLOW,
 		obj_charact,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x06c */
-	{ "gnd_wave2", "Object not used in any track. Yellow object that makes a wave animation. If CPUs touch down the object, they disappear.",
+	{ "gnd_wave2", "Object not used in any track. Yellow object that makes a wave animation.",
 		OBF_OBJFLOW,
 		obj_charact,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x06d */
-	{ "gnd_wave3", "Object not used in any track. Orange object that makes a wave animation. If CPUs touch down the object, they disappear.",
+	{ "gnd_wave3", "Object not used in any track. Orange object that makes a wave animation.",
 		OBF_OBJFLOW,
 		obj_charact,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x06e */
-	{ "gnd_wave4", "Object not used in any track. Blue object that makes a wave animation. If CPUs touch down the object, they disappear.",
+	{ "gnd_wave4", "Object not used in any track. Blue object that makes a wave animation.",
 		OBF_OBJFLOW,
 		obj_charact,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -430,7 +430,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{73,-1,-1}, "KmoonZ(B)",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x072 */
-	{ "sunDS", "The Angry Sun from <small>DS</small> Desert Hills. It changes point of view and rotation of the crown according to player's position. Route Setting 2 controls the behavior depending on the value X: X < 30 (1E in hex) → Stays for X/60 seconds X ≥ 30 (1E in hex) → Drops a `FireSnake' staying for X/60 seconds. In both cases, the dropping animation is viewed; if the route start point is set to drop, it will drop at the second \"lap\" of the route. Only slots 3.1, 4.2, 6.2, and 7.1 support this object.",
+	{ "sunDS", "The Angry Sun from DS Desert Hills. It changes point of view and rotation of the crown according to player's position. Route Setting 2 controls the behavior depending on the value X: X < 30 (1E in hex) → Stays for X/60 seconds X ≥ 30 (1E in hex) → Drops a `FireSnake' staying for X/60 seconds. In both cases, the dropping animation is viewed; if the route start point is set to drop, it will drop at the second \"lap\" of the route. Only slots 3.1, 4.2, 6.2, and 7.1 support this object.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -456,7 +456,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x075 */
-	{ "ItemDirect", "Object used in tournaments (Daisy Circuit and <small>SNES</small> Battle Course 4). Can be used to place an item directly onto the track; they will not show up in Time Trials. You must not place more than 11 of these in a track; otherwise, your track will freeze or hang in online play.",
+	{ "ItemDirect", "Object used in tournaments (Daisy Circuit and SNES Battle Course 4). Can be used to place an item directly onto the track; they will not show up in Time Trials. You must not place more than 11 of these in a track; otherwise, your track will freeze or hang in online play.",
 		OBF_OBJFLOW,
 		obj_charact,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -464,7 +464,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{ "0 = Green Shell 1 = Red Shell 2 = Banana 3 = Mushroom 4 = Star",
 		  0, 0, 0, 0, 0, 0, 0 }},
     /* 0x076 */
-	{ "s_itembox", "Item box that acts similarly to a placed item. It moves in conjunction with most moving objects and is normally locked in a relative Y-position, moving along with the object's behavior. Otherwise, it typically phases through object collision altogether.  Some interactions might be slot specific, such as with `quicksand'. When placed high without an object underneath, it falls until it reaches the ground, and when placed on a steep surface, it falls down the slope, but can sometimes cause a crash due to unknown reasons.",
+	{ "s_itembox", "Item box that acts similarly to a placed item. It moves in conjunction with most moving objects and is normally locked in a relative Y-position, moving along with the object's behavior. Otherwise, it typically phases through object collision altogether.  Some interactions might be slot specific, such as with `quicksand'. When placed high without an object underneath, it falls until it reaches the ground, and when placed on a steep surface, it falls down the slope, but can sometimes cause a crash due to unknown reasons if used in this way. For more information, see the Moving Terrain page.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_SOLID | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK | OBF_M_ARENA | OBF_ITEMBOX,
 		obj_charact_s_ta,
 		&settings_format_uxxu, &settings_format_uuuu,
@@ -578,7 +578,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Route start point",
 		  0, 0, 0 }},
     /* 0x0ca */
-	{ "MashBalloonGC", "Air balloon as seen in <small>GCN</small> Mario Circuit. It has an assigned route but also floats from Y to Y. It turns to face the direction it is traveling in.",
+	{ "MashBalloonGC", "Air balloon as seen in GCN Mario Circuit. It has an assigned route but also floats from Y to Y. It turns to face the direction it is traveling in.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK | OBF_F_OTHER,
 		obj_charact_r_to,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -587,7 +587,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Max Y difference",
 		  0, 0, 0, 0, 0, 0 }},
     /* 0x0cb */
-	{ "WLwallGC", "Horizontal moving Piranha Plant wall from <small>GCN</small> Waluigi Stadium. It moves like a sine function (inside → outside → inside); normally combined with `WLdokanGC'.",
+	{ "WLwallGC", "Horizontal moving Piranha Plant wall from GCN Waluigi Stadium. It moves like a sine function (inside → outside → inside); normally combined with `WLdokanGC'.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_KCL | OBF_OBJFLOW | OBF_SOLID | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -609,14 +609,14 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Time of pause",
 		  0, 0, 0, 0, 0 }},
     /* 0x0cd */
-	{ "basabasa", "Swoopers that follow a route. When touched, they act like a wall. They are released as groups which can be edited in any way.",
+	{ "basabasa", "Swoops that follow a route. When touched, they act like a wall. They are released as groups which can be edited in any way.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_SOLID | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{145,-1,-1}, "basabasa(B)",
 		{ "Speed in units per 1/60 seconds",
 		  "Delay until start of the next group in 1/60 seconds. Multiple groups can be on the way",
-		  "Number of bats per group",
+		  "Number of Swoops per group",
 		  "How far they can get off the route (unknown values)",
 		  "Maximum height",
 		  "Distance between the bats in the same group",
@@ -723,7 +723,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Time until the fire goes out",
 		  0, 0, 0, 0 }},
     /* 0x0d7 */
-	{ "penguin_s", "Small penguin from <small>N64</small> Sherbet Land. It creates a symmetrical copy of itself under the ground to simulate an ice reflection. Route Setting 1: 0 = Default; 1 = Glide; 2 = Animation faster; 3 = Default. Route Setting 2 describes the speed when Route Setting 1 ≠ 0, but always requires a value ≠ 0. Slot 6.1 enables its SFX.",
+	{ "penguin_s", "Small penguin from N64 Sherbet Land. It creates a symmetrical copy of itself under the ground to simulate an ice reflection. Route Setting 1: 0 = Default; 1 = Glide; 2 = Animation faster; 3 = Default. Route Setting 2 describes the speed when Route Setting 1 ≠ 0, but always requires a value ≠ 0. Slot 6.1 enables its SFX.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_BRASD | OBF_OBJFLOW | OBF_SOLID | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -731,7 +731,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{ "Speed",
 		  0, 0, 0, 0, 0, 0, 0 }},
     /* 0x0d8 */
-	{ "penguin_m", "Medium penguin from <small>N64</small> Sherbet Land. Slot 6.1 enables its SFX.",
+	{ "penguin_m", "Medium penguin from N64 Sherbet Land. Slot 6.1 enables its SFX.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_BRASD | OBF_OBJFLOW | OBF_SOLID | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -742,7 +742,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  0, 0, 0, 0,
 		  "LE-CODE or special cheat code required: 0: normal behavior 1: custom \"mushroom car\" behavior developed by kHacker35000vr." }},
     /* 0x0d9 */
-	{ "penguin_l", "Large penguin from <small>N64</small> Sherbet Land.",
+	{ "penguin_l", "Large penguin from N64 Sherbet Land.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_OBJFLOW | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -777,7 +777,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x0dd */
-	{ "boble", "Lava bubble from <small>GBA</small> Bowser Castle 3. Route Setting 1 controls the speed (gets added to S1), Route Setting 2 = 1 means that the model flips horizontally.",
+	{ "boble", "Lava bubble from GBA Bowser Castle 3. Route Setting 1 controls the speed (gets added to S1), Route Setting 2 = 1 means that the model flips horizontally.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_OBJFLOW | OBF_SOLID | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -841,7 +841,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{ "Speed",
 		  0, 0, 0, 0, 0, 0, 0 }},
     /* 0x0e5 */
-	{ "crab", "Crab from <small>GBA</small> Shy Guy Beach. Route Setting 1 sets the time in 1/60 seconds of stop in that point.",
+	{ "crab", "Crab from GBA Shy Guy Beach. Route Setting 1 sets the time in 1/60 seconds of stop in that point.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_BRASD | OBF_OBJFLOW | OBF_SOLID | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -877,7 +877,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Time of pause",
 		  0, 0, 0, 0, 0 }},
     /* 0x0e9 */
-	{ "Hwanwan", "Route-following Chain Chomp from <small>DS</small> Peach Gardens. Hwanwan and wanwan only work together if the effect files are absent. Route Setting 2 = 1 plays a rollover animation, originally used within a tournament in Rainbow Road.",
+	{ "Hwanwan", "Route-following Chain Chomp from DS Peach Gardens. Hwanwan and wanwan only work together if the effect files are absent. Route Setting 2 = 1 plays a rollover animation, originally used within a tournament in Rainbow Road.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_OBJFLOW | OBF_SOLID | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -916,7 +916,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{ "Start speed",
 		  0, 0, 0, 0, 0, 0, 0 }},
     /* 0x0ed */
-	{ "bird", "Route-following eagle from <small>GCN</small> DK Mountain.",
+	{ "bird", "Route-following eagle from GCN DK Mountain.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -931,7 +931,8 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		&settings_format_uuuu, &settings_format_uuuu,
 		{192,-1,-1}, "itembox(B)",
 		{ "Cycle time in 1/60 seconds",
-		  0, 0, 0,
+		  0, 0,
+		  "[?] 0 = Enable shadow 1 = Disable shadow",
 		  "Start delay in 1/60 seconds",
 		  0, 0, 0 }},
     /* 0x0ef */
@@ -970,7 +971,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x0f3 */
-	{ "K_bomb_car1", "Object not used in any track.",
+	{ "K_bomb_car1", "Object not used in any track. Black Bomb car used in one of the Luigi Circuit tournaments.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_COMMONOBJ | OBF_OBJFLOW | OBF_SOLID | OBF_FNAME,
 		obj_charact_s,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -1041,7 +1042,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{171,-1,-1}, "dummy",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x12e */
-	{ "dokan_sfc", "Pipe from Luigi Circuit and <small>SNES</small> Mario Circuit 3.",
+	{ "dokan_sfc", "Pipe from Luigi Circuit and SNES Mario Circuit 3.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_SCALE | OBF_ROTATE | OBF_OBJFLOW | OBF_SOLID | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -1845,7 +1846,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Bouncing factor",
 		  0, 0, 0, 0 }},
     /* 0x199 */
-	{ "sanbo", "Pokey from Dry Dry Desert and DS Desert Hills. Route Setting 1 sets the time in 1/60 seconds of stop in that point. Its SFX is exclusive to certain slots.",
+	{ "sanbo", "Pokey from Dry Dry Desert and DS Desert Hills. Route Setting 1 sets the time in 1/60 seconds to stop at that point. Some of its SFX may be exclusive to certain slots. Requires the bones joint1, joint2, joint3, and joint4 in the BRRES.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_BRASD | OBF_OBJFLOW | OBF_SOLID | OBF_ALWAYS_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_r_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -1899,7 +1900,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{-1,-1,-1}, 0,
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x19f */
-	{ "pile", "Object not used in any track.",
+	{ "pile", "Object not used in any track. Chain Chomp's wooden pole seen in one of the Mario Circuit tournaments.",
 		OBF_OBJECT | OBF_NO_FILE | OBF_OBJFLOW | OBF_SOLID | OBF_FNAME,
 		obj_charact_s,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -1970,10 +1971,10 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		obj_charact_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{33,-1,-1}, "Epropeller(BE)",
-		{ "Rotations per 12 seconds",
+		{ "Rotations per 12 seconds if S8 = 0. Rotations per 12*S8 seconds if S8 > 0 (needs LE-CODE or this cheat code)",
 		  "Direction: 0 = Clockwise 1 = Counterclockwise",
 		  0, 0, 0, 0, 0,
-		  "[?] Unused in the normal game. With LE-CODE or this cheat code this setting can be used to change the speed to S1/(30*S8) instead of S1/30, allowing for slower Epropellers." }},
+		  "[?] Unused in the normal game. With LE-CODE or this cheat code this setting becomes a multiplicative factor applied in Setting 1." }},
     /* 0x1a7 */
 	{ "dc_pillar_c", "Object not used in any track.",
 		OBF_OBJFLOW | OBF_SOLID,
@@ -1992,7 +1993,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Units of distance from position point to landing point following the Y angulation.",
 		  0, 0, 0, 0, 0 }},
     /* 0x1a9 */
-	{ "honeBall", "Object not used in regular tracks. Used in the <small>N64</small> Bowser's Castle tournament with Dry Bowser. For use of this object in Mission Mode, at least one CPU must be defined. The location of the object does not matter. If more than one CPU is defined, it will cause weird behavior. If more than one CPU exists in a mission with this object, only the one that is the  closest to the player will fire at them. Occasionally, some will try and fire at the same time, but this causes them to spin out repeatedly until another fireball is fired. Regardless of how many CPUs are defined in a mission with this object, or how many times this object is added, only one of the CPUs will fire at the player.",
+	{ "honeBall", "Object not used in regular tracks. Used in the N64 Bowser's Castle tournament with Dry Bowser. For use of this object in Mission Mode, at least one CPU must be defined. The location of the object does not matter. If more than one CPU is defined, it will cause weird behavior. If more than one CPU exists in a mission with this object, only the one that is the  closest to the player will fire at them. Occasionally, some will try and fire at the same time, but this causes them to spin out repeatedly until another fireball is fired. Regardless of how many CPUs are defined in a mission with this object, or how many times this object is added, only one of the CPUs will fire at the player.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_COMMONOBJ | OBF_OBJFLOW | OBF_SOLID | OBF_FNAME,
 		obj_charact_s,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -2195,7 +2196,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Size factor",
 		  0, 0, 0, 0, 0 }},
     /* 0x1fe */
-	{ "TwistedWay", "Moving section from Bowser's Castle.",
+	{ "TwistedWay", "Moving section from Bowser's Castle. Cannot be rotated or scaled.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -2242,14 +2243,14 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{50,-1,-1}, "FlamePoleEff",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x204 */
-	{ "aurora", "Moving section from Rainbow Road. The object collision is not affected by rotation, so all rotation values need to be 0 in order to work properly.",
+	{ "aurora", "Moving section from Rainbow Road. Cannot be rotated or scaled.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_t,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{143,-1,-1}, "aurora(B)",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x205 */
-	{ "venice_saku", "Fence gate from Delfino Pier. Using multiple of this object appears to cause all of them to rise simultaneously.",
+	{ "venice_saku", "Fence gate from Delfino Pier. Slot A1.2 enables its SFX. Using multiple of this object appears to cause all of them to rise simultaneously.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_KCL | OBF_OBJFLOW | OBF_SOLID | OBF_NO_ROUTE | OBF_FNAME | OBF_M_ARENA,
 		obj_charact_s_a,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -2259,7 +2260,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Speed that it moves up",
 		  0, 0, 0, 0, 0 }},
     /* 0x206 */
-	{ "casino_roulette", "The rotating parts of Chain Chomp Wheel; when used with KCL flag 0x1D, the road slowly rotates around the object counterclockwise. X, Y and Z positions and rotations need to be 0 and scales need to be 1 in order to work properly. Additionally, the file must have a texture animation named \"dushBoard\" (without quotations), or else the game will crash. Arena slot 1.4 enables functionality that causes players to additionally rotate the direction they are facing on both the object by itself and on KCL flag 0x1D. For more information: Moving Terrain",
+	{ "casino_roulette", "The rotating parts of Chain Chomp Wheel; when used with KCL flag 0x1D, the road slowly rotates around the object counterclockwise. X, Y and Z positions and rotations need to be 0 and scales need to be 1 in order to work properly. Additionally, the file must have a texture animation named \"dushBoard\" (without quotations), or else the game will crash. Arena slot 1.4 enables functionality that causes players to additionally rotate the direction they are facing on both the object by itself and on KCL flag 0x1D. For more information, see the Moving Terrain page.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_KCL | OBF_OBJFLOW | OBF_SOLID | OBF_NO_ROUTE | OBF_FNAME | OBF_M_ARENA,
 		obj_charact_s_a,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -2294,7 +2295,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Start delay before it starts to grow in 1/60 seconds (starts 4 seconds before the timer in-game)",
 		  0, 0, 0, 0, 0 }},
     /* 0x20a */
-	{ "venice_hasi", "Bridge from Delfino Pier. Animation capped at 30 frames. S3 might be a relic of old animation length.",
+	{ "venice_hasi", "Bridge from Delfino Pier. Slot A1.2 enables its SFX (includes a bell sound). Animation capped at 30 frames. S3 might be a relic of old animation length.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_KCL | OBF_OBJFLOW | OBF_SOLID | OBF_NO_ROUTE | OBF_FNAME | OBF_M_ARENA,
 		obj_charact_s_a,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -2304,14 +2305,15 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		  "Unknown",
 		  0, 0, 0, 0, 0 }},
     /* 0x20b */
-	{ "venice_gondola", "Object not used in any track.",
+	{ "venice_gondola", "Object not used in any track. A gondola ship that would have traversed the outside of Delfino Pier. This object can be seen briefly in the course selection screen video for Delfino Pier. The game places a Pianta waving at a fixed position on top of the object. No graphic files for this object exist in the final game. This object is solid and must have a route. If the player touches the top, they will bounce forwards. In addition, the bone of its model must be named hune.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_NO_FILE | OBF_OBJFLOW | OBF_SOLID | OBF_FNAME | OBF_MULTI_FNAME,
 		obj_charact_s,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{248,210,-1}, "venice_gondola;monte_a(B)",
-		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
+		{ "Speed",
+		  0, 0, 0, 0, 0, 0, 0 }},
     /* 0x20c */
-	{ "quicksand", "Thwomp Desert controller. Arena slot 1.5 enables its SFX. `s_itembox' is affected by the push/pull factor on slots other than arena slot 1.5, causing buggy interactions. ",
+	{ "quicksand", "Thwomp Desert controller. Arena slot 1.5 enables its SFX. `s_itembox' is affected by the push/pull factor on slots other than arena slot 1.5, causing buggy interactions. Cannot be scaled, due to hard-coded collision.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_EFFECT | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_MULTI_FNAME | OBF_M_ARENA,
 		obj_charact_a,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -2519,21 +2521,21 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{26,-1,-1}, "DonkyCannonGC(BED)",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x25a */
-	{ "BeltEasy", "Second set of belts from Toad's Factory.  For more information: Moving Terrain",
+	{ "BeltEasy", "Second set of belts from Toad's Factory.  For more information, see the Moving Terrain page.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_t,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{5,-1,-1}, "BeltEasy(B)",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x25b */
-	{ "BeltCrossing", "First set of belts from Toad's Factory.  For more information: Moving Terrain",
+	{ "BeltCrossing", "First set of belts from Toad's Factory.  For more information, see the Moving Terrain page.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_t,
 		&settings_format_uuuu, &settings_format_uuuu,
 		{2,-1,-1}, "BeltCrossing(B)",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x25c */
-	{ "BeltCurveA", "Third set of belts from Toad's Factory. Object is not scalable.  For more information: Moving Terrain",
+	{ "BeltCurveA", "Third set of belts from Toad's Factory. Object is not scalable.  For more information, see the Moving Terrain page.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_OBJFLOW | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -2550,7 +2552,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{4,-1,-1}, "BeltCurveB",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x25e */
-	{ "escalator", "Coconut Mall escalator. For more information: Moving Terrain",
+	{ "escalator", "Coconut Mall escalator. For more information, see the Moving Terrain page.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_KCL | OBF_OBJFLOW | OBF_SOLID | OBF_NO_ROUTE | OBF_FNAME | OBF_M_TRACK,
 		obj_charact_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,
@@ -2570,7 +2572,7 @@ const ObjectInfo_t ObjectInfo[N_KMP_GOBJ] =
 		{27,-1,-1}, "DonkyCannon_wii(BED)",
 		{ 0, 0, 0, 0, 0, 0, 0, 0 }},
     /* 0x260 */
-	{ "escalator_group", "2 Time Escalators from Coconut Mall. One of the two escalators uses the given speed, the other uses a multiplied speed of -1 (negative speed), so they always run in opposite directions. For more information: Moving Terrain",
+	{ "escalator_group", "2 Time Escalators from Coconut Mall. One of the two escalators uses the given speed, the other uses a multiplied speed of -1 (negative speed), so they always run in opposite directions. For more information, see the Moving Terrain page.",
 		OBF_OBJECT | OBF_UNIQUE | OBF_BRRES | OBF_KCL | OBF_OBJFLOW | OBF_SOLID | OBF_NO_ROUTE | OBF_FNAME | OBF_MULTI_FNAME | OBF_M_TRACK,
 		obj_charact_s_t,
 		&settings_format_uuuu, &settings_format_uuuu,

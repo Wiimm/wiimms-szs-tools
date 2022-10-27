@@ -814,6 +814,11 @@
 		"Read in a PREFIX file and replace the internal prefix database with the content."
 		" https://ct.wiimm.de/export/prefix is the authoritative source for this." },
 
+  { T_OPT_GP,	"LOAD_CATEGORY", "load-category|loadcategory",
+		"file",
+		"Read in a CATEGORY file and replace the internal category database with the content."
+		" https://ct.wiimm.de/export/category is the authoritative source for this." },
+
   { T_OPT_CP,	"PLUS",		"plus",
 		"chars",
 		"If a name begins with a plus sign, then all characters up to the first space"
@@ -827,6 +832,14 @@
 		" The first character from the second part determines the lower value."
 		" If it is in parameter CHARS then the position determines the value,"
 		" otherwise the ASCII value to which 500 is added." },
+
+  { T_OPT_CP,	"SPLIT",	"split",
+		"num",
+		"Only one line with the standardized name is output."
+		" The components are divided into NUM (1-13) parts with predifined format strings."
+		" The pipe sign (@|@) is used as a separator."
+		" An alternative output format can be defined with the {--printf} option."
+		"\1 See https://szs.wiimm.de/opt/split for details." },
 
   { T_OPT_CP,	"PRINTF",	"printf",
 		"format",
@@ -3104,7 +3117,9 @@
 
   { T_CMD_BEG,	"SPLIT",	0,0,0 },
   { T_COPT,	"LOAD_PREFIX",	0,0,0 },
+  { T_COPT,	"LOAD_CATEGORY",0,0,0 },
   { T_COPT,	"PLUS",		0,0,0 },
+  { T_COPT,	"SPLIT",	0,0,0 },
   { T_COPT,	"PRINTF",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
@@ -3514,6 +3529,7 @@
 		"Log patching." },
   { T_COPT,	"BRIEF",	0,0,
 		"Suppress min/max counts on dumps." },
+  { T_COPT,	"DE",		0,0,0 },
 
 //
 ///////////////////////////////////////////////////////////////////////////////
