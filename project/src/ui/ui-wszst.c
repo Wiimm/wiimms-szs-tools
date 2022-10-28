@@ -7852,7 +7852,8 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"ANALYZE",
 	"ANA",
 	"wszst ANALYZE [source]...",
-	"Analyse track files and print results in machine readable format.",
+	"Analyse track files and LE-CODE binaries. Print the results in"
+	" machine-readable form. The output format is selected by options.",
 	0,
 	16,
 	option_tab_cmd_ANALYZE,

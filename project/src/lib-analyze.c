@@ -664,46 +664,51 @@ enumError ExecAnalyzeLECODE ( analyze_param_t *ap )
     AnalyzeLEBinary(&ana,ap->szs.data,ap->szs.size);
 
     const u_usec_t duration_usec = GetTimerUSec() - start_usec;
-
+    const bool valid = ( ana.valid & LE_HEAD_VALID ) != 0;
 
     //--- print result
 
     PrintHeaderAP(ap,"lecode");
-    PrintScriptVars(&ap->ps,0,
-	"phase=%d\n"
-	"version=%d\n"
-	"build=%d\n"
-	"region=\"%s\"\n"
-	"debug=%d\n"
-	"header_size=%d\n"
-	"file_size=%d\n"
-	"creation_time=\"%u, %s\"\n"
-	"edit_time=\"%u, %s\"\n"
-	"required_szs_tool=\"%u, %s\"\n"
-	"edit_by_szs_tool=\"%u, %s\"\n"
+    if (valid)
+    {
+	PrintScriptVars(&ap->ps,0,
+		"phase=%d\n"
+		"version=%d\n"
+		"build=%d\n"
+		"region=\"%s\"\n"
+		"debug=%d\n"
+		"header_size=%d\n"
+		"file_size=%d\n"
+		"creation_time=\"%u, %s\"\n"
+		"edit_time=\"%u, %s\"\n"
+		"required_szs=\"%u, %s\"\n"
+		"recommended_szs=\"%u, %s\"\n"
+		"edit_by_szs=\"%u, %s\"\n"
 
-	,ana.head->phase
-	,ana.header_vers
-	,ntohl(ana.head->build_number)
-	,ana.head->region == 'P' ? "PAL"
-	:ana.head->region == 'E' ? "USA"
-	:ana.head->region == 'J' ? "Japan"
-	:ana.head->region == 'K' ? "Korea"
-	: "?"
-	,ana.head->debug == 'D'
-	,ana.header_size
-	,ntohl(ana.head->file_size)
-	,ana.creation_time
-	,ana.creation_time ? PrintTimeByFormat("%F %T %Z",ana.creation_time) : "-"
-	,ana.edit_time
-	,ana.edit_time ? PrintTimeByFormat("%F %T %Z",ana.edit_time) : "-"
-	,ana.szs_version
-	,ana.szs_version ? DecodeVersion(ana.szs_version) : "-"
-	,ana.edit_version
-	,ana.edit_version ? DecodeVersion(ana.edit_version) : "-"
-	);
-
-    PrintFooterAP(ap,ana.valid>0,duration_usec,0);
+		,ana.head->phase
+		,ana.header_vers
+		,ntohl(ana.head->build_number)
+		,ana.head->region == 'P' ? "PAL"
+		:ana.head->region == 'E' ? "USA"
+		:ana.head->region == 'J' ? "Japan"
+		:ana.head->region == 'K' ? "Korea"
+		: "?"
+		,ana.head->debug == 'D'
+		,ana.header_size
+		,ntohl(ana.head->file_size)
+		,ana.creation_time
+		,ana.creation_time ? PrintTimeByFormat("%F %T %Z",ana.creation_time) : "-"
+		,ana.edit_time
+		,ana.edit_time ? PrintTimeByFormat("%F %T %Z",ana.edit_time) : "-"
+		,ana.szs_required
+		,ana.szs_required ? DecodeVersion(ana.szs_required) : "-"
+		,ana.szs_recommended
+		,ana.szs_recommended ? DecodeVersion(ana.szs_recommended) : "-"
+		,ana.edit_version
+		,ana.edit_version ? DecodeVersion(ana.edit_version) : "-"
+		);
+    }
+    PrintFooterAP(ap,valid,duration_usec,0);
     ResetLEAnalyze(&ana);
     return ERR_OK;
 }

@@ -2302,6 +2302,8 @@ static enumError cmd_sha1()
 
 static enumError cmd_analyze()
 {
+    SetupPager();
+
     static ccp def_path = "\1P/\1F\1?T";
     CheckOptDest("-",false);
     char dest[PATH_MAX];

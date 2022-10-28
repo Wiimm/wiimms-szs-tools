@@ -367,7 +367,9 @@
 
   { T_DEF_CMD,	"ANALYZE",	"ANALYZE|ANA|ANALYSE",
 		    "wszst ANALYZE [source]...",
-		"Analyse track files and print results in machine readable format." },
+		"Analyse track files and LE-CODE binaries."
+		" Print the results in machine-readable form."
+		" The output format is selected by options." },
 
   { T_DEF_CMD,	"SPLIT",	"SPLIT",
 		    "wszst SPLIT [source]...",

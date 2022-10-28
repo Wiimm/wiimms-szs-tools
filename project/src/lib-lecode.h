@@ -446,9 +446,9 @@ typedef struct le_binary_head_v4_t
 __attribute__ ((packed)) le_binary_head_v4_t;
 
 //-----------------------------------------------------------------------------
-// [[le_binary_head_v5_t]]
+// [[le_binary_head_v5_34_t]]
 
-typedef struct le_binary_head_v5_t
+typedef struct le_binary_head_v5_34_t
 {
  /*00*/  char	magic[4];	// LE_BINARY_MAGIC
  /*04*/  u32	version;	// always 5 for v5
@@ -462,13 +462,46 @@ typedef struct le_binary_head_v5_t
  /*1e*/  u8	phase;		// >0: PHASE (usually 2)
  /*1f*/  char	unknown_1f;
 
- /*20*/  u32	szs_version;	// minimal encoded version number of szs-tools required to edit
+ /*20*/  u32	szs_required;	// minimal encoded version number of szs-tools required to edit
  /*24*/  u32	edit_version;	// >0: encoded version number of szs-tools, that did last edit
  /*28*/	 u32	head_size;	// size of file header
  /*2c*/	 u32	creation_time;	// unixtime of LE-CODE creation
  /*30*/	 u32	edit_time;	// >0: unixtime of last LE-CODE edit
+ /*34*/
 }
-__attribute__ ((packed)) le_binary_head_v5_t;
+__attribute__ ((packed)) le_binary_head_v5_34_t;
+
+//-----------------------------------------------------------------------------
+// [[le_binary_head_v5_38_t]]
+
+typedef struct le_binary_head_v5_38_t
+{
+ /*00*/  char	magic[4];	// LE_BINARY_MAGIC
+ /*04*/  u32	version;	// always 5 for v5
+ /*08*/  u32	build_number;	// current code version
+ /*0c*/  u32	base_address;	// memory address of binary (destination)
+ /*10*/  u32	entry_point;	// memory address (prolog function)
+ /*14*/  u32	file_size;	// size of complete file
+ /*18*/  u32	off_param;	// offset of LPAR section
+ /*1c*/  char	region;		// one of: P, E, J, K
+ /*1d*/  char	debug;		// one of: D (debug) or R (release)
+ /*1e*/  u8	phase;		// >0: PHASE (usually 2)
+ /*1f*/  char	unknown_1f;
+
+ /*20*/  u32	szs_required;	// minimal encoded version number of szs-tools required to edit
+ /*24*/  u32	edit_version;	// >0: encoded version number of szs-tools, that did last edit
+ /*28*/	 u32	head_size;	// size of file header
+ /*2c*/	 u32	creation_time;	// unixtime of LE-CODE creation
+ /*30*/	 u32	edit_time;	// >0: unixtime of last LE-CODE edit
+ /*34*/  u32	szs_recommended;// recommended version number of szs-tools to manage LE binaries
+ /*38*/
+}
+__attribute__ ((packed)) le_binary_head_v5_38_t;
+
+//-----------------------------------------------------------------------------
+// [[le_binary_head_v5_t]]
+
+typedef le_binary_head_v5_38_t le_binary_head_v5_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -833,7 +866,8 @@ typedef struct le_analyze_t
     le_region_t	region;		// one of LEREG_*
     u32		creation_time;	// unixtime of LE-CODE creation
     u32		edit_time;	// >0: unixtime of last LE-CODE edit
-    uint	szs_version;	// minimal encoded version number of szs-tools required to edit
+    uint	szs_required;	// minimal encoded version number of szs-tools required to edit
+    uint	szs_recommended;// >0: recommended version number of szs-tools to manage LE binaries
     uint	edit_version;	// >0: encoded version number of szs-tools, that did last edit
 
     const u8	*data;		// pointer to raw data

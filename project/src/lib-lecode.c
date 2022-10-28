@@ -79,8 +79,8 @@ ccp GetLecodeSupportWarning ( const le_analyze_t *ana )
     DASSERT(ana);
     return !( ana->valid & LE_HEAD_VALID )
 	? "LE-CODE file header is invalid"
-	: GetEncodedVersion() < ana->szs_version
-	? PrintCircBuf("SZS Tools v%s or younger required",DecodeVersion(ana->szs_version))
+	: GetEncodedVersion() < ana->szs_required
+	? PrintCircBuf("SZS Tools v%s or younger required",DecodeVersion(ana->szs_required))
 	: IsLecodeSupported(ana->valid)
 	? 0
 	: PrintCircBuf("LE-CODE v%u is not supported",ana->header_vers);
@@ -1773,14 +1773,17 @@ enumError AnalyzeLEBinary
 	break;
 
      case 5:
-	if ( ana->data_size > sizeof(le_binary_head_v5_t) )
+	if ( ana->data_size > sizeof(le_binary_head_v5_34_t) )
 	{
 	    off_param		=  ntohl(ana->head_v5->off_param);
-	    ana->szs_version	=  ntohl(ana->head_v5->szs_version);
+	    ana->szs_required	=  ntohl(ana->head_v5->szs_required);
 	    ana->edit_version	=  ntohl(ana->head_v5->edit_version);
 	    ana->header_size	=  ntohl(ana->head_v5->head_size);
 	    ana->creation_time	=  ntohl(ana->head_v5->creation_time);
 	    ana->edit_time	=  ntohl(ana->head_v5->edit_time);
+
+	    if ( ana->header_size > offsetof(le_binary_head_v5_t,szs_recommended) )
+		ana->szs_recommended	=  ntohl(ana->head_v5->szs_recommended);
 
 	    if ( ana->edit_version != 0x32303232 ) // first 4 bytes of "2022-10-23" => invalid
 		ana->valid	|= LE_HEAD_VALID | LE_HEAD_KNOWN;
@@ -1797,7 +1800,7 @@ enumError AnalyzeLEBinary
 	break;
     }
 
-    if ( GetEncodedVersion() >= ana->szs_version )
+    if ( GetEncodedVersion() >= ana->szs_required )
 	    ana->valid |= LE_HEAD_VERSION;
 
 
@@ -2921,16 +2924,53 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		"%*s" "Time of last edit: %s\n",
 		indent,"", PrintTimeByFormat("%F %T %Z",ana->edit_time));
 
-	if (ana->szs_version)
+	if ( ana->szs_required || ana->szs_recommended )
 	{
-	    const bool valid = GetEncodedVersion() >= ana->szs_version;
 	    fprintf(f,
-		"%*s" "SZS Tool required: v%s  (current: %sv%s,%s%s)\n"
-		,indent,""
-			,DecodeVersion(ana->szs_version)
-			,valid ? col.success : col.warn, BASE_VERSION
-			,valid ? "ok" : "outdated", col.reset
-		);
+		"%*s" "Current SZS Tool:  v%s\n", indent,"", BASE_VERSION );
+
+	    int fw = 0;
+	    ccp required = 0, recommended = 0;
+
+	    if (ana->szs_required)
+	    {
+		required = DecodeVersion(ana->szs_required);
+		int len = strlen(required);
+		if ( fw < len )
+		     fw = len;
+	    }
+
+	    if (ana->szs_recommended)
+	    {
+		recommended = DecodeVersion(ana->szs_recommended);
+		int len = strlen(recommended);
+		if ( fw < len )
+		     fw = len;
+	    }
+
+	    if (ana->szs_required)
+	    {
+		const bool valid = GetEncodedVersion() >= ana->szs_required;
+		fprintf(f,
+		    "%*s" "Required SZS:      v%-*s (%s%s%s)\n"
+		    ,indent,""
+		    ,fw,required
+		    ,valid ? col.success : col.warn
+		    ,valid ? "ok" : "outdated", col.reset
+		    );
+	    }
+
+	    if (ana->szs_recommended)
+	    {
+		const bool valid = GetEncodedVersion() >= ana->szs_recommended;
+		fprintf(f,
+		    "%*s" "Recommended SZS:   v%-*s (%s%s%s)\n"
+		    ,indent,""
+		    ,fw,recommended
+		    ,valid ? col.success : col.warn
+		    ,valid ? "ok" : "outdated", col.reset
+		    );
+	    }
 	}
 
 	if (ana->edit_version)

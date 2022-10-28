@@ -5189,6 +5189,7 @@ void SetupPrintScriptByOptions ( PrintScript_t *ps )
     InitializePrintScript(ps);
     ps->force_case	= opt_case;
     ps->create_array	= script_array > 0;
+    ps->var_size	= 20;
     ps->var_name	= script_varname ? script_varname : "res";
     ps->var_prefix	= script_varname ? script_varname : "res_";
     ps->eq_tabstop	= 2;

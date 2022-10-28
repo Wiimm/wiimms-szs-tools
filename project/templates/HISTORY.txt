@@ -615,6 +615,27 @@ szs v2.28a r8636 - 2022-08-27
    mistake, only RETORE was recognized so far.
 
 
+szs v2.29a r8691 - 2022-10-27
+
+ - Updated prefix, object and porting databases.
+ - Updated integrated LE-CODE binaries to v4 build 34.
+ - Support of LE-CODE v4.b34 with 8-bits flags and v5.b35 with 16-bits flags.
+ - Added LE-CODE protection against changes by SZS tools that are too old.
+ - LPAR: Support of new features BT-TEXTURES, VS-TEXTURES and BLOCK-TEXTURES.
+ - Bug fix: If creating a LPAR file (by "wlect create lpar" or by decoding),
+   some lines are terminated by LF instead of CR+LF. This could lead to
+   problems with some Windows editors and other Windows programs.
+ - Bug fix: The wildcard ** did not work correctly. The recursion depth was
+   always 1 level higher than specified. So level 0 was never possible.
+   See https://szs.wiimm.de/doc/wildcards#2stars for details.
+ - wszst ANALYZE: Added support for LE-CODE binaries.
+ - wszst ANALYZE: A track can be valid, even if vrcorn_model.brres is missed.
+ - wszst ANALYZE: Support of edit-slot ('e12' or 'ea12').
+ - wszst SPLIT: Added support for "(author1,author2,,editor1,editor2)",
+   LE-CODE flags + group, order by attribute, and for track category.
+ - New file type: MTCAT: Import and export 'MKW Track Category' files.
+
+
 @@MODULE(last-history.txt)@@
 
 
