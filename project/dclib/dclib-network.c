@@ -2908,7 +2908,7 @@ void PrintTranferStatistics
 	char duration_buf[10];
 	if (!duration_info)
 	{
-	    PrintTimerUSec6(duration_buf,sizeof(duration_buf),duration,false);
+	    PrintTimerUSec6(duration_buf,sizeof(duration_buf),duration,0);
 	    duration_info = duration_buf;
 	}
 
@@ -3765,21 +3765,21 @@ char * BufInfoTCPStream
     char connect_usec[7];
     if ( ts->connect_usec )
 	PrintTimerUSec6(connect_usec,sizeof(connect_usec),
-			now_usec - ts->connect_usec, true );
+			now_usec - ts->connect_usec, DC_SFORM_ALIGN );
     else
 	connect_usec[0] = '-', connect_usec[1] = 0;
 
     char receive_usec[7];
     if ( ts->receive_usec )
 	PrintTimerUSec6(receive_usec,sizeof(receive_usec),
-			now_usec - ts->receive_usec, true );
+			now_usec - ts->receive_usec, DC_SFORM_ALIGN );
     else
 	receive_usec[0] = '-', receive_usec[1] = 0;
 
     char send_usec[7];
     if ( ts->send_usec )
 	PrintTimerUSec6(send_usec,sizeof(send_usec),
-			now_usec - ts->send_usec, true );
+			now_usec - ts->send_usec, DC_SFORM_ALIGN );
     else
 	send_usec[0] = '-', send_usec[1] = 0;
 

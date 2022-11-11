@@ -61,6 +61,7 @@
 #include "file-type.h"
 #include "lib-numeric.h"
 #include "lib-mkw-def.h"
+#include "lib-mkw.h"
 
 #if HAVE_XSRC
  #include "xsrc/x-std.h"
@@ -157,7 +158,7 @@ enum
 ccp LibGetErrorName ( int stat, ccp ret_not_found );
 ccp LibGetErrorText ( int stat, ccp ret_not_found );
 
-void SetupPager();
+void SetupPager(void);
 static inline void ClosePager() { CloseStdoutToPager(); }
 
 struct InfoUI_t;

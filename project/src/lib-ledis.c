@@ -72,14 +72,6 @@ static const le_cup_ref_t standard_vs_ref[MKW_N_TRACKS] =
 static const le_cup_ref_t mkwfun_random_ref[MKW_N_LE_RANDOM] =
 	{ 62, 63, 64, 65 };
 
-///////////////////////////////////////////////////////////////////////////////
-
-#if LE_TYPE_MARKERS_ENABLED
-  #define LTT_MARKER_ARENA	0x1000
-  #define LTT_MARKER_TRACK	0x2000
-  #define LTT_MARKER__ALL	0x3000
-#endif
-
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////				helpers			///////////////
@@ -191,10 +183,12 @@ static KeywordTab_t keywords_leo[] =
 
 	{ LEO_IN_LECODE,	"IN-LECODE",	"INLECODE",	0 },
 	 { LEO_IN_LECODE,	"ILECODE",	0,		0 },
+	{ LEO_NO_SLOT,		"NO-SLOT",	"NOSLOT",	0 },
 	{ LEO_BRIEF,		"BRIEF",	0,		0 },
 
 	{ LEO_HELP,		"HELP",	    	"H",		0 },
 
+	{ LEO_CUT_ALL,		"CUT-ALL",	"CUTALL",	0 },
 	{ LEO_CUT_STD,		"CUT-STD",	"CUTSTD",	0 },
 	{ LEO_CUT_CTCODE,	"CUT-CTCODE",	"CUTCTCODE",	0 },
 
@@ -569,7 +563,7 @@ ccp GetNameLSP ( const le_strpar_t *par )
 {
     if (par)
     {
-	ccp name = GetLowerNameLTT(par->opt);
+	ccp name = GetLowerNameLEO(par->opt);
 	if (name)
 	    return name;
 
@@ -652,6 +646,7 @@ void InitializeLECUP ( le_cup_t *lc, uint max_cups, uint tracks_per_cup )
     memset(lc,0,sizeof(*lc));
     lc->max		= max_cups;
     lc->tracks		= tracks_per_cup;
+    lc->first_custom	= tracks_per_cup == 5 ? 2 : 8;
     lc->fill_slot	= -1;
     lc->fill_src	= -1;
     lc->dirty		= true;
@@ -710,6 +705,28 @@ le_cup_ref_t * DefineLECUP ( le_cup_t *lc, uint cup_index )
     ASSERT( cup_index < lc->used );
 
     return lc->list + cup_index * lc->tracks;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int GetIndexByRefLECUP ( const le_cup_t *lc, int cup_ref )
+{
+    if ( !lc || cup_ref <= 0 )
+	return -1;
+	
+    const uint cup = cup_ref / 10 - 1;
+    const uint idx = cup_ref % 10 - 1;
+    return cup < lc->max && idx < lc->tracks ? cup*lc->tracks + idx : -1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+uint GetRefByIndexLECUP ( const le_cup_t *lc, uint cup_index )
+{
+    if ( !lc || cup_index >= lc->max * lc->tracks )
+	return 0;
+    return cup_index / lc->tracks * 10 + cup_index % lc->tracks + 11;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -962,7 +979,7 @@ void SetupLecodeRandomTrackLT ( le_track_t *lt, uint setup_slot )
     if (info)
     {
 	lt->track_status = LTS_ACTIVE;
-	lt->track_type	= LTTY_RANDOM|LTTY_TRACK;
+	lt->track_type	= LTTY_RANDOM|LTTY_TRACK|LTTY_ARENA;
 	lt->cup_slot	= setup_slot - MKW_LE_RANDOM_BEG + 91;
 	lt->property	= 0;
 	lt->music	= MKW_MUSIC_MIN_ID;
@@ -1400,7 +1417,7 @@ ccp GetTextOptLT ( const le_track_t *lt, le_options_t opt, ccp return_on_empty )
 	default:
 	 #if LE_STRING_LIST_ENABLED
 	    if ( ltt >= LTT__LIST_BEG && ltt < LTT__LIST_END )
-		return GetListLT(lt,ltt,return_on_empty);
+		return GetListLT(lt,opt,return_on_empty);
 	 #endif
 	    break;
     }
@@ -1598,7 +1615,7 @@ ccp QuoteTextOptLT ( const le_track_t *lt, le_options_t opt, ccp return_on_empty
 	default:
 	 #if LE_STRING_LIST_ENABLED
 	    if ( ltt >= LTT__LIST_BEG && ltt < LTT__LIST_END )
-		return QuoteListLT(lt,ltt,return_on_empty);
+		return QuoteListLT(lt,opt,return_on_empty);
 	 #endif
 	    break;
     }
@@ -1618,7 +1635,7 @@ void InitializeLD ( le_distrib_t *ld )
 
     ld->is_initialized		= true;
     ld->scan.bt.add_unused	= true;
-    ld->scan.bt.add_unused	= true;
+    ld->scan.vs.add_unused	= true;
     ld->auto_setup		= LAS_DEFAULT;
 
     InitializeLSP(&ld->spar,SetupDefaultLEO());
@@ -1730,13 +1747,13 @@ void AutoSetupLD ( le_distrib_t *ld, le_auto_setup_t auto_setup )
 
 		    if ( i == 3 )
 		    {
-			lt->flags = LEFL_RND_HEAD;
+			lt->flags = G_LEFL_RND_HEAD;
 			SetNameLT(lt,0,"Head of a group");
 			*ref++ = lt->track_slot;
 		    }
 		    else if ( i == 4 || i == 5 )
 		    {
-			lt->flags = LEFL_RND_GROUP;
+			lt->flags = G_LEFL_RND_GROUP;
 			snprintf(buf,sizeof(buf),"Group Track #%u (hidden)",i-3);
 			SetNameLT(lt,0,buf);
 			SetIdentOptLT(lt,"SHA1 of SZS",false,false,0);
@@ -1801,13 +1818,18 @@ void CutLD ( le_distrib_t *ld, le_options_t opt )
     if (!ld)
 	return;
 
-    if ( opt & LEO_CUT_STD )
-	ClearTracksLD( ld, BMG_N_TRACK + BMG_N_ARENA, INT_MAX );
-
-    if ( opt & LEO_CUT_CTCODE )
+    if ( opt & LEO_CUT_ALL )
+	ClearTracksLD( ld, 0, INT_MAX );
+    else
     {
-	ClearTracksLD( ld, CT_CODE_MAX_TRACKS, INT_MAX );
-	ClearTracksLD( ld, BMG_N_TRACK, BMG_N_TRACK + BMG_N_ARENA );
+	if ( opt & LEO_CUT_STD )
+	    ClearTracksLD( ld, BMG_N_TRACK + BMG_N_ARENA, INT_MAX );
+
+	if ( opt & LEO_CUT_CTCODE )
+	{
+	    ClearTracksLD( ld, CT_CODE_MAX_TRACKS, INT_MAX );
+	    ClearTracksLD( ld, BMG_N_TRACK, BMG_N_TRACK + BMG_N_ARENA );
+	}
     }
 }
 
@@ -1892,12 +1914,25 @@ void CheckTracksLD ( const le_distrib_t *ld )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+void DefineRandomTracksLD ( le_distrib_t *ld )
+{
+    for ( int slot = MKW_LE_RANDOM_BEG; slot < MKW_LE_RANDOM_END; slot++ )
+	DefineTrackLD(ld,slot,false);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 le_track_t * GetTrackLD ( le_distrib_t *ld, int slot )
 {
     if ( !ld || !IsValidLecodeSlot(slot) || slot >= ld->tlist_used )
 	return 0;
 
     le_track_t *lt = ld->tlist + slot;
+
+    // random slots are defined automatically on access
+    if ( lt->track_status < LTS_ACTIVE && IsLecodeRandom(slot) )
+	DefineTrackLD(ld,slot,false);
+
     return lt->track_status < LTS_ACTIVE ? 0 : lt;
 }
 
@@ -1907,7 +1942,6 @@ le_track_t * DefineTrackLD ( le_distrib_t *ld, int slot, bool mark_export )
 {
     if ( !ld || !IsValidLecodeSlot(slot) )
 	return 0;
-
 
     if (!ld->is_initialized)
 	InitializeLD(ld);
@@ -1958,7 +1992,7 @@ le_track_t * DefineTrackLD ( le_distrib_t *ld, int slot, bool mark_export )
 	else if ( IsLecodeRandom(slot) )
 	{
 	    lt->track_status	= LTS_ACTIVE;
-	    lt->track_type	= LTTY_RANDOM|LTTY_TRACK;
+	    lt->track_type	= LTTY_RANDOM|LTTY_TRACK|LTTY_ARENA;
 	    if ( ld->auto_setup & LAS_RANDOM )
 		SetupLecodeRandomTrackLT(lt,slot);
 	}
@@ -2096,7 +2130,7 @@ le_track_t * ReserveTracksLD
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void ClearUserFlagsAndCupsLD ( le_distrib_t *ld )
+void ClearUserFlagsAndCupsLD ( le_distrib_t *ld, bool purge_le_flags )
 {
     if (ld)
     {	
@@ -2105,6 +2139,15 @@ void ClearUserFlagsAndCupsLD ( le_distrib_t *ld )
 	{
 	    lt->user_flags = 0;
 	    lt->cup_slot = 0;
+
+	    if (purge_le_flags)
+	    {
+		lt->flags &= G_LEFL__ALL;
+		if (IsMkwTrack(lt->property))
+		    lt->flags |= G_LEFL_VERSUS;
+		else if (IsMkwArena(lt->property))
+		    lt->flags |= G_LEFL_BATTLE;
+	    }
 	}
     }
 }
@@ -2325,6 +2368,22 @@ void ScanRefSTLD
 	lt->lap_count	= str2l(src[IDX_LAPS].ptr,0,10);
 	lt->speed_factor= strtof(src[IDX_SPEED].ptr,0);
 
+	le_cup_t *cup = &ld->cup_versus;
+	if (IsMkwArena(lt->property))
+	{
+	    lt->track_type = LTTY_ARENA;
+	    cup = &ld->cup_battle;
+	}
+
+	int cup_index = GetIndexByRefLECUP(cup,lt->cup_slot);
+	if ( cup_index >= 0 )
+	{
+	    le_cup_ref_t *ref = DefineLECUP(cup,cup_index);
+	    PRINT0("tslot=%d, cup_slot=%d, cup_index=%d, ref=%p\n",tslot,lt->cup_slot,cup_index,ref);
+	    if (ref)
+		*ref = tslot;
+	}
+
 	char buf[LE_TRACK_STRING_MAX+1];
 	if ( n > IDX_SHA1  )	SetIdentOptLT(lt,xstring(buf,sizeof(buf),src[IDX_SHA1]),   0,1,ld->spar.opt );
 	if ( n > IDX_IDENT )	SetIdentOptLT(lt,xstring(buf,sizeof(buf),src[IDX_IDENT]),  0,0,ld->spar.opt );
@@ -2476,11 +2535,11 @@ bool ScanSha1LineLD
     uint tslot		= -1;
     uint cup		= 0;
 
-    int pi;
+    int pi, le_flags = -1;
     char buf[300];
     int valid_sha1 = false;
     sha1_size_t bin;
-    enum { P_TYPE, P_FLAGS, P_SHA1, P_TSLOT, P_CUP, P_NAME };
+    enum { P_TYPE, P_FLAGS, P_LEFLAGS, P_SHA1, P_TSLOT, P_CUP, P_NAME };
 
     for ( pi = P_TYPE; pi <= P_NAME; pi++ )
     {
@@ -2508,6 +2567,18 @@ bool ScanSha1LineLD
 	    StringCopySM(buf,sizeof(buf),par,src-par);
 	    is_d = strchr(buf,'d') != 0;
 	    break;
+
+	 case P_LEFLAGS:
+	    if ( src - par < 40 )
+	    {
+		PRINT0("LEFLAGS: %.*s\n",(int)(src-par),par);
+		StringCopySM(buf,sizeof(buf),par,src-par);
+		le_flags = ScanLEFL(buf);
+		break;
+	    }
+
+	    pi++;
+	    // fall through
 
 	 case P_SHA1:
 	    PRINT0("SHA1:  %.*s\n",(int)(src-par),par);
@@ -2562,6 +2633,9 @@ bool ScanSha1LineLD
     {
 	lt->track_type = is_arena ? LTTY_ARENA : LTTY_TRACK;
 	lt->cup_slot = cup;
+	if ( le_flags >= 0 )
+	    lt->flags = le_flags;
+	    
 	SetXNameLT(lt,0,buf);
     }
     SetIdentOptLT(lt,hex,is_d,true,0);
@@ -2659,7 +2733,7 @@ static enumError scan_track ( le_track_t *lt, ScanInfo_t *si )
     DEFINE_VAR(var);
     err = ScanValueSI(si,&var);
     if (!err)
-	lt->flags = var.mode == VAR_STRING ? ScanLEFT(var.str) : GetIntV(&var);
+	lt->flags = var.mode == VAR_STRING ? ScanLEFL(var.str) : GetIntV(&var);
     ResetV(&var);
 
     PRINT0("TRACK %s: t=%d, p=%d, m=%d, f:%x\n",
@@ -2723,13 +2797,15 @@ static enumError ScanLeDefTRACKS
     if ( !ld || !si )
 	return ERR_MISSING_PARAM;
 
-    enum { C_SLOT, C_TRACK, C_LAPS, C_SPEED, C_IDENT, C_FILE, C_NAME, C_XNAME,
+    enum { C_SLOT, C_IGNORE_SLOT, C_TRACK,
+		C_LAPS, C_SPEED, C_IDENT, C_FILE, C_NAME, C_XNAME,
 		C_LIST, C_STD_ARENAS, C_STD_VERSUS };
     enum { O_CURRENT = 0x100, O_STRING = 0x200 };
 
     static const KeywordTab_t commands[] =
     {
 	{ C_SLOT,	"SLOT",			0,		0 },
+	{ C_IGNORE_SLOT,"IGNORE-SLOT",		"IGNORESLOT",	0 },
 	{ C_TRACK,	"TRACK",		0,		0 },
 
 	{ C_LAPS,	"LAPS",			"LAP",		O_CURRENT },
@@ -2757,7 +2833,7 @@ static enumError ScanLeDefTRACKS
     s_nsec_t total_nsec = -GetTimerNSec(), get_track_nsec = 0;
 
     enumError max_err = ERR_OK;
-    int next_slot = -1, count = 0;
+    int next_slot = -1, ignore_slot = 0, count = 0;
     DEFINE_VAR(string_par);
     le_track_t *current_lt = 0;
     le_strpar_t spar = { .opt = ld->spar.opt };
@@ -2843,6 +2919,10 @@ static enumError ScanLeDefTRACKS
 	    CheckEolSI(si);
 	    continue; // skip 'next_slot=-1'
 
+	 case C_IGNORE_SLOT:
+	    ScanIntValueSI(si,&ignore_slot);
+	    break;
+
 	 case C_TRACK:
 	    {
 		current_lt = 0;
@@ -2853,7 +2933,7 @@ static enumError ScanLeDefTRACKS
 
 		    get_track_nsec -= GetTimerNSec();
 		    le_track_t *lt
-			    = next_slot >= 0
+			    = next_slot >= 0 && !ignore_slot
 			    ? DefineTrackLD(ld,next_slot,true)			// SLOT has highest priority
 			    : IsRandomLEFL(temp.flags)
 			    ? DefineGroupTrackLD(ld,temp.track_type,true)	// append random tracks always
@@ -2865,18 +2945,7 @@ static enumError ScanLeDefTRACKS
 			temp.track_slot = lt->track_slot;
 			MoveLT(lt,&temp);
 			if (*last_index_name)
-			{
-			 #if LE_TYPE_MARKERS_ENABLED
-			    uint val = lt->track_slot;
-			    if ( lt->track_type & LTTY_ARENA )
-				val |= LTT_MARKER_ARENA;
-			    if ( lt->track_type & LTTY_TRACK )
-				val |= LTT_MARKER_TRACK;
-			    DefineIntVar(&si->gvar,last_index_name,val);
-			 #else
 			    DefineIntVar(&si->gvar,last_index_name,lt->track_slot);
-			 #endif
-			}
 			current_lt = lt;
 		    }
 		}
@@ -2961,44 +3030,39 @@ static enumError ScanLeDefTRACKS
 ///////////////////////////////////////////////////////////////////////////////
 
 static void add_reflist_to_cup
-	( le_distrib_t *ld, const le_cup_ref_t *slot_list, int n_slots )
+	( le_distrib_t *ld, const le_cup_ref_t *slot_list,
+	  int n_slots, le_track_type_t force_ltty )
 {
     if ( !ld || !slot_list || n_slots < 1 )
 	return;
 
     while ( n_slots-- > 0 )
     {
-     #if LE_TYPE_MARKERS_ENABLED
-	le_cup_ref_t val = *slot_list++;
-	le_cup_ref_t slot = val & ~LTT_MARKER__ALL;
-	PRINT0("APPEND %d (val:%x)%s\n",slot,val,IsValidLecodeSlot(slot)?"":" INVALID!");
-     #else
 	le_cup_ref_t slot = *slot_list++;
 	PRINT0("APPEND %d %s\n",slot,IsValidLecodeSlot(slot)?"":" INVALID!");
-     #endif
 	if (!IsValidLecodeSlot(slot))
 	    continue;
 
-	le_track_t *lt = GetTrackLD(ld,slot);
-	if ( !IsVisibleLT(lt) )
+	if (IsLecodeRandom(slot))
 	{
-	 #if LE_TYPE_MARKERS_ENABLED
-	    if ( val & LTT_MARKER_TRACK )
-		AppendLECUP(&ld->cup_versus,slot);
-
-	    if ( val & LTT_MARKER_ARENA )
+	    if ( force_ltty == LTTY_ARENA )
 		AppendLECUP(&ld->cup_battle,slot);
-	 #endif
+	    else
+		AppendLECUP(&ld->cup_versus,slot);
 	    continue;
 	}
 
-	if ( lt->track_type & LTTY_TRACK )
+	le_track_t *lt = GetTrackLD(ld,slot);
+	if ( !IsVisibleLT(lt) )
+	    continue;
+
+	if ( lt->track_type & LTTY_TRACK && force_ltty != LTTY_ARENA )
 	{
 	    lt->user_flags |= LTTY_TRACK;
 	    AppendLECUP(&ld->cup_versus,slot);
 	}
 
-	if ( lt->track_type & LTTY_ARENA )
+	if ( lt->track_type & LTTY_ARENA && force_ltty != LTTY_TRACK )
 	{
 	    lt->user_flags |= LTTY_ARENA;
 	    AppendLECUP(&ld->cup_battle,slot);
@@ -3008,7 +3072,7 @@ static void add_reflist_to_cup
 
 //-----------------------------------------------------------------------------
 
-static void append_to_cup ( ScanInfo_t *si )
+static void append_to_cup ( ScanInfo_t *si, le_track_type_t ltty )
 {
     if ( !si || !si->ld )
 	return;
@@ -3025,7 +3089,7 @@ static void append_to_cup ( ScanInfo_t *si )
 	    return;
 
 	le_cup_ref_t ref = val;
-	add_reflist_to_cup(si->ld,&ref,1);
+	add_reflist_to_cup(si->ld,&ref,1,ltty);
 	SkipCharSI(si,',');
     }
 }
@@ -3068,11 +3132,13 @@ static enumError ScanLeDefCUPS
     if ( !ld || !si )
 	return ERR_MISSING_PARAM;
 
-    enum { C_APPEND, C_NEW_CUP, C_STD_CUPS, C_MKWFUN, C_UNUSED };
+    enum { C_APPEND, C_APPEND_BT, C_APPEND_VS, C_NEW_CUP, C_STD_CUPS, C_MKWFUN, C_UNUSED };
     enum { O_BOOL_VAL = 1, O_BT = 2, O_VS = 4 };
     static const KeywordTab_t commands[] =
     {
 	{ C_APPEND,	"APPEND",		0,			0 },
+	{ C_APPEND_BT,	"APPEND-BT",		"APPEND-BT",		0 },
+	{ C_APPEND_VS,	"APPEND-VS",		"APPEND-VS",		0 },
 	{ C_NEW_CUP,	"NEW-CUP",		"NEWCUP",		0 },
 
 	{ C_STD_CUPS,	"STANDARD-BATTLE-CUPS",	"STANDARDBATTLECUPS",	O_BT },
@@ -3115,7 +3181,15 @@ static enumError ScanLeDefCUPS
 	switch(cmd->id)
 	{
 	 case C_APPEND:
-	    append_to_cup(si);
+	    append_to_cup(si,0);
+	    break;
+
+	 case C_APPEND_BT:
+	    append_to_cup(si,LTTY_ARENA);
+	    break;
+
+	 case C_APPEND_VS:
+	    append_to_cup(si,LTTY_TRACK);
 	    break;
 
 	 case C_NEW_CUP:
@@ -3124,15 +3198,15 @@ static enumError ScanLeDefCUPS
 
 	 case C_STD_CUPS:
 	    if (cmd->opt&O_BT)
-		add_reflist_to_cup(ld,standard_bt_ref,MKW_N_ARENAS);
+		add_reflist_to_cup(ld,standard_bt_ref,MKW_N_ARENAS,LTTY_ARENA);
 	    if (cmd->opt&O_VS)
-		add_reflist_to_cup(ld,standard_vs_ref,MKW_N_TRACKS);
+		add_reflist_to_cup(ld,standard_vs_ref,MKW_N_TRACKS,LTTY_TRACK);
 	    break;
 
 	 case C_MKWFUN:
 	    for ( int slot = MKW_LE_RANDOM_BEG; slot <= MKW_LE_RANDOM_END; slot++ )
 		DefineTrackLD(ld,slot,true);
-	    add_reflist_to_cup(ld,mkwfun_random_ref,MKW_N_LE_RANDOM);
+	    add_reflist_to_cup(ld,mkwfun_random_ref,MKW_N_LE_RANDOM,LTTY_TRACK);
 	    break;
 
 	 case C_UNUSED:
@@ -3145,6 +3219,11 @@ static enumError ScanLeDefCUPS
 	CheckEolSI(si);
     }
 
+ #if 0
+    xBINGO;
+    HexDump16(stdout,0,0,ld->cup_versus.list,
+		sizeof(*ld->cup_versus.list)*ld->cup_versus.used*ld->cup_versus.tracks);
+ #endif
     return max_err;
 }
 
@@ -3202,7 +3281,7 @@ enumError ScanLeDefSTLD
 	ld->scan.valid = true;
 	ld->scan.bt.add_unused = true;
 	ld->scan.vs.add_unused = true;
-	ClearUserFlagsAndCupsLD(ld);
+	ClearUserFlagsAndCupsLD(ld,false);
     }
 
     ScanInfo_t si;
@@ -3385,7 +3464,7 @@ bool PrintCupRefLD ( FILE *f, le_distrib_t *ld, le_cup_t *lc )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void update_cup_helper
+static void update_cup_helper
 (
     le_distrib_t	*ld,		// valid distrib
     le_cup_t		*lc,		// cup to update
@@ -3452,7 +3531,10 @@ void update_cup_helper
 	}
 	else if ( fill->track_status != LTS_FILL )
 	{
+	    const int fill_slot = fill->track_slot;
 	    le_track_t *next = DefineTrackLD(ld,ld->tlist_used,true);
+	    fill = ld->tlist + fill_slot; // maybe REALLOC()
+
 	    if (next)
 	    {
 		next->track_status	= LTS_FILL;
@@ -3487,24 +3569,33 @@ void update_cup_helper
     if ( lc->tracks == 4 )
 	DumpCupSlots(ld,"before assign");
 
+    const uint first_custom = lc->first_custom * lc->tracks;
     end = lc->list + lc->used * lc->tracks;
     for ( le_cup_ref_t *ptr = lc->list; ptr < end; ptr++ )
     {
 	if ( *ptr >= 0 )
 	{
 	    le_track_t *lt = GetTrackLD(ld,*ptr);
-	    if ( lt && !lt->cup_slot && lt->track_type & ltty )
+	    if ( lt && lt->track_type & ltty )
 	    {
-		lt->cup_slot = GetCupSlotLECUP(lc,ptr);
-		if ( lt->flags & LEFL_RND_HEAD )
+		if ( ptr - lc->list < first_custom )
+		    lt->flags |= G_LEFL_CUP|G_LEFL_ORIG_CUP;
+		else
+		    lt->flags |= G_LEFL_CUP|G_LEFL_CUSTOM_CUP;
+
+		if (!lt->cup_slot)
 		{
-		    for ( int hslot = lt->track_slot+1; hslot < ld->tlist_used; hslot++ )
+		    lt->cup_slot = GetCupSlotLECUP(lc,ptr);
+		    if ( lt->flags & G_LEFL_RND_HEAD )
 		    {
-			le_track_t *hlt = GetTrackLD(ld,hslot);
-			if ( IsActiveLT(hlt) && IsHiddenLEFL(hlt->flags) )
-			    hlt->cup_slot = lt->cup_slot;
-			else
-			    break;
+			for ( int hslot = lt->track_slot+1; hslot < ld->tlist_used; hslot++ )
+			{
+			    le_track_t *hlt = GetTrackLD(ld,hslot);
+			    if ( IsActiveLT(hlt) && IsHiddenLEFL(hlt->flags) )
+				hlt->cup_slot = lt->cup_slot;
+			    else
+				break;
+			}
 		    }
 		}
 	    }
@@ -3540,13 +3631,13 @@ void UpdateCupsLD ( le_distrib_t *ld )
     //--- clear user flags
 
     CheckTracksLD(ld);
-    ClearUserFlagsAndCupsLD(ld);
+    ClearUserFlagsAndCupsLD(ld,true);
 
 
     //--- battle cups
 
     if (!ld->cup_battle.used)
-	add_reflist_to_cup(ld,standard_bt_ref,MKW_N_ARENAS);
+	add_reflist_to_cup(ld,standard_bt_ref,MKW_N_ARENAS,LTTY_ARENA);
 
     update_cup_helper( ld, &ld->cup_battle, LTTY_ARENA,MKW_ARENA_BEG,
 			!ld->scan.valid || ld->scan.bt.add_unused );
@@ -3555,7 +3646,7 @@ void UpdateCupsLD ( le_distrib_t *ld )
     //--- versus cups
 
     if (!ld->cup_versus.used)
-	add_reflist_to_cup(ld,standard_vs_ref,MKW_N_TRACKS);
+	add_reflist_to_cup(ld,standard_vs_ref,MKW_N_TRACKS,LTTY_TRACK);
 
     update_cup_helper( ld, &ld->cup_versus, LTTY_TRACK,MKW_TRACK_BEG,
 			!ld->scan.valid || ld->scan.vs.add_unused );
@@ -3649,9 +3740,9 @@ static void AddToGroup ( le_distrib_t *ld, le_track_arch_t *ta, mem_t grp )
 
     //-- append index to list;
 
-    if ( ta->lt.flags & LEFL_RND_HEAD && !gi->n_head++ )
+    if ( ta->lt.flags & G_LEFL_RND_HEAD && !gi->n_head++ )
 	gi->head1 = ta->lt.track_slot;
-    if ( ta->lt.flags & LEFL_RND_GROUP )
+    if ( ta->lt.flags & G_LEFL_RND_GROUP )
 	gi->n_group++;
 
     if ( gi->used >= gi->size )
@@ -3769,7 +3860,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 
 // [[split-le-flags]]
 	if (spf.plus.len)
-	    ta->lt.flags |= LEFL_NEW;
+	    ta->lt.flags |= G_LEFL_NEW;
 
 
 	//-- setup basic strings
@@ -3824,21 +3915,21 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 // [[split-le-flags]]
 	    if (!memcmp(attr.ptr,"head=",5))
 	    {
-		ta->lt.flags |= LEFL_RND_HEAD;
+		ta->lt.flags |= G_LEFL_RND_HEAD;
 		grp = MidMem(attr,5,attr.len);
 	    }
 	    else if (!memcmp(attr.ptr,"grp=",4))
 	    {
-		ta->lt.flags |= LEFL_RND_GROUP;
+		ta->lt.flags |= G_LEFL_RND_GROUP;
 		if (!grp.len)
 		    grp = MidMem(attr,4,attr.len);
 	    }
 	    else if ( grp.len && !StrCmpMem(attr,"grp") )
 	    {
-		ta->lt.flags |= LEFL_RND_GROUP;
+		ta->lt.flags |= G_LEFL_RND_GROUP;
 	    }
 	    else if ( !StrCmpMem(attr,"new") )
-		ta->lt.flags |= LEFL_NEW;
+		ta->lt.flags |= G_LEFL_NEW;
 	    else if (!memcmp(attr.ptr,"order=",6))
 		ta->attr_order = str2l(attr.ptr+6,0,10);
 	}
@@ -3934,18 +4025,18 @@ bool CloseArchLD ( le_distrib_t *ld )
 	    le_track_arch_t *ta = ld->arch + index;
 	    if (clear_group)
 	    {
-		if ( ta->lt.flags & LEFL_RND_GROUP )
+		if ( ta->lt.flags & G_LEFL_RND_GROUP )
 		{
-		    ta->lt.flags &= ~LEFL__RND;
+		    ta->lt.flags &= ~G_LEFL__RND;
 		    ta->group = 0;
 		}
 		else
 		    ta->lt.track_status = LTS_VALID; // deactivate track
 	    }
 	    else if ( index == gi->head1 )
-		ta->lt.flags |= LEFL_RND_HEAD;
-	    else if ( ta->lt.flags & LEFL_RND_GROUP )
-		ta->lt.flags &= ~LEFL_RND_HEAD;
+		ta->lt.flags |= G_LEFL_RND_HEAD;
+	    else if ( ta->lt.flags & G_LEFL_RND_GROUP )
+		ta->lt.flags &= ~G_LEFL_RND_HEAD;
 	    else
 		ta->lt.track_status = LTS_VALID; // deactivate track
 	}
@@ -4018,6 +4109,7 @@ bool CloseArchLD ( le_distrib_t *ld )
 
     FREE(order);
     ResetArchLD(ld);
+
     return true;
 }
 
@@ -4163,6 +4255,8 @@ void ImportCtcodeLD ( le_distrib_t *ld, const ctcode_t *ctcode )
 	lt->music	= GetMkwMusicSlot(slot);
     }
 
+    DefineRandomTracksLD(ld);
+
 
     //--- copy track properties
 
@@ -4198,6 +4292,9 @@ void ImportCtcodeLD ( le_distrib_t *ld, const ctcode_t *ctcode )
 		    lt->music    = ntohl(td->music_id);
 		    lt->flags    = ctcode->le_flags[slot];
 		}
+
+		if (IsMkwArena(lt->property))
+		    lt->track_type = LTTY_ARENA;
 
 		char buf[200];
 		const int str_idx = ctcode->ctb.track_name1.beg + slot;
@@ -4239,7 +4336,7 @@ void ImportCtcodeLD ( le_distrib_t *ld, const ctcode_t *ctcode )
 
     const ctcode_cup1_data_t *cup;
     cup = ctcode->cup_battle;
-    if (cup )
+    if (cup)
     {
 	uint max = ctcode->n_battle_cups;
 	if ( max > ld->cup_battle.max )
@@ -4279,7 +4376,7 @@ void ImportCtcodeLD ( le_distrib_t *ld, const ctcode_t *ctcode )
 	    {
 		const int slot = ntohl(cup->track_id[i]);
 		le_track_t *lt = DefineTrackLD(ld,slot,false);
-		if ( lt && !IsArenaLTTY(lt->track_type) )
+		if ( lt && IsTrackLTTY(lt->track_type) )
 		{
 		    lt->cup_slot = 10*cup_idx + i + 11;
 		    if (dest)
@@ -4288,6 +4385,33 @@ void ImportCtcodeLD ( le_distrib_t *ld, const ctcode_t *ctcode )
 	    }
 	}
     }
+
+    ld->ana.bt.add_unused = false;
+    ld->ana.vs.add_unused = false;
+    ld->scan.valid = true;
+    ld->scan.bt.add_unused = false;
+    ld->scan.vs.add_unused = false;
+
+ #if 0 // [[DEBUG]]
+    for ( int slot = 68; slot < 76; slot++ )
+    {
+	le_track_t *lt = DefineTrackLD(ld,slot,false);
+	if (lt)
+	{
+	    printf("%2d %3d %x %x %2d %04x %3d %s\n",
+		lt->track_slot, lt->cup_slot, 
+		lt->track_status, lt->track_type, 
+		lt->property, lt->music, lt->flags,
+		lt->name );
+	}
+    }
+ #endif
+
+ #if 0
+    xBINGO;
+    HexDump16(stdout,0,0,ld->cup_versus.list,
+		sizeof(*ld->cup_versus.list)*ld->cup_versus.used*ld->cup_versus.tracks);
+ #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5139,7 +5263,7 @@ enumError CreateInfoLD ( FILE *f, le_distrib_t *ld, bool use_xname, bool add_rat
 		GetCupAlignLT(lt),
 		PrintPropertyID(lt->property,false),
 		PrintMusicID(lt->music,false),
-		PrintLEFL8(lt->flags,true),
+		PrintLEFL16(lt->flags,true),
 		esc.data.ptr );
 	FreeExMem(&esc);
     }
@@ -5160,8 +5284,12 @@ enumError CreateSha1LD
     if ( !f || !ld )
 	return ERR_MISSING_PARAM;
 
+ #if 1
+    SortByCupLD(ld,filter_options_td,ld->spar.opt);
+ #else
     UpdateCupsLD(ld);
     SetupReferenceList(ld,filter_options_td,ld->spar.opt);
+ #endif
 
     static char sep[] = "#----------\r\n";
 
@@ -5179,27 +5307,28 @@ enumError CreateSha1LD
 	if ( filter && *filter )
 	    fprintf(f,"# Active output filter: %s\r\n",filter);
 
-	fputs(	"# Columns: TYPE FLAGS SHA1 TRACK_SLOT CUP NAME\r\n"
+	fputs(	"# Columns: TYPE FLAGS LE_FLAGS SHA1 TRACK_SLOT CUP NAME\r\n"
 		"# During the import, only the first 4 columns are evaluated.\r\n"
 		"# Flags: d:is _d file / t:title only / h:hidden / o:original track\r\n"
 		,f );
     }
 
-    int count = 0, prev_type = 99;
+    int count = 0, prev_type = 99, prev_cup = -1;
     for ( le_track_t **plt = ld->reflist; *plt; plt++ )
     {
 	const le_track_t *lt = *plt;
 
-	if ( prev_type != lt->track_type )
+	if ( prev_type != lt->track_type || prev_cup != !lt->cup_slot )
 	{
 	    prev_type = lt->track_type;
+	    prev_cup = !lt->cup_slot;
 	    fputs( add_comments ? sep : "\r\n", f );
 	}
 
 	const int max = ld->spar.opt & LEO_NO_D_FILES ? 0 : 1;
-	for ( int d = 0; d <= max; d++ )
+	for ( int is_d = 0; is_d <= max; is_d++ )
 	{
-	    const le_track_id_t *lti = lt->lti + d;
+	    const le_track_id_t *lti = lt->lti + is_d;
 	    if ( lti->have_sha1 )
 	    {
 		count++;
@@ -5209,12 +5338,13 @@ enumError CreateSha1LD
 		ccp name = use_xname ? GetXName2LT(lt,0) : GetNameLT(lt,0);
 		exmem_t esc = EscapeStringEx(name,-1,EmptyString,EmptyString,CHMD__MODERN,0,false);
 
-		fprintf(f,"%s %c%c%c%c %s %4d %s  %s\r\n",
+		fprintf(f,"%s %c%c%c%c %s %s %4d %s  %s\r\n",
 		    GetNameLTTY(lt->track_type),
-		    d ? 'd' : '-',
+		    is_d ? 'd' : '-',
 		    IsTitleLEFL(lt->flags) ? 't' : '-',
 		    IsHiddenLEFL(lt->flags) ? 'h' : '-',
 		    lti->orig_sha1 ? 'o' : '-',
+		    PrintLEFL16(lt->flags,true),
 		    hex, lt->track_slot, GetCupAlignLT(lt),
 		    esc.data.ptr );
 		FreeExMem(&esc);
@@ -5332,14 +5462,19 @@ static void print_ledef_track
 	dest = StringCopyE(dest,comment+sizeof(comment),", hidden");
     *dest = 0;
 
+    if (ld->spar.opt&LEO_NO_SLOT)
+	fputs("\r\n",f);
+    else
+	fprintf(f,"\r\nSLOT %u\r\n",lt->track_slot);
+    
     ccp type = GetNameLTTY(lt->track_type);
-    fprintf(f,"\r\nTRACK %s%u\t%s\t%s\t%s\t\"%s\"%s%s\r\n",
+    fprintf(f,"TRACK %s%u\t%s\t%s\t%s\t\"%s\"%s%s\r\n",
 		type,
 		lt->track_slot,
 		type,
 		PrintPropertyID(lt->property,false),
 		PrintMusicID(lt->music,false),
-		PrintLEFL8(lt->flags,true),
+		PrintLEFL16(lt->flags,true),
 		*comment ? "\t#" : "",
 		*comment ? comment+1 : "" );
 
@@ -5405,7 +5540,7 @@ static void print_ledef_track
 //-----------------------------------------------------------------------------
 
 static void print_ledef_cup
-	( FILE *f, le_distrib_t *ld, const le_cup_t *lc, int sep_index )
+	( FILE *f, le_distrib_t *ld, const le_cup_t *lc, int sep_index, ccp suffix )
 {
     DASSERT(f);
     DASSERT(ld);
@@ -5466,7 +5601,7 @@ static void print_ledef_cup
 	    count++;
 	    sep = "\r\n";
 
-	    fputs("APPEND",f);
+	    fprintf(f,"APPEND%s",suffix);
 	    for ( int t = 0; t < lc->tracks; t++ )
 	    {
 		const int slot = ref[t];
@@ -5580,7 +5715,7 @@ enumError CreateLeDefLD ( FILE *f, le_distrib_t *ld )
     // battle cups
 
     fputs("#--- battle cups\r\n\r\n",f);
-    print_ledef_cup(f,ld,&ld->cup_battle,2);
+    print_ledef_cup(f,ld,&ld->cup_battle,2,"-BT");
 
     fprintf(f,
 	"# Append unused battle arenas automatically (0=NO/1=YES):\r\n"
@@ -5592,7 +5727,7 @@ enumError CreateLeDefLD ( FILE *f, le_distrib_t *ld )
     // versus cups
 
     fputs("#--- versus cups\r\n\r\n",f);
-    print_ledef_cup(f,ld,&ld->cup_versus,8);
+    print_ledef_cup(f,ld,&ld->cup_versus,8,"-VS");
 
     fprintf(f,
 	"# Append unused versus tracks automatically (0=NO/1=YES):\r\n"
@@ -5637,7 +5772,10 @@ enumError CreateLecode4LD ( ccp fname, le_distrib_t *ld )
 	File_t F;
 	enumError err = CreateFileOpt(&F,true,path,false,0);
 	if (!err)
+	{
 	    err = CreateLecodeLD(F.f,ld,reg);
+	    CloseFile(&F,0);
+	}
 	if (err)
 	    return err;
     }
@@ -6909,27 +7047,6 @@ void ScanOptLeDefine ( ccp arg )
 	AppendStringField(&le_define_list,arg,false);
 }
 
-
-///////////////////////////////////////////////////////////////////////////////
-
-le_flags_t ScanLEFT ( ccp text )
-{
-    // automatic flags are not scannend!
-
-    le_flags_t res = 0;
-    if (text)
-    {
-	if ( strchr(text,'N') || strchr(text,'n') ) res |= LEFL_NEW;
-	if ( strchr(text,'H') || strchr(text,'h') ) res |= LEFL_RND_HEAD;
-	if ( strchr(text,'G') || strchr(text,'g') ) res |= LEFL_RND_GROUP;
-	if ( strchr(text,'X') || strchr(text,'x') ) res |= LEFL_RND_HEAD | LEFL_RND_GROUP;
-	if ( strchr(text,'A') || strchr(text,'a') ) res |= LEFL_ALIAS;
-	if ( strchr(text,'T') || strchr(text,'t') ) res |= LEFL_TEXTURE;
-	if ( strchr(text,'2') || strchr(text,'t') ) res |= LEFL_ALIAS | LEFL_TEXTURE;
-	if ( strchr(text,'I') || strchr(text,'i') ) res |= LEFL_HIDDEN;
-    }
-    return res;
-}
 
 ///////////////////////////////////////////////////////////////////////////////
 

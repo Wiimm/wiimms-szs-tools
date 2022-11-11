@@ -761,12 +761,19 @@ static const InfoOption_t option_cmd_FUNCTIONS_LONG =
 	" --long is set, the descriptions are compared too."
     };
 
+static const InfoOption_t option_cmd_DUMP_BRIEF =
+    {	OPT_BRIEF, false, false, false, false, false, 'B', "brief",
+	0,
+	"For LE-CODE binaries: If set, print infos about file header only."
+    };
+
 static const InfoOption_t option_cmd_DUMP_LONG =
     {	OPT_LONG, false, false, false, false, false, 'l', "long",
 	0,
 	"For LE-CODE binaries: If set, print cups with tracks or arenas. For"
 	" each track, property and music slot is printed in brackets. If set"
-	" twice, print a track list too.\n"
+	" twice, print a track list too. If set 3 times, print a track slot"
+	" usage map too (same as -v).\n"
 	"  For LEX binaries: If set, print a hex dump of max 16 bytes (1 line)"
 	" of the element data. If set twice, print a hex dump of max 64 bytes"
 	" (4 lines). If set 3 times ore more, print a complete hex dump."
@@ -775,7 +782,7 @@ static const InfoOption_t option_cmd_DUMP_LONG =
 static const InfoOption_t option_cmd_DUMP_VERBOSE =
     {	OPT_VERBOSE, false, false, false, false, false, 'v', "verbose",
 	0,
-	"For LE-CODE binaries: If set, print a track slot usage table."
+	"For LE-CODE binaries: If set, print a track slot usage map."
     };
 
 static const InfoOption_t option_cmd_BIN_DIFF_QUIET =
@@ -816,8 +823,10 @@ static const KeywordTab_t CommandTab[] =
     { CMD_EXPORT,	"_EXPORT",	0,		0 },
     { CMD_DPAD,		"_DPAD",	0,		0 },
     { CMD_DUMP,		"DUMP",		"D",		0 },
+    { CMD_DB,		"DBwlect DL [source]...",0,		0 },
     { CMD_DL,		"DL",		0,		0 },
     { CMD_DLL,		"DLL",		0,		0 },
+    { CMD_DLLL,		"DLLL",		0,		0 },
     { CMD_BIN_DIFF,	"BIN-DIFF",	"BINDIFF",	0 },
     { CMD_BIN_DIFF,	"BD",		0,		0 },
     { CMD_PATCH,	"PATCH",	"P",		0 },
@@ -1212,65 +1221,77 @@ static u8 option_allowed_cmd_DPAD[47] = // cmd #16
 
 static u8 option_allowed_cmd_DUMP[47] = // cmd #17
 {
-    0,0,0,1,0, 0,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
+    0,0,0,1,0, 1,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_DL[47] = // cmd #18
+static u8 option_allowed_cmd_DB[47] = // cmd #18
 {
-    0,0,0,1,0, 0,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
+    0,0,0,1,0, 1,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_DLL[47] = // cmd #19
+static u8 option_allowed_cmd_DL[47] = // cmd #19
 {
-    0,0,0,1,0, 0,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
+    0,0,0,1,0, 1,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_BIN_DIFF[47] = // cmd #20
+static u8 option_allowed_cmd_DLL[47] = // cmd #20
+{
+    0,0,0,1,0, 1,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+};
+
+static u8 option_allowed_cmd_DLLL[47] = // cmd #21
+{
+    0,0,0,1,0, 1,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+};
+
+static u8 option_allowed_cmd_BIN_DIFF[47] = // cmd #22
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
 };
 
-static u8 option_allowed_cmd_PATCH[47] = // cmd #21
+static u8 option_allowed_cmd_PATCH[47] = // cmd #23
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,0,
     0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_LPAR[47] = // cmd #22
+static u8 option_allowed_cmd_LPAR[47] = // cmd #24
 {
     0,0,0,0,1, 1,1,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_CREATE[47] = // cmd #23
+static u8 option_allowed_cmd_CREATE[47] = // cmd #25
 {
     0,0,0,0,1, 1,1,0,1,1,  1,1,0,1,0, 1,0,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
     0,1,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_DISTRIBUTION[47] = // cmd #24
+static u8 option_allowed_cmd_DISTRIBUTION[47] = // cmd #26
 {
     0,1,0,0,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,1,1,1,1,
     0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_CAT[47] = // cmd #25
+static u8 option_allowed_cmd_CAT[47] = // cmd #27
 {
     0,0,0,0,1, 1,1,0,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0
 };
 
-static u8 option_allowed_cmd_DECODE[47] = // cmd #26
+static u8 option_allowed_cmd_DECODE[47] = // cmd #28
 {
     0,0,0,0,1, 1,1,0,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_ENCODE[47] = // cmd #27
+static u8 option_allowed_cmd_ENCODE[47] = // cmd #29
 {
     0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
@@ -1464,6 +1485,30 @@ static const InfoOption_t * option_tab_cmd_DUMP[] =
 
 	OptionInfo + OPT_NONE, // separator
 
+	&option_cmd_DUMP_BRIEF,
+	&option_cmd_DUMP_LONG,
+	&option_cmd_DUMP_VERBOSE,
+	OptionInfo + OPT_CREATE_DISTRIB,
+
+	0
+};
+
+static const InfoOption_t * option_tab_cmd_DB[] =
+{
+	OptionInfo + OPT_LE_DEFINE,
+	OptionInfo + OPT_LPAR,
+	OptionInfo + OPT_ALIAS,
+	OptionInfo + OPT_ENGINE,
+	OptionInfo + OPT_200CC,
+	OptionInfo + OPT_PERFMON,
+	OptionInfo + OPT_CUSTOM_TT,
+	OptionInfo + OPT_XPFLAGS,
+	OptionInfo + OPT_SPEEDOMETER,
+	OptionInfo + OPT_DEBUG,
+
+	OptionInfo + OPT_NONE, // separator
+
+	&option_cmd_DUMP_BRIEF,
 	&option_cmd_DUMP_LONG,
 	&option_cmd_DUMP_VERBOSE,
 	OptionInfo + OPT_CREATE_DISTRIB,
@@ -1486,6 +1531,7 @@ static const InfoOption_t * option_tab_cmd_DL[] =
 
 	OptionInfo + OPT_NONE, // separator
 
+	&option_cmd_DUMP_BRIEF,
 	&option_cmd_DUMP_LONG,
 	&option_cmd_DUMP_VERBOSE,
 	OptionInfo + OPT_CREATE_DISTRIB,
@@ -1508,6 +1554,30 @@ static const InfoOption_t * option_tab_cmd_DLL[] =
 
 	OptionInfo + OPT_NONE, // separator
 
+	&option_cmd_DUMP_BRIEF,
+	&option_cmd_DUMP_LONG,
+	&option_cmd_DUMP_VERBOSE,
+	OptionInfo + OPT_CREATE_DISTRIB,
+
+	0
+};
+
+static const InfoOption_t * option_tab_cmd_DLLL[] =
+{
+	OptionInfo + OPT_LE_DEFINE,
+	OptionInfo + OPT_LPAR,
+	OptionInfo + OPT_ALIAS,
+	OptionInfo + OPT_ENGINE,
+	OptionInfo + OPT_200CC,
+	OptionInfo + OPT_PERFMON,
+	OptionInfo + OPT_CUSTOM_TT,
+	OptionInfo + OPT_XPFLAGS,
+	OptionInfo + OPT_SPEEDOMETER,
+	OptionInfo + OPT_DEBUG,
+
+	OptionInfo + OPT_NONE, // separator
+
+	&option_cmd_DUMP_BRIEF,
 	&option_cmd_DUMP_LONG,
 	&option_cmd_DUMP_VERBOSE,
 	OptionInfo + OPT_CREATE_DISTRIB,
@@ -2028,9 +2098,23 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Print an information dump for each source file. LE-CODE binaries and"
 	" LEX binaries are accepted as input.",
 	0,
-	13,
+	14,
 	option_tab_cmd_DUMP,
 	option_allowed_cmd_DUMP
+    },
+
+    {	CMD_DB,
+	false,
+	false,
+	false,
+	"DBwlect DL [source]...",
+	0,
+	"Short cut for 'DUMP --brief'.",
+	"",
+	0,
+	14,
+	option_tab_cmd_DB,
+	option_allowed_cmd_DB
     },
 
     {	CMD_DL,
@@ -2042,7 +2126,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wlect DL [source]...",
 	"Short cut for 'DUMP --long'.",
 	0,
-	13,
+	14,
 	option_tab_cmd_DL,
 	option_allowed_cmd_DL
     },
@@ -2056,9 +2140,23 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wlect DLL [source]...",
 	"Short cut for 'DUMP --long --long'.",
 	0,
-	13,
+	14,
 	option_tab_cmd_DLL,
 	option_allowed_cmd_DLL
+    },
+
+    {	CMD_DLLL,
+	false,
+	false,
+	false,
+	"DLLL",
+	0,
+	"wlect DLL [source]...",
+	"Short cut for 'DUMP --long --long --long'.",
+	0,
+	14,
+	option_tab_cmd_DLLL,
+	option_allowed_cmd_DLLL
     },
 
     {	CMD_BIN_DIFF,

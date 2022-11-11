@@ -677,6 +677,7 @@ enumError ExecAnalyzeLECODE ( analyze_param_t *ap )
 		"build=%d\n"
 		"region=\"%s\"\n"
 		"debug=%d\n"
+		"identifier=\"%s\"\n"
 		"header_size=%d\n"
 		"file_size=%d\n"
 		"creation_time=\"%u, %s\"\n"
@@ -685,17 +686,18 @@ enumError ExecAnalyzeLECODE ( analyze_param_t *ap )
 		"recommended_szs=\"%u, %s\"\n"
 		"edit_by_szs=\"%u, %s\"\n"
 
-		,ana.head->phase
+		,ana.head->v3.phase
 		,ana.header_vers
-		,ntohl(ana.head->build_number)
-		,ana.head->region == 'P' ? "PAL"
-		:ana.head->region == 'E' ? "USA"
-		:ana.head->region == 'J' ? "Japan"
-		:ana.head->region == 'K' ? "Korea"
+		,ntohl(ana.head->v3.build_number)
+		,ana.head->v3.region == 'P' ? "PAL"
+		:ana.head->v3.region == 'E' ? "USA"
+		:ana.head->v3.region == 'J' ? "Japan"
+		:ana.head->v3.region == 'K' ? "Korea"
 		: "?"
-		,ana.head->debug == 'D'
+		,ana.head->v3.debug == 'D'
+		,ana.identifier
 		,ana.header_size
-		,ntohl(ana.head->file_size)
+		,ntohl(ana.head->v3.file_size)
 		,ana.creation_time
 		,ana.creation_time ? PrintTimeByFormat("%F %T %Z",ana.creation_time) : "-"
 		,ana.edit_time

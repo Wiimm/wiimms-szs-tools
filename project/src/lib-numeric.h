@@ -106,53 +106,6 @@ enum
 #define LE_SLOT_RND_END		0x42
 
 //-----------------------------------------------------------------------------
-// bits for [[le_flags8_t]] [[le_flags_t]]
-
-typedef u8  le_flags8_t;	// type of LE-CODE track flags (classic 8 bits)
-typedef u16 le_flags_t;		// type of LE-CODE track flags since build 35
-
-#define LEFL_NEW	0x01	// new track
-#define LEFL_RND_HEAD	0x02	// first track of random group
-#define LEFL_RND_GROUP	0x04	// member of random group, but not first
-				// members are not added to cups
-#define LEFL_ALIAS	0x08	// use TrackByAliasLE(prop,music)
-				// as alias for another track
-#define LEFL_TEXTURE	0x10	// track is declared as texture hack of same property slot
-#define LEFL_HIDDEN	0x20	// exclude a track from cups.
-
-#define LEFL__RND	0x06	// both random flags
-#define LEFL__ALL	0x3f	// all bits of above
-
-// flags calculated by CopyLecodeFlags()
-#define LEFL_BATTLE	0x0100	// track is a battle arena
-#define LEFL_VERSUS	0x0200	// track is a versus track
-#define LEFL_CUP	0x0400	// track is refefrenced by a cup
-#define LEFL_ORIG_CUP	0x0800	// track is refefrenced by a original cup
-#define LEFL_CUSTOM_CUP	0x1000	// track is refefrenced by a custom cup
-#define LEFL_RANDOM	0x2000	// slot id LE-CODE random
-#define LEFL__XALL	0x3f3f	// all bits of above
-
-static inline bool IsTitleLEFL ( uint flags )
-	{ return (flags&(LEFL_RND_HEAD|LEFL_RND_GROUP)) == LEFL_RND_HEAD; }
-
-static inline bool IsHiddenLEFL ( uint flags )
-	{ return (flags&LEFL_HIDDEN)
-		||  (flags&(LEFL_RND_HEAD|LEFL_RND_GROUP)) == LEFL_RND_GROUP; }
-
-static inline bool IsRandomLEFL ( uint flags )
-	{ return (flags&(LEFL_RND_HEAD|LEFL_RND_GROUP)) != 0; }
-
-ccp PrintLEFL8  ( le_flags_t flags, bool aligned );
-ccp PrintLEFL16 ( le_flags_t flags, bool aligned );
-
-static inline ccp PrintLEFL ( uint flags_bits, le_flags_t flags, bool aligned )
-	{ return ( flags_bits == 16 ? PrintLEFL16 : PrintLEFL8 )(flags,aligned); }
-
-typedef ccp (*PrintLEFL_func) ( le_flags_t flags, bool aligned );
-static inline PrintLEFL_func GetPrintLEFL ( uint flags_bits )
-	{ return flags_bits == 16 ? PrintLEFL16 : PrintLEFL8; }
-
-//-----------------------------------------------------------------------------
 // some more constants
 
 enum

@@ -707,7 +707,7 @@ ccp LibGetErrorText ( int stat, ccp ret_not_found )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SetupPager()
+void SetupPager(void)
 {
     if ( !opt_no_pager && isatty(fileno(stdout)) )
     {

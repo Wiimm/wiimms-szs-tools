@@ -91,6 +91,35 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+////////////////////////////   LE-CODE track flags   //////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// [[LecodeFlags_t]]
+typedef enum LecodeFlags_t
+{
+	G_LEFL_NEW                 = 0x0001,	// N2: new track
+	G_LEFL_RND_HEAD            = 0x0002,	// HX: first track of random group
+	G_LEFL_RND_GROUP           = 0x0004,	// GX: member of random group, but not first
+	G_LEFL_ALIAS               = 0x0008,	// A-: use TrackByAliasLE(prop,music)
+	G_LEFL_TEXTURE             = 0x0010,	// T2: track is declared as texture hack of same property slot
+	G_LEFL_HIDDEN              = 0x0020,	// i-: exclude a track from cups.
+	G_LEFL__RND                = 0x0006,	// both random flags
+	G_LEFL__ALL                = 0x003f,	// all bits of above
+	G_LEFL_BATTLE              = 0x0100,	// B-: track is a battle arena
+	G_LEFL_VERSUS              = 0x0200,	// V-: track is a versus track
+	G_LEFL_CUP                 = 0x0400,	// --: track is referenced by a cup
+	G_LEFL_ORIG_CUP            = 0x0800,	// ob: track is referenced by a original cup
+	G_LEFL_CUSTOM_CUP          = 0x1000,	// cb: track is referenced by a custom cup
+	G_LEFL_RANDOM              = 0x2000,	// r-: slot id LE-CODE random
+	G_LEFL__USED               = 0x3c3f,	// if any of these bits is set, the track is used
+	G_LEFL__XALL               = 0x3f3f,	// all bits of above
+}
+LecodeFlags_t;
+
+#define DB_LECODE_FLAGS_TYPE      "smallint unsigned"
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////   misc   //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 

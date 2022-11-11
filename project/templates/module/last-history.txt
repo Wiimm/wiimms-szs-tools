@@ -1,8 +1,21 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Removed a forgotten debug instruction, that created file _trace-wszst.tmp
-   when reading an LE-CODE binary file of version 4 (builds up to 34).
- - wszst ANALYZE lecode: Changed output names.
+ - Command "wlect DUMP":
+    - Accept option --brief to print file header of LE-CODE binaries only.
+    - New command "wlect DB" is a short cut for "wlect DUMP --brief".
+    - New command "wlect DLLL" is a short cut for "wlect DUMP -lll".
+    - Fixed some issues if displaying LE-CODE v5 dates.
+    - Dump of LE-CODE binaries improved.
+ - Command "wlect DISTRIB":
+    - Fixed support for random slots in cups.
+    - Updated distribution generator "distrib=...".
+    - New processing option: +CUT-ALL.
+ - File format #LE-DEF:
+    - Section [TRACK-LIST]: New instruction IGNORE-SLOT to ignore SLOT
+      instructions. When exporting, SLOT instructions are now inserted so that
+      an identical track distribution is achieved when reading in.
+    - Section [CUP-LIST]: New instructions APPEND-BT and APPEND-VS to force
+      the cup type (battle or versus). This is important for random tracks.
 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it

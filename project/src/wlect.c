@@ -171,6 +171,22 @@ static enumError cmd_test()
 
  #elif 1
 
+    le_cup_t cup;
+    //InitializeLECUP(&cup,BMG_MAX_BCUP,BMG_BCUP_TRACKS); // battle setup
+    InitializeLECUP(&cup,BMG_MAX_RCUP,BMG_RCUP_TRACKS); // versus setup
+
+    for ( int i = -1; i < 26; i++ )
+    {
+	int i1 = GetIndexByRefLECUP(&cup,i);
+	int r1 = GetRefByIndexLECUP(&cup,i1);
+	int r2 = GetRefByIndexLECUP(&cup,i);
+	int i2 = GetIndexByRefLECUP(&cup,r2);
+	printf("%3d : %3d %3d : %3d %3d\n",i,i1,r1,r2,i2);
+    }
+    return ERR_OK;
+
+ #elif 1
+
     uint tr;
     for ( tr = 0; tr < MKW_N_TRACKS + MKW_N_ARENAS; tr++ )
     {
@@ -316,6 +332,13 @@ static enumError cmd_dump ( int long_level )
     {
 	RegisterOptionByIndex(&InfoUI_wlect,OPT_LONG,long_level,false);
 	long_count += long_level;
+	brief_count = 0;
+    }
+    else if ( long_level < 0 )
+    {
+	RegisterOptionByIndex(&InfoUI_wlect,OPT_BRIEF,-long_level,false);
+	brief_count -= long_level;
+	long_count = 0;
     }
 
     raw_data_t raw;
@@ -496,22 +519,22 @@ static int BinDiffLECODE
     const le_binary_head_t *h1 = a1->head;
     const le_binary_head_t *h2 = a2->head;
 
-    bd->stat_size   = a1->data_size != a2->data_size;
+    bd->stat_size = a1->data_size != a2->data_size;
 
-    if ( h1->version != h2->version || a1->header_size != a2->header_size )
+    if ( h1->v3.version != h2->v3.version || a1->header_size != a2->header_size )
 	bd->stat_header = true;
-    else if ( h1->version <= 4 )
+    else if ( h1->v3.version <= 4 )
 	bd->stat_header = memcmp(h1,h2,sizeof(*h1)) != 0;
     else
     {
-	DASSERT( h1->version >= 5 );
+	DASSERT( h1->v3.version >= 5 );
 	DASSERT(a1->header_size == a2->header_size );
 
 	le_binary_head_v5_t *h5	= MEMDUP(a1->head,a1->header_size);
-	h5->edit_version	= a2->head_v5->edit_version;
-	h5->creation_time	= a2->head_v5->creation_time;
-	h5->edit_time		= a2->head_v5->edit_time;
-	bd->stat_header		= memcmp(h5,a2->head_v5,a1->header_size) != 0;
+	h5->edit_version	= a2->head->v5.edit_version;
+	h5->creation_time	= a2->head->v5.creation_time;
+	h5->edit_time		= a2->head->v5.edit_time;
+	bd->stat_header		= memcmp(h5,&a2->head->v5,a1->header_size) != 0;
 	FREE(h5);
     }
 
@@ -521,11 +544,11 @@ static int BinDiffLECODE
 		|| bodysize1 != bodysize2
 		|| memcmp( body1, body2, bodysize1 );
 
-    bd->stat_timestamp	= h1->version != h2->version
+    bd->stat_timestamp	= h1->v3.version != h2->v3.version
 			? true
-			: h1->version >= 5
-			? a1->head_v5->creation_time != a2->head_v5->creation_time
-			: strcmp(a1->head_v4->timestamp,a2->head_v4->timestamp) != 0;
+			: h1->v3.version >= 5
+			? a1->head->v5.creation_time != a2->head->v5.creation_time
+			: strcmp(a1->head->v4.timestamp,a2->head->v4.timestamp) != 0;
 
     bd->stat_param = memcmp(&a1->lpar,&a2->lpar,sizeof(a1->lpar));
 
@@ -1091,9 +1114,6 @@ static void help_distrib ( enumError exit_code )
 	" The {name|instructions} are used to change the data or to write data to files."
 	" The {name|processing options} affect both reading and writing.\n"
 	"\n"
-	"  |{warn|This command is still under development."
-	" Its use is therefore experimental and errors are quite likely!}\n"
-	"\n"
 	"  {syntax|Syntax:}\n"
 	"|[4]\n"
 	"\t|{cmd|%s DISTRIBUTION}\n"
@@ -1190,6 +1210,10 @@ static void help_distrib ( enumError exit_code )
 		"Replace the internal prefix list by the content of the file."
 		" {file|https://ct.wiimm.de/export/prefix} is the authoritative source for this.\n"
 	"\n"
+	"\t{name|MTCAT}:\t|"
+		"Replace the internal track category list by the content of the file."
+		" {file|https://ct.wiimm.de/export/category} is the authoritative source for this.\n"
+	"\n"
 	"\t{name|LPAR}:\t|"
 		"A LE-CODE parameter file (e.g. »{file|lpar.txt}«).\n"
 	"\n"
@@ -1205,6 +1229,11 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|CTTEXT}:\t|"
 		"A CT-CODE or LE-CODE definition file."
 		" The file is scanned by the CT-CODE scanner and then imported.\n"
+	"\n"
+	"\t{name|*.szs}:\t|"
+		"Track files are added to 2 different internal track tracks lists,"
+		" one for racing tracks and one for battle areans."
+		" I the argument is quoted then wlect will resolve the wildcards by itself." 
 	"\n"
 	"  |All file types that are accepted by option {opt|--le-define}"
 	" ({name|BRRES}, {name|TEX0}, {name|CT-CODE}, ...) are also possible.\n"
@@ -1450,11 +1479,13 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|RESET}:\t|"
 		"Reset the filter to its default.\n"
 	"\n"
+	"\t{name|CUT-ALL}:\t|"
+		"Remove all tracks and their settings.\n"
 	"\t{name|CUT-STD}:\t|"
-		"Remove settings and tracks, that are not needed for a standard distribution"
+		"Remove tracks and their settings, that are not needed for a standard distribution"
 		" with 32 tracks and 10 battle arenas.\n"
 	"\t{name|CUT-CTCODE}:\t|"
-		"Remove settings and tracks, that are not needed for a CT-CODE distribution."
+		"Remove tracks and their settings, that are not needed for a CT-CODE distribution."
 		" Arenas are also removed.\n"
 	"\n"
 
@@ -1621,6 +1652,11 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|/IN-LECODE}:\t|"
 		"Switch option {name|IN-LECODE} off.\n"
 	"\n"
+	"\t{name|NO-SLOT}:\t|"
+		"Suppress »{name|SLOT <index>}« lines when creating a LE-CODE defintion file ({name|LE-DEF}).\n"
+	"\t{name|/NO-SLOT}:\t|"
+		"Switch option {name|NO-SLOT} off.\n"
+	"\n"
 	"\t{name|BRIEF}:\t|"
 		"When creating text files, detailed descriptions are suppressed."
 		" The default is based on the global options {opt|--no-header} and {opt|--brief}.\n"
@@ -1630,11 +1666,13 @@ static void help_distrib ( enumError exit_code )
 
 	//-------------------------------------------------------------------------
 
+ #if 0 // [[2do]]
 	"\n"
 	"{heading|Examples:}\n"
 	"\n"
 	"  |....\n"
 	"\n"
+ #endif
 
 	//-------------------------------------------------------------------------
 
@@ -2473,8 +2511,10 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_FLOAT:		err = cmd_float(); break;
 
 	case CMD_DUMP:		err = cmd_dump(0); break;
+	case CMD_DB:		err = cmd_dump(-1); break;
 	case CMD_DL:		err = cmd_dump(1); break;
 	case CMD_DLL:		err = cmd_dump(2); break;
+	case CMD_DLLL:		err = cmd_dump(3); break;
 	case CMD_BIN_DIFF:	err = cmd_bin_diff(); break;
 	case CMD_PATCH:		err = cmd_patch(); break;
 

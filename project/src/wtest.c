@@ -4365,8 +4365,8 @@ static enumError develop ( int argc, char ** argv )
 	}
 	duration += GetTimerUSec();
 	printf( " %s total, %s/1000, %u*1000 * FindConditionRef (%#x..%#x)\n",
-		PrintTimerUSec6(0,0,duration,true),
-		PrintTimerUSec6(0,0,duration/N1000/(ptr[1]-ptr[0]+1),true),
+		PrintTimerUSec6(0,0,duration,DC_SFORM_ALIGN),
+		PrintTimerUSec6(0,0,duration/N1000/(ptr[1]-ptr[0]+1),DC_SFORM_ALIGN),
 		N1000, ptr[0], ptr[1] );
 
 	duration = -GetTimerUSec();
@@ -4378,8 +4378,8 @@ static enumError develop ( int argc, char ** argv )
 	}
 	duration += GetTimerUSec();
 	printf( " %s total, %s/1000, %u*1000 * FindConditionRef2(%#x..%#x)\n",
-		PrintTimerUSec6(0,0,duration,true),
-		PrintTimerUSec6(0,0,duration/N1000/(ptr[1]-ptr[0]+1),true),
+		PrintTimerUSec6(0,0,duration,DC_SFORM_ALIGN),
+		PrintTimerUSec6(0,0,duration/N1000/(ptr[1]-ptr[0]+1),DC_SFORM_ALIGN),
 		N1000, ptr[0], ptr[1] );
     }
     putchar('\n');

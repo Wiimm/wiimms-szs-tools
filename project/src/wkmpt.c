@@ -1302,7 +1302,7 @@ static enumError cmd_gobj()
 	    printf("%s%u object%s analyzed in %s: ",
 		col->status,
 		ag.n_gobj, ag.n_gobj == 1 ? "" : "s",
-		PrintTimerUSec6(0,0,ag.dur_usec,false) );
+		PrintTimerUSec6(0,0,ag.dur_usec,0) );
 
 	    printf("o=%u=%u+%u, en=%d,%d, do=%u/%u=%u+%u+%u\n",
 		ag.n_object, ag.n_disabled, ag.n_enabled,
@@ -1392,7 +1392,7 @@ static enumError cmd_gamemodes()
 	    printf("%s%u object%s analyzed in %s: ",
 		col->status,
 		ap.ag.n_gobj, ap.ag.n_gobj == 1 ? "" : "s",
-		PrintTimerUSec6(0,0,ap.dur_usec,false) );
+		PrintTimerUSec6(0,0,ap.dur_usec,0) );
 
 	    if ( ap.n_version == ap.n_res )
 		printf("%u different scenario%s total",

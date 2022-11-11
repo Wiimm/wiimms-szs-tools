@@ -84,7 +84,7 @@ static inline bool IsLecodeSupported ( le_valid_t mode )
 	{ return ( mode & LE_M_ALL_VALID ) == LE_M_ALL_VALID; }
 
 //-----------------------------------------------------------------------------
-// [[le_usage_t]]
+// [[le_usage_t]] => edit usage_ch[] before GetLEUsageChar() on changes
 
 typedef enum le_usage_t
 {
@@ -98,7 +98,7 @@ typedef enum le_usage_t
     LEU_S_TRACK_HIDE,	// t track slot
     LEU_S_TRACK_RND,	// R track slot
 
-    LEU_S_LE_RANDOM,	// L network slot
+    LEU_S_LE_RANDOM,	// L LE-CODE random
     LEU_S_SPECIAL,	// s special slot
     LEU_S_NETWORK,	// n network slot
     LEU_S_ALIAS,	// > is alias	    <<< last element!
@@ -284,16 +284,19 @@ ccp PatchNameLEREG ( char *buf, uint bufsize, ccp name, le_region_t lereg );
 
 const mem_t GetLecodeLEREG ( le_region_t reg );
 
-// returns circ-buf
-ccp GetLecodeBuildLEREG ( le_region_t reg );
-ccp GetLecodeInfoLEREG ( le_region_t reg );
 
 //-----------------------------------------------------------------------------
 // some more global functions, used as helpers for *LEREG functions
 
-// returns circ-buf
-ccp GetBuildLECODE ( mem_t lecode );
-ccp GetInfoLECODE ( mem_t lecode );
+// returns circ-buf for strings
+ccp	GetLecodeBuildLEREG	( le_region_t reg );
+ccp	GetLecodeInfoLEREG	( le_region_t reg );
+u_sec_t	GetLecodeCTimeLEREG	( le_region_t reg );
+
+// returns circ-buf for strings
+ccp	GetInfoLECODE	( mem_t lecode );
+ccp	GetBuildLECODE	( mem_t lecode );
+u_sec_t	GetCTimeLECODE	( mem_t lecode );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -407,9 +410,9 @@ bool SetupLecodeDebugLPAR
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			binary headers			///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[le_binary_head_t]]
+// [[le_binary_head_v3_t]]
 
-typedef struct le_binary_head_t
+typedef struct le_binary_head_v3_t
 {
  /*00*/  char	magic[4];	// LE_BINARY_MAGIC
  /*04*/  u32	version;	// always 4 for v4
@@ -423,7 +426,7 @@ typedef struct le_binary_head_t
  /*1e*/  u8	phase;		// >0: PHASE
  /*1f*/  char	unknown_1f;
 }
-__attribute__ ((packed)) le_binary_head_t;
+__attribute__ ((packed)) le_binary_head_v3_t;
 
 //-----------------------------------------------------------------------------
 // [[le_binary_head_v4_t]]
@@ -502,6 +505,19 @@ __attribute__ ((packed)) le_binary_head_v5_38_t;
 // [[le_binary_head_v5_t]]
 
 typedef le_binary_head_v5_38_t le_binary_head_v5_t;
+
+//-----------------------------------------------------------------------------
+// [[le_binary_head_t]]
+
+typedef union
+{
+    le_binary_head_v3_t	v3;
+    le_binary_head_v4_t	v4;
+    le_binary_head_v5_t	v5;
+}
+le_binary_head_t;
+
+u_sec_t GetCTimeLeHead ( const le_binary_head_t *head );
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -862,13 +878,13 @@ typedef struct le_analyze_t
     //--- header data
 
     le_valid_t	valid;		// see LE_VALID_* above
-    uint	version;	// version = phase
     le_region_t	region;		// one of LEREG_*
     u32		creation_time;	// unixtime of LE-CODE creation
     u32		edit_time;	// >0: unixtime of last LE-CODE edit
     uint	szs_required;	// minimal encoded version number of szs-tools required to edit
     uint	szs_recommended;// >0: recommended version number of szs-tools to manage LE binaries
     uint	edit_version;	// >0: encoded version number of szs-tools, that did last edit
+    char	identifier[20];	// identifier of format "v#-b###-h###-<debug><region>"
 
     const u8	*data;		// pointer to raw data
     u32		data_size;	// data size
@@ -921,6 +937,7 @@ typedef struct le_analyze_t
 
     //--- pointers into LE-CODE binary
 
+    le_binary_head_t	*head;		// LECT file header
     le_cup_par_t	*cup_par;	// NULL or cup parameters
     le_course_par_t	*course_par;	// NULL or course parameters
     le_cup_track_t	*cup_track;	// NULL or list of cup tracks
@@ -931,13 +948,6 @@ typedef struct le_analyze_t
 
     u8			*beg_of_data;	// NULL or begin of data
     u8			*end_of_data;	// NULL or end of data
-
-    union
-    {
-	le_binary_head_t	* head;
-	le_binary_head_v4_t	* head_v4;
-	le_binary_head_v5_t	* head_v5;
-    };
 
     union
     {
@@ -976,13 +986,15 @@ void TransferTrackFile   ( LogFile_t *log, uint dest_slot, ccp  src_name, Transf
 void TransferTrackBySlot ( LogFile_t *log, uint dest_slot, uint src_slot, TransferMode_t flags );
 
 static inline bool IsLESlotUsed ( const le_analyze_t *ana, uint slot )
-	{ return slot < ana->n_slot && ana->music[slot]; }
+	{ return slot < ana->n_slot && ana->flags[slot] & G_LEFL__USED; }
 
 static inline bool IsLERacingSlot ( const le_analyze_t *ana, uint slot )
-	{ return slot < ana->n_slot && ana->music[slot] && ana->property[slot] < MKW_TRACK_END; }
+	{ return slot < ana->n_slot && ana->flags[slot] & G_LEFL__USED
+			&& ana->property[slot] < MKW_TRACK_END; }
 
 static inline bool IsLEBattleSlot ( const le_analyze_t *ana, uint slot )
-	{ return slot < ana->n_slot && ana->music[slot] && ana->property[slot] >= MKW_ARENA_BEG; }
+	{ return slot < ana->n_slot && ana->flags[slot] & G_LEFL__USED
+			&& ana->property[slot] >= MKW_ARENA_BEG; }
 
 ///////////////////////////////////////////////////////////////////////////////
 

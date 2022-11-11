@@ -52,3 +52,11 @@
 #   STANDARD-VERSUS-TRACKS
 #	Define 32 standard versus tracks.
 
+
+#--- Instructions
+
+# If IGNORE-SLOT is set to value 1, then all SLOT instructions are ignored
+# until it is reset to 0. This is easier than deleting all SLOT instructions.
+
+IGNORE-SLOT 0
+

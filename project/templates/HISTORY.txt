@@ -636,6 +636,13 @@ szs v2.29a r8691 - 2022-10-27
  - New file type: MTCAT: Import and export 'MKW Track Category' files.
 
 
+szs v2.29b r8696 - 2022-10-28
+
+ - Removed a forgotten debug instruction, that created file _trace-wszst.tmp
+   when reading a LE-CODE binary file of version 4 (builds up to 34).
+ - wszst ANALYZE lecode: Changed output names.
+
+
 @@MODULE(last-history.txt)@@
 
 

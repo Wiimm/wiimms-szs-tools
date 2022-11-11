@@ -1442,7 +1442,7 @@ uint EncodeVersion ( ccp arg )
     char *next;
     uint major = str2ul(arg,&next,10);
     if ( major > 4293 )
-	major = major;
+	major = 4293;
 
     uint minor = 0, letter = 0, beta = ~0;
     if ( *next == '.' )

@@ -1171,33 +1171,33 @@ const mkw_driver_t mkw_driver_attrib[MKW_N_DRIVER+1] =
 	{ 1, 0, "Peac",	"Peac",	"Peach",	"Peach" },		// M2 #16
 	{ 1, 0, "Bird",	"Bird",	"Birdo",	"Birdo" },		// M5
 	{ 1, 0, "DidK",	"DidK",	"Diddy Kong",	"Diddy Kong" },		// M6
-	{ 2, 0, "KBoo",	"BuHu",	"King Boo",	"Kˆnig Buu Huu" },	// L4
+	{ 2, 0, "KBoo",	"BuHu",	"King Boo",	"K√∂nig Buu Huu" },	// L4
 
 	{ 1, 0, "B.Jr",	"B.Jr",	"Bowser Jr.",	"Bowser Jr." },		// M7 #20
 	{ 2, 0, "DBow",	"KnBo",	"Dry Bowser",	"Knochen-Bowser" },	// L7
 	{ 2, 0, "Funk",	"Funk",	"Funky Kong",	"Funky Kong" },		// L6
 	{ 2, 0, "Rosa",	"Rosa",	"Rosalina",	"Rosalina" },		// L5
 
-	{ 0, 1, "MAsm",	"MAkm",	"Mii A (small,male)",	"Mii A (klein,m‰nn)" },	// S8 #24
+	{ 0, 1, "MAsm",	"MAkm",	"Mii A (small,male)",	"Mii A (klein,m√§nn)" },	// S8 #24
 	{ 0, 1, "MAsf",	"MAkw",	"Mii A (small,female)",	"Mii A (klein,weib)" },	// S9
-	{ 0, 2, "MBsm",	"MBkm",	"Mii B (small,male)",	"Mii B (klein,m‰nn)" },	// S10
+	{ 0, 2, "MBsm",	"MBkm",	"Mii B (small,male)",	"Mii B (klein,m√§nn)" },	// S10
 	{ 0, 2, "MBsf",	"MBkw",	"Mii B (small,female)",	"Mii B (klein,weib)" },	// S11
-	{ 0, 3, "MCsm",	"MCkm",	"Mii C (small,male)",	"Mii C (klein,m‰nn)" },	// 0x11c
+	{ 0, 3, "MCsm",	"MCkm",	"Mii C (small,male)",	"Mii C (klein,m√§nn)" },	// 0x11c
 	{ 0, 3, "MCsf",	"MCkw",	"Mii C (small,female)",	"Mii C (klein,weib)" },	// 0x11d
 
-	{ 1, 1, "MAmm",	"MAmm",	"Mii A (medium,male)",	"Mii A (mittel,m‰nn)" },// M8 #30
+	{ 1, 1, "MAmm",	"MAmm",	"Mii A (medium,male)",	"Mii A (mittel,m√§nn)" },// M8 #30
 	{ 1, 1, "MAmf",	"MAmw",	"Mii A (medium,female)","Mii A (mittel,weib)" },// M9
-	{ 1, 2, "MBmm",	"MBmm",	"Mii B (medium,male)",	"Mii B (mittel,m‰nn)" },// M10
+	{ 1, 2, "MBmm",	"MBmm",	"Mii B (medium,male)",	"Mii B (mittel,m√§nn)" },// M10
 	{ 1, 2, "MBmf",	"MBmw",	"Mii B (medium,female)","Mii B (mittel,weib)" },// M11
-	{ 1, 3, "MCmm",	"MCmm",	"Mii C (medium,male)",	"Mii C (mittel,m‰nn)" },// 0x122
+	{ 1, 3, "MCmm",	"MCmm",	"Mii C (medium,male)",	"Mii C (mittel,m√§nn)" },// 0x122
 	{ 1, 3, "MCmf",	"MCmw",	"Mii C (medium,female)","Mii C (mittel,weib)" },// 0x123
 
-	{ 2, 1, "MAlm",	"MAgm",	"Mii A (large,male)",	"Mii A (groﬂ,m‰nn)" },	// L8 #36
-	{ 2, 1, "MAlf",	"MAgw",	"Mii A (large,female)",	"Mii A (groﬂ,weib)" },	// L9
-	{ 2, 2, "MBlm",	"MBgm",	"Mii B (large,male)",	"Mii B (groﬂ,m‰nn)" },	// L10
-	{ 2, 2, "MBlf",	"MBgw",	"Mii B (large,female)",	"Mii B (groﬂ,weib)" },	// L11
-	{ 2, 3, "MClm",	"MCgm",	"Mii C (large,male)",	"Mii C (groﬂ,m‰nn)" },	// 0x128
-	{ 2, 3, "MClf",	"MCgw",	"Mii C (large,female)",	"Mii C (groﬂ,weib)" },	// 0x129
+	{ 2, 1, "MAlm",	"MAgm",	"Mii A (large,male)",	"Mii A (gro√ü,m√§nn)" },	// L8 #36
+	{ 2, 1, "MAlf",	"MAgw",	"Mii A (large,female)",	"Mii A (gro√ü,weib)" },	// L9
+	{ 2, 2, "MBlm",	"MBgm",	"Mii B (large,male)",	"Mii B (gro√ü,m√§nn)" },	// L10
+	{ 2, 2, "MBlf",	"MBgw",	"Mii B (large,female)",	"Mii B (gro√ü,weib)" },	// L11
+	{ 2, 3, "MClm",	"MCgm",	"Mii C (large,male)",	"Mii C (gro√ü,m√§nn)" },	// 0x128
+	{ 2, 3, "MClf",	"MCgw",	"Mii C (large,female)",	"Mii C (gro√ü,weib)" },	// 0x129
 
 	{0,0,"","",0,0} // TERM #42
 };
@@ -1319,6 +1319,134 @@ ccp GetVehicleName4 ( u8 vehicle )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			LE-CODE track flags		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+le_flags_t ScanLEFL ( ccp text )
+{
+    // automatic flags are not scannend!
+
+    le_flags_t res = 0;
+    if (text)
+    {
+	if ( strchr(text,'N') || strchr(text,'n') ) res |= G_LEFL_NEW;
+	if ( strchr(text,'H') || strchr(text,'h') ) res |= G_LEFL_RND_HEAD;
+	if ( strchr(text,'G') || strchr(text,'g') ) res |= G_LEFL_RND_GROUP;
+	if ( strchr(text,'X') || strchr(text,'x') ) res |= G_LEFL_RND_HEAD | G_LEFL_RND_GROUP;
+	if ( strchr(text,'A') || strchr(text,'a') ) res |= G_LEFL_ALIAS;
+	if ( strchr(text,'T') || strchr(text,'t') ) res |= G_LEFL_TEXTURE;
+	if ( strchr(text,'2')                     ) res |= G_LEFL_ALIAS | G_LEFL_TEXTURE;
+	if ( strchr(text,'I') || strchr(text,'i') ) res |= G_LEFL_HIDDEN;
+    }
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintLEFL8 ( le_flags_t flags, bool aligned )
+{
+    char *buf = GetCircBuf(7);
+    flags &= 0xff;
+
+    if ( flags & ~G_LEFL__ALL )
+	snprintf(buf,7,"?0x%02x ",flags);
+    else if (aligned)
+    {
+	buf[0] = flags & G_LEFL_NEW		? 'N' : '-';
+	buf[1] = flags & G_LEFL_RND_HEAD	? 'H' : '-';
+	buf[2] = flags & G_LEFL_RND_GROUP	? 'G' : '-';
+	buf[3] = flags & G_LEFL_ALIAS		? 'A' : '-';
+	buf[4] = flags & G_LEFL_TEXTURE		? 'T' : '-';
+	buf[5] = flags & G_LEFL_HIDDEN		? 'i' : '-';
+	buf[6] = 0;
+    }
+    else
+    {
+	char *d = buf;
+	if ( flags & G_LEFL_NEW		) *d++ = 'N';
+	if ( flags & G_LEFL_RND_HEAD	) *d++ = 'H';
+	if ( flags & G_LEFL_RND_GROUP	) *d++ = 'G';
+	if ( flags & G_LEFL_ALIAS	) *d++ = 'A';
+	if ( flags & G_LEFL_TEXTURE	) *d++ = 'T';
+	if ( flags & G_LEFL_HIDDEN	) *d++ = 'i';
+	if ( d == buf )
+	    *d++ = '-';
+	*d = 0;
+    }
+    return buf;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintLEFL16 ( le_flags_t flags, bool aligned )
+{
+    char *buf = GetCircBuf(7);
+
+    if ( flags & ~G_LEFL__XALL )
+    {
+	snprintf(buf,7,"?0x%03x ",flags);
+	return buf;
+    }
+
+    char *d = buf;
+    switch ( flags & (G_LEFL_BATTLE|G_LEFL_VERSUS|G_LEFL_RANDOM) )
+    {
+	case G_LEFL_BATTLE: *d++ = 'B'; break;
+	case G_LEFL_VERSUS: *d++ = 'V'; break;
+	case G_LEFL_RANDOM: *d++ = 'r'; break;
+	default:
+	    if ( aligned )
+		*d++ = '-';
+    }
+
+    switch ( flags & (G_LEFL_ORIG_CUP|G_LEFL_CUSTOM_CUP) )
+    {
+	case G_LEFL_ORIG_CUP:				*d++ = 'o'; break;
+	case G_LEFL_CUSTOM_CUP:				*d++ = 'c'; break;
+	case G_LEFL_ORIG_CUP | G_LEFL_CUSTOM_CUP:	*d++ = 'b'; break;
+	default:
+	    if ( aligned )
+		*d++ = '-';
+    }
+
+    switch ( flags & (G_LEFL_RND_HEAD|G_LEFL_RND_GROUP) )
+    {
+	case G_LEFL_RND_HEAD:				*d++ = 'H'; break;
+	case G_LEFL_RND_GROUP:				*d++ = 'G'; break;
+	case G_LEFL_RND_HEAD | G_LEFL_RND_GROUP:	*d++ = 'X'; break;
+	default:
+	    if ( aligned )
+		*d++ = '-';
+    }
+
+    switch ( flags & (G_LEFL_NEW|G_LEFL_TEXTURE) )
+    {
+	case G_LEFL_NEW:				*d++ = 'N'; break;
+	case G_LEFL_TEXTURE:				*d++ = 'T'; break;
+	case G_LEFL_NEW | G_LEFL_TEXTURE:		*d++ = '2'; break;
+	default:
+	    if ( aligned )
+		*d++ = '-';
+    }
+
+    if (aligned)
+    {
+	*d++ = flags & G_LEFL_ALIAS	? 'A' : '-';
+	*d++ = flags & G_LEFL_HIDDEN	? 'i' : '-';
+    }
+    else
+    {
+	if ( flags & G_LEFL_ALIAS	) *d++ = 'A';
+	if ( flags & G_LEFL_HIDDEN	) *d++ = 'i';
+	if ( d == buf )
+	    *d++ = '-';
+    }
+    *d = 0;
+    return buf;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			random slots			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1349,6 +1477,7 @@ ccp GetLecodeRandomInfo ( uint slot, ccp return_on_err )
 		? info[ slot - MKW_LE_RANDOM_BEG ]
 		: return_on_err;
 }
+
 
 //
 ///////////////////////////////////////////////////////////////////////////////

@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.29b
+VERSION_NUM		= 2.30a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 

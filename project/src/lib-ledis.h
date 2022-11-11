@@ -62,14 +62,6 @@
 
 #define LE_STRING_SET_ENABLED 1
 
-//-----------------------------------------------------------------------------
-
-// LE-DEF can set track-type markers in vars to remember the track type.
-// So [CUP-LIST] can be defined before [TRACK-LIST]. Anyway, because [TRACK-LIST]
-// is scanned in pass-1 and [CUP-LIST] in pass-2 this can be always set to 0.
-
-#define LE_TYPE_MARKERS_ENABLED 0
-
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			definitions			///////////////
@@ -91,7 +83,7 @@
 
 #define LE_SHA1REF_MAGIC8	"#SHA1REF"
 #define LE_SHA1REF_MAGIC8_NUM	0x2353484131524546ull
-#define LE_SHA1REF_VERSION	1
+#define LE_SHA1REF_VERSION	2
 
 #define LE_PREFIX_MAGIC8	"#PREFIX1"
 #define LE_PREFIX_MAGIC8_NUM	0x2350524546495831ull
@@ -148,6 +140,13 @@ static inline bool IsTrackLTTY ( le_track_type_t track_type )
 
 static inline bool IsRandomLTTY ( le_track_type_t track_type )
 	{ return ( track_type & LTTY_RANDOM ) > 0; }
+
+static inline bool IsArenaOrRandomLTTY ( le_track_type_t track_type )
+	{ return ( track_type & (LTTY_ARENA|LTTY_RANDOM) ) > 0; }
+
+static inline bool IsTrackOrRandomLTTY ( le_track_type_t track_type )
+	{ return ( track_type & (LTTY_TRACK|LTTY_RANDOM) ) > 0; }
+
 
 ccp  GetNameLTTY ( le_track_type_t track_type );
 
@@ -229,15 +228,15 @@ typedef enum le_options_t
 {
     //-- text selector
 
-    LEO_LTT_SELECTOR	= 0x000000f,  // mask to store le_track_text_t selector
+    LEO_LTT_SELECTOR	= 0x0000000f,  // mask to store le_track_text_t selector
 
 
     //-- BMG input source selector. If none is set then use all
 
-    LEO_MKW1		= 0x0000010,  // import track names from MKW set 1 (0x2454../0x24b8..)
-    LEO_MKW2		= 0x0000020,  // import track names from MKW set 2 (0x2490../0x24cc..)
-    LEO_CTCODE		= 0x0000040,  // import track names from CT-CODE   (0x4000..)
-    LEO_LECODE		= 0x0000080,  // import track names from LE-CODE   (0x7000..)
+    LEO_MKW1		= 0x00000010,  // import track names from MKW set 1 (0x2454../0x24b8..)
+    LEO_MKW2		= 0x00000020,  // import track names from MKW set 2 (0x2490../0x24cc..)
+    LEO_CTCODE		= 0x00000040,  // import track names from CT-CODE   (0x4000..)
+    LEO_LECODE		= 0x00000080,  // import track names from LE-CODE   (0x7000..)
      LEO_MKW		= LEO_MKW1 | LEO_MKW2,
      LEO_DEFAULT_BMG	= LEO_MKW | LEO_LECODE,
      LEO_M_BMG		= LEO_MKW | LEO_LECODE | LEO_CTCODE,
@@ -245,59 +244,61 @@ typedef enum le_options_t
 
     //-- BMG input options
 
-    LEO_IN_EMPTY	= 0x0000100,  // accept empty strings as valid
-    LEO_IN_MINUS	= 0x0000200,  // accept minus strings as valid
+    LEO_IN_EMPTY	= 0x00000100,  // accept empty strings as valid
+    LEO_IN_MINUS	= 0x00000200,  // accept minus strings as valid
      LEO_IN_ALL		= LEO_IN_EMPTY | LEO_IN_MINUS,
 
 
     //-- BMG operator
 
-    LEO_INSERT		= 0x0000400,  // insert only new strings into the source.
-    LEO_REPLACE		= 0x0000800,  // replace only strings that are already defined.
-    LEO_OVERWRITE	= 0x0000c00,  // insert all valid strings
-     LEO_M_HOW		= 0x0000c00,
+    LEO_INSERT		= 0x00000400,  // insert only new strings into the source.
+    LEO_REPLACE		= 0x00000800,  // replace only strings that are already defined.
+    LEO_OVERWRITE	= 0x00000c00,  // insert all valid strings
+     LEO_M_HOW		= 0x00000c00,
 
 
     //-- Output filter pairs. Only valid if exact 1 bit is set
 
-    LEO_VERSUS		= 0x0001000,  // use racing tracks only (!lt->arena)
-    LEO_BATTLE		= 0x0002000,  // use battle arenas only (lt->arena)
+    LEO_VERSUS		= 0x00001000,  // use racing tracks only (!lt->arena)
+    LEO_BATTLE		= 0x00002000,  // use battle arenas only (lt->arena)
      LEO_M_ARENA	= LEO_VERSUS | LEO_BATTLE,
 
-    LEO_CUSTOM		= 0x0004000,  // use custom tracks only (!lt->original)
-    LEO_ORIGINAL	= 0x0008000,  // use original tracks only (lt->original)
+    LEO_CUSTOM		= 0x00004000,  // use custom tracks only (!lt->original)
+    LEO_ORIGINAL	= 0x00008000,  // use original tracks only (lt->original)
      LEO_M_ORIGINAL	= LEO_CUSTOM | LEO_ORIGINAL,
 
-    LEO_NO_D_FILES	= 0x0010000,  // suppred info about _d files
+    LEO_NO_D_FILES	= 0x00010000,  // suppredd info about _d files
 
      LEO_M_OUTPUT	= LEO_M_ARENA | LEO_M_ORIGINAL | LEO_NO_D_FILES,
 
 
     //-- Output filter flags
 
-    LEO_OUT_EMPTY	= 0x0020000,  // accept empty strings as valid
-    LEO_OUT_MINUS	= 0x0040000,  // accept minus strings as valid
+    LEO_OUT_EMPTY	= 0x00020000,  // accept empty strings as valid
+    LEO_OUT_MINUS	= 0x00040000,  // accept minus strings as valid
      LEO_OUT_ALL	= LEO_OUT_EMPTY | LEO_OUT_MINUS,
 
 
     //-- more options
 
-    LEO_IN_LECODE	= 0x0100000,  // import lecode binary
-    LEO_BRIEF		= 0x0200000,  // suppress descriptions
+    LEO_IN_LECODE	= 0x00100000,  // import lecode binary
+    LEO_NO_SLOT		= 0x00200000,  // suppress 'SLOT <num>' if creating a LE-DEF file.
+    LEO_BRIEF		= 0x00400000,  // suppress descriptions
 
 
     //-- special signals
 
-    LEO_HELP		= 0x1000000,  // print help and exit
+    LEO_CUT_ALL		= 0x01000000,  // cut all
+    LEO_CUT_STD		= 0x02000000,  // cut for standard distribution.
+    LEO_CUT_CTCODE	= 0x04000000,  // cut for CT-CODE distribution.
+     LEO_M_CUT		= LEO_CUT_ALL | LEO_CUT_STD | LEO_CUT_CTCODE,
 
-    LEO_CUT_STD		= 0x2000000,  // cut for standard distribution.
-    LEO_CUT_CTCODE	= 0x4000000,  // cut for CT-CODE distribution.
-     LEO_M_CUT		= LEO_CUT_STD | LEO_CUT_CTCODE,
+    LEO_HELP		= 0x0800000,  // print help and exit
 
 
     //-- misc
 
-    LEO__ALL		= 0x7ffffff,
+    LEO__ALL		= 0x07ffffff,
     LEO__DEFAULT	= LTT__DEFAULT | LEO_OVERWRITE,
     LEO__SRC		= LEO_LTT_SELECTOR | LEO_IN_ALL,
     LEO__DEST		= LEO_LTT_SELECTOR | LEO_OUT_ALL | LEO_M_OUTPUT | LEO_M_HOW,
@@ -324,6 +325,15 @@ ccp GetOutputFilterLEO ( le_options_t opt );
 // Options: LEO_IN_*, LEO_M_BMG
 bool GetBmgBySlotLEO
 	( char *buf, uint bufsize, const bmg_t *bmg, int slot, le_options_t opt );
+
+//-----------------------------------------------------------------------------
+// wrapper from le_options_t to le_track_text_t
+
+static inline ccp GetUpperNameLEO ( le_options_t opt )
+	{ return GetUpperNameLTT((le_track_text_t)opt); }
+
+static inline ccp GetLowerNameLEO ( le_options_t opt )
+	{ return GetLowerNameLTT((le_track_text_t)opt); }
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -388,7 +398,8 @@ typedef struct le_cup_t
     le_cup_ref_t	*list;		// list with tracks => list[size][tracks]
     uint		used;		// used cups of 'list'
     uint		size;		// alloced cups of 'list'
-    uint		max;		// max pssible cups of 'list'
+    uint		max;		// max possible cups of 'list'
+    uint		first_custom;	// index of first custom cup (2|8)
     uint		tracks;		// number of tracks of each cup
 
     uint		cur_cup;	// current cup
@@ -409,6 +420,9 @@ void ResetLECUP		( le_cup_t *lc );
 
 le_cup_ref_t * GetLECUP    ( const le_cup_t *lc, uint cup_index );
 le_cup_ref_t * DefineLECUP ( le_cup_t *lc, uint cup_index );
+
+int  GetIndexByRefLECUP ( const le_cup_t *lc, int  cup_ref );
+uint GetRefByIndexLECUP ( const le_cup_t *lc, uint cup_index );
 
 // return 0 or cup slot like 21
 uint GetCupSlotLECUP	( const le_cup_t *lc, const le_cup_ref_t *ptr );
@@ -751,9 +765,10 @@ void SetupLparLD ( le_distrib_t *ld, bool load_lpar );
 //-----------------------------------------------------------------------------
 // trackhelpers
 
-uint PackTracksLD ( const le_distrib_t *ld );
-void CheckTracksLD ( const le_distrib_t *ld );
+uint PackTracksLD		( const le_distrib_t *ld );
+void CheckTracksLD		( const le_distrib_t *ld );
 
+void DefineRandomTracksLD	( le_distrib_t *ld );
 le_track_t * GetTrackLD		( le_distrib_t *ld, int slot );
 le_track_t * DefineTrackLD	( le_distrib_t *ld, int slot, bool mark_export );
 le_track_t * DefineFreeTrackLD	( le_distrib_t *ld, le_track_type_t ltty, bool mark_export );
@@ -767,7 +782,7 @@ le_track_t * ReserveTracksLD ( le_distrib_t *ld, le_track_type_t ltty, int n, bo
 //-----------------------------------------------------------------------------
 // cup helpers
 
-void ClearUserFlagsAndCupsLD ( le_distrib_t *ld );
+void ClearUserFlagsAndCupsLD ( le_distrib_t *ld, bool purge_le_flags );
 bool HaveWiimmCupLD ( const le_distrib_t *ld );
 
 void DirtyCupLD   ( le_distrib_t *ld, le_track_type_t ltty );

@@ -489,7 +489,6 @@ const VarMap_t * SetupVarsLECODE()
 
 	    { "LE$STRING_LIST_ENABLED",	LE_STRING_LIST_ENABLED },
 	    { "LE$STRING_SET_ENABLED",	LE_STRING_SET_ENABLED },
-	    { "LE$TYPE_MARKERS_ENABLED",LE_TYPE_MARKERS_ENABLED },
 
 	    {0,0}
 	};
@@ -872,10 +871,13 @@ ccp GetBuildLECODE ( mem_t lecode )
     if ( !lecode.ptr || lecode.len < sizeof(le_binary_head_v4_t) )
 	return "?";
 
+    const u_sec_t creation_time = GetCTimeLECODE(lecode);
     const le_binary_head_v4_t *head = (le_binary_head_v4_t*)lecode.ptr;
-    return ntohl(head->version) < 4
+    return !creation_time
 	? PrintCircBuf("%u",ntohl(head->build_number))
-	: PrintCircBuf("%u (%.10s)",ntohl(head->build_number),head->timestamp);
+	: PrintCircBuf("%u (%.10s)",
+			ntohl(head->build_number),
+			PrintTimeByFormat("%F %T %Z",creation_time) );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -892,26 +894,66 @@ ccp GetInfoLECODE ( mem_t lecode )
     if ( !lecode.ptr || lecode.len < sizeof(le_binary_head_v4_t) )
 	return "?";
 
-    const le_binary_head_v4_t *head = (le_binary_head_v4_t*)lecode.ptr;
-    ccp region	= head->region == 'P' ? "PAL"
-		: head->region == 'E' ? "USA"
-		: head->region == 'J' ? "JAP"
-		: head->region == 'K' ? "KOR"
-		: "?";
-    ccp debug	= head->debug == 'D' ? "/debug" : "";
+    const le_binary_head_t *head = (le_binary_head_t*)lecode.ptr;
 
-    return ntohl(head->version) < 4
-	? PrintCircBuf("%s%s v%u, build %u, %u bytes",
+    ccp region	= head->v3.region == 'P' ? "PAL"
+		: head->v3.region == 'E' ? "USA"
+		: head->v3.region == 'J' ? "JAP"
+		: head->v3.region == 'K' ? "KOR"
+		: "?";
+    ccp debug	= head->v3.debug == 'D' ? "/debug" : "";
+    const u_sec_t creation_time = GetCTimeLECODE(lecode);
+
+    return creation_time
+	? PrintCircBuf("%s%s v%u, build %u (%s), %u bytes",
 			region, debug,
-			ntohl(head->version),
-			ntohl(head->build_number),
-			ntohl(head->file_size) )
-	: PrintCircBuf("%s%s v%u, build %u (%s UTC), %u bytes",
+			ntohl(head->v3.version),
+			ntohl(head->v3.build_number),
+			PrintTimeByFormat("%F %T %Z",creation_time),
+			ntohl(head->v3.file_size) )
+	: PrintCircBuf("%s%s v%u, build %u, %u bytes",
 			region, debug,
-			ntohl(head->version),
-			ntohl(head->build_number),
-			head->timestamp,
-			ntohl(head->file_size) );
+			ntohl(head->v3.version),
+			ntohl(head->v3.build_number),
+			ntohl(head->v3.file_size) );
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+u_sec_t	GetLecodeCTimeLEREG ( le_region_t reg )
+{
+    return GetCTimeLECODE(GetLecodeLEREG(reg));
+}
+
+//-----------------------------------------------------------------------------
+
+u_sec_t GetCTimeLECODE ( mem_t lecode )
+{
+    return lecode.len >= sizeof(le_binary_head_v5_t)
+	? GetCTimeLeHead((le_binary_head_t*)lecode.ptr)
+	: 0;
+}
+
+//-----------------------------------------------------------------------------
+
+u_sec_t GetCTimeLeHead ( const le_binary_head_t *head )
+{
+    if (!head)
+	return 0;
+
+    const uint version = ntohl(head->v3.version);
+
+    if ( version >= 5 )
+	return ntohl(head->v5.creation_time);
+
+    if ( version >= 4 )
+    {
+	time_t tim;
+	ScanDateTime(&tim,0,head->v4.timestamp,false,false);
+	return tim;
+    }
+
+    return 0;
 }
 
 //
@@ -1654,6 +1696,7 @@ static void ApplyArena ( le_analyze_t * ana, const ctcode_arena_t * ca )
 			if ( ntohl(ana->cup_arena[idx]) == slot )
 			{
 			    ana->cup_arena[idx] = htonl(prop);
+			    ana->arena_applied = true;
 			    break;
 			}
 		}
@@ -1672,11 +1715,14 @@ static void ApplyArena ( le_analyze_t * ana, const ctcode_arena_t * ca )
 
 	    if ( ca->flags[a] & CT_ARENA_FLAGS_VALID )
 	    {
-		ana->flags[slot] = ca->flags[a] & LEFL__ALL;
+		ana->flags[slot] = ca->flags[a] & G_LEFL__ALL;
 		ana->arena_applied = true;
 	    }
 	}
     }
+
+    if (ana->arena_applied)
+	UpdateLecodeFlags(ana);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1732,26 +1778,25 @@ enumError AnalyzeLEBinary
     memset(ana,0,sizeof(*ana));
 
     if (   !data
-	|| data_size < sizeof(le_binary_head_t)
+	|| data_size < sizeof(le_binary_head_v3_t)
 	|| memcmp(data,LE_BINARY_MAGIC,4) )
     {
 	return ERR_INVALID_DATA;
     }
 
     le_binary_head_t *head = (le_binary_head_t*)data;
-    const uint file_size = ntohl(head->file_size);
+    const uint file_size = ntohl(head->v3.file_size);
     if ( file_size > data_size )
 	return ERR_INVALID_DATA;
 
     ana->valid		= LE_HEAD_FOUND;
-    ana->version	= head->phase;
-    ana->region		= GetLEREG(head->region);
+    ana->region		= GetLEREG(head->v3.region);
     ana->data		= data;
     ana->data_size	= data_size;
     ana->head		= head;
-    ana->header_vers	= ntohl(head->version);
+    ana->header_vers	= ntohl(head->v3.version);
     ana->end_of_data	= (u8*)data + file_size;
-    ana->flags_bits	= ntohl(head->build_number) < 35 ? 8 : 16;
+    ana->flags_bits	= ntohl(head->v3.build_number) < 35 ? 8 : 16;
     ana->le_random_beg	= MKW_LE_RANDOM_BEG;
     ana->le_random_end	= MKW_LE_RANDOM_END;
 
@@ -1761,13 +1806,13 @@ enumError AnalyzeLEBinary
      case 4:
 	if ( ana->data_size > sizeof(le_binary_head_v4_t) )
 	{
-	    off_param		=  ntohl(ana->head_v4->off_param);
+	    off_param		=  ntohl(ana->head->v4.off_param);
 	    ana->header_size	=  sizeof(le_binary_head_v4_t);
-	    ana->le_random_beg	= MKW_LE_RANDOM_BY_CUP;
+	    ana->le_random_beg	=  MKW_LE_RANDOM_BY_CUP;
 	    ana->valid		|= LE_HEAD_VALID | LE_HEAD_KNOWN;
 
 	    time_t tim;
-	    ScanDateTime(&tim,0,ana->head_v4->timestamp,false,0);
+	    ScanDateTime(&tim,0,ana->head->v4.timestamp,false,false);
 	    ana->creation_time	= tim;
 	}
 	break;
@@ -1775,26 +1820,34 @@ enumError AnalyzeLEBinary
      case 5:
 	if ( ana->data_size > sizeof(le_binary_head_v5_34_t) )
 	{
-	    off_param		=  ntohl(ana->head_v5->off_param);
-	    ana->szs_required	=  ntohl(ana->head_v5->szs_required);
-	    ana->edit_version	=  ntohl(ana->head_v5->edit_version);
-	    ana->header_size	=  ntohl(ana->head_v5->head_size);
-	    ana->creation_time	=  ntohl(ana->head_v5->creation_time);
-	    ana->edit_time	=  ntohl(ana->head_v5->edit_time);
+	    off_param		=  ntohl(ana->head->v5.off_param);
+	    ana->szs_required	=  ntohl(ana->head->v5.szs_required);
+	    ana->edit_version	=  ntohl(ana->head->v5.edit_version);
+	    ana->header_size	=  ntohl(ana->head->v5.head_size);
+	    ana->creation_time	=  ntohl(ana->head->v5.creation_time);
+	    ana->edit_time	=  ntohl(ana->head->v5.edit_time);
 
-	    if ( ana->header_size > offsetof(le_binary_head_v5_t,szs_recommended) )
-		ana->szs_recommended	=  ntohl(ana->head_v5->szs_recommended);
-
-	    if ( ana->edit_version != 0x32303232 ) // first 4 bytes of "2022-10-23" => invalid
+	    if ( ana->edit_version != 0x32303232 ) // if first 4 bytes of "2022-10-23" => invalid
+	    {
 		ana->valid	|= LE_HEAD_VALID | LE_HEAD_KNOWN;
+
+		if ( ana->header_size > offsetof(le_binary_head_v5_t,szs_recommended) )
+		{
+		    ana->szs_recommended = ntohl(ana->head->v5.szs_recommended);
+	//	    if ( ana->szs_recommended >= 2300100 )
+	//	    {
+	//		//?
+	//	    }
+		}   
+	    }
 	}
 	break;
 
      default:
-	if ( ana->header_vers > 5 && ana->data_size > sizeof(le_binary_head_t) )
+	if ( ana->header_vers > 5 && ana->data_size > sizeof(le_binary_head_v3_t) )
 	{
-	    off_param		=  ntohl(head->off_param);
-	    ana->header_size	=  ntohl(ana->head_v5->head_size);
+	    off_param		=  ntohl(head->v3.off_param);
+	    ana->header_size	=  ntohl(head->v5.head_size);
 	    ana->valid		|= LE_HEAD_VALID;
 	}
 	break;
@@ -1803,6 +1856,13 @@ enumError AnalyzeLEBinary
     if ( GetEncodedVersion() >= ana->szs_required )
 	    ana->valid |= LE_HEAD_VERSION;
 
+    snprintf(ana->identifier,sizeof(ana->identifier),
+		"v%u-b%02u-h%02u-%c%c",
+		ntohl(ana->head->v3.version),
+		ntohl(ana->head->v3.build_number),
+		ana->header_size,
+		tolower(ana->head->v3.debug),
+		tolower(ana->head->v3.region) );
 
     //--- analyse parameters (prepare)
 
@@ -2065,8 +2125,7 @@ le_region_t GetLERegion ( const le_analyze_t *ana )
 {
     if (ana->valid)
     {
-	const le_binary_head_t *h = ana->head;
-	switch (h->region)
+	switch (ana->head->v3.region)
 	{
 	    case 'P': return LEREG_PAL;
 	    case 'E': return LEREG_USA;
@@ -2169,25 +2228,27 @@ const le_usage_t * GetLEUsage ( const le_analyze_t *ana0, bool force_recalc )
 
     for ( slot = LE_FIRST_CT_SLOT; slot < ana->usage_size; slot++ )
     {
+	const le_flags_t flags = ana->flags[slot];
+	if (!flags)
+	    continue;
+
 	if (IsLESlotUsed(ana,slot))
 	{
-	    const le_flags_t flags = ana->flags[slot];
-
-	    if ( flags & LEFL_ALIAS )
+	    if ( flags & G_LEFL_ALIAS )
 		 usage[slot] = LEU_S_ALIAS;
 	    else if ( IsLEBattleSlot(ana,slot) )
 		usage[slot]
-			= flags & LEFL_RND_HEAD			? LEU_S_ARENA_RND
-			: flags & (LEFL_RND_GROUP|LEFL_HIDDEN)	? LEU_S_ARENA_HIDE
+			= flags & G_LEFL_RND_HEAD			? LEU_S_ARENA_RND
+			: flags & (G_LEFL_RND_GROUP|G_LEFL_HIDDEN)	? LEU_S_ARENA_HIDE
 			:					  LEU_S_ARENA;
 	    else
 		usage[slot]
-			= flags & LEFL_RND_HEAD			? LEU_S_TRACK_RND
-			: flags & (LEFL_RND_GROUP|LEFL_HIDDEN)	? LEU_S_TRACK_HIDE
+			= flags & G_LEFL_RND_HEAD			? LEU_S_TRACK_RND
+			: flags & (G_LEFL_RND_GROUP|G_LEFL_HIDDEN)	? LEU_S_TRACK_HIDE
 			:					  LEU_S_TRACK;
 	}
 
-	if ( ana->version > 1 || slot < 0xff
+	if ( ana->head->v3.phase > 1 || slot < 0xff
 		|| slot >= LE_FIRST_UPPER_CT_SLOT && slot <= LE_LAST_UPPER_CT_SLOT )
 	{
 	    usage[slot] |= LEU_F_ONLINE;
@@ -2202,9 +2263,9 @@ const le_usage_t * GetLEUsage ( const le_analyze_t *ana0, bool force_recalc )
 	if (IsLESlotUsed(ana,slot))
 	{
 	    const le_flags_t flags = ana->flags[slot];
-	    usage[slot] = flags & LEFL_ALIAS      ? LEU_S_ALIAS
-			: flags & LEFL_RND_HEAD   ? LEU_S_ARENA_RND
-			: flags & LEFL_RND_GROUP  ? LEU_S_ARENA_HIDE
+	    usage[slot] = flags & G_LEFL_ALIAS      ? LEU_S_ALIAS
+			: flags & G_LEFL_RND_HEAD   ? LEU_S_ARENA_RND
+			: flags & G_LEFL_RND_GROUP  ? LEU_S_ARENA_HIDE
 			:			    LEU_S_ARENA;
 	}
     }
@@ -2212,7 +2273,7 @@ const le_usage_t * GetLEUsage ( const le_analyze_t *ana0, bool force_recalc )
 
     //--- override Network.random
 
-    if ( ana->version == 1 )
+    if ( ana->head->v3.phase == 1 )
 	usage[0xff] = LEU_S_NETWORK|LEU_F_ONLINE;
 
     return usage;
@@ -2399,7 +2460,7 @@ static ccp GetSlotInfo
 
 	static const char warn_list[] = " <!!";
 	const le_flags_t flags = ana->flags[tid];
-	return flags & LEFL_ALIAS
+	return flags & G_LEFL_ALIAS
 		? PrintCircBuf("[%s->%4x %s,%s] ",
 				col->differ, TrackByAliasLE(prop,music),
 				col->reset, PrintLEFL(ana->flags_bits,flags,true) )
@@ -2481,7 +2542,7 @@ static void DumpLETracks
 
     u16 *done = CALLOC(sizeof(*done),ana->n_slot);
     DASSERT(done);
-    if ( ana->version == 1 )
+    if ( ana->head->v3.phase == 1 )
     {
 	uint max = ana->n_slot < LE_FIRST_UPPER_CT_SLOT
 		 ? ana->n_slot : LE_FIRST_UPPER_CT_SLOT;
@@ -2629,7 +2690,7 @@ static void DumpLETracks
 	    else // if ( !done[i] )
 	    {
 		const typeof(*ana->flags) flags = ana->flags ? ana->flags[i] : 0;
-		if ( flags & LEFL_RND_GROUP )
+		if ( flags & G_LEFL_RND_GROUP )
 		{
 		    n_group++;
 		    max_viewed_slot = i;
@@ -2637,7 +2698,7 @@ static void DumpLETracks
 		else
 		{
 		    n_unused++;
-		    if ( flags & LEFL_TEXTURE )
+		    if ( flags & G_LEFL_TEXTURE )
 			max_viewed_slot = i;
 		}
 	    }
@@ -2670,13 +2731,22 @@ static void DumpLETracks
 		n_group, n_group == 1 ? "" : "s",
 		col->reset );
 
-	for ( i = 0; i < ana->n_slot; i++ )
-	    if ( !done[i] && IsRacingTrackLE(i) && ana->flags[i] & LEFL_RND_GROUP )
+	int prev = -1, line_count = 99;
+	for ( int i = 0; i <= max_viewed_slot; i++ )
+	{
+	    if ( !done[i] && IsRacingTrackLE(i) && ana->flags[i] & G_LEFL_RND_GROUP )
 	    {
+		if ( ++line_count > 4 || i != prev+1 )
+		{
+		    fprintf(f,"\n%*sSlot %4d/dec :", indent,"", i );
+		    line_count = 1;
+		}
 		done[i]++;
-		fprintf(f,"%*sSlot %4d/dec : %3x%s\n",
-			indent,"", i, i, GetSlotInfo(ana,i,col,CHECK_OFF,0));
+		fprintf(f," %3x%s", i, GetSlotInfo(ana,i,col,CHECK_OFF,0) );
+		prev = i;
 	    }
+	}
+	putchar('\n');
     }
 
     //HexDump16(stdout,0,0,done,ana->n_slot*sizeof(*done));
@@ -2705,7 +2775,6 @@ static void DumpLETracks
 		{
 		    if ( ++line_count > 4 || i != prev+1 )
 		    {
-//DEL			if ( i == prev+1 ) fputs("...",f);
 			fprintf(f,"\n%*sSlot %4d/dec :", indent,"", i );
 			line_count = 1;
 		    }
@@ -2721,10 +2790,14 @@ static void DumpLETracks
 	    first_unused_slot = LE_FIRST_CT_SLOT;
 	const int unused_slots = ana->n_slot - first_unused_slot;
 	if ( unused_slots > 0 )
-	    fprintf(f,"%*s  > %u slot%s beginning with slot %u (%x/hex) are not used.\n",
-		indent,"",
-		unused_slots, unused_slots == 1 ? "" : "s",
-		first_unused_slot, first_unused_slot );
+	{
+	    if ( unused_slots > 1 )
+		fprintf(f,"%*s  > %u slots beginning with slot %u (%x/hex) are not used.\n",
+			indent,"", unused_slots, first_unused_slot, first_unused_slot );
+	    else
+		fprintf(f,"%*s  > Slot %u (%x/hex) is not used.\n",
+			indent,"", first_unused_slot, first_unused_slot );
+	}
     }
 
 
@@ -2751,11 +2824,10 @@ static void DumpLEUsageMap
     if ( max_view > ana->usage_size )
 	 max_view = ana->usage_size;
 
- #if 1
     fprintf(f,"\n%*s%s"	"Slot usage map for %u slots%s\n"
-		"%*s"	"%s: Arena%s, %s: Hidden Arena%s, %s: Random Arena%s, "
+		"%*s"	"%s: Arena%s, %s: Hidden Arena%s, %s: Random Group Arena%s, "
 			"%s: LE-CODE random%s, %s: Alias%s,\n"
-		"%*s"	"%s: Track%s, %s: Hidden Track%s, %s: Random Track%s, "
+		"%*s"	"%s: Track%s, %s: Hidden Track%s, %s: Random Group Track%s, "
 			"%s: Network%s, %s: Special%s, %s: unused%s.\n",
 
 		indent-2,"", col->heading, max_view, col->reset,
@@ -2772,32 +2844,6 @@ static void DumpLEUsageMap
 		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_NETWORK,	col,0 ), col->reset,
 		 GetLEUsageCharCol(		   LEU_S_SPECIAL,	col,0 ), col->reset,
 		 GetLEUsageCharCol(		   LEU_S_UNUSED,	col,0 ), col->reset );
-
- #else
-    fprintf(f,"\n%*s%s"	"Slot usage map for %u slots%s\n"
-		"%*s"	"%s: Arena%s, %s: Hidden Arena%s, %s: Random Arena%s, "
-			"%s: LE-CODE arena random%s,\n"
-		"%*s"	"%s: Track%s, %s: Hidden Track%s, %s: Random Track%s, "
-			"%s: LE-CODE track random%s,\n"
-		"%*s"	"%s: Alias%s, %s: Network%s, %s: Special%s, %s: unused%s.\n",
-
-		indent-2,"", col->heading, max_view, col->reset,
-		indent,"",
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA,		col,0 ), col->reset,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_HIDE,	col,0 ), col->reset,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_RND,	col,0 ), col->reset,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ARENA_LE_RND,	col,0 ), col->reset,
-		indent,"",
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK,		col,0 ), col->reset,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_HIDE,	col,0 ), col->reset,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_RND,	col,0 ), col->reset,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_TRACK_LE_RND,	col,0 ), col->reset,
-		indent,"",
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_ALIAS,		col,0 ), col->reset,
-		 GetLEUsageCharCol( LEU_F_ONLINE | LEU_S_NETWORK,	col,0 ), col->reset,
-		 GetLEUsageCharCol(		   LEU_S_SPECIAL,	col,0 ), col->reset,
-		 GetLEUsageCharCol(		   LEU_S_UNUSED,	col,0 ), col->reset );
- #endif
 
     uint slot;
     ccp prev_col = 0;
@@ -2873,7 +2919,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 
     if ( ana->valid & LE_HEAD_VALID )
     {
-	const le_binary_head_t *h = ana->head;
+	const le_binary_head_v3_t *h = &ana->head->v3;
 	DASSERT(h);
 	fprintf(f,
 		"\n%*s%s" "File header:%s\n"
@@ -2929,7 +2975,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	    fprintf(f,
 		"%*s" "Current SZS Tool:  v%s\n", indent,"", BASE_VERSION );
 
-	    int fw = 0;
+	    int fw = strlen(BASE_VERSION);
 	    ccp required = 0, recommended = 0;
 
 	    if (ana->szs_required)
@@ -2944,6 +2990,13 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	    {
 		recommended = DecodeVersion(ana->szs_recommended);
 		int len = strlen(recommended);
+		if ( fw < len )
+		     fw = len;
+	    }
+
+	    if (ana->edit_version)
+	    {
+		int len = strlen(DecodeVersion(ana->edit_version));
 		if ( fw < len )
 		     fw = len;
 	    }
@@ -2979,6 +3032,10 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		indent,"", DecodeVersion(ana->edit_version) );
     }
 
+    fputc('\n',f);
+    if ( brief_count > 0 )
+	return;
+
 
     //--- parameters
 
@@ -2987,7 +3044,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	const le_binary_param_t *h = ana->param;
 	DASSERT(h);
 	fprintf(f,
-		"\n%*s%s" "Parameters (LPAR):%s\n"
+		"%*s%s" "Parameters (LPAR):%s\n"
 		"%*s" "Magic:             %.4s\n"
 		"%*s" "Version:           %u\n"
 		"%*s" "Param size:        %x/hex = %u bytes\n"
@@ -3258,7 +3315,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 
     if ( long_count > 0 )
 	DumpLETracks(f,indent,&col,ana);
-    if ( verbose > 0 )
+    if ( verbose > 0 || long_count > 2 )
 	DumpLEUsageMap(f,indent,&col,ana);
 
     fputc('\n',f);
@@ -3387,7 +3444,7 @@ enumError ApplyLEFile ( le_analyze_t * ana )
     DASSERT(ana);
     SetupArenasLEAnalyze(ana,false);
 
-    const ctcode_t *ctcode = LoadLEFile(ana->version);
+    const ctcode_t *ctcode = LoadLEFile(ana->head->v3.phase);
     return ctcode ? ApplyCTCODE(ana,ctcode) : ERR_ERROR;
 }
 
@@ -3531,6 +3588,7 @@ enumError ApplyCTCODE ( le_analyze_t * ana, const ctcode_t * ctcode )
     }
 
     CalculateStatsLE(ana);
+    UpdateLecodeFlags(ana);
     return ERR_OK;
 }
 
@@ -3558,9 +3616,9 @@ bool DefineAliasLE ( le_analyze_t * ana, uint slot, uint alias )
 	}
 
 	const le_flags_t fl = ana->flags[alias];
-	if ( !(fl & LEFL_ALIAS) )
+	if ( !(fl & G_LEFL_ALIAS) )
 	{
-	    ana->flags[slot]   |= LEFL_ALIAS;
+	    ana->flags[slot]   |= G_LEFL_ALIAS;
 	    ana->property[slot] = alias >> 8;
 	    ana->music[slot]    = alias & 0xff;
 	    return true;
@@ -3647,27 +3705,27 @@ void UpdateLecodeFlags ( le_analyze_t * ana )
 	return;
 
 
-    //--- calculate flags LEFL_BATTLE and LEFL_VERSUS, reset other flags
+    //--- calculate flags G_LEFL_BATTLE and G_LEFL_VERSUS, reset other flags
 
     for ( int slot = 0; slot < ana->max_flags; slot++ )
     {
-	le_flags_t flags = ana->flags[slot] & LEFL__ALL;
+	le_flags_t flags = ana->flags[slot] & G_LEFL__ALL;
 	if ( slot < ana->max_property )
 	{
 	    if ( slot < MKW_ARENA_END || slot >= MKW_LE_SLOT_BEG )
-		flags |= IsMkwTrack(ana->property[slot]) ? LEFL_VERSUS : LEFL_BATTLE;
+		flags |= IsMkwTrack(ana->property[slot]) ? G_LEFL_VERSUS : G_LEFL_BATTLE;
 	}
 	ana->flags[slot] = flags;
     }
 
 
-    //--- define LEFL_RANDOM
+    //--- define G_LEFL_RANDOM
 
     for ( int slot = LE_SLOT_RND_BEG; slot < LE_SLOT_RND_END; slot++ )
-	ana->flags[slot] |= LEFL_RANDOM;
+	ana->flags[slot] |= G_LEFL_RANDOM;
 
 
-    //--- calculate flags LEFL_CUP, LEFL_ORIG_CUP, LEFL_CUSTOM_CUP
+    //--- calculate flags G_LEFL_CUP, G_LEFL_ORIG_CUP, G_LEFL_CUSTOM_CUP
 
     if ( ana->n_cup_track && ana->cup_track )
     {
@@ -3679,8 +3737,8 @@ void UpdateLecodeFlags ( le_analyze_t * ana )
 	for ( int tr = 0; tr < max_tr; tr++ )
 	{
 	    const uint slot = ntohl(*src++);
-	    if ( slot < ana->max_flags && ana->flags[slot] & (LEFL_VERSUS|LEFL_RANDOM) )
-		ana->flags[slot] |= LEFL_CUP | ( tr < MKW_N_TRACKS ? LEFL_ORIG_CUP : LEFL_CUSTOM_CUP );
+	    if ( slot < ana->max_flags && ana->flags[slot] & (G_LEFL_VERSUS|G_LEFL_RANDOM) )
+		ana->flags[slot] |= G_LEFL_CUP | ( tr < MKW_N_TRACKS ? G_LEFL_ORIG_CUP : G_LEFL_CUSTOM_CUP );
 	}
     }
 
@@ -3691,8 +3749,8 @@ void UpdateLecodeFlags ( le_analyze_t * ana )
 	for ( int tr = 0; tr < max_tr; tr++ )
 	{
 	    const uint slot = ntohl(*src++);
-	    if ( slot < ana->max_flags && ana->flags[slot] & (LEFL_BATTLE|LEFL_RANDOM) )
-		ana->flags[slot] |= LEFL_CUP | ( tr < MKW_N_ARENAS ? LEFL_ORIG_CUP : LEFL_CUSTOM_CUP );
+	    if ( slot < ana->max_flags && ana->flags[slot] & (G_LEFL_BATTLE|G_LEFL_RANDOM) )
+		ana->flags[slot] |= G_LEFL_CUP | ( tr < MKW_N_ARENAS ? G_LEFL_ORIG_CUP : G_LEFL_CUSTOM_CUP );
 	}
     }
 }

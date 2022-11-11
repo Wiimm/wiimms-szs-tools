@@ -291,13 +291,18 @@ typedef enum enumOptions
 //	OB_CMD_DPAD		= 0,
 //
 //	OB_CMD_DUMP		= OB_GRP_PATCH
+//				| OB_BRIEF
 //				| OB_LONG
 //				| OB_GRP_PATCH
 //				| OB_CREATE_DISTRIB,
 //
+//	OB_CMD_DB		= OB_CMD_DUMP,
+//
 //	OB_CMD_DL		= OB_CMD_DUMP,
 //
 //	OB_CMD_DLL		= OB_CMD_DUMP,
+//
+//	OB_CMD_DLLL		= OB_CMD_DUMP,
 //
 //	OB_CMD_BIN_DIFF		= 0,
 //
@@ -373,8 +378,10 @@ typedef enum enumCommands
 	CMD_DPAD,
 
 	CMD_DUMP,
+	CMD_DB,
 	CMD_DL,
 	CMD_DLL,
+	CMD_DLLL,
 	CMD_BIN_DIFF,
 	CMD_PATCH,
 	CMD_LPAR,
@@ -386,7 +393,7 @@ typedef enum enumCommands
 	CMD_ENCODE,
 
 
-	CMD__N // == 28
+	CMD__N // == 30
 
 } enumCommands;
 

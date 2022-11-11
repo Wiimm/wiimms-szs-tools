@@ -116,8 +116,6 @@ typedef u8  le_music_t;		// type of music indices
 static inline int TrackByAliasLE ( le_property_t prop, le_music_t music )
 	{ return prop << 8 | music; }
 
-le_flags_t ScanLEFT ( ccp text );
-
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			ctcode_*_t			///////////////

@@ -20137,6 +20137,10 @@
 	"Print an information dump for each source file. LE-CODE binaries and" \
 	" LEX binaries are accepted as input." )
 
+#:def_cmd( "DB", "DBwlect DL [source]...", \
+	"Short cut for {DUMP --brief}.", \
+	"" )
+
 #:def_cmd( "DL", "DL", \
 	"wlect DL [source]...", \
 	"Short cut for {DUMP --long}." )
@@ -20144,6 +20148,10 @@
 #:def_cmd( "DLL", "DLL", \
 	"wlect DLL [source]...", \
 	"Short cut for {DUMP --long --long}." )
+
+#:def_cmd( "DLLL", "DLLL", \
+	"wlect DLL [source]...", \
+	"Short cut for {DUMP --long --long --long}." )
 
 #:def_cmd( "BIN_DIFF", "BIN-DIFF|BINDIFF|BD", \
 	"wlect BIN-DIFF settings binary1 binary2", \
@@ -20848,20 +20856,87 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUMP", "BRIEF", \
+	"", \
+	"For LE-CODE binaries: If set, print infos about file header only." )
+
 #:def_cmd_opt( "DUMP", "LONG", \
 	"", \
 	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
 	" each track, property and music slot is printed in brackets. If set" \
-	" twice, print a track list too.\n" \
+	" twice, print a track list too. If set 3 times, print a track slot" \
+	" usage map too (same as -v).\n" \
 	"  For LEX binaries: If set, print a hex dump of max 16 bytes (1 line)" \
 	" of the element data. If set twice, print a hex dump of max 64 bytes" \
 	" (4 lines). If set 3 times ore more, print a complete hex dump." )
 
 #:def_cmd_opt( "DUMP", "VERBOSE", \
 	"", \
-	"For LE-CODE binaries: If set, print a track slot usage table." )
+	"For LE-CODE binaries: If set, print a track slot usage map." )
 
 #:def_cmd_opt( "DUMP", "CREATE_DISTRIB", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "LE_DEFINE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "LPAR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "ALIAS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "ENGINE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "200CC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "PERFMON", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "CUSTOM_TT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "XPFLAGS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "SPEEDOMETER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "DEBUG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "BRIEF", \
+	"", \
+	"For LE-CODE binaries: If set, print infos about file header only." )
+
+#:def_cmd_opt( "DB", "LONG", \
+	"", \
+	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
+	" each track, property and music slot is printed in brackets. If set" \
+	" twice, print a track list too. If set 3 times, print a track slot" \
+	" usage map too (same as -v).\n" \
+	"  For LEX binaries: If set, print a hex dump of max 16 bytes (1 line)" \
+	" of the element data. If set twice, print a hex dump of max 64 bytes" \
+	" (4 lines). If set 3 times ore more, print a complete hex dump." )
+
+#:def_cmd_opt( "DB", "VERBOSE", \
+	"", \
+	"For LE-CODE binaries: If set, print a track slot usage map." )
+
+#:def_cmd_opt( "DB", "CREATE_DISTRIB", \
 	"", \
 	"" )
 
@@ -20905,18 +20980,23 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DL", "BRIEF", \
+	"", \
+	"For LE-CODE binaries: If set, print infos about file header only." )
+
 #:def_cmd_opt( "DL", "LONG", \
 	"", \
 	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
 	" each track, property and music slot is printed in brackets. If set" \
-	" twice, print a track list too.\n" \
+	" twice, print a track list too. If set 3 times, print a track slot" \
+	" usage map too (same as -v).\n" \
 	"  For LEX binaries: If set, print a hex dump of max 16 bytes (1 line)" \
 	" of the element data. If set twice, print a hex dump of max 64 bytes" \
 	" (4 lines). If set 3 times ore more, print a complete hex dump." )
 
 #:def_cmd_opt( "DL", "VERBOSE", \
 	"", \
-	"For LE-CODE binaries: If set, print a track slot usage table." )
+	"For LE-CODE binaries: If set, print a track slot usage map." )
 
 #:def_cmd_opt( "DL", "CREATE_DISTRIB", \
 	"", \
@@ -20962,20 +21042,87 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DLL", "BRIEF", \
+	"", \
+	"For LE-CODE binaries: If set, print infos about file header only." )
+
 #:def_cmd_opt( "DLL", "LONG", \
 	"", \
 	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
 	" each track, property and music slot is printed in brackets. If set" \
-	" twice, print a track list too.\n" \
+	" twice, print a track list too. If set 3 times, print a track slot" \
+	" usage map too (same as -v).\n" \
 	"  For LEX binaries: If set, print a hex dump of max 16 bytes (1 line)" \
 	" of the element data. If set twice, print a hex dump of max 64 bytes" \
 	" (4 lines). If set 3 times ore more, print a complete hex dump." )
 
 #:def_cmd_opt( "DLL", "VERBOSE", \
 	"", \
-	"For LE-CODE binaries: If set, print a track slot usage table." )
+	"For LE-CODE binaries: If set, print a track slot usage map." )
 
 #:def_cmd_opt( "DLL", "CREATE_DISTRIB", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "LE_DEFINE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "LPAR", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "ALIAS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "ENGINE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "200CC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "PERFMON", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "CUSTOM_TT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "XPFLAGS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "SPEEDOMETER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "DEBUG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "BRIEF", \
+	"", \
+	"For LE-CODE binaries: If set, print infos about file header only." )
+
+#:def_cmd_opt( "DLLL", "LONG", \
+	"", \
+	"For LE-CODE binaries: If set, print cups with tracks or arenas. For" \
+	" each track, property and music slot is printed in brackets. If set" \
+	" twice, print a track list too. If set 3 times, print a track slot" \
+	" usage map too (same as -v).\n" \
+	"  For LEX binaries: If set, print a hex dump of max 16 bytes (1 line)" \
+	" of the element data. If set twice, print a hex dump of max 64 bytes" \
+	" (4 lines). If set 3 times ore more, print a complete hex dump." )
+
+#:def_cmd_opt( "DLLL", "VERBOSE", \
+	"", \
+	"For LE-CODE binaries: If set, print a track slot usage map." )
+
+#:def_cmd_opt( "DLLL", "CREATE_DISTRIB", \
 	"", \
 	"" )
 

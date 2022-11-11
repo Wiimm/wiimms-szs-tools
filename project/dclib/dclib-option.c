@@ -547,7 +547,7 @@ ccp PrintGParam ( const GParam_t *par )
 
 	case GOPT_IDX_DURATION:
 	    snprintf(buf,sizeof(buf),"[DUR] %12g = %s",
-		par->d, PrintTimerUSec6(0,0,double2usec(par->d),false) );
+		par->d, PrintTimerUSec6(0,0,double2usec(par->d),0) );
 	    break;
 
 	case GOPT_IDX_STRING:

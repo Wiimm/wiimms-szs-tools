@@ -89,6 +89,7 @@ enum mkw_consts_t // some constants
 	MKW_ORIGINAL_BEG	= MKW_TRACK_BEG,
 	MKW_ORIGINAL_END	= MKW_ARENA_END,
 
+
 	//--- LE-CODE random tracks
 
 	MKW_LE_RANDOM_BEG	= 0x3d,
@@ -105,6 +106,13 @@ enum mkw_consts_t // some constants
 	MKW_LE_SLOT_BEG		=   0x44,
 	MKW_LE_SLOT_END		= 0x1000,
 	MKW_N_LE_SLOT		= MKW_LE_SLOT_END - MKW_LE_SLOT_BEG,
+
+
+	//--- special slots (LE-CODE randon included)
+
+	MKW_SPECIAL_BEG		= MKW_ORIGINAL_END,
+	MKW_SPECIAL_END		= MKW_LE_SLOT_BEG,
+
 
 	//--- music ids
 
@@ -148,7 +156,11 @@ static inline bool IsValidLecodeSlot ( uint tid )
 		|| tid >= MKW_LE_RANDOM_BEG && tid < MKW_LE_RANDOM_END; }
 
 static inline bool IsMkwSpecial ( uint tid )
-	{ return tid >= MKW_ARENA_END && tid < MKW_LE_SLOT_BEG; }
+	{ return tid >= MKW_SPECIAL_BEG && tid < MKW_SPECIAL_END; }
+
+static inline bool IsLecodeSpecial ( uint tid )
+	{ return tid >= MKW_SPECIAL_BEG && tid < MKW_LE_RANDOM_BEG
+	      || tid >= MKW_LE_RANDOM_END && tid < MKW_SPECIAL_END; }
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -427,6 +439,45 @@ ccp GetVehicleNum ( u8 vehicle );
 
 ccp GetDriverName4  ( u8 driver  );
 ccp GetVehicleName4 ( u8 vehicle );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			LE-CODE track flags		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// bits for [[le_flags8_t]] [[le_flags_t]]
+
+typedef u8  le_flags8_t;	// type of LE-CODE track flags (classic 8 bits)
+typedef u16 le_flags_t;		// type of LE-CODE track flags since build 35
+
+// see 'LecodeFlags_t' in dclib/lib-mkw-def.h for G_LEFL_*
+
+static inline bool IsTitleLEFL ( le_flags_t flags )
+	{ return (flags&(G_LEFL_RND_HEAD|G_LEFL_RND_GROUP)) == G_LEFL_RND_HEAD; }
+
+static inline bool IsHiddenLEFL ( le_flags_t flags )
+	{ return (flags&G_LEFL_HIDDEN)
+		||  (flags&(G_LEFL_RND_HEAD|G_LEFL_RND_GROUP)) == G_LEFL_RND_GROUP; }
+
+static inline bool IsRandomLEFL ( le_flags_t flags )
+	{ return (flags&(G_LEFL_RND_HEAD|G_LEFL_RND_GROUP)) != 0; }
+
+//-----------------------------------------------------------------------------
+// scan lecode flags
+
+le_flags_t ScanLEFL ( ccp text );
+
+//-----------------------------------------------------------------------------
+// print lecode flags
+
+ccp PrintLEFL8  ( le_flags_t flags, bool aligned );
+ccp PrintLEFL16 ( le_flags_t flags, bool aligned );
+
+static inline ccp PrintLEFL ( le_flags_t flags_bits, le_flags_t flags, bool aligned )
+	{ return ( flags_bits == 16 ? PrintLEFL16 : PrintLEFL8 )(flags,aligned); }
+
+typedef ccp (*PrintLEFL_func) ( le_flags_t flags, bool aligned );
+static inline PrintLEFL_func GetPrintLEFL ( uint flags_bits )
+	{ return flags_bits == 16 ? PrintLEFL16 : PrintLEFL8; }
 
 //
 ///////////////////////////////////////////////////////////////////////////////

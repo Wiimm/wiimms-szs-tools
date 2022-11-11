@@ -4713,25 +4713,25 @@ void AnalyseSPF
 
 	    if (!memcmp(p.ptr,"head=",5))
 	    {
-		spf->le_flags |= LEFL_RND_HEAD;
+		spf->le_flags |= G_LEFL_RND_HEAD;
 		spf->le_group = MidMem(p,5,p.len);
 	    }
 	    else if (!memcmp(p.ptr,"grp=",4))
 	    {
-		spf->le_flags |= LEFL_RND_GROUP;
+		spf->le_flags |= G_LEFL_RND_GROUP;
 		if (!spf->le_group.len)
 		    spf->le_group = MidMem(p,4,p.len);
 	    }
 	    else if ( spf->le_group.len && !StrCmpMem(p,"grp") )
 	    {
-		spf->le_flags |= LEFL_RND_GROUP;
+		spf->le_flags |= G_LEFL_RND_GROUP;
 	    }
 	    else if ( !StrCmpMem(p,"new") )
-		spf->le_flags |= LEFL_NEW;
+		spf->le_flags |= G_LEFL_NEW;
 	    else if ( !StrCmpMem(p,"texture") || !StrCmpMem(p,"temp-allow") )
-		spf->le_flags |= LEFL_TEXTURE;
+		spf->le_flags |= G_LEFL_TEXTURE;
 	    else if ( !StrCmpMem(p,"hidden") )
-		spf->le_flags |= LEFL_HIDDEN;
+		spf->le_flags |= G_LEFL_HIDDEN;
 	    else if (!memcmp(p.ptr,"order=",6))
 		spf->attrib_order = str2l(p.ptr+6,0,10);
 	    else

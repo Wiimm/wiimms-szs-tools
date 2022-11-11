@@ -127,6 +127,10 @@
 		"Print an information dump for each source file."
 		" LE-CODE binaries and LEX binaries are accepted as input." },
 
+  { T_DEF_CMD,	"DB",		"DB"
+		    "wlect DL [source]...",
+		"Short cut for {DUMP --brief}." },
+
   { T_DEF_CMD,	"DL",		"DL",
 		    "wlect DL [source]...",
 		"Short cut for {DUMP --long}." },
@@ -134,6 +138,10 @@
   { T_DEF_CMD,	"DLL",		"DLL",
 		    "wlect DLL [source]...",
 		"Short cut for {DUMP --long --long}." },
+
+  { T_DEF_CMD,	"DLLL",		"DLLL",
+		    "wlect DLL [source]...",
+		"Short cut for {DUMP --long --long --long}." },
 
   { T_DEF_CMD,	"BIN_DIFF",	"BIN-DIFF|BINDIFF|BD",
 		    "wlect BIN-DIFF settings binary1 binary2",
@@ -854,20 +862,29 @@
 
   { T_COPY_GRP,	"PATCH",		0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"BRIEF",		0,0,
+		"For LE-CODE binaries:"
+		" If set, print infos about file header only." },
   { T_COPT,	"LONG",		0,0,
 		"For LE-CODE binaries:"
 		" If set, print cups with tracks or arenas."
 		" For each track, property and music slot is printed in brackets."
 		" If set twice, print a track list too."
+		" If set 3 times, print a track slot usage map too (same as -v)."
 		"\n "
 		" For LEX binaries:"
 		" If set, print a hex dump of max 16 bytes (1 line) of the element data."
 		" If set twice, print a hex dump of max 64 bytes (4 lines)."
 		" If set 3 times ore more, print a complete hex dump." },
   { T_COPT,	"VERBOSE",		0,0,
-		"For LE-CODE binaries: If set, print a track slot usage table." },
+		"For LE-CODE binaries: If set, print a track slot usage map." },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
   { T_COPT,	"CREATE_DISTRIB",0,0,0 },
+
+  //---------- COMMAND wlect DB ----------
+
+  { T_CMD_BEG,	"DB",		0,0,0 },
+  { T_COPY_CMD,	"DUMP",		0,0,0 },
 
   //---------- COMMAND wlect DL ----------
 
@@ -877,6 +894,11 @@
   //---------- COMMAND wlect DLL ----------
 
   { T_CMD_BEG,	"DLL",		0,0,0 },
+  { T_COPY_CMD,	"DUMP",		0,0,0 },
+
+  //---------- COMMAND wlect DLLL ----------
+
+  { T_CMD_BEG,	"DLLL",		0,0,0 },
   { T_COPY_CMD,	"DUMP",		0,0,0 },
 
   //---------- COMMAND wlect BIN-DIFF ----------
