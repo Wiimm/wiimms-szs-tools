@@ -1,21 +1,19 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Command "wlect DUMP":
-    - Accept option --brief to print file header of LE-CODE binaries only.
-    - New command "wlect DB" is a short cut for "wlect DUMP --brief".
-    - New command "wlect DLLL" is a short cut for "wlect DUMP -lll".
-    - Fixed some issues if displaying LE-CODE v5 dates.
-    - Dump of LE-CODE binaries improved.
- - Command "wlect DISTRIB":
-    - Fixed support for random slots in cups.
-    - Updated distribution generator "distrib=...".
-    - New processing option: +CUT-ALL.
- - File format #LE-DEF:
-    - Section [TRACK-LIST]: New instruction IGNORE-SLOT to ignore SLOT
-      instructions. When exporting, SLOT instructions are now inserted so that
-      an identical track distribution is achieved when reading in.
-    - Section [CUP-LIST]: New instructions APPEND-BT and APPEND-VS to force
-      the cup type (battle or versus). This is important for random tracks.
+ - Updated integrated LE-CODE binaries to v5 build 36.
+ - LPAR: Official support of new features BT-WORLDWIDE and VS-WORLDWIDE. This
+   was already implemented hidden in version v2.29a.
+ - File format LE-DEF: Instructions STANDARD-BATTLE-ARENAS and/or
+   STANDARD-VERSUS-TRACKS will be executed automatically if no other battle
+   arena or no other versus track are defined.
+ - wlect DISTRIB: 
+    - Bug fix: Random slots are ignored now if adding missed tracks to cups.
+    - Fixed import of LE-CODE binaries without standard tracks.
+    - New instructions: CUP-ICONS, CUP-INFO (both are experimental).
+    - New processing option OUT-DUMMY to accept/ignore generic dummy names.
+ - Tool wimgt supports generic images. The main application is the creation of
+   cup-icons, as used e.g. by MKW-Fun. At the moment only an incomplete
+   documentation is available at https://szs.wiimm.de/doc/genericimg .
 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it

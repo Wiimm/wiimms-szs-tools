@@ -865,7 +865,7 @@ static void CreateTestImage ( ccp dest_path )
 
     //--- terminate
 
-    SavePNG(&img,true,dest_path,"test-image.png",0,true,0);
+    SavePNG(&img,true,0,dest_path,"test-image.png",0,true,0);
     ResetIMG(&img);
 }
 
@@ -887,7 +887,7 @@ static enumError save_image
     DrawHLineIMG(img,0,img->width,img->height/2,line_col);
     DrawVLineIMG(img,img->width/2,0,img->height,line_col);
 
-    return SavePNG(img,true,path1,path2,0,true,0);
+    return SavePNG(img,true,0,path1,path2,0,true,0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -931,7 +931,7 @@ static int create_images ( int argc, char ** argv )
 	for ( x = xstart-4; x < (int)bg_img.width; x += 2*bg_step )
 	    FillRectIMG(&bg_img,x,y,x+bg_step,y+bg_step,col1,true);
     }
-    SavePNG(&bg_img,true,argv[1],"bg-temp.png",0,true,0);
+    SavePNG(&bg_img,true,0,argv[1],"bg-temp.png",0,true,0);
 
 
     //--- blue-temp.png
@@ -1007,44 +1007,44 @@ static int create_images ( int argc, char ** argv )
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_COPY);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"mode-copy-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"mode-copy-temp.png",0,true,0);
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_FOREGROUND);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"mode-foreground-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"mode-foreground-temp.png",0,true,0);
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_BACKGROUND);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"mode-background-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"mode-background-temp.png",0,true,0);
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_MIX);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"mode-mix-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"mode-mix-temp.png",0,true,0);
 
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_COPY|PIM_INS_LEFT|PIM_GROW);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"insert-left-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"insert-left-temp.png",0,true,0);
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_COPY|PIM_INS_RIGHT|PIM_GROW);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"insert-right-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"insert-right-temp.png",0,true,0);
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_COPY|PIM_INS_TOP|PIM_GROW);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"insert-top-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"insert-top-temp.png",0,true,0);
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_COPY|PIM_INS_BOTTOM|PIM_GROW);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"insert-bottom-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"insert-bottom-temp.png",0,true,0);
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_COPY|PIM_INS_TOP|PIM_INS_RIGHT|PIM_GROW);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"insert-top_right-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"insert-top_right-temp.png",0,true,0);
 
     PatchIMG(&mix_img,&blue_img,&red_img,PIM_COPY|PIM_INS_BOTTOM|PIM_INS_LEFT|PIM_GROW);
     PatchIMG(&mix_img,&mix_img,&bg_img,PIM_BACKGROUND);
-    SavePNG(&mix_img,true,argv[1],"insert-bottom_left-temp.png",0,true,0);
+    SavePNG(&mix_img,true,0,argv[1],"insert-bottom_left-temp.png",0,true,0);
 
 
     //--- test image
@@ -1171,17 +1171,17 @@ static int resize_image ( int argc, char ** argv )
 
 	char path[PATH_MAX];
 	NewFileExtS(path,sizeof(path),argv[i],"1smart.png");
-	err = SavePNG(&img1,false,path,0,true,true,0);
+	err = SavePNG(&img1,false,0,path,0,true,true,0);
 	if (err)
 	    return ERR_WARNING;
 
 	NewFileExtS(path,sizeof(path),argv[i],"2smart.png");
-	err = SavePNG(&img2,false,path,0,true,true,0);
+	err = SavePNG(&img2,false,0,path,0,true,true,0);
 	if (err)
 	    return ERR_WARNING;
 
 	NewFileExtS(path,sizeof(path),argv[i],"3fast.png");
-	err = SavePNG(&img3,false,path,0,true,true,0);
+	err = SavePNG(&img3,false,0,path,0,true,true,0);
 	if (err)
 	    return ERR_WARNING;
 
@@ -1386,7 +1386,7 @@ static enumError save_img ( Image_t *img, char type, uint n )
 
     char fname[100];
     snprintf(fname,sizeof(fname),"./_start-pos.tmp/start-pos-%c-%02u.png",type,n);
-    enumError err = SavePNG(img,false,fname,0,0,true,0);
+    enumError err = SavePNG(img,false,0,fname,0,0,true,0);
     if (!err)
 	printf("Image %s created.\n",fname);
     return err;
@@ -4251,6 +4251,85 @@ static enumError test_coded_version ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_key_list()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct KeyListParam_t
+{
+    // standard input settings
+    KeywordCallbackFunc	func;		// NULL or calculation function
+    bool		allow_prefix;	// allow '-' | '+' | '=' as prefix
+    LowerUpper_t	force_case;	// change case of scanned arg if LOUP_LOWER|LOUP_UPPER
+
+    // Scan for integer numbers, if min_number < max_number
+    // special case: if  min_number >= 0  && max_number < 0 && min_number < (u64)max_number,
+    // then scan for unsigned number
+    s64			min_number;	// input: minimal number
+    s64			max_number;	// input: maximal number
+    s64			number;		// output: scanned number if 'have_number'
+    bool		have_number;	// output: if TRUE: 'number' is valid
+
+    // error management
+    uint		err_mode;	// bit field:
+					//	1: continue on error
+    ccp			err_msg;	// not NULL: print a warning message:
+					//   "<ERR_MSG>: Unknown keyword: <KEY>"
+    enumError		err_code;	// use 'err_code' for the 'err_msg'
+
+    // main result, will be set to 0
+    bool		valid;		// TRUE: returned value is valid
+    u64			result;		// main result
+    int			abbrev_count;	// number of found abbreviation, -1: not abbrev found
+    uint		err_count;	// count errors here
+}
+KeyListParam_t;
+
+//-----------------------------------------------------------------------------
+
+s64 ScanKeywordListP
+(
+    KeyListParam_t	*par,		// NULL or parameters and extended result
+    ccp			arg,		// NULL or argument to scan
+    int			arg_len,	// length of 'arg', if <0 then terminate at null, comma or semicolon
+    const KeywordTab_t	* key_tab	// pointer to valid command table
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
+s64 ScanKeywordListP
+(
+    KeyListParam_t	*par,		// NULL or parameters and extended result
+    ccp			arg,		// NULL or argument to scan
+    int			arg_len,	// length of 'arg', if <0 then terminate at null, comma or semicolon
+    const KeywordTab_t	* key_tab	// pointer to valid command table
+)
+{
+    return ~0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_key_list ( int argc, char ** argv )
+{
+    if ( argc <= 1 )
+    {
+	printf(	"\nSyntax: KEY-LIST | KL  [options] [a..b] [args]...\n\n");
+	exit(1);
+    }
+
+    KeyListParam_t par = {0};
+
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	ScanKeywordListP(&par,arg,-1,0);
+    }
+    putchar('\n');
+    return 0;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4535,6 +4614,7 @@ enum
     CMD_TEST_PREFIX,		// test_test_prefix(argc,argv)
     CMD_PF_EXPAND,		// test_pf_expand(argc,argv)
     CMD_CODED_VERSION,		// test_coded_version(argc,argv)
+    CMD_KEY_LIST,		// test_key_list(argc,argv)
 
  #ifdef HAVE_WIIMM_EXT
     CMD_WIIMM,			// test_wiimm(argc,argv)
@@ -4612,6 +4692,7 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_TEST_PREFIX,	"TEST-PREFIX",	"TP",		0 },
 	{ CMD_PF_EXPAND,	"PF-EXPAND",	"PFE",		0 },
 	{ CMD_CODED_VERSION,	"CVERSION",	"CV",		0 },
+	{ CMD_KEY_LIST,		"KEY-LIST",	"KL",		0 },
 
  #ifdef HAVE_WIIMM_EXT
 	{ CMD_WIIMM,		"WIIMM",	"W",		0 },
@@ -4786,6 +4867,7 @@ int main ( int argc, char ** argv )
 	case CMD_TEST_PREFIX:		test_test_prefix(argc,argv); break;
 	case CMD_PF_EXPAND:		test_pf_expand(argc,argv); break;
 	case CMD_CODED_VERSION:		test_coded_version(argc,argv); break;
+	case CMD_KEY_LIST:		test_key_list(argc,argv); break;
 
  #ifdef HAVE_WIIMM_EXT
 	case CMD_WIIMM:			test_wiimm(argc,argv); break;

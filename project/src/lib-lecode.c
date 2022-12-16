@@ -842,18 +842,16 @@ ccp PatchNameLEREG ( char *buf, uint bufsize, ccp name, le_region_t lereg )
 
 const mem_t GetLecodeLEREG ( le_region_t reg )
 {
-    BZ2Manager_t *lm;
-    switch (reg)
-    {
-	case LEREG_PAL:  lm = &lecode_pal_bin_mgr; break;
-	case LEREG_USA:	 lm = &lecode_usa_bin_mgr; break;
-	case LEREG_JAP:	 lm = &lecode_jap_bin_mgr; break;
-	case LEREG_KOR:  lm = &lecode_kor_bin_mgr; break;
-	default:	 return NullMem;
-    }
+    const uint idx = reg - LEREG__BEG;
+    if ( idx > LEREG__END )
+	return NullMem;
 
-    DecodeBZIP2Manager(lm);
-    mem_t res = { .ptr = (ccp)lm->data, .len = lm->size };
+    DecodeBZIP2Manager(&lecode4_bin_mgr);
+    const u32 *poslist = (u32*)lecode4_bin_mgr.data;
+    const u32 pos = ntohl(poslist[idx]);
+    mem_t res;
+    res.ptr = (char*)lecode4_bin_mgr.data + pos;
+    res.len = ntohl(poslist[idx+1]) - pos;
     return res;
 }
 
@@ -871,7 +869,7 @@ ccp GetBuildLECODE ( mem_t lecode )
     if ( !lecode.ptr || lecode.len < sizeof(le_binary_head_v4_t) )
 	return "?";
 
-    const u_sec_t creation_time = GetCTimeLECODE(lecode);
+    const u_sec_t creation_time = GetCreateTimeLECODE(lecode);
     const le_binary_head_v4_t *head = (le_binary_head_v4_t*)lecode.ptr;
     return !creation_time
 	? PrintCircBuf("%u",ntohl(head->build_number))
@@ -901,18 +899,19 @@ ccp GetInfoLECODE ( mem_t lecode )
 		: head->v3.region == 'J' ? "JAP"
 		: head->v3.region == 'K' ? "KOR"
 		: "?";
-    ccp debug	= head->v3.debug == 'D' ? "/debug" : "";
-    const u_sec_t creation_time = GetCTimeLECODE(lecode);
+    ccp debug	= IsBuildModeDebug(head->v3.build_mode) ? "/debug" : "";
+    ccp test	= IsBuildModeTest(head->v3.build_mode) ? "/test" : "";
+    const u_sec_t ref_time = GetRefTimeLECODE(lecode);
 
-    return creation_time
-	? PrintCircBuf("%s%s v%u, build %u (%s), %u bytes",
-			region, debug,
+    return ref_time
+	? PrintCircBuf("%s%s%s v%u, build %u (%s), %u bytes",
+			region, debug, test,
 			ntohl(head->v3.version),
 			ntohl(head->v3.build_number),
-			PrintTimeByFormat("%F %T %Z",creation_time),
+			PrintTimeByFormat("%F %T %Z",ref_time),
 			ntohl(head->v3.file_size) )
-	: PrintCircBuf("%s%s v%u, build %u, %u bytes",
-			region, debug,
+	: PrintCircBuf("%s%s%s v%u, build %u, %u bytes",
+			region, debug, test,
 			ntohl(head->v3.version),
 			ntohl(head->v3.build_number),
 			ntohl(head->v3.file_size) );
@@ -920,23 +919,57 @@ ccp GetInfoLECODE ( mem_t lecode )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-u_sec_t	GetLecodeCTimeLEREG ( le_region_t reg )
+u_sec_t	GetLECommitTimeLEREG ( le_region_t reg )
 {
-    return GetCTimeLECODE(GetLecodeLEREG(reg));
+    return GetCommitTimeLECODE(GetLecodeLEREG(reg));
 }
 
 //-----------------------------------------------------------------------------
 
-u_sec_t GetCTimeLECODE ( mem_t lecode )
+u_sec_t GetCommitTimeLECODE ( mem_t lecode )
 {
     return lecode.len >= sizeof(le_binary_head_v5_t)
-	? GetCTimeLeHead((le_binary_head_t*)lecode.ptr)
+	? GetCommitTimeLeHead((le_binary_head_t*)lecode.ptr)
 	: 0;
 }
 
 //-----------------------------------------------------------------------------
 
-u_sec_t GetCTimeLeHead ( const le_binary_head_t *head )
+u_sec_t GetCommitTimeLeHead ( const le_binary_head_t *head )
+{
+    if (!head)
+	return 0;
+
+    const uint version = ntohl(head->v3.version);
+    if ( version >= 5 )
+    {
+	const uint size = ntohl(head->v5.head_size);
+	if ( size >= offsetof(le_binary_head_v5_t,commit_time) )
+	    return ntohl(head->v5.commit_time);
+    }
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+u_sec_t	GetLECreateTimeLEREG ( le_region_t reg )
+{
+    return GetCreateTimeLECODE(GetLecodeLEREG(reg));
+}
+
+//-----------------------------------------------------------------------------
+
+u_sec_t GetCreateTimeLECODE ( mem_t lecode )
+{
+    return lecode.len >= sizeof(le_binary_head_v5_t)
+	? GetCreateTimeLeHead((le_binary_head_t*)lecode.ptr)
+	: 0;
+}
+
+//-----------------------------------------------------------------------------
+
+u_sec_t GetCreateTimeLeHead ( const le_binary_head_t *head )
 {
     if (!head)
 	return 0;
@@ -954,6 +987,30 @@ u_sec_t GetCTimeLeHead ( const le_binary_head_t *head )
     }
 
     return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+u_sec_t	GetLERefTimeLEREG ( le_region_t reg )
+{
+    return GetRefTimeLECODE(GetLecodeLEREG(reg));
+}
+
+//-----------------------------------------------------------------------------
+
+u_sec_t GetRefTimeLECODE ( mem_t lecode )
+{
+    return lecode.len >= sizeof(le_binary_head_v5_t)
+	? GetRefTimeLeHead((le_binary_head_t*)lecode.ptr)
+	: 0;
+}
+
+//-----------------------------------------------------------------------------
+
+u_sec_t GetRefTimeLeHead ( const le_binary_head_t *head )
+{
+    const u_sec_t ref_time = GetCommitTimeLeHead(head);
+    return ref_time ? ref_time : GetCreateTimeLeHead(head);
 }
 
 //
@@ -1218,7 +1275,7 @@ void InitializeLPAR ( le_lpar_t *lpar, bool load_lpar )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void NormalizeLPAR ( le_lpar_t * lp )
+static void NormalizeLPAR ( le_lpar_t * lp, int build )
 {
     DASSERT(lp);
 
@@ -1252,11 +1309,20 @@ static void NormalizeLPAR ( le_lpar_t * lp )
     lp->block_track		= lp->block_track < LE_MAX_BLOCK_TRACK
 				? lp->block_track : LE_MAX_BLOCK_TRACK;
     lp->drag_blue_shell		= lp->drag_blue_shell > 0;
-    lp->bt_worldwide		= lp->bt_worldwide > 0;
-    lp->vs_worldwide		= lp->vs_worldwide > 0;
-    lp->bt_textures		= lp->bt_textures & LE_M_TEXTURE;
-    lp->vs_textures		= lp->vs_textures & LE_M_TEXTURE;
+    lp->bt_textures		&= LE_M_TEXTURE;
+    lp->vs_textures		&= LE_M_TEXTURE;
     lp->block_textures		= lp->block_textures > 0;
+
+    if ( build >= 37 )
+    {
+	lp->bt_worldwide	&= LE_M_BT_WORLDWIDE;
+	lp->vs_worldwide	&= LE_M_VS_WORLDWIDE;
+    }
+    else
+    {
+	lp->bt_worldwide	&= 1;
+	lp->vs_worldwide	&= 1;
+    }
 
     // [[new-lpar]]
 
@@ -1282,7 +1348,7 @@ static void CopyLPAR2Data ( le_analyze_t * ana )
 	return;
     }
 
-    NormalizeLPAR(&ana->lpar);
+    NormalizeLPAR(&ana->lpar,ntohl(ana->head->v3.build_number));
     const le_lpar_t *lp = &ana->lpar;
     le_binpar_v1_t *h = ana->param_v1;
 
@@ -1444,13 +1510,23 @@ static ccp PrintChatMode ( u16 msg, u16 mode1, u16 mode2, int numeric )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static ccp lpar_enabled ( uint val )
+{
+    return PrintCircBuf("%d # %sabled", val, val ? "en" : "dis" );
+}
+
+//-----------------------------------------------------------------------------
+
 static ccp lpar_std_flags ( uint flags )
 {
-    return PrintCircBuf("LE$%sABLE%s%s%s",
-		flags & LE_ENABLED	? "EN"			: "DIS",
-		flags & LE_ALTERABLE	? " | LE$ALTERABLE"	: "",
-		flags & LE_EXCLUDED	? " | LE$EXCLUDE"	: "",
-		flags & LE_INCLUDED	? " | LE$INCLUDE"	: "" );
+    return PrintCircBuf("LE$%sABLE%s%s%s%s%s"
+		,flags & LE_ENABLED	? "EN"			: "DIS"
+		,flags & LE_ALTERABLE	? " | LE$ALTERABLE"	: ""
+		,flags & LE_EXCLUDED	? " | LE$EXCLUDE"	: ""
+		,flags & LE_INCLUDED	? " | LE$INCLUDE"	: ""
+		,flags & LE_EXTENT	? " | LE$EXTENT"	: ""
+		,flags & LE_REGION	? " | LE$REGION"	: ""
+		);
 }
 
 //-----------------------------------------------------------------------------
@@ -1489,7 +1565,8 @@ enumError WriteSectionLPAR
 		,lpar->item_cheat
 		,lpar->drag_blue_shell
 		,lpar->thcloud_frames,lpar->thcloud_frames/60.0
-		// [[worldwide]] should be included here, see below for a temporary solution
+		,lpar_std_flags( lpar->bt_worldwide & LE_M_BT_WORLDWIDE )
+		,lpar_std_flags( lpar->vs_worldwide & LE_M_VS_WORLDWIDE )
 		,lpar_std_flags( lpar->bt_textures & LE_M_TEXTURE )
 		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
 		,lpar->block_textures
@@ -1513,10 +1590,11 @@ enumError WriteSectionLPAR
 	       "ITEM-CHEAT	= %u\r\n"
 	       "DRAG-BLUE-SHELL	= %u\r\n"
 	       "THCLOUD-TIME	= %u # %.2fs\r\n"
+	       "BT-WORLDWIDE	= %s\r\n"
+	       "VS-WORLDWIDE	= %s\r\n"
 	       "BT-TEXTURES	= %s\r\n"
 	       "VS-TEXTURES	= %s\r\n"
 	       "BLOCK-TEXTURES	= %u\r\n"
-	       // [[worldwide]] should be included here, see below for a temporary solution
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
 		,lpar->cheat_mode
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
@@ -1530,21 +1608,13 @@ enumError WriteSectionLPAR
 		,lpar->item_cheat
 		,lpar->drag_blue_shell
 		,lpar->thcloud_frames,lpar->thcloud_frames/60.0
+		,lpar_std_flags( lpar->bt_worldwide & LE_M_BT_WORLDWIDE )
+		,lpar_std_flags( lpar->vs_worldwide & LE_M_VS_WORLDWIDE )
 		,lpar_std_flags( lpar->bt_textures & LE_M_TEXTURE )
 		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
 		,lpar->block_textures
 		);
-
     }
-
-    // [[worldwide]]
-    if ( lpar->bt_worldwide || lpar->vs_worldwide )
-	fprintf(f,
-	       "BT-WORLDWIDE	= %u\r\n"
-	       "VS-WORLDWIDE	= %u\r\n"
-		,lpar->bt_worldwide,
-		lpar->vs_worldwide
-		);
 
 
     //--- chat modes
@@ -1832,13 +1902,9 @@ enumError AnalyzeLEBinary
 		ana->valid	|= LE_HEAD_VALID | LE_HEAD_KNOWN;
 
 		if ( ana->header_size > offsetof(le_binary_head_v5_t,szs_recommended) )
-		{
 		    ana->szs_recommended = ntohl(ana->head->v5.szs_recommended);
-	//	    if ( ana->szs_recommended >= 2300100 )
-	//	    {
-	//		//?
-	//	    }
-		}   
+		if ( ana->header_size > offsetof(le_binary_head_v5_t,commit_time) )
+		    ana->commit_time = ntohl(ana->head->v5.commit_time);
 	    }
 	}
 	break;
@@ -1861,7 +1927,7 @@ enumError AnalyzeLEBinary
 		ntohl(ana->head->v3.version),
 		ntohl(ana->head->v3.build_number),
 		ana->header_size,
-		tolower(ana->head->v3.debug),
+		tolower(ana->head->v3.build_mode),
 		tolower(ana->head->v3.region) );
 
     //--- analyse parameters (prepare)
@@ -2564,9 +2630,8 @@ static void DumpLETracks
 	fprintf(f,
 		"%*s%sFlag   1%s:  %sB%s: battle arena, %sV%s: versus track, %sr%s: random slot.\n"
 		"%*s%sFlag   2%s:  Used in: %so%s: original cup, %sc%s custom cup, %sb%s: both.\n"
-		"%*s%sFlag   3%s:  %sH%s: header of group, %sG%s: group member,"
-				 " %sX%s: header of group and group member.\n"
-		"%*s%sFlags  4%s:  %sN%s: new track, %sT%s: texture hack, %s2%s: both.\n"
+		"%*s%sFlag   3%s:  %sH%s: header of group, %sG%s: group member, %sX%s: both.\n"
+		"%*s%sFlag   4%s:  %sN%s: new track, %sT%s: texture hack, %s2%s: both.\n"
 		"%*s%sFlags 5+6%s: %sA%s: alias, %si%s: invisible/hidden.\n"
 		,indent+2,"", col->param, col->reset
 			,col->info, col->reset
@@ -2863,14 +2928,24 @@ static void DumpLEUsageMap
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static ccp ana_enabled ( uint val )
+{
+    return PrintCircBuf("%u (%sabled)", val, val ? "en"	: "dis" );
+}
+
+//-----------------------------------------------------------------------------
+
 static ccp ana_std_flags ( uint flags )
 {
-    return PrintCircBuf("%u (%sabled%s%s%s)",
-		flags,
-		flags & LE_ENABLED	? "en"		: "dis",
-		flags & LE_ALTERABLE	? ",alterable"	: "",
-		flags & LE_EXCLUDED	? ",excluded"	: "",
-		flags & LE_INCLUDED	? ",included"	: "" );
+    return PrintCircBuf("%u (%sabled%s%s%s%s%s)"
+		,flags
+		,flags & LE_ENABLED	? "en"		: "dis"
+		,flags & LE_ALTERABLE	? ",alterable"	: ""
+		,flags & LE_EXCLUDED	? ",exclude"	: ""
+		,flags & LE_INCLUDED	? ",include"	: ""
+		,flags & LE_EXTENT	? ",extent"	: ""
+		,flags & LE_REGION	? ",region"	: ""
+		);
 }
 
 //-----------------------------------------------------------------------------
@@ -2921,44 +2996,45 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
     {
 	const le_binary_head_v3_t *h = &ana->head->v3;
 	DASSERT(h);
-	fprintf(f,
-		"\n%*s%s" "File header:%s\n"
-		"%*s" "Magic:             %.4s\n"
-		,indent-2,"", col.heading, col.reset
-		,indent,"", h->magic
-		);
+	fprintf(f, "\n%*s%s" "File header (magic: %.4s):%s\n",
+		indent-2,"", col.heading,  h->magic, col.reset );
 
 	if ( h->phase != 2 )
-	fprintf(f,"%*s" "Phase:             %u\n",indent,"",h->phase);
+	    fprintf(f,"%*s" "Phase:             %u\n",indent,"",h->phase);
 
 	fprintf(f,
-		"%*s" "Version:           %u\n"
-		"%*s" "Build number:      %u\n"
-		"%*s" "Region code:       %c = %s\n"
-		"%*s" "Debug flag:        %c = %s\n"
+		"%*s" "Version:           %u, %c = %s\n"
+		"%*s" "Build:             %u, %c = %s\n"
 		"%*s" "Header size:       %8x/hex = %6u bytes\n"
 		"%*s" "Total size:        %8x/hex = %6u bytes\n"
 		"%*s" "Offset param:      %8x/hex\n"
 		"%*s" "Base address:      %8x/hex\n"
 		"%*s" "Entry point:       %8x/hex\n"
 		,indent,"", ntohl(h->version)
+			,h->region
+				,h->region == 'P' ? "PAL"
+				:h->region == 'E' ? "USA"
+				:h->region == 'J' ? "Japan"
+				:h->region == 'K' ? "Korea"
+				: "?"
 		,indent,"", ntohl(h->build_number)
-		,indent,"", h->region
-			,h->region == 'P' ? "PAL"
-			:h->region == 'E' ? "USA"
-			:h->region == 'J' ? "Japan"
-			:h->region == 'K' ? "Korea"
-			: "?"
-		,indent,"", h->debug
-			,h->debug == 'R' ? "Release"
-			:h->debug == 'D' ? "Debug"
-			: "?"
+			,h->build_mode
+				,h->build_mode == 'R' ? "Release"
+				:h->build_mode == 'T' ? "Release with test code"
+				:h->build_mode == 'D' ? "Debug"
+				:h->build_mode == 'X' ? "Debug with test code"
+				: "?"
 		,indent,"", ana->header_size ,ana->header_size
 		,indent,"", ntohl(h->file_size), ntohl(h->file_size)
 		,indent,"", ntohl(h->off_param)
 		,indent,"", ntohl(h->base_address)
 		,indent,"", ntohl(h->entry_point)
 		);
+
+	if (ana->commit_time)
+	    fprintf(f,
+		"%*s" "Time of commit:    %s\n",
+		indent,"", PrintTimeByFormat("%F %T %Z",ana->commit_time));
 
 	if (ana->creation_time)
 	    fprintf(f,
@@ -3044,12 +3120,10 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	const le_binary_param_t *h = ana->param;
 	DASSERT(h);
 	fprintf(f,
-		"%*s%s" "Parameters (LPAR):%s\n"
-		"%*s" "Magic:             %.4s\n"
+		"%*s%s" "Parameters (magic: %.4s):%s\n"
 		"%*s" "Version:           %u\n"
 		"%*s" "Param size:        %x/hex = %u bytes\n"
-		,indent-2,"", col.heading, col.reset
-		,indent,"", h->magic
+		,indent-2,"", col.heading, h->magic, col.reset
 		,indent,"", ntohl(h->version)
 		,indent,"", ntohl(h->size), ntohl(h->size)
 		);
@@ -3136,18 +3210,13 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_26c_t)  )
 	{
-	    // [[worldwide]]
-	 #if !HAVE_WIIMM_EXT
-	    if ( h->bt_worldwide || h->vs_worldwide )
-	 #endif
-		fprintf(f,
-			"%*s" "Worldwide:         bt=%u, vs=%u  (planned)\n"
-			,indent,"", h->bt_worldwide, h->vs_worldwide
-			);
-
 	    fprintf(f,
-		"%*s" "Textures:          bt=%s, vs=%s\n"
+		"%*s" "Worldwide:         battle=%s, versus=%s\n"
+		"%*s" "Textures:          battle=%s, versus=%s\n"
 		"%*s" "Block textures:    %u\n"
+		,indent,""
+			,ana_std_flags( h->bt_worldwide & LE_M_BT_WORLDWIDE )
+			,ana_std_flags( h->vs_worldwide & LE_M_VS_WORLDWIDE )
 		,indent,""
 			,ana_std_flags( h->bt_textures & LE_M_TEXTURE )
 			,ana_std_flags( h->vs_textures & LE_M_TEXTURE )

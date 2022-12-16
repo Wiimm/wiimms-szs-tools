@@ -218,7 +218,10 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" mode and SHRINK (SH), GROW (GR) and LEAVE (LV) as image size mode.\n"
 	"  Abbreviations are allowed. The default is VCENTER.HCENTER.MIX.LEAVE"
 	" or in short form V.H.MX.LV. If this option is used multiple times"
-	" all patch files will be used in the entered order."
+	" all patch files will be used in the entered order.\n"
+	"  If FILE starts with colon (:), then it may be a generic image"
+	" instead of a real file. See https://szs.wiimm.de/doc/genericimg for"
+	" details."
     },
 
     {	OPT_TRANSFORM, false, false, false, false, true, 'x', "transform",
@@ -229,7 +232,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" for all source formats. This makes only sense as last rule. If DEST"
 	" is empty no transformation is done for the source. Examples: 'TPL'"
 	" or 'GRAY' or 'BTI.IA8' or 'TPL.I4+I8=IA8,TEX=,CMPR'\n"
-	"  SRC and DEST are tuple of file, image and palette formats and of 2"
+	"  SRC and DEST are tuples of file, image and palette formats and of 2"
 	" more attributes. All parts are optional and separated by points, the"
 	" order is irrelevant.\n"
 	"  Allowed file formats are: TPL, TEX, BTI, BREFT-IMG (=BTIMG), PNG"
@@ -1454,7 +1457,9 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"DEC",
 	"wimgt DECODE [source]...",
 	"Decode (export) the entered image files into PNG files. The default"
-	" destination is '%P/%F.png'.",
+	" destination is '%P/%F.png'. If SOURCE starts with colon (:), then it"
+	" may be a generic image instead of a real file. See"
+	" https://szs.wiimm.de/doc/genericimg for details.",
 	0,
 	20,
 	option_tab_cmd_DECODE,
@@ -1470,7 +1475,9 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wimgt ENCODE [source]...",
 	"Encode (import) the entered PNG files and convert them to to an"
 	" internal image format (TPL, TEX, BREFT). The default destination is"
-	" '%P/%N' (removed extension).",
+	" '%P/%N' (removed extension). If SOURCE starts with colon (:), then"
+	" it may be a generic image instead of a real file. See"
+	" https://szs.wiimm.de/doc/genericimg for details.",
 	0,
 	21,
 	option_tab_cmd_ENCODE,
@@ -1486,7 +1493,9 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wimgt CONVERT [source]...",
 	"Convert the entered image files into new file and image formats. The"
 	" old file is replaced by the new one. The difference to ENCODE is"
-	" only the default file name handling.",
+	" only the default file name handling. If SOURCE starts with colon"
+	" (:), then it may be a generic image instead of a real file. See"
+	" https://szs.wiimm.de/doc/genericimg for details.",
 	0,
 	21,
 	option_tab_cmd_CONVERT,
@@ -1507,7 +1516,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"  This is an alternative for the ENCODE and DECODE commands. The"
 	" default destination file format is selected by scanning the file"
 	" extension of the destination. Option --transform may override this."
-	" Option --overwrite is set implicitly.",
+	" Option --overwrite is set implicitly.\n"
+	"  If SOURCE starts with colon (:), then it may be a generic image"
+	" instead of a real file. See https://szs.wiimm.de/doc/genericimg for"
+	" details.",
 	0,
 	21,
 	option_tab_cmd_COPY,

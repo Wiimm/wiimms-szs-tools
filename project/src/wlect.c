@@ -1339,7 +1339,7 @@ static void help_distrib ( enumError exit_code )
 	"\n"
 	"\t{name|BMG}:\t|"
 		"Create a BMG binary file. BMG options are recognized."
-		" But if the output goes to a terminal, then use {name|BMGTXT} insted."
+		" But if the output goes to a terminal, then use instruction {name|BMGTXT} instead."
 		" If no {heading|BMG selector} is defined,"
 		" then {name|MKW,LE-CODE} (all except {name|CT-CODE}) is used.\n"
 	"\t{name|BMGTXT}:\t|"
@@ -1355,6 +1355,37 @@ static void help_distrib ( enumError exit_code )
 		" (type {name|LE-DIS})."
 		" This file can be used as source to restore the internal model.\n"
 	"\n"
+
+	//-------------------------
+	"  {heading|Cup-Icon support:}\n"
+	"\n|[4,15]"
+	"\t{name|CUP-ICONS}:\t|"
+		"Create an image file with cup icons.\r"
+		"  {heading|Syntax:} {syntax|CUP-ICON '=' [OPTIONS] '=' FILE}\r"
+		"If the output goes to a terminal, then use instruction {name|CUP-INFO} instead."
+		" To determine the file type, the file extension is analyzed."
+		" Examples are »{par|*.tpl}« or »{par|*.png}«.\r\r"
+		"The generic icons consist of a red cup index at the top-right and the first"
+		" 3 characters of the name without a prefix, shown in blue at the bottom."
+		" If a name is wider than 128 pixels, than it is horizontal shrinked to 128 pixels.\r\r"
+		"{syntax|OPTIONS} is a comma separated list of keywords:\n"
+		"|[17,27]"
+		"\t{par|original}:\t|Add 8 original cup icons.\n"
+		"\t{par|swapped}:\t|Add 8 original cup icons in swapped order.\n"
+		"\t{par|1wiimm}:\t|Use Wiimms avatar for the first cup if original icons are not used.\n"
+		"\t{par|9wiimm}:\t|Use Wiimms avatar for the ninth cup.\n"
+		"\t{par|xwiimm}:\t|Use Wiimms avatar for the last cup.\n"
+		"\t{par|plus}:\t|Include the plus prefix to create the name.\n"
+		"\t{par|game}:\t|Include the game prefix to create the name.\n"
+		"\t{par|space}:\t|Finish the name part at first space.\n"
+		"\t{par|1} .. {par|15}:\t|"
+			"Define the maximum number of charaters for the name part"
+			" to any value between 1 and 15. The default is 3 characters.\n"
+	"\n|[4,15]"
+	"\t{name|CUP-INFO}:\t|"
+		"Same as {name|CUP-ICONS}, but create a text file"
+		" with a job list for tool {cmd|wimgt} and its generic file {par|:cup-file=FILE}.\n"
+	"\n|[4,14]"
 
 	//-------------------------
 	"  {heading|Create LE-CODE binary files:}\n"
@@ -1632,8 +1663,16 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|OUT-MINUS}:\t|"
 		"Strings consisting only of a minus sign are also considered valid."
 		" {name|OMINUS} is a short cut for this keyword.\n"
+	"\t{name|OUT-DUMMY}:\t|"
+		"Dummy names are considered valid (default)."
+		" A dummy name consists of an underscore followed by a three-digit hex number"
+		" (lower case only). This name is assigned when importing a LE-CODE binary file"
+		" due to a lack of alternatives."
+		" {name|ODUMMY} is a short cut for this keyword.\n"
+	"\t{name|/OUT-DUMMY}:\t|"
+		"Switch option {name|OUT-DUMMY} off so that dummy names are considered invalid.\n"
 	"\t{name|OUT-ALL}:\t|"
-		"Short cut for »{name|+OUT-EMPTY,OUT-MINUS}«."
+		"Short cut for »{name|+OUT-EMPTY,OUT-MINUS,OUT-DUMMY}«."
 		" {name|OALL} is a short cut for this keyword.\n"
 	"\n"
 
@@ -1653,7 +1692,8 @@ static void help_distrib ( enumError exit_code )
 		"Switch option {name|IN-LECODE} off.\n"
 	"\n"
 	"\t{name|NO-SLOT}:\t|"
-		"Suppress »{name|SLOT <index>}« lines when creating a LE-CODE defintion file ({name|LE-DEF}).\n"
+		"Suppress »{name|SLOT <index>}« lines when creating a LE-CODE defintion file ({name|LE-DEF})."
+		" {name|NOSLOT} is a short cut for this keyword.\n"
 	"\t{name|/NO-SLOT}:\t|"
 		"Switch option {name|NO-SLOT} off.\n"
 	"\n"
@@ -1738,16 +1778,17 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     enum { C_NAMES, C_INFO, C_RATING, C_LEINFO, C_SHA1, C_DISTRIB,
 		C_CTDEF, C_LEDEF, C_LEREF, C_STRINGS, C_DUMP, 
 		C_LECODE, C_LECODE4, C_LPAR,
-		C_BMG, C_SEPARATOR, C_COPY, C_SPLIT, C_SUBST,
+		C_BMG, C_CUPICON, C_SEPARATOR, C_COPY, C_SPLIT, C_SUBST,
 		C_TRACKS, C_PREFIX, C_RESERVE, C_DEBUG };
 
     enum
     {
-	O_PARAM_D	= 0x100, // scan storage DEST
-	O_PARAM_S	= 0x200, // scan storage SRC
-	O_PARAM_S2	= 0x400, // scan second storage SRC
-	O_PARAM_SS	= 0x600, // scan storage SRC [ + SRC ]...
-	O_PARAM_A	= 0x800, // allow additonal arguments
+	O_PARAM_OPT	= 0x0100, // scan options before additional '='
+	O_PARAM_D	= 0x0200, // scan storage DEST
+	O_PARAM_S	= 0x0400, // scan storage SRC
+	O_PARAM_S2	= 0x0800, // scan second storage SRC
+	O_PARAM_SS	= 0x0c00, // scan storage SRC [ + SRC ]...
+	O_PARAM_A	= 0x1000, // allow additonal arguments
     };
 
     static const KeywordTab_t tab[] =
@@ -1784,6 +1825,8 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_BMG,	"BMG",			"BMGBIN",	0  },
 	{ C_BMG,	"BMG-TXT",		"BMGTXT",	 1 },
 
+	{ C_CUPICON,	"CUP-ICONS",		"CUPICONS",	O_PARAM_OPT  },
+	{ C_CUPICON,	"CUP-INFO",		"CUPINFO",	O_PARAM_OPT | 1 },
 
 	{ C_SEPARATOR,	"SEPARATOR",		"SEP",		0 },
 	{ C_COPY,	"COPY",			0,		O_PARAM_D|O_PARAM_SS },
@@ -1845,9 +1888,22 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     const int MAX_PAR_SRC = 20;
     int n_par_src = 0;
     le_strpar_t par_dest, par_src[MAX_PAR_SRC];
+    mem_t par_opt = {0};
 
     enumError err = ERR_OK;
     const le_options_t opt = cmd->opt;
+    if ( opt & O_PARAM_OPT )
+    {
+	char *eq = strchr(arg,'=');
+	if (eq)
+	{
+	    par_opt.ptr = arg;
+	    par_opt.len = eq - arg;
+	    arg = eq;
+	    *arg++ = 0;
+	}
+    }
+
     if ( opt & (O_PARAM_D|O_PARAM_S) )
     {
 	if ( opt & O_PARAM_D )
@@ -2008,6 +2064,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	      case C_LECODE:  err = CreateLecodeLD(F.f,ld,cmd->opt); break;
 	      case C_LPAR:    err = CreateLparLD(F.f,ld,true); break;
 	      case C_BMG:     err = CreateBmgLD(F.f,ld,variant||F.is_stdio); break;
+	      case C_CUPICON: err = CreateCupIconsLD(F.f,ld,arg,par_opt,variant||F.is_stdio); break;
 	      case C_PREFIX:  err = SavePrefixTable(F.f,0); break;
 	      case C_DEBUG:   err = CreateDebugLD(F.f,ld); break;
 	    }

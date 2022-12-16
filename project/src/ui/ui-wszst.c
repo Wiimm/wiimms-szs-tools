@@ -677,7 +677,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" for all source formats. This makes only sense as last rule. If DEST"
 	" is empty no transformation is done for the source. Examples: 'TPL'"
 	" or 'GRAY' or 'BTI.IA8' or 'TPL.I4+I8=IA8,TEX=,CMPR'\n"
-	"  SRC and DEST are tuple of file, image and palette formats and of 2"
+	"  SRC and DEST are tuples of file, image and palette formats and of 2"
 	" more attributes. All parts are optional and separated by points, the"
 	" order is irrelevant.\n"
 	"  Allowed file formats are: TPL, TEX, BTI, BREFT-IMG (=BTIMG), PNG"

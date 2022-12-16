@@ -622,7 +622,7 @@ enumError SaveImageKCL
 	SmartResizeIMG(&param.img,false,0,xn/pix_aalise,zn/pix_aalise);
     }
 
-    enumError err = SavePNG(&param.img,true,fname,0,0,true,0);
+    enumError err = SavePNG(&param.img,true,0,fname,0,0,true,0);
     ResetIMG(&param.img);
     return err;
 }

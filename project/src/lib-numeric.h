@@ -110,13 +110,17 @@ enum
 
 enum
 {
-    LE_DISABLED		=    0,	// setting is dsiabled
-    LE_ENABLED		= 0x01,	// setting is enabled
-    LE_ALTERABLE	= 0x02,	// setting can be altered by player
-    LE_EXCLUDED		= 0x04,	// exclude some features or objects
-    LE_INCLUDED		= 0x08,	// include some features or objects
+    LE_DISABLED		=    0,  // setting is disabled
+    LE_ENABLED		= 0x01,  // setting is enabled
+    LE_ALTERABLE	= 0x02,  // setting can be altered by player
+    LE_EXCLUDED		= 0x04,  // exclude some features or objects
+    LE_INCLUDED		= 0x08,  // include some features or objects
+    LE_EXTENT		= 0x10,  // extend functionality
+    LE_REGION		= 0x20,  // enable region support
 
     LE_M_TEXTURE	= LE_ENABLED | LE_ALTERABLE | LE_EXCLUDED,
+    LE_M_BT_WORLDWIDE	= LE_ENABLED | LE_REGION,
+    LE_M_VS_WORLDWIDE	= LE_ENABLED | LE_REGION | LE_EXTENT,
 };
 
 //-----------------------------------------------------------------------------

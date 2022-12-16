@@ -218,6 +218,7 @@ typedef struct Image_t
 
     ccp			path;		// NULL or alloced filename of image
     bool		path_alloced;	// true: 'path' is alloced -> free() it
+    bool		is_cup_icon;	// true: image contains cup icons
     file_format_t	info_fform;	// info about original file format
     image_format_t	info_iform;	// info about original image format
     palette_format_t	info_pform;	// info about original palette format
@@ -345,7 +346,7 @@ enumError AssignIMG
     Image_t		* img,		// pointer to valid img
     int			init_img,	// <0:none, =0:reset, >0:init
     const u8		* data,		// source data
-    uint		data_size,	// soze of 'data'
+    uint		data_size,	// size of 'data'
     uint		img_index,	// index of sub image, 0:main, >0:mipmaps
     bool		mipmaps,	// true: assign mipmaps
     const endian_func_t * endian,	// endian functions to read data
@@ -373,6 +374,7 @@ enumError SaveIMG
     Image_t		* img,		// pointer to valid img
     file_format_t	fform,		// file format
     const MipmapOptions_t *mmo,		// NULL or mipmap options
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting
 );
@@ -382,6 +384,7 @@ enumError SaveIMG
 enumError SaveTPL
 (
     Image_t		* src_img,	// pointer to valid source img
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting
 );
@@ -392,6 +395,7 @@ enumError SaveBTI
 (
     Image_t		* src_img,	// pointer to valid source img
     const MipmapOptions_t *mmo,		// NULL or mipmap options
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting
 );
@@ -402,6 +406,7 @@ enumError SaveTEX
 (
     Image_t		* src_img,	// pointer to valid source img
     const MipmapOptions_t *mmo,		// NULL or mipmap options
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite,	// true: force overwriting
     bool		ctcode_support	// true: include a CT-CODE file
@@ -413,6 +418,7 @@ enumError SaveBREFTIMG
 (
     Image_t		* src_img,	// pointer to valid img
     const MipmapOptions_t *mmo,		// NULL or mipmap options
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting
 );
@@ -539,7 +545,8 @@ enumError ReadPNG
 enumError SavePNG
 (
     Image_t		* img,		// pointer to valid img
-    bool		mipmaps,	// save: save mipmaps (auto file name)
+    bool		mipmaps,	// true: save mipmaps (auto file name)
+    FILE		*f,		// output file, if NULL then use path1+path2
     ccp			path1,		// NULL or part #1 of path
     ccp			path2,		// NULL or part #2 of path
     int			store_alpha,	// <0:no alpha, =0:auto alpha, >0:store alpha
@@ -563,6 +570,49 @@ enumError ExportPNG
     FormatFieldItem_t	* ffi,		// not null: store detected image+pal format
     bool		create_png,	// false: do some calculations but don't create png
     StringField_t	*file_list	// not NULL: store filenames of created png files
+);
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			generic images			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct BZ2Manager_t BZ2Manager_t;
+
+typedef struct GenericImgParam_t
+{
+    //--- input, setup by CheckGenericIMG()
+
+    mem_t		cmd_name;	// command
+    mem_t		param;		// parameter string
+    bool		ignore_unknown;	// ignore unknown commands and images
+
+    //--- analysis, setup by CreateGenericIMG()
+
+    const KeywordTab_t	*cmd;		// selected command
+    int			width;		// width of image
+    int			height;		// height of image
+    Color_t		color;		// default color
+    BZ2Manager_t	*font;		// NULL or selected font (red_36|blue_40)
+}
+GenericImgParam_t;
+
+//-----------------------------------------------------------------------------
+
+bool CheckGenericIMG // returns TRUE if command syntax is ok
+(
+    GenericImgParam_t	* par,		// parameter to setup
+    ccp			fname,		// filename to check
+    bool		ignore_unknown	// true: ignore unknown (sub-)commands
+);
+
+//-----------------------------------------------------------------------------
+
+enumError CreateGenericIMG
+(
+    GenericImgParam_t	* par,		// valid parameters
+    Image_t		* img,		// pointer to valid img
+    bool		init_img	// true: initialize 'img'
 );
 
 //
@@ -765,7 +815,7 @@ extern bool fast_resize_enabled;
 
 enumError ResizeIMG
 (
-    Image_t		* dest,		// dest image (may same as src)
+    Image_t		* dest,		// dest image (may be same as src)
     bool		init_dest,	// true: initialize 'dest' first
     const Image_t	* src,		// source image (if NULL: use dest)
     uint		width,		// new width of image
@@ -778,7 +828,7 @@ enumError ResizeIMG
 
 enumError FastResizeIMG
 (
-    Image_t		* dest,		// dest image (may same as src)
+    Image_t		* dest,		// dest image (may be same as src)
     bool		init_dest,	// true: initialize 'dest' first
     const Image_t	* src,		// source image (if NULL: use dest)
     uint		width,		// new width of image
@@ -791,7 +841,7 @@ enumError FastResizeIMG
 
 enumError SmartResizeIMG
 (
-    Image_t		* dest,		// dest image (may same as src)
+    Image_t		* dest,		// dest image (may be same as src)
     bool		init_dest,	// true: initialize 'dest' first
     const Image_t	* src,		// source image (if NULL: use dest)
     uint		width,		// new width of image

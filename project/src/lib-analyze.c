@@ -677,6 +677,7 @@ enumError ExecAnalyzeLECODE ( analyze_param_t *ap )
 		"build=%d\n"
 		"region=\"%s\"\n"
 		"debug=%d\n"
+		"testcode=%d\n"
 		"identifier=\"%s\"\n"
 		"header_size=%d\n"
 		"file_size=%d\n"
@@ -694,7 +695,8 @@ enumError ExecAnalyzeLECODE ( analyze_param_t *ap )
 		:ana.head->v3.region == 'J' ? "Japan"
 		:ana.head->v3.region == 'K' ? "Korea"
 		: "?"
-		,ana.head->v3.debug == 'D'
+		,IsBuildModeDebug(ana.head->v3.build_mode)
+		,IsBuildModeTest(ana.head->v3.build_mode)
 		,ana.identifier
 		,ana.header_size
 		,ntohl(ana.head->v3.file_size)

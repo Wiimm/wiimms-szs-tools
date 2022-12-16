@@ -1848,7 +1848,7 @@
 		" If @DEST@ is empty no transformation is done for the source."
 		" Examples: '@TPL@' or '@GRAY@' or '@BTI.IA8@' or '@TPL.I4+I8=IA8,TEX=,CMPR@'"
 		"\n "
-		" @SRC@ and @DEST@ are tuple of file, image and palette formats"
+		" @SRC@ and @DEST@ are tuples of file, image and palette formats"
 		" and of 2 more attributes. All parts are optional and separated"
 		" by points, the order is irrelevant."
 		"\n "

@@ -115,19 +115,22 @@
   { T_DEF_CMD,	"DECODE",	"DECODE|DEC",
 		    "wimgt DECODE [source]...",
 		"Decode (export) the entered image files into PNG files."
-		" The default destination is @'%P/%F.png'@." },
+		" The default destination is @'%P/%F.png'@."
+		" " GENERIC_IMAGE("SOURCE") },
 
   { T_DEF_CMD,	"ENCODE",	"ENCODE|ENC",
 		    "wimgt ENCODE [source]...",
 		"Encode (import) the entered PNG files and convert them to"
 		" to an internal image format (TPL, TEX, BREFT)."
-		" The default destination is @'%P/%N'@ (removed extension)." },
+		" The default destination is @'%P/%N'@ (removed extension)."
+		" " GENERIC_IMAGE("SOURCE") },
 
   { T_DEF_CMD,	"CONVERT",	"CONVERT|CV",
 		    "wimgt CONVERT [source]...",
 		"Convert the entered image files into new file and image formats."
 		" The old file is replaced by the new one."
-		" The difference to {ENCODE} is only the default file name handling." },
+		" The difference to {ENCODE} is only the default file name handling."
+		" " GENERIC_IMAGE("SOURCE") },
 
   { T_DEF_CMD,	"COPY",		"COPY|CP",
 		    "wimgt COPY source dest\n"
@@ -140,7 +143,8 @@
 		" The default destination file format is selected by scanning the"
 		" file extension of the destination."
 		" Option --transform may override this."
-		" Option --overwrite is set implicitly." },
+		" Option --overwrite is set implicitly."
+		"\n  " GENERIC_IMAGE("SOURCE") },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -354,7 +358,8 @@
 		" The default is @VCENTER.HCENTER.MIX.LEAVE@"
 		" or in short form @V.H.MX.LV@."
 		" If this option is used multiple times all patch files"
-		" will be used in the entered order." },
+		" will be used in the entered order."
+		"\n  " GENERIC_IMAGE("FILE") },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 

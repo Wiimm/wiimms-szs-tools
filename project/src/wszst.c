@@ -368,6 +368,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(MipmapOptions_t)
 	SIZEOF_INFO_ENTRY(ImageGeometry_t)
 	SIZEOF_INFO_ENTRY(Image_t)
+	SIZEOF_INFO_ENTRY(GenericImgParam_t)
 	SIZEOF_INFO_ENTRY(cmpr_info_t)
 	SIZEOF_INFO_ENTRY(tpl_header_t)
 	SIZEOF_INFO_ENTRY(tpl_imgtab_t)

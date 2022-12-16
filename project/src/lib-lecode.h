@@ -291,12 +291,16 @@ const mem_t GetLecodeLEREG ( le_region_t reg );
 // returns circ-buf for strings
 ccp	GetLecodeBuildLEREG	( le_region_t reg );
 ccp	GetLecodeInfoLEREG	( le_region_t reg );
-u_sec_t	GetLecodeCTimeLEREG	( le_region_t reg );
+u_sec_t	GetLECommitTimeLEREG	( le_region_t reg );
+u_sec_t	GetLECreateTimeLEREG	( le_region_t reg );
+u_sec_t	GetLERefTimeLEREG	( le_region_t reg );
 
 // returns circ-buf for strings
-ccp	GetInfoLECODE	( mem_t lecode );
-ccp	GetBuildLECODE	( mem_t lecode );
-u_sec_t	GetCTimeLECODE	( mem_t lecode );
+ccp	GetInfoLECODE		( mem_t lecode );
+ccp	GetBuildLECODE		( mem_t lecode );
+u_sec_t	GetCommitTimeLECODE	( mem_t lecode );
+u_sec_t	GetCreateTimeLECODE	( mem_t lecode );
+u_sec_t	GetRefTimeLECODE	( mem_t lecode );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -322,7 +326,7 @@ typedef struct le_lpar_t
     u8  item_cheat;		// 0:disabled, 1:enabled
     u8  drag_blue_shell;	// >0: allow dragging of blue shell
     u8  bt_worldwide;		// >0: enable worldwide battles
-    u8  vs_worldwide;		// >0: enable worldwide versus races
+    u8  vs_worldwide;		// >0: enable worldwide versus races, >1: extended
     u8  bt_textures;		// &1: enable texture hacks for battles, &2:alternable
     u8  vs_textures;		// &1: enable texture hacks for versus, &2:alternable
     u8  block_textures;		// >0: enable blocking of recent texture hacks
@@ -422,7 +426,7 @@ typedef struct le_binary_head_v3_t
  /*14*/  u32	file_size;	// size of complete file
  /*18*/  u32	off_param;	// offset of param section
  /*1c*/  char	region;		// one of: P, E, J, K
- /*1d*/  char	debug;		// one of: D (debug) or R (release)
+ /*1d*/  char	build_mode;	// one of: D (debug) or R (release)
  /*1e*/  u8	phase;		// >0: PHASE
  /*1f*/  char	unknown_1f;
 }
@@ -441,7 +445,7 @@ typedef struct le_binary_head_v4_t
  /*14*/  u32	file_size;	// size of complete file
  /*18*/  u32	off_param;	// offset of param section
  /*1c*/  char	region;		// one of: P, E, J, K
- /*1d*/  char	debug;		// one of: D (debug) or R (release)
+ /*1d*/  char	build_mode;	// one of: D (debug) or R (release)
  /*1e*/  u8	phase;		// >0: PHASE
  /*1f*/  char	unknown_1f;
  /*20*/  char	timestamp[];	// timestamp of build in ASCII
@@ -461,7 +465,7 @@ typedef struct le_binary_head_v5_34_t
  /*14*/  u32	file_size;	// size of complete file
  /*18*/  u32	off_param;	// offset of LPAR section
  /*1c*/  char	region;		// one of: P, E, J, K
- /*1d*/  char	debug;		// one of: D (debug) or R (release)
+ /*1d*/  char	build_mode;	// one of: D (debug) or R (release)
  /*1e*/  u8	phase;		// >0: PHASE (usually 2)
  /*1f*/  char	unknown_1f;
 
@@ -487,7 +491,7 @@ typedef struct le_binary_head_v5_38_t
  /*14*/  u32	file_size;	// size of complete file
  /*18*/  u32	off_param;	// offset of LPAR section
  /*1c*/  char	region;		// one of: P, E, J, K
- /*1d*/  char	debug;		// one of: D (debug) or R (release)
+ /*1d*/  char	build_mode;	// one of: R (release), T (testcode), D (debug) or X (debug+testcode)
  /*1e*/  u8	phase;		// >0: PHASE (usually 2)
  /*1f*/  char	unknown_1f;
 
@@ -502,9 +506,51 @@ typedef struct le_binary_head_v5_38_t
 __attribute__ ((packed)) le_binary_head_v5_38_t;
 
 //-----------------------------------------------------------------------------
+// [[le_binary_head_v5_3c_t]]
+
+typedef struct le_binary_head_v5_3c_t
+{
+ /*00*/  char	magic[4];	// LE_BINARY_MAGIC
+ /*04*/  u32	version;	// always 5 for v5
+ /*08*/  u32	build_number;	// current code version
+ /*0c*/  u32	base_address;	// memory address of binary (destination)
+ /*10*/  u32	entry_point;	// memory address (prolog function)
+ /*14*/  u32	file_size;	// size of complete file
+ /*18*/  u32	off_param;	// offset of LPAR section
+ /*1c*/  char	region;		// one of: P, E, J, K
+ /*1d*/  char	build_mode;	// one of: R (release), T (testcode), D (debug) or X (debug+testcode)
+ /*1e*/  u8	phase;		// >0: PHASE (usually 2)
+ /*1f*/  char	unknown_1f;
+
+ /*20*/  u32	szs_required;	// minimal encoded version number of szs-tools required to edit
+ /*24*/  u32	edit_version;	// >0: encoded version number of szs-tools, that did last edit
+ /*28*/	 u32	head_size;	// size of file header
+ /*2c*/	 u32	creation_time;	// unixtime of LE-CODE creation
+ /*30*/	 u32	edit_time;	// >0: unixtime of last LE-CODE edit
+ /*34*/  u32	szs_recommended;// recommended version number of szs-tools to manage LE binaries
+ /*38*/  u32	commit_time;	// unixtime of "git commit"
+ /*3c*/
+}
+__attribute__ ((packed)) le_binary_head_v5_3c_t;
+
+//-----------------------------------------------------------------------------
+
+static inline bool IsBuildModeRelease ( char ch )
+	{ return ch == 'R' || ch == 'T'; }
+
+static inline bool IsBuildModeDebug ( char ch )
+	{ return ch == 'D' || ch == 'X'; }
+
+static inline bool IsBuildModeTest ( char ch )
+	{ return ch == 'T' || ch == 'X'; }
+
+static inline bool IsBuildModeUnknown ( char ch )
+	{ return ch != 'R' || ch != 'T' || ch != 'D' || ch != 'X'; }
+
+//-----------------------------------------------------------------------------
 // [[le_binary_head_v5_t]]
 
-typedef le_binary_head_v5_38_t le_binary_head_v5_t;
+typedef le_binary_head_v5_3c_t le_binary_head_v5_t;
 
 //-----------------------------------------------------------------------------
 // [[le_binary_head_t]]
@@ -517,7 +563,9 @@ typedef union
 }
 le_binary_head_t;
 
-u_sec_t GetCTimeLeHead ( const le_binary_head_t *head );
+u_sec_t GetCommitTimeLeHead ( const le_binary_head_t *head );
+u_sec_t GetCreateTimeLeHead ( const le_binary_head_t *head );
+u_sec_t GetRefTimeLeHead    ( const le_binary_head_t *head );
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -879,6 +927,7 @@ typedef struct le_analyze_t
 
     le_valid_t	valid;		// see LE_VALID_* above
     le_region_t	region;		// one of LEREG_*
+    u32		commit_time;	// unixtime of last 'git commit'
     u32		creation_time;	// unixtime of LE-CODE creation
     u32		edit_time;	// >0: unixtime of last LE-CODE edit
     uint	szs_required;	// minimal encoded version number of szs-tools required to edit
@@ -918,7 +967,7 @@ typedef struct le_analyze_t
 
     uint	le_random_beg;	// first LE-CODE random slot
     uint	le_random_end;	// last LE-CODE random slot + 1
-    
+
     le_lpar_t	lpar;		// LPAR parameters
     le_flags_t	*flags;		// alloced list of flags, N=max_flags
 
@@ -986,15 +1035,13 @@ void TransferTrackFile   ( LogFile_t *log, uint dest_slot, ccp  src_name, Transf
 void TransferTrackBySlot ( LogFile_t *log, uint dest_slot, uint src_slot, TransferMode_t flags );
 
 static inline bool IsLESlotUsed ( const le_analyze_t *ana, uint slot )
-	{ return slot < ana->n_slot && ana->flags[slot] & G_LEFL__USED; }
+	{ return slot < ana->n_slot && ( ana->music[slot] || ana->flags[slot] & G_LEFL__USED ); }
 
 static inline bool IsLERacingSlot ( const le_analyze_t *ana, uint slot )
-	{ return slot < ana->n_slot && ana->flags[slot] & G_LEFL__USED
-			&& ana->property[slot] < MKW_TRACK_END; }
+	{ return IsLESlotUsed(ana,slot) && ana->property[slot] < MKW_TRACK_END; }
 
 static inline bool IsLEBattleSlot ( const le_analyze_t *ana, uint slot )
-	{ return slot < ana->n_slot && ana->flags[slot] & G_LEFL__USED
-			&& ana->property[slot] >= MKW_ARENA_BEG; }
+	{ return IsLESlotUsed(ana,slot) && ana->property[slot] >= MKW_ARENA_BEG; }
 
 ///////////////////////////////////////////////////////////////////////////////
 

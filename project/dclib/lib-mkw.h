@@ -162,6 +162,14 @@ static inline bool IsLecodeSpecial ( uint tid )
 	{ return tid >= MKW_SPECIAL_BEG && tid < MKW_LE_RANDOM_BEG
 	      || tid >= MKW_LE_RANDOM_END && tid < MKW_SPECIAL_END; }
 
+
+static inline uint NextLecodeSlot ( uint slot )
+	{ return slot == MKW_ARENA_END-1 ? MKW_LE_SLOT_BEG : slot+1; }
+
+static inline uint NextLecodeSlotRnd ( uint slot )
+	{ return slot == MKW_ARENA_END-1 ? MKW_LE_RANDOM_BEG
+		: slot == MKW_LE_RANDOM_END-1 ? MKW_LE_SLOT_BEG : slot+1; }
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			24p support			///////////////

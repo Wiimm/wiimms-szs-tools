@@ -276,7 +276,8 @@ typedef enum le_options_t
 
     LEO_OUT_EMPTY	= 0x00020000,  // accept empty strings as valid
     LEO_OUT_MINUS	= 0x00040000,  // accept minus strings as valid
-     LEO_OUT_ALL	= LEO_OUT_EMPTY | LEO_OUT_MINUS,
+    LEO_OUT_DUMMY	= 0x00080000,  // accept dummy names ("_abc") as valid (default)
+     LEO_OUT_ALL	= LEO_OUT_EMPTY | LEO_OUT_MINUS | LEO_OUT_DUMMY,
 
 
     //-- more options
@@ -299,7 +300,7 @@ typedef enum le_options_t
     //-- misc
 
     LEO__ALL		= 0x07ffffff,
-    LEO__DEFAULT	= LTT__DEFAULT | LEO_OVERWRITE,
+    LEO__DEFAULT	= LTT__DEFAULT | LEO_OVERWRITE | LEO_OUT_DUMMY,
     LEO__SRC		= LEO_LTT_SELECTOR | LEO_IN_ALL,
     LEO__DEST		= LEO_LTT_SELECTOR | LEO_OUT_ALL | LEO_M_OUTPUT | LEO_M_HOW,
 }
@@ -504,9 +505,9 @@ void ClearLT ( le_track_t *lt, le_track_type_t ltty ); // auto-ltty if 0
 void MoveLT  ( le_track_t *dest, le_track_t *src );
 static inline void ResetLT (  le_track_t *lt ) { ClearLT(lt,0); }
 
-void SetupStandardArenaLT ( le_track_t *lt, uint setup_slot ); // slots 0..9 || 32..41
-void SetupStandardTrackLT ( le_track_t *lt, uint setup_slot ); // slots 0..31
-void SetupByTrackInfoLT   ( le_track_t *lt, const TrackInfo_t *ti );
+void SetupStandardArenaLT  ( le_track_t *lt, uint setup_slot ); // slots 0..9 || 32..41
+void SetupStandardTrackLT  ( le_track_t *lt, uint setup_slot ); // slots 0..31
+void SetupByTrackInfoLT    ( le_track_t *lt, const TrackInfo_t *ti );
 
 void SetupLecodeRandomTrackLT ( le_track_t *lt, uint setup_slot ); // slots 62..65
 
@@ -763,7 +764,7 @@ void ClearTracksLD ( le_distrib_t *ld, int from, int to );
 void SetupLparLD ( le_distrib_t *ld, bool load_lpar );
 
 //-----------------------------------------------------------------------------
-// trackhelpers
+// track helpers
 
 uint PackTracksLD		( const le_distrib_t *ld );
 void CheckTracksLD		( const le_distrib_t *ld );
@@ -778,6 +779,9 @@ le_track_t * FindFillTrackLD	( le_distrib_t *ld, le_cup_t *lc, bool allow_candid
 
 int FindFreeTracksLD         ( le_distrib_t *ld, le_track_type_t ltty, int n );
 le_track_t * ReserveTracksLD ( le_distrib_t *ld, le_track_type_t ltty, int n, bool mark_export );
+
+void SetupStandardArenasLD ( le_distrib_t *ld, bool if_no_arnea_defined );
+void SetupStandardTracksLD ( le_distrib_t *ld, bool if_no_track_defined );
 
 //-----------------------------------------------------------------------------
 // cup helpers
@@ -932,22 +936,23 @@ bool ExportAnaLD	( const le_distrib_t *ld, le_analyze_t *ana );
 //-----------------------------------------------------------------------------
 // create files
 
-enumError CreateDumpLD    ( FILE *f, le_distrib_t *ld );
-enumError CreateRefLD     ( FILE *f, le_distrib_t *ld, bool add_strings );
-enumError CreateStringsLD ( FILE *f, le_distrib_t *ld );
-enumError CreateNamesLD   ( FILE *f, le_distrib_t *ld, bool use_xname );
-enumError CreateInfoLD    ( FILE *f, le_distrib_t *ld, bool use_xname, bool add_rating );
-enumError CreateSha1LD    ( FILE *f, le_distrib_t *ld, bool use_xname, bool add_comments );
-enumError CreateCtDefLD   ( FILE *f, le_distrib_t *ld );
-enumError CreateLeDefLD   ( FILE *f, le_distrib_t *ld );
-enumError CreateLecodeLD  ( FILE *f, le_distrib_t *ld, le_region_t region );
-enumError CreateLparLD    ( FILE *f, le_distrib_t *ld, bool print_full );
-enumError CreateBmgLD	  ( FILE *f, le_distrib_t *ld, bool bmg_text );
+enumError CreateDumpLD     ( FILE *f, le_distrib_t *ld );
+enumError CreateRefLD      ( FILE *f, le_distrib_t *ld, bool add_strings );
+enumError CreateStringsLD  ( FILE *f, le_distrib_t *ld );
+enumError CreateNamesLD    ( FILE *f, le_distrib_t *ld, bool use_xname );
+enumError CreateInfoLD     ( FILE *f, le_distrib_t *ld, bool use_xname, bool add_rating );
+enumError CreateSha1LD     ( FILE *f, le_distrib_t *ld, bool use_xname, bool add_comments );
+enumError CreateCtDefLD    ( FILE *f, le_distrib_t *ld );
+enumError CreateLeDefLD    ( FILE *f, le_distrib_t *ld );
+enumError CreateLecodeLD   ( FILE *f, le_distrib_t *ld, le_region_t region );
+enumError CreateLparLD     ( FILE *f, le_distrib_t *ld, bool print_full );
+enumError CreateBmgLD	   ( FILE *f, le_distrib_t *ld, bool bmg_text );
+enumError CreateCupIconsLD ( FILE *f, le_distrib_t *ld, ccp fname, mem_t par_opt, bool print_info );
 
-enumError CreateLeInfoLD  ( FILE *f, const le_distrib_t *ld, bool list_only );
-enumError CreateDebugLD   ( FILE *f, const le_distrib_t *ld );
+enumError CreateLeInfoLD   ( FILE *f, const le_distrib_t *ld, bool list_only );
+enumError CreateDebugLD    ( FILE *f, const le_distrib_t *ld );
 
-enumError CreateLecode4LD ( ccp fname, le_distrib_t *ld );
+enumError CreateLecode4LD  ( ccp fname, le_distrib_t *ld );
 
 //-----------------------------------------------------------------------------
 // string functions

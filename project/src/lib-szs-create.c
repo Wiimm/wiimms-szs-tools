@@ -762,7 +762,7 @@ enumError CreateSZS
 				    false,
 				    FF_TEX );
 		img.info_n_image = ptr->num;
-		if (SaveIMG(&img,fform,0,sd.path,true))
+		if (SaveIMG(&img,fform,0,0,sd.path,true))
 		    encode_errors++;
 	      }
 	      break;

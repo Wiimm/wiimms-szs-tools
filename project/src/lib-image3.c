@@ -656,7 +656,7 @@ bool fast_resize_enabled = false;
 
 enumError ResizeIMG
 (
-    Image_t		* dest,		// dest image (may same as src)
+    Image_t		* dest,		// dest image (may be same as src)
     bool		init_dest,	// true: initialize 'dest' first
     const Image_t	* src,		// source image (if NULL: use dest)
     uint		width,		// new width of image
@@ -674,7 +674,7 @@ enumError ResizeIMG
 
 enumError FastResizeIMG
 (
-    Image_t		* dest,		// dest image (may same as src)
+    Image_t		* dest,		// dest image (may be same as src)
     bool		init_dest,	// true: initialize 'dest' first
     const Image_t	* src,		// source image (if NULL: use dest)
     uint		width,		// new width of image
@@ -935,7 +935,7 @@ enumError FastResizeIMG
 
 enumError SmartResizeIMG
 (
-    Image_t		* dest,		// dest image (may same as src)
+    Image_t		* dest,		// dest image (may be same as src)
     bool		init_dest,	// true: initialize 'dest' first
     const Image_t	* src,		// source image (if NULL: use dest)
     uint		width,		// new width of image

@@ -750,7 +750,16 @@ file_format_t IsImageFF
     // returns the normalized FF for a valid image or NULL (=FF_UNKNOWN)
 
     file_format_t	fform,		// file format to check
-    bool		allow_png	// true: allow PNG
+    bool		allow_png	// true: allow FF_PNG
+);
+
+file_format_t GetImageFFByFName
+(
+    // returns the normalized FF for a valid image or NULL (=FF_UNKNOWN)
+
+    ccp			fname,		// NULL or filename to analyse extention
+    file_format_t	default_fform,	// use this as default/fallback
+    bool		allow_png	// true: allow FF_PNG
 );
 
 file_format_t GetImageFF
@@ -759,7 +768,7 @@ file_format_t GetImageFF
     file_format_t	fform2,		// if a valid image ff, use this one
     ccp			path,		// not NULL and exists: use file format
     file_format_t	default_fform,	// use this as default, if valid ff
-    bool		allow_png,	// true: allow PNG
+    bool		allow_png,	// true: allow FF_PNG
     file_format_t	not_found	// return this, if all other fails
 );
 
@@ -860,8 +869,29 @@ enumError LoadFILE
     bool		fatt_max	// true: store *max* values to 'fatt'
 );
 
+
+enumError WriteFILE
+(
+    FILE		*f,		// valid file for output
+    ccp			path1,		// NULL or part #1 of path for messages
+    ccp			path2,		// NULL or part #2 of path for messages
+    const void		* data,		// data to write
+    uint		data_size	// size of 'data'
+);
+
 enumError SaveFILE
 (
+    ccp			path1,		// NULL or part #1 of path
+    ccp			path2,		// NULL or part #2 of path
+    bool		overwrite,	// true: force overwriting
+    const void		* data,		// data to write
+    uint		data_size,	// size of 'data'
+    FileAttrib_t	* fatt		// not NULL: set timestamps using this attribs
+);
+
+enumError SaveFILE2
+(
+    FILE		* f,		// output file, if NULL use path1+path2 
     ccp			path1,		// NULL or part #1 of path
     ccp			path2,		// NULL or part #2 of path
     bool		overwrite,	// true: force overwriting

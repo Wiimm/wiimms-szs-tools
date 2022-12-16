@@ -98,6 +98,13 @@ DRAG-BLUE-SHELL	= %u
 
 THCLOUD-TIME	= %u # %.2fs
 
+# Since build 36, LE-CODE supports worldwide matches. Here you can disable (0)
+# or enable (1) it for battle or versus. The online "worldwide" button is
+# disabled, if both settings are disabled.
+
+BT-WORLDWIDE	= %s
+VS-WORLDWIDE	= %s
+
 # Since build 34, LE-CODE supports texture hacks for original Nintendo tracks
 # and arenas. This new feature can be disabled by value LE$DISABLE (default)
 # or enabled by value LE$ENABLE. Additonally you can append »|LE$ALTERABLE«

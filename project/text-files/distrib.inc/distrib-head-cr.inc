@@ -72,6 +72,10 @@
 # Date of first release in format yyyy-mm-dd
 @RELEASE-DATE	= %s
 
+# A name that is used for distribution references @CT-Wiiki.
+# Use @NAME if empty.
+@REFERENCE-NAME	= %s
+
 # Additional keywords for the search engine (optional).
 # The 4 parameters above are automatically scanned for keywords.
 @KEYWORDS	= %s

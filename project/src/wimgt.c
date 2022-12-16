@@ -242,19 +242,19 @@ static enumError cmd_test()
 	    *end = 0;
 
 	    StringCopyE(end,path+sizeof(path),"-std.png");
-	    SavePNG(&img,true,path,0,0,false,0);
+	    SavePNG(&img,true,0,path,0,0,false,0);
 
 	    ConvertIMG(&img,false,0,IMG_X_RGB,PAL_INVALID);
 	    StringCopyE(end,path+sizeof(path),"-rgb.png");
-	    SavePNG(&img,true,path,0,0,false,0);
+	    SavePNG(&img,true,0,path,0,0,false,0);
 
 	    ConvertIMG(&img,false,0,IMG_X_GRAY,PAL_INVALID);
 	    StringCopyE(end,path+sizeof(path),"-gray.png");
-	    SavePNG(&img,true,path,0,0,false,0);
+	    SavePNG(&img,true,0,path,0,0,false,0);
 
 	    ConvertIMG(&img,false,0,IMG_X_PAL,PAL_INVALID);
 	    StringCopyE(end,path+sizeof(path),"-pal.png");
-	    SavePNG(&img,true,path,0,0,false,0);
+	    SavePNG(&img,true,0,path,0,0,false,0);
 	}
 	ResetIMG(&img);
     }
@@ -348,7 +348,7 @@ static enumError cmd_decode()
 
 	if (!testmode)
 	{
-	    err = SavePNG(&img,true,dest,0,0,false,0);
+	    err = SavePNG(&img,true,0,dest,0,0,false,0);
 	    if ( max_err < err )
 	         max_err = err;
 	}
@@ -431,7 +431,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 
 	if (!testmode)
 	{
-	    err = SaveIMG(&img,fform,0,dest,samefile);
+	    err = SaveIMG(&img,fform,0,0,dest,samefile);
 	    if ( err > ERR_WARNING )
 		return err;
 	}
@@ -539,7 +539,7 @@ static enumError cmd_copy()
 
 	if (!testmode)
 	{
-	    err = SaveIMG(&img,fform,0,dest,samefile);
+	    err = SaveIMG(&img,fform,0,0,dest,samefile);
 	    if ( err > ERR_WARNING )
 		return err;
 	}

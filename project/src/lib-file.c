@@ -506,6 +506,34 @@ enumError LoadFILE
 
 ///////////////////////////////////////////////////////////////////////////////
 
+enumError WriteFILE
+(
+    FILE		*f,		// valid file for output
+    ccp			path1,		// NULL or part #1 of path for messages
+    ccp			path2,		// NULL or part #2 of path for messages
+    const void		* data,		// data to write
+    uint		data_size	// size of 'data'
+)
+{
+    DASSERT(data);
+
+    const uint written = fwrite(data,1,data_size,f);
+    if ( written != data_size )
+    {
+	char pathbuf[PATH_MAX];
+	ccp path = PathCatPP(pathbuf,sizeof(pathbuf),path1,path2);
+	if ( path && *path )
+	    ERROR1(ERR_WRITE_FAILED,"Write to file failed: %s\n",path);
+	else
+	    ERROR1(ERR_WRITE_FAILED,"Write to file failed!\n");
+	return ERR_WRITE_FAILED;
+    }
+
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 enumError SaveFILE
 (
     ccp			path1,		// NULL or part #1 of path
@@ -530,17 +558,30 @@ enumError SaveFILE
 	return err;
     }
 
-    const uint written = fwrite(data,1,data_size,F.f);
-    if ( written != data_size )
-    {
-	ERROR1(ERR_WRITE_FAILED,"Write to file failed: %s\n",path);
-	ResetFile(&F,0);
-	return ERR_WRITE_FAILED;
-    }
-
-    if (fatt)
+    err = WriteFILE(F.f,path,0,data,data_size);
+    if ( !err && fatt )
 	memcpy(&F.fatt,fatt,sizeof(F.fatt));
-    return ResetFile(&F,true);
+    enumError err2 = ResetFile(&F,true);
+    return err ? err : err2;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError SaveFILE2
+(
+    FILE		* f,		// output file, if NULL use path1+path2 
+    ccp			path1,		// NULL or part #1 of path
+    ccp			path2,		// NULL or part #2 of path
+    bool		overwrite,	// true: force overwriting
+    const void		* data,		// data to write
+    uint		data_size,	// size of 'data'
+    FileAttrib_t	* fatt		// not NULL: set timestamps using this attribs
+)
+{
+    DASSERT(data);
+    return f
+	? WriteFILE(f,path1,path2,data,data_size)
+	: SaveFILE(path1,path2,overwrite,data,data_size,fatt);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1201,7 +1242,7 @@ file_format_t IsImageFF
     // returns the normalized FF for a valid image or NULL (=FF_UNKNOWN)
 
     file_format_t	fform,		// file format to check
-    bool		allow_png	// true: allow PNG
+    bool		allow_png	// true: allow FF_PNG
 )
 {
     switch (fform)
@@ -1226,13 +1267,38 @@ file_format_t IsImageFF
 
 ///////////////////////////////////////////////////////////////////////////////
 
+file_format_t GetImageFFByFName
+(
+    // returns the normalized FF for a valid image or NULL (=FF_UNKNOWN)
+
+    ccp			fname,		// NULL or filename to analyse extention
+    file_format_t	default_fform,	// use this as default/fallback
+    bool		allow_png	// true: allow FF_PNG
+)
+{
+    file_format_t ff = default_fform;
+    if (fname)
+    {
+	ccp point = strrchr(fname,'.');
+	if (point)
+	{
+	    ff = IsImageFF(GetByNameFF(point+1),allow_png);
+	    if ( ff == FF_UNKNOWN )
+		ff = default_fform;
+	}
+    }
+    return ff;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 file_format_t GetImageFF
 (
     file_format_t	fform1,		// if a valid image ff, use this one
     file_format_t	fform2,		// if a valid image ff, use this one
     ccp			path,		// not NULL and exists: use file format
     file_format_t	default_fform,	// use this as default, if valid ff
-    bool		allow_png,	// true: allow PNG
+    bool		allow_png,	// true: allow FF_PNG
     file_format_t	not_found	// return this, if all other fails
 )
 {
@@ -1963,7 +2029,7 @@ void SearchConfigHelper ( search_file_list_t *sfl, int stop_mode )
 
     SearchConfig(sfl,CONFIG_FILE, opt,2, &xdg_home,1, &home,1, etc,2, etc+1,1, 0,0, stop_mode );
     if ( logging >= 4 )
-	DumpSearchFile(stdout,2,sfl,logging>=5,"Config search list");
+	DumpSearchFile(stdlog,2,sfl,logging>=5,"Config search list");
 }
 
 //-----------------------------------------------------------------------------
@@ -2348,7 +2414,7 @@ int GetVersionFF
 		    if ( vers == 4 && data_size >= sizeof(le_binary_head_v4_t) )
 		    {
 			const le_binary_head_v4_t *leh = (le_binary_head_v4_t*)data;
-			*res_suffix = leh->debug == 'R'
+			*res_suffix = leh->build_mode == 'R'
 					? toupper(leh->region)
 					: tolower(leh->region);
 		    }

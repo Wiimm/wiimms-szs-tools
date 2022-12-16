@@ -39,6 +39,12 @@
 #include <png.h>
 #include "lib-image.h"
 #include "lib-breff.h"
+#include "lib-bzip2.h"
+#include "dclib-utf8.h"
+
+#include "red-36.inc"
+#include "blue-40.inc"
+#include "cup-images.inc"
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -52,6 +58,46 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			transformation data		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[transform_mode_t]]
+
+typedef enum transform_mode_t
+{
+	TM_IDX_FILE,		// file format (=byte index)
+	TM_IDX_IMG,		// image format (=byte index)
+	TM_IDX_PAL,		// palette format (=byte index)
+	TM_IDX_PALETTE,		// switch PALETTE
+	TM_IDX_COLOR,		// switch COLOR
+	TM_IDX_ALPHA,		// switch ALPHA
+
+	TM_IDX_N,		// number of modes
+	TM_IDX_MASK	= 7,
+
+	TM_F_PAL	= 0x10,	// flag: Palette support
+
+	TF_ON		= 1,
+	TF_OFF		= 2,
+}
+transform_mode_t;
+
+///////////////////////////////////////////////////////////////////////////////
+// [[transform_t]]
+
+typedef struct transform_t
+{
+    char src[TM_IDX_N];
+    char dest[TM_IDX_N];
+}
+transform_t;
+
+#define MAX_TRANSFORM 100
+
+static uint n_transform = 0;
+static transform_t transform[MAX_TRANSFORM];
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////		    AssignIMG(), LoadIMG()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -60,7 +106,7 @@ enumError AssignIMG
     Image_t		* img,		// pointer to valid img
     int			init_img,	// <0:none, =0:reset, >0:init
     const u8		* data,		// source data
-    uint		data_size,	// soze of 'data'
+    uint		data_size,	// size of 'data'
     uint		img_index,	// index of sub image, 0:main, >0:mipmaps
     bool		mipmaps,	// true: assign mipmaps
     const endian_func_t * endian,	// endian functions to read data
@@ -269,6 +315,10 @@ enumError LoadIMG
     DASSERT(fname);
     TRACE("LoadIMG(%p,%d,%d) fname=%s\n",img,init_img,ignore_no_file,fname);
 
+    GenericImgParam_t genpar;
+    if (CheckGenericIMG(&genpar,fname,ignore_no_file))
+	return CreateGenericIMG(&genpar,img,init_img);
+
     if (init_img)
 	InitializeIMG(img);
     else
@@ -347,6 +397,445 @@ enumError LoadIMG
 
     ResetExtractSZS(&eszs);
     return err;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			create generic images		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enum generic_img_cmd_t
+{
+    VICMD_BLANK,
+    VICMD_TEXT,
+    VICMD_CUP_IMAGES,
+    VICMD_CUP_ICON,
+    VICMD_CUP_FILE,
+};
+
+//-----------------------------------------------------------------------------
+
+enum generic_img_options_t
+{
+    VIOPT_FONT		= 0x0001,
+    VIOPT_SIZE		= 0x0002,
+    VIOPT_COLOR		= 0x0004,
+};
+
+//-----------------------------------------------------------------------------
+
+static const KeywordTab_t generic_img_key[] =
+{
+    { VICMD_BLANK,	"BLANK",	0,		VIOPT_SIZE | VIOPT_COLOR },
+    { VICMD_TEXT,	"TEXT",		0,		VIOPT_FONT },
+    { VICMD_CUP_IMAGES,	"CUP-IMAGE",	"CUPIMAGE",	0 },
+    { VICMD_CUP_ICON,	"CUP-ICON",	"CUPICON",	0 },
+    { VICMD_CUP_FILE,	"CUP-FILE",	"CUPFILE",	0 },
+    {0,0,0,0},
+};
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+bool CheckGenericIMG // returns TRUE if command syntax is ok
+(
+    GenericImgParam_t	* par,		// parameter to setup
+    ccp			fname,		// filename to check
+    bool		ignore_unknown	// true: ignore unknown (sub-)commands
+)
+{
+    DASSERT(par);
+    memset(par,0,sizeof(*par));
+    par->ignore_unknown = ignore_unknown;
+
+    if ( fname && *fname == ':' )
+    {
+	ccp eq = strchr(fname,'=');
+	if (eq)
+	{
+	    par->cmd_name.ptr	= fname+1;
+	    par->cmd_name.len	= eq - par->cmd_name.ptr;
+	    par->param		= MemByString0(eq+1);
+	}
+	else
+	{
+	    par->cmd_name	= MemByString0(fname+1);
+	    par->param		= NullMem;
+	}
+
+	if ( par->cmd_name.len
+	   && !memchr(par->cmd_name.ptr,'/',par->cmd_name.len)
+	   && !memchr(par->cmd_name.ptr,'.',par->cmd_name.len)
+	   )
+	{
+	    return true;
+	}
+    }
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError CreateGenericTextIMG
+(
+    GenericImgParam_t	* par,		// valid parameters
+    Image_t		* img		// pointer to valid img
+)
+{
+    DASSERT(par);
+    DASSERT(img);
+
+    static char search[]  = "ÄÖÜàáâäèéíñóôúüß";
+    static char replace[] = "AOUaaaaeeinoouus";
+    static u32 codelist[sizeof(replace)] = {0};
+
+    if (!codelist[0])
+    {
+	ccp src = search;
+	u32 *dest = codelist;
+	for(;;)
+	{
+	    const u32 code = ScanUTF8AnsiChar(&src);
+	    if (!code)
+		break;
+	    *dest++ = code;
+	}
+	//HexDump16(stdout,0,0,codelist,sizeof(codelist));
+    }
+
+    BZ2Manager_t *font = par->font ? par->font : &blue_40_bin_mgr;
+    DecodeBZIP2Manager(font);
+
+    u32 *offset_list = (u32*)(font->data + be32(font->data));
+    ccp char_list   = (ccp)font->data + 4;
+
+    ccp src = par->param.ptr;
+    ccp end = src + par->param.len;
+    if ( logging >= 2 )
+	fprintf(stdlog,"# GenericText: |%.*s|\n",par->param.len,par->param.ptr);
+
+    while ( src < end )
+    {
+	u32 code = ScanUTF8AnsiChar(&src);
+	if ( code <= ' ' )
+	    code = ' ';
+	else if ( code >= 0x80 )
+	{
+	    for ( u32 *p = codelist; *p; p++ )
+		if ( *p == code )
+		{
+		    PRINT0(" REPLACE |#%u| -> %zu |%c|\n",code,p-codelist,(uchar)replace[p-codelist]);
+		    code = (uchar)replace[p-codelist];
+		    break;
+		}
+	    if ( code >= 0x100 )
+		continue;
+	}
+
+	ccp found = strchr(char_list,code);
+	PRINT0(" |%c| : %zd\n",code,found?found-char_list:-1);
+	if (!found)
+	    continue;
+
+	const int chidx = found - char_list;
+	const u32 off  = ntohl(offset_list[chidx]);
+	const u8 *data = font->data + off;
+	const int size = ntohl(offset_list[chidx+1]) - off;
+
+	if (img->width)
+	{
+	    Image_t img2;
+	    AssignIMG(&img2,true,data,size,0,false,&be_func,":TEXT");
+	    PatchIMG(img,img,&img2,PIM_INS_RIGHT);
+	    ResetIMG(&img2);
+	}
+	else
+	    AssignIMG(img,false,data,size,0,false,&be_func,":TEXT");
+    }
+
+   return ERR_OK;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError CreateGenericCupImagesIMG
+(
+    GenericImgParam_t	* par,		// valid parameters
+    Image_t		* img		// pointer to valid img
+)
+{
+    DASSERT(par);
+    DASSERT(img);
+
+    enum { I_ARROWS, I_ORIG, I_SWAPPED, I_WIIMM };
+    static const KeywordTab_t keytab[] =
+    {
+	{ I_ARROWS,	"ARROWS",	0,		0 },
+	{ I_ORIG,	"ORIGINAL",	0,		0 },
+	{ I_SWAPPED,	"SWAPPED",	0,		0 },
+	{ I_WIIMM,	"WIIMM",	0,		0 },
+	{0,0,0,0},
+    };
+
+    mem_t parlist = par->param;
+    while ( parlist.len )
+    {
+	ccp comma = memchr(parlist.ptr,',',parlist.len);
+	ccp plus  = memchr(parlist.ptr,'+',parlist.len);
+	if ( !comma || plus && plus < comma )
+	    comma = plus;
+	mem_t text = BeforeMem(parlist,comma);
+	parlist = BehindMem(parlist,comma?comma+1:0);
+
+	const KeywordTab_t *cmd = ScanKeywordEx(0,text.ptr,text.len,LOUP_UPPER,keytab);
+	if (!cmd)
+	{
+	    if (!par->ignore_unknown)
+		ERROR0(ERR_NOT_EXISTS,
+		    "Unknown image name: %.*s\n",text.len,text.ptr);
+	    return ERR_NOT_EXISTS;
+	}
+
+	if ( logging >= 1 )
+	    fprintf(stdlog,"# GenericCupImage: %s\n",cmd->name1);
+
+	BZ2Manager_t *bz2 = 0;
+	switch(cmd->id)
+	{
+	    case I_ARROWS:	bz2 = &cup_arrows_tpl_mgr; break;
+	    case I_ORIG:	bz2 = &cup_orig_tpl_mgr; break;
+	    case I_SWAPPED:	bz2 = &cup_swapped_tpl_mgr; break;
+	    case I_WIIMM:	bz2 = &cup_wiimm_tpl_mgr; break;
+	}
+
+	if (bz2)
+	{
+	    DecodeBZIP2Manager(bz2);
+	    if (img->width)
+	    {
+		Image_t img2;
+		AssignIMG(&img2,true,bz2->data,bz2->size,0,false,&be_func,":IMAGE");
+		PatchIMG(img,img,&img2,PIM_INS_BOTTOM);
+		ResetIMG(&img2);
+	    }
+	    else
+		AssignIMG(img,false,bz2->data,bz2->size,0,false,&be_func,":BOTTOM");
+	}
+    }
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError CreateGenericCupIconIMG
+(
+    GenericImgParam_t	* par,		// valid parameters
+    Image_t		* img		// pointer to valid img
+)
+{
+    DASSERT(par);
+    DASSERT(img);
+
+    Color_t col = { .val = 0 };
+    GenericImgParam_t mypar = *par;
+    mem_t parlist = mypar.param;
+    enumError err = ERR_OK;
+
+    while ( parlist.len )
+    {
+	ccp pipe = memchr(parlist.ptr,'|',parlist.len);
+	ccp nl   = memchr(parlist.ptr,'\n',parlist.len);
+	if ( !pipe || nl && nl < pipe )
+	    pipe = nl;
+	mem_t text = BeforeMem(parlist,pipe);
+	parlist = BehindMem(parlist,pipe?pipe+1:0);
+	PRINT0("%d+%d : %.*s\n",text.len,parlist.len,text.len,text.ptr);
+
+	Image_t cupicon;
+	if ( text.len && *text.ptr == ':' )
+	{
+	    text = MidMem(text,1,text.len);
+	    if ( !text.len || *text.ptr != ':' )
+	    {
+		mypar.param = text;
+		InitializeIMG(&cupicon);
+		CreateGenericCupImagesIMG(&mypar,&cupicon);
+		goto append;
+	    }
+	}
+
+	if ( logging >= 1 )
+	    fprintf(stdlog,"# GenericCupIcon: |%.*s|\n",text.len,text.ptr);
+
+	err = CreateIMG(&cupicon,true,128,128,col);
+	if (err)
+	    break;
+
+	ccp minus = memchr(text.ptr,'-',text.len);
+	if (minus)
+	{
+	    mypar.font = &red_36_bin_mgr;
+	    mypar.param = BeforeMem(text,minus);
+	    Image_t num;
+	    InitializeIMG(&num);
+	    err = CreateGenericTextIMG(&mypar,&num);
+	    if (err)
+		break;
+	    if ( num.width > 128 )
+		ResizeIMG(&num,false,0,128,num.height);
+	    PatchIMG(&cupicon,&cupicon,&num,PIM_RIGHT|PIM_TOP);
+	    ResetIMG(&num);
+
+	    text = BehindMem(text,minus+1);
+	}
+
+	if (text.len)
+	{
+	    mypar.font = &blue_40_bin_mgr;
+	    mypar.param = text;
+	    Image_t name;
+	    InitializeIMG(&name);
+	    err = CreateGenericTextIMG(&mypar,&name);
+	    if (err)
+		break;
+	    if ( name.width > 128 )
+		ResizeIMG(&name,false,0,128,name.height);
+	    PatchIMG(&cupicon,&cupicon,&name,PIM_BOTTOM);
+	    ResetIMG(&name);
+	}
+
+    append:;
+	if (img->height)
+	    PatchIMG(img,img,&cupicon,PIM_INS_BOTTOM);
+	else
+	    CopyIMG(img,false,&cupicon,false);
+	ResetIMG(&cupicon);
+    }
+
+    img->is_cup_icon = true;
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError CreateGenericCupFileIMG
+(
+    GenericImgParam_t	* par,		// valid parameters
+    Image_t		* img		// pointer to valid img
+)
+{
+    DASSERT(par);
+    DASSERT(img);
+
+    u8 *data = 0;
+    size_t size;
+    enumError err = LoadFileAlloc(par->param.ptr,0,0,&data,&size,1000000,0,0,false);
+    if (!err)
+    {
+	GenericImgParam_t mypar = *par;
+	mypar.param.ptr = (ccp)data;
+	mypar.param.len = size;
+	err = CreateGenericCupIconIMG(&mypar,img);
+    }
+    if (data)
+	FREE(data);
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CreateGenericIMG
+(
+    GenericImgParam_t	* par,		// valid parameters
+    Image_t		* img,		// pointer to valid img
+    bool		init_img	// true: initialize 'img'
+)
+{
+    DASSERT(par);
+    DASSERT(img);
+    if (init_img)
+	InitializeIMG(img);
+    else
+	ResetIMG(img);
+
+    par->cmd = ScanKeywordEx(0,par->cmd_name.ptr,par->cmd_name.len,LOUP_UPPER,generic_img_key);
+    if (!par->cmd)
+    {
+	if (!par->ignore_unknown)
+	    ERROR0(ERR_NOT_EXISTS,
+		"Invalid keyword for virtual image: %.*s\n",par->cmd_name.len,par->cmd_name.ptr);
+	return ERR_NOT_EXISTS;
+    }
+
+    mem_t param = par->param;
+    if ( par->cmd->opt & VIOPT_FONT )
+    {
+	ccp comma = memchr(param.ptr,',',param.len);
+	mem_t scan = BeforeMem(param,comma);
+	param = BehindMem(param,comma?comma+1:0);
+
+	if (scan.len)
+	    par->font = tolower(*scan.ptr) == 'r' ? &red_36_bin_mgr : &blue_40_bin_mgr;
+    }
+
+    if ( par->cmd->opt & VIOPT_SIZE )
+    {
+	ccp comma = memchr(param.ptr,',',param.len);
+	mem_t scan = BeforeMem(param,comma);
+	param = BehindMem(param,comma?comma+1:0);
+
+	PRINT0(" > scan |%.*s|%.*s|\n",scan.len,scan.ptr,param.len,param.ptr);
+	if (scan.len)
+	{
+	    char *next;
+	    par->width = str2ul(scan.ptr,&next,10);
+	    par->height = *next == 'x' ? str2ul(next+1,0,10) : par->width;
+	}
+    }
+
+    if ( par->cmd->opt & VIOPT_COLOR )
+    {
+	ccp comma = memchr(param.ptr,',',param.len);
+	mem_t scan = BeforeMem(param,comma);
+	param = BehindMem(param,comma?comma+1:0);
+
+	PRINT0(" > scan |%.*s|%.*s|\n",scan.len,scan.ptr,param.len,param.ptr);
+	if (scan.len)
+	{
+	    u32 col = str2ul(scan.ptr,0,16);
+	    if ( scan.len <= 6 )
+		col = col << 8 | 0xff;
+	    par->color.val = htonl(col);
+	}
+    }
+
+    PRINT0("Virtual image found: |%.*s| = |%.*s| [%dx%d,%08x]\n",
+	par->cmd_name.len, par->cmd_name.ptr, param.len, param.ptr,
+		par->width, par->height, par->color );
+
+    par->param = param;
+    switch(par->cmd->id)
+    {
+	case VICMD_BLANK:
+	    if (!par->width)  par->width = 1;
+	    if (!par->height) par->height = 1;
+	    return CreateIMG(img,false,par->width,par->height,par->color);
+
+	case VICMD_TEXT:
+	    return CreateGenericTextIMG(par,img);
+
+	case VICMD_CUP_IMAGES:
+	    return CreateGenericCupImagesIMG(par,img);
+
+	case VICMD_CUP_ICON:
+	    return CreateGenericCupIconIMG(par,img);
+
+	case VICMD_CUP_FILE:
+	    return CreateGenericCupFileIMG(par,img);
+    }
+
+    return ERR_NOT_EXISTS;
 }
 
 //
@@ -679,6 +1168,7 @@ enumError SaveIMG
     Image_t		* img,		// pointer to valid img
     file_format_t	fform,		// file format
     const MipmapOptions_t *mmo,		// NULL or mipmap options
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting
 )
@@ -693,13 +1183,13 @@ enumError SaveIMG
 
     switch(fform)
     {
-	case FF_TPL:		return SaveTPL(img,fname,overwrite);
-	case FF_BTI:		return SaveBTI(img,mmo,fname,overwrite);
-	case FF_TEX:		return SaveTEX(img,mmo,fname,overwrite,false);
-	case FF_TEX_CT:		return SaveTEX(img,mmo,fname,overwrite,true);
+	case FF_TPL:		return SaveTPL(img,f,fname,overwrite);
+	case FF_BTI:		return SaveBTI(img,mmo,f,fname,overwrite);
+	case FF_TEX:		return SaveTEX(img,mmo,f,fname,overwrite,false);
+	case FF_TEX_CT:		return SaveTEX(img,mmo,f,fname,overwrite,true);
 	case FF_BREFT:
-	case FF_BREFT_IMG:	return SaveBREFTIMG(img,mmo,fname,overwrite);
-	case FF_PNG:		return SavePNG(img,true,fname,0,0,overwrite,0);
+	case FF_BREFT_IMG:	return SaveBREFTIMG(img,mmo,f,fname,overwrite);
+	case FF_PNG:		return SavePNG(img,true,f,fname,0,0,overwrite,0);
 
 	default:
 	    return ERROR0(ERR_INVALID_IFORM,
@@ -713,6 +1203,7 @@ enumError SaveIMG
 enumError SaveTPL
 (
     Image_t		* src_img,	// pointer to valid source img
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting
 )
@@ -721,6 +1212,12 @@ enumError SaveTPL
     DASSERT(fname);
 
     PRINT("SaveTPL(o=%d) %s\n", overwrite, fname );
+
+
+    //--- special handling for cup icons
+
+    if ( src_img->is_cup_icon && !n_transform )
+	ConvertIMG(src_img,false,0,IMG_CMPR,PAL_INVALID);
 
 
     //--- setup images
@@ -823,7 +1320,7 @@ enumError SaveTPL
 
     //--- save to file & clean
 
-    err = SaveFILE(fname,0,overwrite,data,data_off,0);
+    err = SaveFILE2(f,fname,0,overwrite,data,data_off,0);
 
  abort:
     for ( i = 0; i < n_image; i++ )
@@ -839,6 +1336,7 @@ enumError SaveBTI
 (
     Image_t		* src_img,	// pointer to valid source img
     const MipmapOptions_t *mmo,		// NULL or mipmap options
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting
 )
@@ -906,7 +1404,7 @@ enumError SaveBTI
 
     err = WriteImageData(&mmi,data+data_off);
     if (!err)
-	err = SaveFILE(fname,0,overwrite,data,total_size,0);
+	err = SaveFILE2(f,fname,0,overwrite,data,total_size,0);
 
  abort:
     FREE(data);
@@ -920,6 +1418,7 @@ enumError SaveTEX
 (
     Image_t		* src_img,	// pointer to valid source img
     const MipmapOptions_t *mmo,		// NULL or mipmap options
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite,	// true: force overwriting
     bool		ctcode_support	// true: include a CT-CODE file
@@ -991,7 +1490,7 @@ enumError SaveTEX
 
     err = WriteImageData(&mmi,data+grp_off);
     if (!err)
-	err = SaveFILE(fname,0,overwrite,data,total_size,0);
+	err = SaveFILE2(f,fname,0,overwrite,data,total_size,0);
 
  abort:
     FREE(data);
@@ -1005,6 +1504,7 @@ enumError SaveBREFTIMG
 (
     Image_t		* src_img,	// pointer to valid img
     const MipmapOptions_t *mmo,		// NULL or mipmap options
+    FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting
 )
@@ -1061,7 +1561,7 @@ enumError SaveBREFTIMG
 
     err = WriteImageData(&mmi,data+img_off);
     if (!err)
-	err = SaveFILE(fname,0,overwrite,data,total_size,0);
+	err = SaveFILE2(f,fname,0,overwrite,data,total_size,0);
 
  abort:
     FREE(data);
@@ -1413,7 +1913,8 @@ enumError ReadPNG
 enumError SavePNG
 (
     Image_t		* img,		// valid image
-    bool		mipmaps,	// save: save mipmaps (auto file name)
+    bool		mipmaps,	// true: save mipmaps (auto file name)
+    FILE		*fo,		// output file, if NULL then use path1+path2
     ccp			path1,		// NULL or part #1 of path
     ccp			path2,		// NULL or part #2 of path
     int			store_alpha,	// <0:no alpha, =0:auto alpha, >0:store alpha
@@ -1504,13 +2005,22 @@ enumError SavePNG
     }
 
     File_t f;
-    err = CreateFileOpt(&f,true,path,testmode, overwrite ? path : 0 );
-    if ( err || !f.f )
+    if (fo)
     {
-	ResetFile(&f,0);
-	return err;
+	InitializeFile(&f);
+	f.f = fo;
+	f.is_writing = true;
+	mipmaps = false;
     }
-
+    else
+    {
+	err = CreateFileOpt(&f,true,path,testmode, overwrite ? path : 0 );
+	if ( err || !f.f )
+	{
+	    ResetFile(&f,0);
+	    return err;
+	}
+    }
 
     //--- setup png
 
@@ -1753,6 +2263,9 @@ enumError SavePNG
 
     if (opt_preserve)
 	memcpy(&f.fatt,&img->fatt,sizeof(f.fatt));
+
+    if (fo)
+	f.f = 0;
     err = ResetFile(&f,opt_preserve);
 
     if ( mipmaps && img->mipmap )
@@ -1774,7 +2287,7 @@ enumError SavePNG
 		(int)(ext-path2), path2, count, ext );
 
 	    PRINT("## SAVE -> %s\n",mm_path);
-	    err = SavePNG(img,false,path1,mm_path,store_alpha,overwrite,file_list);
+	    err = SavePNG(img,false,0,path1,mm_path,store_alpha,overwrite,file_list);
 	}
     }
     return err;
@@ -1863,7 +2376,7 @@ enumError ExportPNG
 	{
 	    err = ConvertIMG(&img,false,0,IMG_X_AUTO,PAL_INVALID);
 	    if (!err)
-		err = SavePNG(&img,mipmaps,path1,path2,0,false,file_list);
+		err = SavePNG(&img,mipmaps,0,path1,path2,0,false,file_list);
 
 	 #if ENABLE_EXPORT_TIMER
 	    start_time = GetTimerUSec() - start_time;
@@ -1881,27 +2394,6 @@ enumError ExportPNG
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////		    scan file and image format		///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-typedef enum transform_mode_t
-{
-	TM_IDX_FILE,		// file format (=byte index)
-	TM_IDX_IMG,		// image format (=byte index)
-	TM_IDX_PAL,		// palette format (=byte index)
-	TM_IDX_PALETTE,		// switch PALETTE
-	TM_IDX_COLOR,		// switch COLOR
-	TM_IDX_ALPHA,		// switch ALPHA
-
-	TM_IDX_N,		// number of modes
-	TM_IDX_MASK	= 7,
-
-	TM_F_PAL	= 0x10,	// flag: Palette support
-
-	TF_ON		= 1,
-	TF_OFF		= 2,
-
-} transform_mode_t;
-
 ///////////////////////////////////////////////////////////////////////////////
 
 const KeywordTab_t cmdtab_transform[] =
@@ -1965,20 +2457,6 @@ const KeywordTab_t cmdtab_transform[] =
 
 	{ 0,0,0,0 }
 };
-
-///////////////////////////////////////////////////////////////////////////////
-
-typedef struct transform_t
-{
-    char src[TM_IDX_N];
-    char dest[TM_IDX_N];
-
-} transform_t;
-
-#define MAX_TRANSFORM 100
-
-static uint n_transform = 0;
-static transform_t transform[MAX_TRANSFORM];
 
 ///////////////////////////////////////////////////////////////////////////////
 

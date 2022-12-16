@@ -277,7 +277,7 @@ enumError CreateBREFF
 	for ( i = 0; i < szs->subfile.used; i++ )
 	{
 	    szs_subfile_t * f = szs->subfile.list + i;
-	    printf("%3d.: %u %6x %6x %s\n", i, f->is_dir, f->offset, f->size, f->path );
+	    fprintf(stdlog,"%3d.: %u %6x %6x %s\n", i, f->is_dir, f->offset, f->size, f->path );
 	}
     }
 

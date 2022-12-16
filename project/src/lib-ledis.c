@@ -40,6 +40,7 @@
 #include "lib-ledis.h"
 #include "lib-analyze.h"
 #include "lib-szs.h"
+#include "lib-image.h"
 #include "db-mkw.h"
 #include "crypt.h"
 
@@ -178,6 +179,8 @@ static KeywordTab_t keywords_leo[] =
 	 { LEO_OUT_EMPTY,	"OEMPTY",	0,		0 },
 	{ LEO_OUT_MINUS,	"OUT-MINUS",	"OUTMINUS",	0 },
 	 { LEO_OUT_MINUS,	"OMINUS",	0,		0 },
+	{ LEO_OUT_DUMMY,	"OUT-DUMMY",	"OUTDUMMY",	0 },
+	 { LEO_OUT_DUMMY,	"ODUMMY",	0,		0 },
 	{ LEO_OUT_ALL,		"OUT-ALL",	"OUTALL",	0 },
 	 { LEO_OUT_ALL,		"OALL",		0,		0 },
 
@@ -234,6 +237,17 @@ bool IsInputNameValidLEO ( ccp name, le_options_t opt )
 
 bool IsOutputNameValidLEO ( ccp name, le_options_t opt )
 {
+    if	(  name
+	&& name[0] == '_'
+	&& strlen(name) == 4
+	&& ( isdigit(name[1]) || name[1] >= 'a' && name[1] <= 'f' )
+	&& ( isdigit(name[2]) || name[2] >= 'a' && name[2] <= 'f' )
+	&& ( isdigit(name[3]) || name[3] >= 'a' && name[3] <= 'f' )
+	)
+    {
+	return ( opt & LEO_OUT_DUMMY ) != 0;
+    }
+
     return !name || !*name
 	? ( opt & LEO_OUT_EMPTY ) != 0
 	: *name == '-' && !name[1]
@@ -714,7 +728,7 @@ int GetIndexByRefLECUP ( const le_cup_t *lc, int cup_ref )
 {
     if ( !lc || cup_ref <= 0 )
 	return -1;
-	
+
     const uint cup = cup_ref / 10 - 1;
     const uint idx = cup_ref % 10 - 1;
     return cup < lc->max && idx < lc->tracks ? cup*lc->tracks + idx : -1;
@@ -929,6 +943,23 @@ void SetupStandardArenaLT ( le_track_t *lt, uint setup_slot )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void SetupStandardArenasLD ( le_distrib_t *ld, bool if_no_arnea_defined )
+{
+    DASSERT(ld);
+    if ( if_no_arnea_defined )
+    {
+	le_track_t *lt = ld->tlist;
+	for ( int slot = 0; slot < ld->tlist_used; slot++, lt++ )
+	    if ( lt->track_status >= LTS_EXPORT && lt->track_type == LTTY_ARENA )
+		return;
+    }
+
+    for ( int slot = MKW_ARENA_BEG; slot < MKW_ARENA_END; slot++ )
+	SetupStandardArenaLT(DefineFreeTrackLD(ld,LTTY_ARENA,true),slot);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SetupStandardTrackLT ( le_track_t *lt, uint setup_slot )
 {
     if (IsMkwTrack(setup_slot))
@@ -938,6 +969,23 @@ void SetupStandardTrackLT ( le_track_t *lt, uint setup_slot )
 	setup_slot -= MKW_ARENA_BEG;
 	SetupByTrackInfoLT(lt,arena_info+setup_slot);
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SetupStandardTracksLD ( le_distrib_t *ld, bool if_no_track_defined )
+{
+    DASSERT(ld);
+    if ( if_no_track_defined )
+    {
+	le_track_t *lt = ld->tlist;
+	for ( int slot = 0; slot < ld->tlist_used; slot++, lt++ )
+	    if ( lt->track_status >= LTS_EXPORT && lt->track_type == LTTY_TRACK )
+		return;
+    }
+
+    for ( int slot = MKW_TRACK_BEG; slot < MKW_TRACK_END; slot++ )
+	SetupStandardTrackLT(DefineFreeTrackLD(ld,LTTY_TRACK,true),slot);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1792,7 +1840,7 @@ void AnalyzeLD ( le_distrib_t *ld, bool force_new_analysis )
     for ( int slot = MKW_ARENA_BEG; slot < MKW_ARENA_END; slot++ )
     {
 	le_track_t *lt = GetTrackLD(ld,slot);
-	if ( !lt || lt->track_status < LTS_EXPORT || !lt->is_original )
+	if ( !lt || lt->track_status < LTS_EXPORT || !lt->is_original || lt->property != slot )
 	{
 	    ld->ana.bt.orig_tracks = false;
 	    break;
@@ -1802,7 +1850,7 @@ void AnalyzeLD ( le_distrib_t *ld, bool force_new_analysis )
     for ( int slot = MKW_TRACK_BEG; slot < MKW_TRACK_END; slot++ )
     {
 	le_track_t *lt = GetTrackLD(ld,slot);
-	if ( !lt || lt->track_status < LTS_EXPORT || !lt->is_original )
+	if ( !lt || lt->track_status < LTS_EXPORT || !lt->is_original || lt->property != slot )
 	{
 	    ld->ana.vs.orig_tracks = false;
 	    break;
@@ -2635,7 +2683,7 @@ bool ScanSha1LineLD
 	lt->cup_slot = cup;
 	if ( le_flags >= 0 )
 	    lt->flags = le_flags;
-	    
+
 	SetXNameLT(lt,0,buf);
     }
     SetIdentOptLT(lt,hex,is_d,true,0);
@@ -2994,14 +3042,12 @@ static enumError ScanLeDefTRACKS
      #endif // LE_STRING_LIST_ENABLED
 
 	 case C_STD_ARENAS:
-	    for ( int slot = MKW_ARENA_BEG; slot < MKW_ARENA_END; slot++ )
-		SetupStandardArenaLT(DefineFreeTrackLD(ld,LTTY_ARENA,true),slot);
+	    SetupStandardArenasLD(ld,false);
 	    current_lt = 0;
 	    break;
 
 	 case C_STD_VERSUS:
-	    for ( int slot = MKW_TRACK_BEG; slot < MKW_TRACK_END; slot++ )
-		SetupStandardTrackLT(DefineFreeTrackLD(ld,LTTY_TRACK,true),slot);
+	    SetupStandardTracksLD(ld,false);
 	    current_lt = 0;
 	    break;
 	}
@@ -3502,7 +3548,7 @@ static void update_cup_helper
     {
 	le_track_t *lt = ld->tlist;
 	for ( int slot = 0; slot < ld->tlist_used; slot++, lt++ )
-	    if ( IsVisibleLT(lt) && lt->track_type & ltty && !(lt->user_flags&ltty) )
+	    if ( IsVisibleLT(lt) && lt->track_type == ltty && !(lt->user_flags&ltty) )
 		AppendLECUP(lc,slot);
     }
 
@@ -3637,18 +3683,24 @@ void UpdateCupsLD ( le_distrib_t *ld )
     //--- battle cups
 
     if (!ld->cup_battle.used)
+    {
+	SetupStandardArenasLD(ld,true);
 	add_reflist_to_cup(ld,standard_bt_ref,MKW_N_ARENAS,LTTY_ARENA);
+    }
 
-    update_cup_helper( ld, &ld->cup_battle, LTTY_ARENA,MKW_ARENA_BEG,
+    update_cup_helper( ld, &ld->cup_battle, LTTY_ARENA, MKW_ARENA_BEG,
 			!ld->scan.valid || ld->scan.bt.add_unused );
 
 
     //--- versus cups
 
     if (!ld->cup_versus.used)
+    {
+	SetupStandardTracksLD(ld,true);
 	add_reflist_to_cup(ld,standard_vs_ref,MKW_N_TRACKS,LTTY_TRACK);
+    }
 
-    update_cup_helper( ld, &ld->cup_versus, LTTY_TRACK,MKW_TRACK_BEG,
+    update_cup_helper( ld, &ld->cup_versus, LTTY_TRACK, MKW_TRACK_BEG,
 			!ld->scan.valid || ld->scan.vs.add_unused );
 
 
@@ -4160,6 +4212,8 @@ void ImportAnaLD ( le_distrib_t *ld, const le_analyze_t *ana )
     if ( !ld || !ana || !ana->valid )
 	return;
 
+    PRINT0("ImportAnaLD() nslot=%d, ncup=%d+%d\n",ana->n_slot,ana->n_cup_arena,ana->n_cup_track);
+
 
     //--- import lecode binary + lpar
 
@@ -4186,6 +4240,10 @@ void ImportAnaLD ( le_distrib_t *ld, const le_analyze_t *ana )
 	    if (ana->property)	lt->property = ana->property[slot];
 	    if (ana->music)	lt->music    = ana->music[slot];
 	    if (ana->flags)	lt->flags    = ana->flags[slot];
+
+	    char name[30];
+	    snprintf(name,sizeof(name),"_%03x",slot);
+	    SetNameLT(lt,0,name);
 	}
     }
 
@@ -4225,7 +4283,7 @@ void ImportAnaLD ( le_distrib_t *ld, const le_analyze_t *ana )
 	    {
 		int slot = htonl( ana->cup_track[ BMG_RCUP_TRACKS*cup_idx + i ] );
 		le_track_t *lt = DefineTrackLD(ld,slot,false);
-		if ( lt && !IsArenaLTTY(lt->track_type) )
+		if ( lt && IsTrackLTTY(lt->track_type) )
 		{
 		    lt->cup_slot = 10*cup_idx + i + 11;
 		    if ( ref_dest && ref_src )
@@ -5466,7 +5524,7 @@ static void print_ledef_track
 	fputs("\r\n",f);
     else
 	fprintf(f,"\r\nSLOT %u\r\n",lt->track_slot);
-    
+
     ccp type = GetNameLTTY(lt->track_type);
     fprintf(f,"TRACK %s%u\t%s\t%s\t%s\t\"%s\"%s%s\r\n",
 		type,
@@ -5618,6 +5676,7 @@ static void print_ledef_cup
 		    }
 		}
 		fprintf(f,"\t%*s",fw_track,info);
+		//fprintf(f," [%u]",slot);
 	    }
 	    fprintf(f,"\t# %*d\r\n",fw_cup,i);
 	}
@@ -5633,6 +5692,7 @@ enumError CreateLeDefLD ( FILE *f, le_distrib_t *ld )
 	return ERR_MISSING_PARAM;
 
     UpdateCupsLD(ld);
+
     AnalyzeLD(ld,true);
     const bool be_verbose = !(ld->spar.opt & LEO_BRIEF);
 
@@ -5642,6 +5702,7 @@ enumError CreateLeDefLD ( FILE *f, le_distrib_t *ld )
 	fprintf(f,"%s\r\n",LE_DEFINE_MAGIC8);
 
     PrintSectionTool(f,be_verbose);
+
 
     //-- TRACK-LIST
 
@@ -5923,6 +5984,184 @@ enumError CreateBmgLD ( FILE *f, le_distrib_t *ld, bool bmg_text )
 	: SaveRawFileBMG(&bmg,f,0);
 
     ResetBMG(&bmg);
+    return err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CreateCupIconsLD
+	( FILE *f, le_distrib_t *ld, ccp fname, mem_t par_opt, bool print_info )
+{
+    if ( !f || !ld )
+	return ERR_MISSING_PARAM;
+
+    //--- setup buffer
+
+    char namebuf[50], *nameend = namebuf + sizeof(namebuf) - 3;
+
+    const uint bufsize = ld->cup_versus.used * 21 + 200;
+    char *buf = MALLOC(bufsize), *dest = buf, *bufend = buf + bufsize - 1;
+
+    dest = StringCopyE(dest,bufend,":cup-icon=");
+    char *cuplist = dest;
+
+    dest = StringCopyE(dest,bufend,":arrows\n");
+    enumError err = ERR_OK;
+
+
+    //--- scan options
+
+    enum
+    {
+	O_ORIG		= 0x0001,
+	O_SWAPPED	= 0x0002,
+	O_1WIIMM	= 0x0004,
+	O_9WIIMM	= 0x0008,
+	O_XWIIMM	= 0x0010,
+
+	O_PLUS		= 0x0020,
+	O_GAME		= 0x0040,
+	O_SPACE		= 0x0080,
+
+	O_CHARS		= 0x1000,
+	 O_M_CHARS	= 0xf000,
+	 O_S_CHARS	= 12,
+	 
+	O__DEFAULT	= 3*O_CHARS,
+    };
+
+    static const KeywordTab_t keytab[] =
+    {
+	{ O_ORIG,		"ORIGINAL",	0,		0 },
+	{ O_SWAPPED,		"SWAPPED",	0,		0 },
+	{ O_1WIIMM,		"1WIIMM",	0,		0 },
+	{ O_9WIIMM,		"9WIIMM",	"WIIMM",	0 },
+	{ O_XWIIMM,		"XWIIMM",	0,		0 },
+
+	{ O_PLUS,		"PLUS",		0,		0 },
+	{ O_GAME,		"GAME",		0,		0 },
+	{ O_SPACE,		"SPACE",	0,		0 },
+
+	{  1*O_CHARS,		 "1",		0,		O_M_CHARS },
+	{  2*O_CHARS,		 "2",		0,		O_M_CHARS },
+	{  3*O_CHARS,		 "3",		0,		O_M_CHARS },
+	{  4*O_CHARS,		 "4",		0,		O_M_CHARS },
+	{  5*O_CHARS,		 "5",		0,		O_M_CHARS },
+	{  6*O_CHARS,		 "6",		0,		O_M_CHARS },
+	{  7*O_CHARS,		 "7",		0,		O_M_CHARS },
+	{  8*O_CHARS,		 "8",		0,		O_M_CHARS },
+	{  9*O_CHARS,		 "9",		0,		O_M_CHARS },
+	{ 10*O_CHARS,		"10",		0,		O_M_CHARS },
+	{ 11*O_CHARS,		"11",		0,		O_M_CHARS },
+	{ 12*O_CHARS,		"12",		0,		O_M_CHARS },
+	{ 13*O_CHARS,		"13",		0,		O_M_CHARS },
+	{ 14*O_CHARS,		"14",		0,		O_M_CHARS },
+	{ 15*O_CHARS,		"15",		0,		O_M_CHARS },
+	{0,0,0,0}
+    };
+
+    StringUpper(par_opt.ptr);
+    PRINT1("CreateCupIconsLD(%d), opt=%.*s|\n",print_info,par_opt.len,par_opt.ptr);
+    int opt = ScanKeywordList(par_opt.ptr,keytab,0,true,0,0,"CUP-ICONS",ERR_SYNTAX);
+    if ( opt < 0 )
+	opt = 0;
+
+    int cup_index = 0;
+    if ( opt & O_SWAPPED )
+    {
+	dest = StringCopyE(dest,bufend,":swapped\n");
+	cup_index = 8;
+    }
+    else if ( opt & O_ORIG )
+    {
+	dest = StringCopyE(dest,bufend,":original\n");
+	cup_index = 8;
+    }
+
+    const int wiimm1 = opt & O_1WIIMM ? 0 : -1;
+    const int wiimm9 = opt & O_9WIIMM ? 8 : -1;
+    const int wiimmx = opt & O_XWIIMM ? ld->cup_versus.used - 1 : -1;
+
+    const bool use_plus_prefix = (opt & O_PLUS) != 0;
+    const bool use_game_prefix = (opt & O_GAME) != 0;
+
+    const int max_chars = ( opt & O_M_CHARS ) >> O_S_CHARS;
+
+
+    //--- add cup names
+
+    for ( ; cup_index < ld->cup_versus.used; cup_index++ )
+    {
+	if ( cup_index == wiimm1 || cup_index == wiimm9 || cup_index == wiimmx )
+	{
+	    dest = StringCopyE(dest,bufend,":wiimm\n");
+	    continue;
+	} 
+
+	dest = snprintfE(dest,bufend,"%u-",cup_index+1);
+
+	le_cup_ref_t *ref = GetLECUP(&ld->cup_versus,cup_index);
+	if (ref)
+	{
+	    le_track_t *lt = GetTrackLD(ld,*ref);
+	    ccp text = GetNameLT(lt,0);
+	    if ( text && *text )
+	    {
+		split_filename_t spf;
+		AnalyseSPF(&spf,true,text,0,CPM_LINK,opt_plus);
+		if ( spf.name.len && dest < bufend )
+		{
+		    char *namedest = namebuf;
+		    if ( use_plus_prefix && spf.plus.len )
+			namedest = StringCat2E(namedest,nameend,spf.plus.ptr," ");
+		    if ( use_game_prefix && spf.game.len )
+			namedest = StringCat2E(namedest,nameend,spf.game.ptr," ");
+		    namedest = StringCopyE(namedest,nameend,spf.name.ptr);
+		    if ( namedest > namebuf + max_chars )
+			 namedest = namebuf + max_chars;
+		    while ( namedest > namebuf && namedest[-1] == ' ' )
+			*--namedest = 0;
+		    *namedest = 0;
+
+		    if ( opt & O_SPACE )
+			for ( namedest = namebuf; *namedest; namedest++ )
+			    if ( *namedest == ' ' )
+			    {
+				*namedest = 0;
+				break;
+			    }
+
+		    dest = StringCopyE(dest,bufend,namebuf);
+		}
+		ResetSPF(&spf);
+	    }
+	}
+	if ( dest < bufend )
+	    *dest++ = '\n';
+    }
+
+
+    //--- terminate
+
+    *dest = 0;
+    if (print_info)
+	fwrite(cuplist,dest-cuplist,1,f);
+    else
+    {
+	GenericImgParam_t genpar;
+	if (CheckGenericIMG(&genpar,buf,true))
+	{
+	    Image_t img;
+	    err = CreateGenericIMG(&genpar,&img,true);
+	    if (!err)
+	    {
+		const file_format_t fform = GetImageFFByFName(fname,FF_TPL,true);
+		err = SaveIMG(&img,fform,0,f,fname,false);
+	    }
+	}
+    }
+
+    FREE(buf);    
     return err;
 }
 
@@ -6437,6 +6676,7 @@ enumError CreateDistribLD ( FILE *f, le_distrib_t *ld, bool use_xname )
 	,GetParamFieldStr(&ld->dis_param,1,"VERSION","?")
 	,GetParamFieldStr(&ld->dis_param,1,"AUTHORS","?")
 	,GetParamFieldStr(&ld->dis_param,1,"RELEASE-DATE","")
+	,GetParamFieldStr(&ld->dis_param,1,"REFERENCE-NAME","")
 	,GetParamFieldStr(&ld->dis_param,1,"KEYWORDS","")
 	,GetParamFieldStr(&ld->dis_param,1,"PREDECESSOR","")
 

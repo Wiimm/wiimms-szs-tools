@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.30a
+VERSION_NUM		= 2.31a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -247,16 +247,12 @@ XOBJ_LIB	= analyze.o lib-szs-create.o lib-analyze.o lib-xbmg.o \
 TOBJ_gen-ui	= $(XOBJ_OBJECT)
 TOBJ_wszst	= $(XOBJ_LIB) $(WRAPPER_OBJ)
 TOBJ_wbmgt	= lib-xbmg.o $(XOBJ_OBJECT)
-TOBJ_wctct1	= lib-ctcode.o lib-lex.o lib-lecode.o lib-ledis.o lib-xbmg.o db-ctcode.o \
-			$(XOBJ_PARSER) $(XOBJ_IMAGE) $(XOBJ_OBJECT)
 TOBJ_wctct	= $(XOBJ_LIB)
 TOBJ_wimgt	= $(XOBJ_IMAGE) $(XOBJ_OBJECT)
 TOBJ_wkclt	= lib-transform.o $(XOBJ_KCL) $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wkmpt	= $(XOBJ_KMP) lib-transform.o \
 			$(XOBJ_KCL) lib-kcl-image.o \
 			$(XOBJ_IMAGE) $(XOBJ_PARSER) $(XOBJ_OBJECT)
-TOBJ_wlect1	= lib-lex.o lib-lecode.o lib-ledis.o lib-ctcode.o lib-xbmg.o db-ctcode.o \
-			$(XOBJ_PARSER) $(XOBJ_IMAGE) $(XOBJ_OBJECT)
 TOBJ_wlect	= $(XOBJ_LIB)
 TOBJ_wmdlt	= lib-mdl.o lib-transform.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
 TOBJ_wpatt	= lib-pat.o $(XOBJ_PARSER) $(XOBJ_OBJECT)
@@ -831,18 +827,20 @@ endif
 .PHONY : export32
 export32:
 	@printf "\n---------- BUILDING EXPORT (I386) ----------\n\n"
+	$(MAKE) clean+
 	@rm -rf ./bin/export-i386
 	@mkdir -p ./bin/export-i386
-	@M32=1 NOWIIMM=1 STATIC=1 $(MAKE) --no-print-directory clean+ all
+	@M32=1 NOWIIMM=1 STATIC=1 $(MAKE) -j --no-print-directory all
 	@for f in $(BIN_FILES); do [[ -f ./$$f ]] \
 		&& cp -p ./$$f ./bin/export-i386/; done; true
 
 .PHONY : export64
 export64:
 	@printf "\n---------- BUILDING EXPORT (X86_64) ----------\n\n"
+	$(MAKE) clean+
 	@rm -rf ./bin/export-x86_64
 	@mkdir -p ./bin/export-x86_64
-	@NOWIIMM=1 STATIC=1 $(MAKE) --no-print-directory clean+ all
+	@NOWIIMM=1 STATIC=1 $(MAKE) -j --no-print-directory all
 	@for f in $(BIN_FILES); do [[ -f ./$$f ]] \
 		&& cp -p ./$$f ./bin/export-x86_64/; done; true
 

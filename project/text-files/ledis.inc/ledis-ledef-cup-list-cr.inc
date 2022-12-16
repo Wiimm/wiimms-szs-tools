@@ -29,6 +29,13 @@
 #	Add each valid track reference to the current cup of correct type.
 #	If a cup is full, create a new before adding the track.
 #
+#   APPEND-BT track...
+#	Same as APPEND, but limit operation to battle cups. This is important
+#	for random slots, that can be added to battle and to versus cups.
+#	
+#   APPEND-VS track...
+#	Same as APPEND, but limit operation to versus cups.
+#	
 #   NEW-CUP bt|vs [bt|vs]
 #	Close the current battle cup (bt) or versus cup (vs). Use both 'bt'
 #	and 'vs' to close the cups of both types.

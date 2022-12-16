@@ -161,6 +161,11 @@ bool DefineIntVar ( VarMap_t * vm, ccp varname, int value ) { return false; }
 	"If set, print the global search list too." \
 	" If set twice, print the auto-add search list too."
 
+#define GENERIC_IMAGE(src) \
+	"If " src " starts with colon (@:@), then it may be a generic image" \
+	" instead of a real file." \
+	" See https://szs.wiimm.de/doc/genericimg for details."
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			the info table			///////////////

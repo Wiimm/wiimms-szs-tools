@@ -5000,7 +5000,7 @@ file_format_t RepairMagic
     if ( rep->mode == REPMD_ANALYZE && rep->magic_len )
     {
 	if ( logging >= 2 )
-	    fprintf(stderr,"REPAIR MAGIC: %s -> %s (%s) : %s\n",
+	    fprintf(stdlog,"REPAIR MAGIC: %s -> %s (%s) : %s\n",
 		PrintID(data,rep->magic_len,0),
 		PrintID(rep->magic,rep->magic_len,0),
 		GetNameFF(0,rep->fform), fname );

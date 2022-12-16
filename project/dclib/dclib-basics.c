@@ -3539,7 +3539,8 @@ mem_t BeforeMem ( const mem_t src, ccp ref )
 {
     mem_t res;
     res.ptr = src.ptr;
-    res.len = ref < src.ptr		? 0
+    res.len = !ref			? src.len
+	    : ref < src.ptr		? 0
 	    : ref <= src.ptr + src.len	? ref - src.ptr
 	    : src.len;
     return res;
@@ -3550,7 +3551,12 @@ mem_t BeforeMem ( const mem_t src, ccp ref )
 mem_t BehindMem ( const mem_t src, ccp ref )
 {
     mem_t res;
-    if ( ref <= src.ptr )
+    if (!ref)
+    {
+	res.ptr = src.ptr + src.len;
+	res.len = 0;
+    }
+    else if ( ref <= src.ptr )
 	res = src;
     else if ( ref <= src.ptr + src.len )
     {
@@ -6219,7 +6225,8 @@ s64 ScanKeywordListEx
     uint		*err_count	// not NULL: store errors here
 )
 {
-    ASSERT(arg);
+    if (!arg)
+	arg = "";
 
     char key_buf[KEYWORD_NAME_MAX];
     char *end  = key_buf + sizeof(key_buf) - 1;
