@@ -57,6 +57,14 @@
 #include "dclib-debug.h"
 #include "dclib-network.h"
 
+///////////////////////////////////////////////////////////////////////////////
+
+#ifdef __CYGWIN__
+  #define ENABLE_CYGWIN_TEST 0
+#else
+  #define ENABLE_CYGWIN_TEST 0
+#endif
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			termios support			///////////////
@@ -252,6 +260,13 @@ int PrintLogFile ( LogFile_t *lf, ccp format, ... )
 ///////////////			search tool			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+enum // search attrib
+{
+    SEATT_CMD_LINE	= 0x01,  // result is a complete command line
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
 exmem_t SearchToolByPATH ( ccp tool )
 {
     exmem_t dest = {};
@@ -260,25 +275,27 @@ exmem_t SearchToolByPATH ( ccp tool )
 	char fname[PATH_MAX];
 	if (strchr(tool,'/'))
 	{
-//PRINT1("SEARCH ABS: %s\n",tool);
+PRINT0("SEARCH ABS: %s\n",tool);
 	    struct stat st;
 	    if ( !stat(tool,&st) && st.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH) )
 	    {
-//PRINT1("FOUND ABS: %s\n",tool);
+PRINT0("FOUND ABS: %s\n",tool);
 		AssignExMemS(&dest,tool,-1,CPM_COPY);
 	    }
 	}
 	else
 	{
-	 #ifdef __CYGWINxxx__
-	    if ( ProgInfo.progpath && *ProgInfo.progpath )
+	 #ifdef __CYGWIN__
+	    ccp progdir = ProgramDirectory();
+PRINT0("progdir=%s\n",progdir);
+	    if ( progdir && *progdir )
 	    {
-		PathCatPP(fname,sizeof(fname),ProgInfo.progpath,tool);
-//PRINT1("SEARCH+: %s\n",fname);
+		PathCatPPE(fname,sizeof(fname),progdir,tool,".exe");
+PRINT0("SEARCH+: %s\n",fname);
 		struct stat st;
 		if ( !stat(fname,&st) && st.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH) )
 		{
-//PRINT1("FOUND+: %s\n",fname);
+PRINT0("FOUND+: %s\n",fname);
 		    AssignExMemS(&dest,fname,-1,CPM_COPY);
 		    return dest;
 		}
@@ -298,11 +315,11 @@ exmem_t SearchToolByPATH ( ccp tool )
 		    break;
 
 		const int flen = snprintf(fname,sizeof(fname),"%.*s/%s",len,start,tool);
-//PRINT1("SEARCH: %s\n",fname);
+PRINT0("SEARCH: %s\n",fname);
 		struct stat st;
 		if ( !stat(fname,&st) && st.st_mode & (S_IXUSR|S_IXGRP|S_IXOTH) )
 		{
-//PRINT1("FOUND: %s\n",fname);
+PRINT0("FOUND: %s\n",fname);
 		    AssignExMemS(&dest,fname,flen,CPM_COPY);
 		    break;
 		}
@@ -332,13 +349,13 @@ exmem_t SearchToolByList ( ccp * list, int max )
 	    ccp arg = *list++;
 	    if (arg)
 	    {
-//PRINT1("SEARCH: %s\n",arg);
 		if ( *arg == '>' )
 		{
 		    ccp env = getenv(arg+1);
 		    if ( env && *env )
 		    {
 			AssignExMemS(&dest,env,-1,CPM_LINK);
+			dest.attrib = SEATT_CMD_LINE;
 			break;
 		    }
 		}
@@ -362,7 +379,8 @@ exmem_t SearchToolByList ( ccp * list, int max )
 ///////////////			pipe to pager			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static FILE *pager_file = 0;
+FILE *pager_file = 0;	// NULL or pipe to pager
+FILE *pager_stdout = 0;	// NULL output of pager
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -390,30 +408,32 @@ FILE * OpenPipeToPager()
 	    ">DC_PAGER1",
 	    ">DC_PAGER2",
 	    ">PAGER",
-	 #ifdef __CYGWINxxx__
-	    "/usr/bin/less",
-	    "/cygdrive/c/Program Files/Wiimm/SZS/less",
-	    "/usr/bin/more",
-	    "/cygdrive/c/Program Files/Wiimm/SZS/more",
-	 #endif
 	    "less",
 	    "more",
+	 #ifdef __CYGWIN__
+	    "less.exe",
+	    "/usr/bin/less.exe",
+	    "more.exe",
+	    "/usr/bin/more.exe",
+	 #endif
 	    0
 	};
 
 	exmem_t pager = SearchToolByList(search_tab,-1);
 	if (pager.data.ptr)
 	{
-	 #ifdef __CYGWINxxx__
-PRINT1("popen(%s)\n",pager.data.ptr);
-	    char buf[500];
-	    StringCat3S(buf,sizeof(buf),"'",pager.data.ptr,"'");
-PRINT1("popen(%s)\n",buf);
-	    pager_file = popen(buf,"we");
-PRINT_IF1(!pager_file,"popen(%s) FAILED\n",buf);
-	 #else
-	    pager_file = popen(pager.data.ptr,"we");
-	 #endif
+	    if ( !(pager.attrib & SEATT_CMD_LINE) && strchr(pager.data.ptr,' '))
+	    {
+	        char buf[500];
+		StringCat3S(buf,sizeof(buf),"'",pager.data.ptr,"'");
+		pager_file = popen(buf,"we");
+PRINT0("popen(%s) = %p\n",buf,pager_file);
+	    }
+	    else
+	    {
+		pager_file = popen(pager.data.ptr,"we");
+PRINT0("popen(%s) = %p\n",pager.data.ptr,pager_file);
+	    }
 	}
 	FreeExMem(&pager);
     }
@@ -427,7 +447,7 @@ void ClosePagerFile()
 {
     if (pager_file)
     {
-	if ( stdout == pager_file ) stdout = 0;
+	if ( stdout == pager_file ) stdout = pager_stdout;
 	if ( stderr == pager_file ) stderr = 0;
 	if ( stdwrn == pager_file ) stdwrn = 0;
 	if ( stdlog == pager_file ) stdlog = 0;
@@ -444,6 +464,7 @@ bool StdoutToPager()
     if (f)
     {
 	fflush(stdout);
+	pager_stdout = stdout;
 	stdout = f;
 
 	if ( stderr && isatty(fileno(stderr)) )

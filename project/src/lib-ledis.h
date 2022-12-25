@@ -91,12 +91,17 @@
 #define LE_MTCAT_MAGIC8		"#MTCAT03"
 #define LE_MTCAT_MAGIC8_NUM	0x234d544341543033ull
 
+#define LE_CT_SHA1_MAGIC8	"#CT-SHA1"
+#define LE_CT_SHA1_MAGIC8_NUM	0x2343542d53484131ull
+
 #define LE_MAX_TRACKS		(MKW_MAX_TRACK_SLOT+1)
 #define LE_TRACK_STRING_MAX	500
 
 //-----------------------------------------------------------------------------
 
 typedef u16			le_group_t;
+typedef u16			track_slot_t;
+typedef u16			cup_slot_t;
 
 typedef struct le_track_t	le_track_t;
 typedef struct le_distrib_t	le_distrib_t;
@@ -369,6 +374,9 @@ static inline void SetOptionsLSP ( le_strpar_t *par, le_options_t opt )
 	{ if (par) par->opt = opt; }
 
 char * ScanLSP ( le_strpar_t *par, ccp arg, enumError *ret_err );
+char * ScanOptionalLSP
+	( le_strpar_t *par, ccp arg, le_track_text_t fallback, enumError *ret_err );
+
 ccp GetNameLSP ( const le_strpar_t *par );
 ccp GetOptionsLSP ( const le_strpar_t *par, le_options_t mask );
 enumError ScanOptionsLSP ( le_strpar_t *par, ccp arg, ccp err_info );
@@ -465,8 +473,8 @@ typedef struct le_track_t
 {
     // keep it small!
 
-    u16			track_slot;	// index of le_distrib_t, 0..MKW_MAX_TRACK_SLOT
-    u16			cup_slot;	// 0 or 'cup * 10 + tidx'
+    track_slot_t	track_slot;	// index of le_distrib_t, 0..MKW_MAX_TRACK_SLOT
+    cup_slot_t		cup_slot;	// 0 or 'cup * 10 + tidx'
 
     le_track_status_t	track_status;	// LTS_INVALID | LTS_VALID | LTS_ACTIVE | LTS_EXPORT
     le_track_type_t	track_type;	// LTTY_NONE | LTTY_ARENA | LTTY_TRACK | LTTY_RANDOM
@@ -476,6 +484,7 @@ typedef struct le_track_t
     le_property_t	property;	// property
     le_music_t		music;		// music slot
     le_flags_t		flags;		// flags
+    DistribFlags_t	distrib_flags;	// distribution flags (G_DTA_*)
 
     u8			lap_count;	// number of laps, valid if >0.0
     float		speed_factor;	// speed factor, valid if >0.0
@@ -528,6 +537,9 @@ static inline bool IsExportLT ( const le_track_t *lt )
 static inline bool IsVisibleLT ( const le_track_t *lt )
 	{ return lt && lt->track_status >= LTS_ACTIVE && !IsHiddenLEFL(lt->flags); }
 
+static inline bool IsTitleLT ( const le_track_t *lt )
+	{ return lt && lt->track_status >= LTS_ACTIVE && IsTitleLEFL(lt->flags); }
+
 //-----------------------------------------------------------------------------
 // SetListLT(), SetText*LT(): use 'opt & LEO_LTT_SELECTOR' to select text
 // recognized options: LEO_M_HOW | LEO_IN_*
@@ -556,6 +568,8 @@ void SetTextOptLT  ( le_track_t *lt, ccp text, le_options_t opt );
 
 ccp * GetPtrLT    ( const le_track_t *lt, const le_strpar_t *par );
 ccp * GetPtrOptLT ( const le_track_t *lt, le_options_t opt, bool allow_d );
+
+const u8 * GetSha1BinLT ( const le_track_t *lt, bool use_d );
 
 ccp GetSha1LT	  ( const le_track_t *lt, bool use_d,			ccp return_on_empty );
 ccp GetIdentLT	  ( const le_track_t *lt, bool use_d, bool use_sha1,	ccp return_on_empty );
@@ -599,6 +613,8 @@ ccp GetSlotNameLT ( const le_track_t *lt );
 
 ccp GetCupLT	  ( const le_track_t *lt, ccp return_on_empty );
 ccp GetCupAlignLT ( const le_track_t *lt );
+
+DistribFlags_t GetDistribFlagsLT ( const le_track_t *lt, bool use_d );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -678,7 +694,7 @@ typedef struct le_group_info_t
 {
     uint		group;		// group number
 
-    u16			*list;		// list of group members
+    track_slot_t	*list;		// list of group members
     uint		used;		// number of group members
     uint		size;		// alloced elements of 'list'
 
@@ -722,7 +738,7 @@ typedef struct le_distrib_t
 
 
     //-- this is a reference list, setup by e.g. Sort*()
-    //-- the list is termianted by a NULL pointer.
+    //-- the list is terminated by a NULL pointer.
 
     le_track_t		**reflist;		// reference list, terminated by NULL
     uint		reflist_used;		// used elements in 'tlist'
@@ -748,6 +764,18 @@ typedef struct le_distrib_t
     bool		second_ledef;		// true: don't clear tracks and cups
 }
 le_distrib_t;
+
+//-----------------------------------------------------------------------------
+// [[ld_out_param_t]]
+
+typedef struct ld_out_param_t
+{
+    ccp			fname;
+    FILE		*f;
+    const ColorSet_t	*colset;
+    le_distrib_t	*ld;
+}
+ld_out_param_t;
 
 //-----------------------------------------------------------------------------
 
@@ -947,10 +975,12 @@ enumError CreateLeDefLD    ( FILE *f, le_distrib_t *ld );
 enumError CreateLecodeLD   ( FILE *f, le_distrib_t *ld, le_region_t region );
 enumError CreateLparLD     ( FILE *f, le_distrib_t *ld, bool print_full );
 enumError CreateBmgLD	   ( FILE *f, le_distrib_t *ld, bool bmg_text );
-enumError CreateCupIconsLD ( FILE *f, le_distrib_t *ld, ccp fname, mem_t par_opt, bool print_info );
+enumError CreateCupIconsLD ( FILE *f, le_distrib_t *ld, ccp fname, const le_strpar_t *src,
+							mem_t mem_opt, bool print_info );
 
 enumError CreateLeInfoLD   ( FILE *f, const le_distrib_t *ld, bool list_only );
 enumError CreateDebugLD    ( FILE *f, const le_distrib_t *ld );
+enumError CreateReportLD   ( ld_out_param_t *lop, mem_t mem_opt );
 
 enumError CreateLecode4LD  ( ccp fname, le_distrib_t *ld );
 
@@ -975,6 +1005,7 @@ enumError TransferFilesLD ( le_distrib_t *ld, bool logit, bool testmode );
 
 void UpdateDistribLD ( le_distrib_t *ld, bool overwrite );
 bool AddDistribParamLD ( le_distrib_t *ld, ccp src, ccp end );
+bool SortTracksLD ( le_distrib_t *ld, const le_strpar_t *src, mem_t mem_opt );
 
 enumError ImportDistribLD ( le_distrib_t *ld, cvp data, uint size );
 enumError ImportDistribSTLD ( le_distrib_t *ld, ScanText_t *st );

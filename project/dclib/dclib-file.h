@@ -94,6 +94,9 @@ int PrintLogFile	( LogFile_t *lf, ccp format, ... )
 exmem_t SearchToolByPATH ( ccp tool );
 exmem_t SearchToolByList ( ccp * list, int max ); // max<0: NULL is list terminator
 
+extern FILE *pager_file;	// NULL or pipe to pager
+extern FILE *pager_stdout;	// NULL output of pager
+
 FILE * OpenPipeToPager();
 void ClosePagerFile();
 bool StdoutToPager();

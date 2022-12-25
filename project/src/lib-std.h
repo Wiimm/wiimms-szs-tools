@@ -2260,6 +2260,46 @@ enumError SaveCategoryListFN ( ccp fname, const mkw_category_list_t * clist );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			sha1_reference_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[sha1_reference_t]]
+
+typedef struct sha1_reference_t
+{
+    sha1_hash_t	sha1;
+    union
+    {
+	u16 ref[3];
+	struct
+	{
+	    u16 track;
+	    u16 family;
+	    u16 clan;
+	};
+    };
+}
+sha1_reference_t;
+
+//-----------------------------------------------------------------------------
+
+extern sha1_reference_t	* s1ref_list;		// NULL or list with records
+extern uint		s1ref_used;		// used elements of 's1ref_list'
+extern uint		s1ref_size;		// alloced elements for 's1ref_list'
+extern uint		s1ref_max1_track;	// max(s1ref_list->track) + 1
+extern uint		s1ref_max1_family;	// max(s1ref_list->family) + 1
+extern uint		s1ref_max1_clan;	// max(s1ref_list->clan) + 1
+
+//-----------------------------------------------------------------------------
+
+void ResetSha1Ref(void);
+void ScanSha1Ref   ( struct ScanText_t *st );
+void DefineSha1Ref ( cvp source, uint len );
+
+const sha1_reference_t * FindSha1RefBin ( sha1_hash_t sha1 );
+const sha1_reference_t * FindSha1RefHex ( ccp sha1, ccp end );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			split_filename_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[split_filename_t]]
@@ -2296,19 +2336,20 @@ typedef struct split_filename_t
 
     //--- misc
 
-    int		attrib_order;
-    int		plus_order;
-    int		game_order;
-    uint	game1_color;
-    uint	game2_color;
+    int			attrib_order;
+    int			plus_order;
+    int			game_order;
+    uint		game1_color;
+    uint		game2_color;
 
-    le_flags_t	le_flags;	// -- LE-CODE flags "number string"
-    u8		track_cat;	// -- track category "number mode string" 
-    u8		lap_count;	// %l number of laps, valid if >0.0
-    float	speed_factor;	// %s speed factor, valid if >0.0
+    DistribFlags_t	distrib_flags;	// -- distribution flags G_DTA_*
+    le_flags_t		le_flags;	// -- LE-CODE flags "number string"
+    u8			track_cat;	// -- track category "number mode string" 
+    u8			lap_count;	// %l number of laps, valid if >0.0
+    float		speed_factor;	// %s speed factor, valid if >0.0
 
-    ccp		input;
-    bool	input_alloced;
+    ccp			input;
+    bool		input_alloced;
 }
 split_filename_t;
 

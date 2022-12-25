@@ -793,12 +793,88 @@ static enumError cmd_patch()
 	le_analyze_t ana;
 	AnalyzeLEBinary(&ana,raw.data,raw.data_size);
 	ApplyLEFile(&ana);
-	PatchLECODE(&ana);
-	err = SaveFILE( dest, 0, dest_is_source||opt_overwrite,
+	err = PatchLECODE(&ana);
+	if (!err)
+	    err = SaveFILE( dest, 0, dest_is_source||opt_overwrite,
 				raw.data, raw.data_size, 0 );
 	ImportAnaLDUMP(&ana);
 	ResetLEAnalyze(&ana);
 	CloseLDUMP();
+    }
+
+    ResetRawData(&raw);
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			command timestamp		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError cmd_timestamp()
+{
+    static ccp def_path = "\1P/\1F";
+    CheckOptDest(def_path,false);
+
+    const u_sec_t reftime = GetTimeSec(false);
+
+    raw_data_t raw;
+    InitializeRawData(&raw);
+
+    ParamList_t *param;
+    for ( param = first_param; param; param = param->next )
+    {
+	NORMALIZE_FILENAME_PARAM(param);
+	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
+	    continue;
+	if ( err > ERR_WARNING )
+	    return err;
+
+	char dest[PATH_MAX];
+	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+			GetExtFF(raw.fform_file,raw.fform),false);
+	const bool dest_is_source = IsSameFilename(dest,param->arg);
+
+	if ( verbose >= 0 || testmode )
+	{
+	    ccp ff_name = GetNameFF(raw.fform_file,raw.fform);
+	    if (dest_is_source)
+		fprintf(stdlog,"%s%sSET TIMESTRAMP %s:%s\n",
+			verbose > 0 ? "\n" : "",
+			testmode ? "WOULD " : "",
+			ff_name, dest );
+	    else
+		fprintf(stdlog,"%s%sSET TIMESTRAMP %s:%s -> %s:%s\n",
+			verbose > 0 ? "\n" : "",
+			testmode ? "WOULD " : "",
+			ff_name, raw.fname,
+			ff_name, dest );
+	    fflush(stdlog);
+	}
+
+	if ( raw.fform != FF_LE_BIN )
+	    return ERROR0(ERR_INVALID_DATA,"Invalid file format: %s",raw.fname);
+
+	le_analyze_t ana;
+	AnalyzeLEBinary(&ana,raw.data,raw.data_size);
+	bool patched = false;
+	if ( !ana.creation_time && ana.header_vers >= 5 )
+	{
+	    u32 timestamp = reftime;
+	    if ( ana.edit_time && timestamp > ana.edit_time )
+		timestamp = ana.edit_time;
+	    if ( timestamp >= ana.commit_time )
+	    {
+		ana.head->v5.creation_time = htonl(timestamp);
+		patched = true;
+	    }
+	}
+
+	if ( !err && ( !dest_is_source || patched ) )
+	    err = SaveFILE( dest, 0, dest_is_source||opt_overwrite,
+				raw.data, raw.data_size, 0 );
+	ResetLEAnalyze(&ana);
     }
 
     ResetRawData(&raw);
@@ -1282,16 +1358,9 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|XRATING}:\t|"
 		"Same as {name|RATING}, but use extended names if available.\n"
 	"\n"
-	"\t{name|LE-INFO}:\t|"
-		"Print information about current LE-CODE binaries.\n"
-	"\n"
 	"\t{name|PREFIX}:\t|"
 		"Print a machine readable prefix list."
 		" {file|https://ct.wiimm.de/export/prefix} is the authoritative source for this.\n"
-	"\n"
-	"\t{name|DEBUG}:\t|"
-		"Print some statistics for debugging."
-		" The current sate is analysed without updating cups.\n"
 	"\n"
 
 	//-------------------------
@@ -1357,34 +1426,85 @@ static void help_distrib ( enumError exit_code )
 	"\n"
 
 	//-------------------------
+	"  {heading|Analyze and report:}\n"
+	"\n"
+	"\t{name|REPORT}:\t|"
+		"Analyse the current distribution and print a report."
+		" Therefor count track and arena types and find duplicate names, tracks, families and clans."
+		"\r\r"
+		"  {heading|Syntax:} {syntax|REPORT '=' [OPTIONS] '=' FILE}"
+		"\r\r"
+		"{syntax|OPTIONS} is a comma separated list of keywords to select the kind of analysis."
+		" If no option is set, all are enabled."
+		" To find duplicate tracks, families or clans, the definition file must support SHA1"
+		" checksums and a SHA1 reference file must be loaded."
+		" You can get the reference file from {file|https://ct.wiimm.de/export/sha1ref/view}."
+		"\n\n"
+		"|[17,29]"
+		"\t{par|counters}:\t|Count track and arena types in different ways.\n"
+		"\t{par|names}:\t|Find track names that are used"
+			" by two or more distinct tracks or arenas.\n"
+		"\t{par|tracks}:\t|Find tracks that are used two or more times and list them.\n"
+		"\t{par|families}:\t|Find tracks that are in the same family and list them.\n"
+		"\t{par|clans}:\t|Find tracks that are in the same clan and list them.\n"
+		"\t{par|duplicates}:\t|Short cut for »{par|names,tracks,families,clans}«.\n"
+		"\t{par|all}:\t|Short cut for all of above and default if no option is set."
+			" To exclude something, you can write e.g. »{par|all,-clans}«,"
+			" or shorter »{par|-clans}«.\n"
+	"\n|[4,15]"
+	"\t{name|DEBUG}:\t|"
+		"Print some statistics for debugging."
+		" The current state is analysed without updating cups.\n"
+	"\n"
+	"\t{name|LE-INFO}:\t|"
+		"Print information about current LE-CODE binaries.\n"
+	"\n"
+
+	//-------------------------
 	"  {heading|Cup-Icon support:}\n"
 	"\n|[4,15]"
 	"\t{name|CUP-ICONS}:\t|"
-		"Create an image file with cup icons.\r"
-		"  {heading|Syntax:} {syntax|CUP-ICON '=' [OPTIONS] '=' FILE}\r"
+		"Create an image file with cup icons."
+		"\r\r"
+		"  {heading|Syntax:} {syntax|CUP-ICON '=' [STORAGE,] [OPTIONS] '=' FILE}"
+		"\r\r"
 		"If the output goes to a terminal, then use instruction {name|CUP-INFO} instead."
 		" To determine the file type, the file extension is analyzed."
-		" Examples are »{par|*.tpl}« or »{par|*.png}«.\r\r"
+		" Examples are »{par|*.tpl}« or »{par|*.png}«."
+		"\r\r"
 		"The generic icons consist of a red cup index at the top-right and the first"
-		" 3 characters of the name without a prefix, shown in blue at the bottom."
-		" If a name is wider than 128 pixels, than it is horizontal shrinked to 128 pixels.\r\r"
+		" 5 characters of the name without a prefix, shown in blue at the bottom."
+		" If a name is wider than 128 pixels, than it is horizontal shrinked to 128 pixels."
+		"\r\r"
+		"{syntax|STORAGE} is an optional storage indicator for the source"
+		" explained in section »{name|Processing Options: Storage}«."
+		" Separate STORAGE and OPTIONS by a comma."
+		" If not set, then {name|NAME} is used as source."
+		"\r\r"
 		"{syntax|OPTIONS} is a comma separated list of keywords:\n"
 		"|[17,27]"
 		"\t{par|original}:\t|Add 8 original cup icons.\n"
 		"\t{par|swapped}:\t|Add 8 original cup icons in swapped order.\n"
-		"\t{par|1wiimm}:\t|Use Wiimms avatar for the first cup if original icons are not used.\n"
+		"\t{par|1wiimm}:\t|Use Wiimms avatar for the first cup, but only if original icons are not used.\n"
 		"\t{par|9wiimm}:\t|Use Wiimms avatar for the ninth cup.\n"
 		"\t{par|xwiimm}:\t|Use Wiimms avatar for the last cup.\n"
-		"\t{par|plus}:\t|Include the plus prefix to create the name.\n"
-		"\t{par|game}:\t|Include the game prefix to create the name.\n"
-		"\t{par|space}:\t|Finish the name part at first space.\n"
-		"\t{par|1} .. {par|15}:\t|"
+		"\t{par|plus}:\t|If a plus prefix exists, then insert it and an additional space.\n"
+		"\t{par|xplus}:\t|Same as option {par|plus},"
+			" but apppend an underline character instead of a space after the plus prefix."
+			" Underline characters are printed like spaces, but they are ignored by option {par|space}.\n"
+		"\t{par|game}:\t|If a game prefix exists, then insert it and an additional space.\n"
+		"\t{par|xgame}:\t|Same as option {par|game},"
+			" but apppend an underline character instead of a space after the game prefix.\n"
+		"\t{par|space}:\t|Finish the name part at first space."
+			" Ignore tabulators and undercore characters for this.\n"
+		"\t{par|0} .. {par|15}:\t|"
 			"Define the maximum number of charaters for the name part"
-			" to any value between 1 and 15. The default is 3 characters.\n"
+			" to any value between 0 and 15. The default is 5 characters.\n"
 	"\n|[4,15]"
 	"\t{name|CUP-INFO}:\t|"
 		"Same as {name|CUP-ICONS}, but create a text file"
-		" with a job list for tool {cmd|wimgt} and its generic file {par|:cup-file=FILE}.\n"
+		" with a job list for tool {cmd|wimgt} and its generic file {par|:cup-file=FILE}."
+		" The output is machine and human readable.\n"
 	"\n|[4,14]"
 
 	//-------------------------
@@ -1401,14 +1521,14 @@ static void help_distrib ( enumError exit_code )
 		" Other templates can be used with the {name|IN-LECODE} processing option.\n"
 	"\n"
 	"\t{name|PAL}:\t|"
-		"Similar to mode {name|LECODE}, but only the PAL version is generated."
+		"Like instruction {name|LECODE}, but only the PAL version is created."
 		" The »@« character has no special meaning here.\n"
 	"\t{name|USA}:\t|"
-		"Like {name|PAL}, but the USA version is generated.\n"
+		"Like instruction {name|PAL}, but the USA version is created.\n"
 	"\t{name|JAP}:\t|"
-		"Like {name|PAL}, but the JAP version is generated.\n"
+		"Like instruction {name|PAL}, but the JAP version is created.\n"
 	"\t{name|KOR}:\t|"
-		"Like {name|PAL}, but the KOR version is generated.\n"
+		"Like instruction {name|PAL}, but the KOR version is created.\n"
 	"\n"
 
 	//-------------------------
@@ -1585,6 +1705,11 @@ static void help_distrib ( enumError exit_code )
 	"  |{heading|Storage:}\n"
 	"\n"
 	"\t|Define the string type being processed. This is used for BMG input and output files only.\n"
+	"\n"
+	"\t|The storge names are also used as a reference in other instructions."
+	" In this case, the reference can be preceded by an at symbol ({name|@})."
+	" This is mandatory if the storage can be specified optionally"
+	" and does not begin with a bracket ({name|[}).\n"
 	"\n"
 
 	"\t{name|IDENT}:\t|"
@@ -1779,16 +1904,18 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 		C_CTDEF, C_LEDEF, C_LEREF, C_STRINGS, C_DUMP, 
 		C_LECODE, C_LECODE4, C_LPAR,
 		C_BMG, C_CUPICON, C_SEPARATOR, C_COPY, C_SPLIT, C_SUBST,
-		C_TRACKS, C_PREFIX, C_RESERVE, C_DEBUG };
+		C_TRACKS, C_SORT, C_PREFIX, C_RESERVE, C_DEBUG, C_REPORT };
 
     enum
     {
-	O_PARAM_OPT	= 0x0100, // scan options before additional '='
+	O_PARAM_OPTSRC	= 0x0100, // scan optional storage
 	O_PARAM_D	= 0x0200, // scan storage DEST
 	O_PARAM_S	= 0x0400, // scan storage SRC
 	O_PARAM_S2	= 0x0800, // scan second storage SRC
 	O_PARAM_SS	= 0x0c00, // scan storage SRC [ + SRC ]...
-	O_PARAM_A	= 0x1000, // allow additonal arguments
+	O_PARAM_OPT1	= 0x1000, // 
+	O_PARAM_OPT2	= 0x2000, // scan options before additional '='
+	O_PARAM_A	= 0x4000, // allow additonal arguments
     };
 
     static const KeywordTab_t tab[] =
@@ -1825,8 +1952,8 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_BMG,	"BMG",			"BMGBIN",	0  },
 	{ C_BMG,	"BMG-TXT",		"BMGTXT",	 1 },
 
-	{ C_CUPICON,	"CUP-ICONS",		"CUPICONS",	O_PARAM_OPT  },
-	{ C_CUPICON,	"CUP-INFO",		"CUPINFO",	O_PARAM_OPT | 1 },
+	{ C_CUPICON,	"CUP-ICONS",		"CUPICONS",	O_PARAM_OPTSRC|O_PARAM_OPT2  },
+	{ C_CUPICON,	"CUP-INFO",		"CUPINFO",	O_PARAM_OPTSRC|O_PARAM_OPT2 | 1 },
 
 	{ C_SEPARATOR,	"SEPARATOR",		"SEP",		0 },
 	{ C_COPY,	"COPY",			0,		O_PARAM_D|O_PARAM_SS },
@@ -1834,10 +1961,12 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_SUBST,	"SUBST",		0,		O_PARAM_D|O_PARAM_A },
 
 	{ C_TRACKS,	"TRACKS",		0,		0  },
+	{ C_SORT,	"SORT",			0,		O_PARAM_OPTSRC|O_PARAM_OPT1 },
 
 	{ C_PREFIX,	"PREFIX",		0,		0  },
 	{ C_RESERVE,	"RESERVE",		0,		0  },
 	{ C_DEBUG,	"DEBUG",		0,		0  },
+	{ C_REPORT,	"REPORT",		0,		O_PARAM_OPT2  },
 
 	{ 0,0,0,0 }
     };
@@ -1887,22 +2016,14 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 
     const int MAX_PAR_SRC = 20;
     int n_par_src = 0;
-    le_strpar_t par_dest, par_src[MAX_PAR_SRC];
-    mem_t par_opt = {0};
+    le_strpar_t par_opt, par_dest, par_src[MAX_PAR_SRC];
+    mem_t mem_opt = {0};
 
     enumError err = ERR_OK;
     const le_options_t opt = cmd->opt;
-    if ( opt & O_PARAM_OPT )
-    {
-	char *eq = strchr(arg,'=');
-	if (eq)
-	{
-	    par_opt.ptr = arg;
-	    par_opt.len = eq - arg;
-	    arg = eq;
-	    *arg++ = 0;
-	}
-    }
+
+    if ( opt & O_PARAM_OPTSRC )
+	arg = ScanOptionalLSP(&par_opt,arg,LTT_NAME,&err);
 
     if ( opt & (O_PARAM_D|O_PARAM_S) )
     {
@@ -1957,6 +2078,24 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	    return ERROR0( ERR_SEMANTIC,"%s: Missing end-of-line: %s\n",cmd->name1,arg);
     }
 
+    if ( opt & O_PARAM_OPT1 )
+    {
+	mem_opt.ptr = arg;
+	mem_opt.len = strlen(arg);
+	arg += mem_opt.len;
+    }
+    else if ( opt & O_PARAM_OPT2 )
+    {
+	char *eq = strchr(arg,'=');
+	if (eq)
+	{
+	    mem_opt.ptr = arg;
+	    mem_opt.len = eq - arg;
+	    arg = eq;
+	    *arg++ = 0;
+	}
+    }
+
 
     //--- text argument only
 
@@ -1968,6 +2107,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	case C_COPY:		err = CopyLD(ld,&par_dest,par_src,n_par_src); break;
 	case C_SPLIT:		err = SplitLD(ld,&par_dest,par_src,arg); break;
 	case C_SUBST:		err = SubstLD(ld,&par_dest,arg); break;
+	case C_SORT:		err = SortTracksLD(ld,&par_opt,mem_opt); break;
 
 	case C_TRACKS:
 	    cmd = ScanKeyword(&cmd_stat,arg,tracks_tab);
@@ -2045,6 +2185,14 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	err = CreateFileOpt(&F,true,arg,false,0);
 	if (!err)
 	{
+	    ld_out_param_t lop = { .fname = arg, .f = F.f,
+					.colset = GetFileColorSet(F.f), .ld = ld };
+	    PRINT0("%sCOLOR-SET: %d,%d,%d  istty=%d,%d%s\n",
+			lop.colset->status,
+			lop.colset->col_mode, lop.colset->colorize, lop.colset->n_colors,
+			isatty(fileno(F.f)), isatty(fileno(stdout)),
+			lop.colset->reset );
+
 	    const bool variant = cmd->opt & 1; // use xnames || force text mode
 	    switch (cmd->id)
 	    {
@@ -2064,9 +2212,10 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	      case C_LECODE:  err = CreateLecodeLD(F.f,ld,cmd->opt); break;
 	      case C_LPAR:    err = CreateLparLD(F.f,ld,true); break;
 	      case C_BMG:     err = CreateBmgLD(F.f,ld,variant||F.is_stdio); break;
-	      case C_CUPICON: err = CreateCupIconsLD(F.f,ld,arg,par_opt,variant||F.is_stdio); break;
+	      case C_CUPICON: err = CreateCupIconsLD(F.f,ld,lop.fname,&par_opt,mem_opt,variant||F.is_stdio); break;
 	      case C_PREFIX:  err = SavePrefixTable(F.f,0); break;
 	      case C_DEBUG:   err = CreateDebugLD(F.f,ld); break;
+	      case C_REPORT:  err = CreateReportLD(&lop,mem_opt); break;
 	    }
 	}
 	CloseFile(&F,0);
@@ -2574,6 +2723,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_DLLL:		err = cmd_dump(3); break;
 	case CMD_BIN_DIFF:	err = cmd_bin_diff(); break;
 	case CMD_PATCH:		err = cmd_patch(); break;
+	case CMD_TIMESTAMP:	err = cmd_timestamp(); break;
 
 	case CMD_CREATE:	err = cmd_create(); break;
 	case CMD_DISTRIBUTION:	err = cmd_distrib(); break;

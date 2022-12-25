@@ -470,12 +470,9 @@ static inline bool IsRandomLEFL ( le_flags_t flags )
 	{ return (flags&(G_LEFL_RND_HEAD|G_LEFL_RND_GROUP)) != 0; }
 
 //-----------------------------------------------------------------------------
-// scan lecode flags
+// lecode flags (G_LEFL_*)
 
 le_flags_t ScanLEFL ( ccp text );
-
-//-----------------------------------------------------------------------------
-// print lecode flags
 
 ccp PrintLEFL8  ( le_flags_t flags, bool aligned );
 ccp PrintLEFL16 ( le_flags_t flags, bool aligned );
@@ -486,6 +483,12 @@ static inline ccp PrintLEFL ( le_flags_t flags_bits, le_flags_t flags, bool alig
 typedef ccp (*PrintLEFL_func) ( le_flags_t flags, bool aligned );
 static inline PrintLEFL_func GetPrintLEFL ( uint flags_bits )
 	{ return flags_bits == 16 ? PrintLEFL16 : PrintLEFL8; }
+
+//-----------------------------------------------------------------------------
+// distrib flags (G_DTA_*)
+
+DistribFlags_t ScanDTA ( ccp text );
+ccp PrintDTA ( DistribFlags_t flags, bool aligned );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

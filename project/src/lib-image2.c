@@ -486,8 +486,8 @@ static enumError CreateGenericTextIMG
     DASSERT(par);
     DASSERT(img);
 
-    static char search[]  = "ÄÖÜàáâäèéíñóôúüß";
-    static char replace[] = "AOUaaaaeeinoouus";
+    static char search[]  = "ÄÖÜàáâäèéíñóôúüß "; // NBSP (0xa0) at end of string
+    static char replace[] = "AOUaaaaeeinoouus ";
     static u32 codelist[sizeof(replace)] = {0};
 
     if (!codelist[0])
@@ -518,7 +518,7 @@ static enumError CreateGenericTextIMG
     while ( src < end )
     {
 	u32 code = ScanUTF8AnsiChar(&src);
-	if ( code <= ' ' )
+	if ( code <= ' ' || code == '_' )
 	    code = ' ';
 	else if ( code >= 0x80 )
 	{

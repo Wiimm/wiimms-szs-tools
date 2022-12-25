@@ -127,7 +127,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_CREATE_DISTRIB, false, false, false, false, false, 0, "create-distrib",
 	"file",
 	"Create a LE-CODE distribution dump with a track list and more info"
-	" about the current distribution. Store the dump info a file."
+	" about the current distribution. Store the dump into a file."
     },
 
     {	OPT_LE_DEFINE, false, false, false, false, true, 0, "le-define",
@@ -830,6 +830,7 @@ static const KeywordTab_t CommandTab[] =
     { CMD_BIN_DIFF,	"BIN-DIFF",	"BINDIFF",	0 },
     { CMD_BIN_DIFF,	"BD",		0,		0 },
     { CMD_PATCH,	"PATCH",	"P",		0 },
+    { CMD_TIMESTAMP,	"TIMESTAMP",	0,		0 },
     { CMD_LPAR,		"LPAR",		0,		0 },
     { CMD_CREATE,	"CREATE",	"CR",		0 },
     { CMD_DISTRIBUTION,	"DISTRIBUTION",	"DIS",		0 },
@@ -1261,37 +1262,43 @@ static u8 option_allowed_cmd_PATCH[47] = // cmd #23
     0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_LPAR[47] = // cmd #24
+static u8 option_allowed_cmd_TIMESTAMP[47] = // cmd #24
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
+};
+
+static u8 option_allowed_cmd_LPAR[47] = // cmd #25
 {
     0,0,0,0,1, 1,1,0,0,0,  0,0,0,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_CREATE[47] = // cmd #25
+static u8 option_allowed_cmd_CREATE[47] = // cmd #26
 {
     0,0,0,0,1, 1,1,0,1,1,  1,1,0,1,0, 1,0,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
     0,1,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_DISTRIBUTION[47] = // cmd #26
+static u8 option_allowed_cmd_DISTRIBUTION[47] = // cmd #27
 {
     0,1,0,0,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 1,1,1,1,1,
     0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_CAT[47] = // cmd #27
+static u8 option_allowed_cmd_CAT[47] = // cmd #28
 {
     0,0,0,0,1, 1,1,0,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0
 };
 
-static u8 option_allowed_cmd_DECODE[47] = // cmd #28
+static u8 option_allowed_cmd_DECODE[47] = // cmd #29
 {
     0,0,0,0,1, 1,1,0,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
 };
 
-static u8 option_allowed_cmd_ENCODE[47] = // cmd #29
+static u8 option_allowed_cmd_ENCODE[47] = // cmd #30
 {
     0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     1,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,0
@@ -1626,6 +1633,24 @@ static const InfoOption_t * option_tab_cmd_PATCH[] =
 	OptionInfo + OPT_PRESERVE,
 	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_CREATE_DISTRIB,
+
+	0
+};
+
+static const InfoOption_t * option_tab_cmd_TIMESTAMP[] =
+{
+	OptionInfo + OPT_DEST,
+	OptionInfo + OPT_DEST2,
+	OptionInfo + OPT_ESC,
+
+	OptionInfo + OPT_NONE, // separator
+
+	OptionInfo + OPT_OVERWRITE,
+	OptionInfo + OPT_NUMBER,
+	OptionInfo + OPT_REMOVE_DEST,
+	OptionInfo + OPT_UPDATE,
+	OptionInfo + OPT_PRESERVE,
+	OptionInfo + OPT_IGNORE,
 
 	0
 };
@@ -2187,13 +2212,28 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	false,
 	"PATCH",
 	"P",
-	"wlect PATCH [le_bin]...",
-	"Read each LE-BIN file and patch it. Use --le-define to setup cups and"
-	" tracks.",
+	"wlect PATCH [lecode_bin]...",
+	"Read each LE-CODE binary file and patch it. Use --le-define to setup"
+	" cups and tracks.",
 	0,
 	25,
 	option_tab_cmd_PATCH,
 	option_allowed_cmd_PATCH
+    },
+
+    {	CMD_TIMESTAMP,
+	true,
+	false,
+	false,
+	"TIMESTAMP",
+	0,
+	"wlect TIMESTAMP [lecode_bin]...",
+	"Read each LE-CODE binary file and set creation time if exists and is"
+	" null with respect to others existing timestamps.",
+	0,
+	9,
+	option_tab_cmd_TIMESTAMP,
+	option_allowed_cmd_TIMESTAMP
     },
 
     {	CMD_LPAR,

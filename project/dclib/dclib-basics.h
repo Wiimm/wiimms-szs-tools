@@ -1514,6 +1514,14 @@ char * StringCat3E ( char *buf, ccp buf_end, ccp src1, ccp src2, ccp src3 );
 char * StringCat2A ( ccp src1, ccp src2 );
 char * StringCat3A ( ccp src1, ccp src2, ccp src3 );
 
+// like above, but with length(src). If <0: use strlen()
+char * StringCat2LS ( char * buf, ssize_t buf_size, ccp src1, int len1, ccp src2, int len2 );
+char * StringCat3LS ( char * buf, ssize_t buf_size, ccp src1, int len1, ccp src2, int len2, ccp src3, int len3 );
+char * StringCat2LE ( char * buf, ccp buf_end, ccp src1, int len1, ccp src2, int len2 );
+char * StringCat3LE ( char * buf, ccp buf_end, ccp src1, int len1, ccp src2, int len2, ccp src3, int len3 );
+char * StringCat2LA ( ccp src1, int len1, ccp src2, int len2 );
+char * StringCat3LA ( ccp src1, int len1, ccp src2, int len2, ccp src3, int len3 );
+
 // like above, but cat with separators
 char * StringCatSep2S ( char *buf, ssize_t bufsize, ccp sep, ccp src1, ccp src2 );
 char * StringCatSep3S ( char *buf, ssize_t bufsize, ccp sep, ccp src1, ccp src2, ccp src3 );
@@ -3463,7 +3471,68 @@ static inline const KeywordTab_t * ScanKeyword
     return ScanKeywordEx(res_abbrev,arg,-1,LOUP_UPPER,key_tab);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// new keyword list interface
+
+typedef struct KeyListParam_t KeyListParam_t;
+
+typedef int (*KeywordListFunc)
+(
+    ccp			name,		// name of option as written
+    uint		name_len,	// length of 'name'
+    KeyListParam_t	*par,		// parameters and current result
+    const KeywordTab_t	*key_tab,	// valid pointer to command table
+    const KeywordTab_t	*key,		// valid pointer to found command
+    char		prefix		// 0 | '-' | '+' | '='
+);
+
 //-----------------------------------------------------------------------------
+
+typedef struct KeyListParam_t
+{
+    // standard input settings
+    bool		allow_prefix;	// allow '-' | '+' | '=' as prefix
+    LowerUpper_t	force_case;	// change case of scanned arg if LOUP_LOWER|LOUP_UPPER
+
+    // call back funtion
+    KeywordListFunc	func;		// NULL or calculation function
+    void		*user_param;	// user defined parameter
+
+    // Scan for integer numbers, if min_number < max_number
+    // special case: if min_number >= 0 && max_number < 0 && min_number < (u64)max_number,
+    // then scan for unsigned number
+    s64			min_number;	// input: minimal number
+    s64			max_number;	// input: maximal number
+    s64			number;		// output: scanned number if 'have_number'
+    bool		have_number;	// output: if TRUE: 'number' is valid
+
+    // error management
+    uint		err_mode;	// bit field:
+					//	1: continue on error
+    ccp			err_msg;	// not NULL: print a warning message:
+					//   "<ERR_MSG>: Unknown keyword: <KEY>"
+    enumError		err_code;	// use 'err_code' for the 'err_msg'
+
+    // main result, will be set to 0
+    bool		valid;		// TRUE: returned value is valid
+    u64			result;		// main result
+    uint		err_count;	// count errors here
+}
+KeyListParam_t;
+
+//-----------------------------------------------------------------------------
+
+s64 ScanKeywordListP
+(
+    KeyListParam_t	* par,		// NULL or parameters and extended result
+    ccp			arg,		// NULL or argument to scan
+    int			arg_len,	// length of 'arg', if <0 then terminate at NULL or semicolon
+    u64			start_val,	// start value for 'result'
+    const KeywordTab_t	* key_tab	// pointer to valid command table
+);
+
+///////////////////////////////////////////////////////////////////////////////
+// old keyword list interface
 
 s64 ScanKeywordListEx
 (

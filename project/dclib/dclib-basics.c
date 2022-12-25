@@ -337,8 +337,16 @@ int GetProgramPath
 
 	ccp *ptr;
 	for ( ptr = tab; *ptr; ptr++ )
+	{
 	    if ( realpath(*ptr,path) && *path )
+	    {
+	     #if __CYGWIN__
+		if (!memcmp(path,"/SZS/",5))
+		    return StringCat2S(buf,buf_size,"/cygdrive/c/Program Files/Wiimm",path) - buf;
+	     #endif
 		return StringCopyS(buf,buf_size,path) - buf;
+	    }
+	}
     }
 
 #endif // !__APPLE__
@@ -504,6 +512,48 @@ char * StringCat2S ( char * buf, ssize_t buf_size, ccp src1, ccp src2 )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+char * StringCat2LE ( char * buf, ccp buf_end, ccp src1, int len1, ccp src2, int len2 )
+{
+    // RESULT: end of copied string pointing to NULL
+    // 'src*' may be a NULL pointer.
+
+    DASSERT(buf);
+    DASSERT(buf<buf_end);
+    buf_end--;
+
+    if (src1)
+    {
+	if ( len1 < 0 )
+	    len1 = strlen(src1);
+	if ( len1 > buf_end - buf )
+	    len1 = buf_end - buf;
+	while( len1-- > 0 )
+	    *buf++ = *src1++;
+    }
+
+    if (src2)
+    {
+	if ( len2 < 0 )
+	    len2 = strlen(src2);
+	if ( len2 > buf_end - buf )
+	    len2 = buf_end - buf;
+	while( len2-- > 0 )
+	    *buf++ = *src2++;
+    }
+
+    *buf = 0;
+    return buf;
+}
+
+//-----------------------------------------------------------------------------
+
+char * StringCat2LS ( char * buf, ssize_t buf_size, ccp src1, int len1, ccp src2, int len2 )
+{
+    return StringCat2LE(buf,buf+buf_size,src1,len1,src2,len2);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 char * StringCatSep2E ( char * buf, ccp buf_end, ccp sep, ccp src1, ccp src2 )
 {
     // RESULT: end of copied string pointing to NULL
@@ -579,6 +629,60 @@ char * StringCat3S ( char * buf, ssize_t buf_size, ccp src1, ccp src2, ccp src3 
 
 ///////////////////////////////////////////////////////////////////////////////
 
+char * StringCat3LE ( char * buf, ccp buf_end,
+		ccp src1, int len1, ccp src2, int len2, ccp src3, int len3 )
+{
+    // RESULT: end of copied string pointing to NULL
+    // 'src*' may be a NULL pointer.
+
+    DASSERT(buf);
+    DASSERT(buf<buf_end);
+    buf_end--;
+
+    if (src1)
+    {
+	if ( len1 < 0 )
+	    len1 = strlen(src1);
+	if ( len1 > buf_end - buf )
+	    len1 = buf_end - buf;
+	while( len1-- > 0 )
+	    *buf++ = *src1++;
+    }
+
+    if (src2)
+    {
+	if ( len2 < 0 )
+	    len2 = strlen(src2);
+	if ( len2 > buf_end - buf )
+	    len2 = buf_end - buf;
+	while( len2-- > 0 )
+	    *buf++ = *src2++;
+    }
+
+    if (src3)
+    {
+	if ( len3 < 0 )
+	    len3 = strlen(src3);
+	if ( len3 > buf_end - buf )
+	    len3 = buf_end - buf;
+	while( len3-- > 0 )
+	    *buf++ = *src3++;
+    }
+
+    *buf = 0;
+    return buf;
+}
+
+//-----------------------------------------------------------------------------
+
+char * StringCat3LS ( char * buf, ssize_t buf_size,
+		ccp src1, int len1, ccp src2, int len2, ccp src3, int len3 )
+{
+    return StringCat3LE(buf,buf+buf_size,src1,len1,src2,len2,src3,len3);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 char * StringCatSep3E
 	( char * buf, ccp buf_end, ccp sep, ccp src1, ccp src2, ccp src3 )
 {
@@ -646,6 +750,24 @@ char * StringCat2A ( ccp src1, ccp src2 )
 char * StringCat3A ( ccp src1, ccp src2, ccp src3 )
 {
     mem_t mem = MemCat3A( MemByString0(src1), MemByString0(src2), MemByString0(src3) );
+    return (char*)mem.ptr;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+char * StringCat2LA ( ccp src1, int len1, ccp src2, int len2 )
+{
+    mem_t mem = MemCat2A( MemByStringS(src1,len1), MemByStringS(src2,len2) );
+    return (char*)mem.ptr;
+}
+
+//-----------------------------------------------------------------------------
+
+char * StringCat3LA ( ccp src1, int len1, ccp src2, int len2, ccp src3, int len3 )
+{
+    mem_t mem = MemCat3A( MemByStringS(src1,len1),
+			  MemByStringS(src2,len2),
+			  MemByStringS(src3,len3) );
     return (char*)mem.ptr;
 }
 
@@ -6207,6 +6329,144 @@ const KeywordTab_t * ScanKeywordEx
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// new keyword list interface
+
+s64 ScanKeywordListP
+(
+    KeyListParam_t	* par,		// NULL or parameters and extended result
+    ccp			arg,		// NULL or argument to scan
+    int			arg_len,	// length of 'arg', if <0 then terminate at NULL or semicolon
+    u64			start_val,	// start value for 'result'
+    const KeywordTab_t	* key_tab	// pointer to valid command table
+)
+{
+    KeyListParam_t localpar;
+    if (!par)
+    {
+	memset(&localpar,0,sizeof(localpar));
+	localpar.force_case	= LOUP_UPPER;
+	localpar.allow_prefix	= true;
+	localpar.err_code	= ERR_SYNTAX;
+	par = &localpar;
+    }
+
+    par->valid     = true;
+    par->result    = start_val;
+    par->err_count = 0;
+
+    if (!arg)
+    {
+	arg = "";
+	arg_len = 0;
+    }
+    else if ( arg_len < 0 )
+    {
+	ccp semicolon = strchr(arg,';');
+	arg_len = semicolon ? semicolon - arg : strlen(arg);
+    }
+    ccp arg_end = arg + arg_len;
+
+
+    for(;;)
+    {
+	while ( arg < arg_end && (uchar)*arg <= ' ' || *arg == ',' || *arg == '.' )
+	    arg++;
+
+	if ( arg >= arg_end )
+	    break;
+
+	ccp key = arg;
+	while ( arg < arg_end && (uchar)*arg > ' ' && *arg != ',' && *arg != '.' && *arg != ';'
+			&& ( *arg != '+' || arg == key ))
+	{
+	    arg++;
+	}
+
+	int prefix = 0, abbrev_count;
+	const KeywordTab_t * cptr = ScanKeywordEx(&abbrev_count,key,arg-key,par->force_case,key_tab);
+	if ( !cptr && par->allow_prefix && key[1]
+		&& ( *key == '+' || *key == '-' || *key == '/' || *key == '=' ))
+	{
+	    prefix = *key == '/' ? '-' : *key;
+	    cptr = ScanKeywordEx(&abbrev_count,key+1,arg-key-1,par->force_case,key_tab);
+	}
+
+	if (abbrev_count)
+	{
+	    if ( par->min_number >= 0 && par->max_number < 0 && par->min_number <= (u64)par->max_number )
+	    {
+		// scan unsigned number
+		char *end;
+		u64 num = str2ull(key,&end,10);
+		if ( end == arg && num >= par->min_number && num <= (u64)par->max_number )
+		{
+		    par->number = num;
+		    par->have_number = true;
+		    continue;
+		}
+	    }
+	    else if (  par->min_number < par->max_number )
+	    {
+		// scan signed number
+		char *end;
+		s64 num = str2ll(key,&end,10);
+		if ( end == arg && num >= par->min_number && num <= par->max_number )
+		{
+		    par->number = num;
+		    par->have_number = true;
+		    continue;
+		}
+	    }
+	}
+
+	if ( !cptr || cptr->opt && prefix && prefix != '+' )
+	{
+	    if (par->err_msg)
+	    {
+		if ( abbrev_count > 1 )
+		    ERROR0(par->err_code,"%s: Ambiguous keyword: %s\n",par->err_msg,key);
+		else
+		    ERROR0(par->err_code,"%s: Unknown keyword: %s\n",par->err_msg,key);
+	    }
+	    else if (par->err_code)
+	    {
+		if ( abbrev_count > 1 )
+		    ERROR0(par->err_code,"Ambiguous keyword: %s\n",key);
+		else
+		    ERROR0(par->err_code,"Unknown keyword: %s\n",key);
+	    }
+	    par->err_count++;
+	    if ( par->err_mode & 1 )
+		continue;
+	    par->result = ~0ull;
+	    par->valid  = false;
+	    break;
+	}
+
+	if (par->func)
+	{
+	    const int stat = par->func(key,arg-key,par,key_tab,cptr,prefix);
+	    if ( stat < 0 && !(par->err_mode & 1) )
+		break;
+	    if (stat)
+		prefix = 0;
+	}
+
+	switch (prefix)
+	{
+	    case 0:
+	    case '+': par->result  =  par->result & ~cptr->opt | cptr->id; break;
+	    case '-': par->result &= ~cptr->id; break;
+	    case '=': par->result  =  cptr->id; break;
+	}
+    }
+
+    return par->result;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+// old keyword list interface
 
 s64 ScanKeywordListEx
 (

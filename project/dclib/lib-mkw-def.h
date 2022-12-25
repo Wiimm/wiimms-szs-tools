@@ -120,6 +120,31 @@ LecodeFlags_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+/////////////////////////   Distrib Track Attributes   ////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// [[DistribFlags_t]]
+typedef enum DistribFlags_t
+{
+	G_DTA_BOOST               = 0x0001,	// is a boost track
+	G_DTA_NEW                 = 0x0002,	// new track
+	G_DTA_AGAIN               = 0x0004,	// track is back again
+	G_DTA_UPDATE              = 0x0008,	// updated track
+	G_DTA_FILL                = 0x0010,	// updated track
+	G_DTA_IS_D                = 0x0100,	// is a _d file
+	G_DTA_TITLE               = 0x0200,	// track marked as title-only
+	G_DTA_HIDDEN              = 0x0400,	// track marked as hidden
+	G_DTA_ORIGINAL            = 0x0800,	// track marked as original
+	G_DTA__STATUS             = 0x001e,	// relevant for status column
+	G_DTA__ALL                = 0x0f1f,
+	G_DTA_F_CALCULATED        = 0x1000,	// flags already calculated
+}
+DistribFlags_t;
+
+#define DB_DTA_TYPE               "smallint unsigned"
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////   misc   //////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 

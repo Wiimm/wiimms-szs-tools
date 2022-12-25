@@ -159,9 +159,14 @@
 		" @DIFFER@ (2) if at least one test failed, or an error code." },
 
   { T_DEF_CMD,	"PATCH",	"PATCH|P",
-		    "wlect PATCH [le_bin]...",
-		"Read each LE-BIN file and patch it."
+		    "wlect PATCH [lecode_bin]...",
+		"Read each LE-CODE binary file and patch it."
 		" Use {--le-define} to setup cups and tracks." },
+
+  { H_DEF_CMD,	"TIMESTAMP",	"TIMESTAMP",
+		    "wlect TIMESTAMP [lecode_bin]...",
+		"Read each LE-CODE binary file and set creation time if exists and is null"
+		" with respect to others existing timestamps." },
 
   { T_DEF_CMD,	"LPAR",		"LPAR",
 		    "wlect LPAR [le_bin]...",
@@ -447,7 +452,7 @@
   { T_OPT_CP,	"CREATE_DISTRIB",	"create-distrib|createdistrib",
 		"file",
 		"Create a LE-CODE distribution dump with a track list and more info about"
-		" the current distribution. Store the dump info a file." },
+		" the current distribution. Store the dump into a file." },
 
  #if OPT_OLD_NEW
   { H_OPT_GM,	"OLD",		"OLD",
@@ -921,6 +926,14 @@
 //  { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"CREATE_DISTRIB",0,0,0 },
+
+  //---------- COMMAND wlect TIMESTAMP ----------
+
+  { T_CMD_BEG,	"TIMESTAMP",	0,0,0 },
+
+  { T_COPY_GRP,	"DEST",		0,0,0 },
+//  { T_COPT,	"NO_CHECK",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wlect LPAR ----------
 

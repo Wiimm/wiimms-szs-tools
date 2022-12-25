@@ -14506,24 +14506,21 @@
 	"wimgt DECODE [source]...", \
 	"Decode (export) the entered image files into PNG files. The default" \
 	" destination is @'%P/%F.png'@. If SOURCE starts with colon (@:@)," \
-	" then it may be a generic image instead of a real file. See" \
-	" https://szs.wiimm.de/doc/genericimg for details." )
+	" then it may be a generic image instead of a real file." )
 
 #:def_cmd( "ENCODE", "ENCODE|ENC", \
 	"wimgt ENCODE [source]...", \
 	"Encode (import) the entered PNG files and convert them to to an" \
 	" internal image format (TPL, TEX, BREFT). The default destination is" \
 	" @'%P/%N'@ (removed extension). If SOURCE starts with colon (@:@)," \
-	" then it may be a generic image instead of a real file. See" \
-	" https://szs.wiimm.de/doc/genericimg for details." )
+	" then it may be a generic image instead of a real file." )
 
 #:def_cmd( "CONVERT", "CONVERT|CV", \
 	"wimgt CONVERT [source]...", \
 	"Convert the entered image files into new file and image formats. The" \
 	" old file is replaced by the new one. The difference to {ENCODE} is" \
 	" only the default file name handling. If SOURCE starts with colon" \
-	" (@:@), then it may be a generic image instead of a real file. See" \
-	" https://szs.wiimm.de/doc/genericimg for details." )
+	" (@:@), then it may be a generic image instead of a real file." )
 
 #:def_cmd( "COPY", "COPY|CP", \
 	"wimgt COPY source dest\n" \
@@ -14536,8 +14533,7 @@
 	" extension of the destination. Option --transform may override this." \
 	" Option --overwrite is set implicitly.\n" \
 	"  If SOURCE starts with colon (@:@), then it may be a generic image" \
-	" instead of a real file. See https://szs.wiimm.de/doc/genericimg for" \
-	" details." )
+	" instead of a real file." )
 
 #:def_opt( "VERSION", "V|version", "G", \
 	"", \
@@ -14855,8 +14851,7 @@
 	" option is used multiple times all patch files will be used in the" \
 	" entered order.\n" \
 	"  If FILE starts with colon (@:@), then it may be a generic image" \
-	" instead of a real file. See https://szs.wiimm.de/doc/genericimg for" \
-	" details." )
+	" instead of a real file." )
 
 #:def_opt( "TRANSFORM", "x|transform", "CP", \
 	"list", \
@@ -20178,9 +20173,9 @@
 	" least one test failed, or an error code." )
 
 #:def_cmd( "PATCH", "PATCH|P", \
-	"wlect PATCH [le_bin]...", \
-	"Read each LE-BIN file and patch it. Use {--le-define} to setup cups" \
-	" and tracks." )
+	"wlect PATCH [lecode_bin]...", \
+	"Read each LE-CODE binary file and patch it. Use {--le-define} to" \
+	" setup cups and tracks." )
 
 #:def_cmd( "LPAR", "LPAR", \
 	"wlect LPAR [le_bin]...", \
@@ -20500,7 +20495,7 @@
 #:def_opt( "CREATE_DISTRIB", "create-distrib|createdistrib", "CP", \
 	"file", \
 	"Create a LE-CODE distribution dump with a track list and more info" \
-	" about the current distribution. Store the dump info a file." )
+	" about the current distribution. Store the dump into a file." )
 
 #:def_opt( "LE_DEFINE", "le-define|ledefine", "CP", \
 	"file", \
@@ -21243,6 +21238,42 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "CREATE_DISTRIB", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "DEST", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "DEST2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "ESC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "OVERWRITE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "NUMBER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "REMOVE_DEST", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "UPDATE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "PRESERVE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "IGNORE", \
 	"", \
 	"" )
 

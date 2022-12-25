@@ -164,7 +164,7 @@ bool DefineIntVar ( VarMap_t * vm, ccp varname, int value ) { return false; }
 #define GENERIC_IMAGE(src) \
 	"If " src " starts with colon (@:@), then it may be a generic image" \
 	" instead of a real file." \
-	" See https://szs.wiimm.de/doc/genericimg for details."
+	"\1 See https://szs.wiimm.de/doc/genericimg for details."
 
 //
 ///////////////////////////////////////////////////////////////////////////////

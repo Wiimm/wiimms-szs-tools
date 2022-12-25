@@ -4188,7 +4188,7 @@ static enumError test_pf_expand ( int argc, char ** argv )
 		printf(">> INSERT %s\n",arg);
 		InsertParamFieldExpand(&pf,arg,0,false,i,0);
 	    }
-	    
+
 	    const ParamFieldItem_t *ptr = pf.field;
 	    for ( int idx = 0; idx < pf.used; idx++, ptr++ )
 		printf("%5d: %3d %s\n",idx,ptr->num,ptr->key);
@@ -4254,61 +4254,6 @@ static enumError test_coded_version ( int argc, char ** argv )
 ///////////////			test_key_list()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-typedef struct KeyListParam_t
-{
-    // standard input settings
-    KeywordCallbackFunc	func;		// NULL or calculation function
-    bool		allow_prefix;	// allow '-' | '+' | '=' as prefix
-    LowerUpper_t	force_case;	// change case of scanned arg if LOUP_LOWER|LOUP_UPPER
-
-    // Scan for integer numbers, if min_number < max_number
-    // special case: if  min_number >= 0  && max_number < 0 && min_number < (u64)max_number,
-    // then scan for unsigned number
-    s64			min_number;	// input: minimal number
-    s64			max_number;	// input: maximal number
-    s64			number;		// output: scanned number if 'have_number'
-    bool		have_number;	// output: if TRUE: 'number' is valid
-
-    // error management
-    uint		err_mode;	// bit field:
-					//	1: continue on error
-    ccp			err_msg;	// not NULL: print a warning message:
-					//   "<ERR_MSG>: Unknown keyword: <KEY>"
-    enumError		err_code;	// use 'err_code' for the 'err_msg'
-
-    // main result, will be set to 0
-    bool		valid;		// TRUE: returned value is valid
-    u64			result;		// main result
-    int			abbrev_count;	// number of found abbreviation, -1: not abbrev found
-    uint		err_count;	// count errors here
-}
-KeyListParam_t;
-
-//-----------------------------------------------------------------------------
-
-s64 ScanKeywordListP
-(
-    KeyListParam_t	*par,		// NULL or parameters and extended result
-    ccp			arg,		// NULL or argument to scan
-    int			arg_len,	// length of 'arg', if <0 then terminate at null, comma or semicolon
-    const KeywordTab_t	* key_tab	// pointer to valid command table
-);
-
-///////////////////////////////////////////////////////////////////////////////
-
-s64 ScanKeywordListP
-(
-    KeyListParam_t	*par,		// NULL or parameters and extended result
-    ccp			arg,		// NULL or argument to scan
-    int			arg_len,	// length of 'arg', if <0 then terminate at null, comma or semicolon
-    const KeywordTab_t	* key_tab	// pointer to valid command table
-)
-{
-    return ~0;
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 static enumError test_key_list ( int argc, char ** argv )
 {
     if ( argc <= 1 )
@@ -4317,12 +4262,35 @@ static enumError test_key_list ( int argc, char ** argv )
 	exit(1);
     }
 
-    KeyListParam_t par = {0};
+    static const KeywordTab_t keytab[] =
+    {
+	{  1,			"EINS",		"1",		0 },
+	{  2,			"ZWEI",		"2",		0 },
+	{  4,			"VIER",		"4",		0 },
+	{  8,			"ACHT",		"8",		0 },
+
+	{ 0x00,			"NONE",		"0",		0x70 },
+	{ 0x10,			"ALPHA",	"A",		0x70 },
+	{ 0x20,			"BETA",		"B",		0x70 },
+	{ 0x30,			"CHARLY",	"C",		0x70 },
+	{ 0x40,			"DELTA",	"D",		0x70 },
+	{ 0x50,			"ECHO",		"E",		0x70 },
+	{ 0x60,			"FOXTROT",	"F",		0x70 },
+	{ 0x70,			"GOLF",		"G",		0x70 },
+
+	{0,0,0,0}
+    };
+
+    KeyListParam_t par = { .force_case = LOUP_UPPER, .allow_prefix = true,
+			   .min_number = 50, .max_number = 60, .err_code = ERR_WARNING  };
 
     for ( int i = 1; i < argc; i++ )
     {
 	ccp arg = argv[i];
-	ScanKeywordListP(&par,arg,-1,0);
+	ScanKeywordListP(&par,arg,-1,1ull,keytab);
+	printf("%u.%02u %6llx num %5lld%c : %s\n",
+		par.valid, par.err_count, par.result&0xffffff,
+		par.number, par.have_number ? ' ' : 'x', arg );
     }
     putchar('\n');
     return 0;
@@ -4358,6 +4326,26 @@ const gobj_cond_ref_t * FindConditionRef2 ( u16 ref_id )
 static enumError develop ( int argc, char ** argv )
 {
  #if 1
+    for ( int i = 1; i < argc; i++ )
+    {
+	exmem_t em = SearchToolByPATH(argv[i]);
+	printf("%.*s\n",em.data.len,em.data.ptr);
+	ResetExMem(&em);
+    }
+    
+ #elif 1
+    opt_overwrite++;
+    File_t F;
+    CreateFileOpt(&F,true,"-",false,0);
+    const ColorSet_t *colset = GetFileColorSet(F.f);
+    int mode = GetFileColorized(F.f);
+    CloseFile(&F,0);
+    fprintf(stderr,"%s mode %d, col %d,%d,%d%s\n",
+	colset->status,
+	mode, colset->col_mode, colset->colorize, colset->n_colors,
+	colset->reset );
+    
+ #elif 1
     bool filter_active = false;
     for ( int i = 1; i < argc; i++ )
     {

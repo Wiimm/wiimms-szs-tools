@@ -1049,7 +1049,7 @@ const ctcode_t * LoadLEFile ( uint le_phase );
 
 enumError ApplyLEFile ( le_analyze_t * ana );
 enumError ApplyCTCODE ( le_analyze_t * ana, const ctcode_t * ctcode );
-void PatchLECODE ( le_analyze_t * ana );
+enumError PatchLECODE ( le_analyze_t * ana );
 void PatchLPAR ( le_lpar_t * lp );
 
 void UpdateLecodeFlags	( le_analyze_t * ana );

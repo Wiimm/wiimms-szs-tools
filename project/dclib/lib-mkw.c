@@ -1447,6 +1447,76 @@ ccp PrintLEFL16 ( le_flags_t flags, bool aligned )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			distribution flags		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+DistribFlags_t ScanDTA ( ccp text )
+{
+    // automatic flags are not scannend!
+
+    DistribFlags_t res = 0;
+    if (text)
+    {
+	while ( *text )
+	{
+	    const int ch = tolower(*text++);
+	    switch (ch)
+	    {
+		case 'b': res |= G_DTA_BOOST; break;
+		case 'n': res |= G_DTA_NEW; break;
+		case 'a': res |= G_DTA_AGAIN; break;
+		case 'u': res |= G_DTA_UPDATE; break;
+		case 'f': res |= G_DTA_FILL; break;
+		case 'd': res |= G_DTA_IS_D; break;
+		case 't': res |= G_DTA_TITLE; break;
+		case 'h': res |= G_DTA_HIDDEN; break;
+		case 'o': res |= G_DTA_ORIGINAL; break;
+	    }
+	}
+    }
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintDTA ( DistribFlags_t flags, bool aligned )
+{
+    char *buf = GetCircBuf(10);
+
+    if (aligned)
+    {
+	buf[0] = flags & G_DTA_BOOST	? 'B' : '-';
+	buf[1] = flags & G_DTA_NEW	? 'N' : '-';
+	buf[2] = flags & G_DTA_AGAIN	? 'A' : '-';
+	buf[3] = flags & G_DTA_UPDATE	? 'U' : '-';
+	buf[4] = flags & G_DTA_FILL	? 'F' : '-';
+	buf[5] = flags & G_DTA_IS_D	? 'd' : '-';
+	buf[6] = flags & G_DTA_TITLE	? 't' : '-';
+	buf[7] = flags & G_DTA_HIDDEN	? 'h' : '-';
+	buf[8] = flags & G_DTA_ORIGINAL	? 'o' : '-';
+	buf[9] = 0;
+    }
+    else
+    {
+	char *d = buf;
+	if ( flags & G_DTA_BOOST	) *d++ = 'B';
+	if ( flags & G_DTA_NEW		) *d++ = 'N';
+	if ( flags & G_DTA_AGAIN	) *d++ = 'A';
+	if ( flags & G_DTA_UPDATE	) *d++ = 'U';
+	if ( flags & G_DTA_FILL		) *d++ = 'F';
+	if ( flags & G_DTA_IS_D		) *d++ = 'd';
+	if ( flags & G_DTA_TITLE	) *d++ = 't';
+	if ( flags & G_DTA_HIDDEN	) *d++ = 'a';
+	if ( flags & G_DTA_ORIGINAL	) *d++ = 'o';
+	if ( d == buf )
+	    *d++ = '-';
+	*d = 0;
+    }
+    return buf;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			random slots			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 

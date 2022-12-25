@@ -613,6 +613,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(mkw_category_list_t)
 	SIZEOF_INFO_ENTRY(split_filename_t)
 	SIZEOF_INFO_ENTRY(print_split_par_t)
+	SIZEOF_INFO_ENTRY(sha1_reference_t)
 
     SIZEOF_INFO_TERM()
 };
@@ -2508,6 +2509,7 @@ static enumError cmd_split()
 	print_split_val(&ps,"attribs",spf.attribs);
 	PrintScriptVars(&ps,0,"attrib_order=%d\n",spf.attrib_order);
 	
+	PrintScriptVars(&ps,0,"distrib_flags=\"%u %s\"\n",spf.distrib_flags,PrintDTA(spf.distrib_flags,false));
 	PrintScriptVars(&ps,0,"le_flags=\"%u %s\"\n",spf.le_flags,PrintLEFL8(spf.le_flags,false));
 	print_split_val(&ps,"le_group",spf.le_group);
 

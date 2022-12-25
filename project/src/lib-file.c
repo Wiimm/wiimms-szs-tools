@@ -815,6 +815,7 @@ file_format_t GetByMagicFF
 	    case LE_SHA1REF_MAGIC8_NUM:		return FF_SHA1REF;
 	    case LE_PREFIX_MAGIC8_NUM:		return FF_PREFIX;
 	    case LE_MTCAT_MAGIC8_NUM:		return FF_MTCAT;
+	    case LE_CT_SHA1_MAGIC8_NUM:		return FF_CT_SHA1;
 	}
     }
 
@@ -4558,6 +4559,161 @@ enumError SaveCategoryListFN ( ccp fname, const mkw_category_list_t * clist )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			sha1_reference_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+sha1_reference_t * s1ref_list	= 0;  // NULL or list with records
+uint s1ref_used			= 0;  // used elements of 's1ref_list'
+uint s1ref_size			= 0;  // alloced elements for 's1ref_list'
+uint s1ref_max1_track		= 0;  // max(s1ref_list->track) + 1
+uint s1ref_max1_family		= 0;  // max(s1ref_list->family) + 1
+uint s1ref_max1_clan		= 0;  // max(s1ref_list->clan) + 1
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ResetSha1Ref(void)
+{
+    FREE(s1ref_list);
+    s1ref_list		= 0;
+    s1ref_used		= 0;
+    s1ref_size		= 0;
+    s1ref_max1_track	= 0;
+    s1ref_max1_family	= 0;
+    s1ref_max1_clan	= 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ScanSha1Ref   ( struct ScanText_t *st )
+{
+    DASSERT(st);
+    if (!st)
+	return;
+
+    ResetSha1Ref();
+
+    enum
+    {
+	IDX_SHA1,
+	IDX_TRACK,
+	IDX_FAMILY,
+	IDX_CLAN,
+	IDX__N
+    };
+
+    uint good_size = 0;
+
+    while ( NextLineScanText(st) )
+    {
+	mem_t srcline = { .ptr = st->line, .len = st->eol - st->line };
+	if ( *srcline.ptr == '@' )
+	{
+	    if (!memcmp(srcline.ptr,"@N_RECORDS=",11))
+		good_size = str2ul(srcline.ptr+11,0,10);
+	    continue;
+	}
+	
+	mem_t src[IDX__N+2];
+	const uint n = SplitByCharMem(src,IDX__N+1,srcline,'|');
+	if ( n <= IDX__N )
+	    continue;
+
+	PRINT0("LINE: %.*s | %.*s | %.*s | %.*s |\n",
+		src[IDX_SHA1].len, src[IDX_SHA1].ptr,
+		src[IDX_TRACK].len, src[IDX_TRACK].ptr,
+		src[IDX_FAMILY].len, src[IDX_FAMILY].ptr,
+		src[IDX_CLAN].len, src[IDX_CLAN].ptr );
+
+	if ( src[IDX_SHA1].len != 40 )
+	    continue;
+
+	if ( s1ref_used == s1ref_size )
+	{
+	    s1ref_size = s1ref_size *5 /4 + 1000;
+	    if ( s1ref_size < good_size )
+		s1ref_size = good_size;
+	    PRINT0("GROW(s1ref_list) %d -> %d\n",s1ref_used,s1ref_size);
+	    s1ref_list = REALLOC( s1ref_list, s1ref_size * sizeof(*s1ref_list) );
+	}
+
+	sha1_reference_t *p = s1ref_list + s1ref_used++;
+	Sha1Hex2Bin(p->sha1,src[IDX_SHA1].ptr,src[IDX_SHA1].ptr+40);
+
+	p->track = strtoul(src[IDX_TRACK].ptr,0,10);
+	if ( s1ref_max1_track < p->track )
+	     s1ref_max1_track = p->track;
+
+	p->family = strtoul(src[IDX_FAMILY].ptr,0,10);
+	if ( s1ref_max1_family < p->family )
+	     s1ref_max1_family = p->family;
+
+	p->clan = strtoul(src[IDX_CLAN].ptr,0,10);
+	if ( s1ref_max1_clan < p->clan )
+	     s1ref_max1_clan = p->clan;
+    }
+
+    s1ref_max1_track++;
+    s1ref_max1_family++;
+    s1ref_max1_clan++;
+
+    if ( logging >= 2 )
+	fprintf(stdlog,"s1ref_list: %u/%u records (%4.2f MB) loaded, max=%u,%u,%u\n",
+		s1ref_used, s1ref_size,
+		s1ref_used * sizeof(*s1ref_list) * 1e-6,
+		s1ref_max1_track, s1ref_max1_family, s1ref_max1_clan );
+
+ #if 0
+    const sha1_reference_t *r1 = FindSha1RefHex("0014f81223307ac9a3c8f738bbd4cedc5e39b10b",0);
+    const sha1_reference_t *r2 = FindSha1RefHex("0014f81223307ac9a3c8f738bbd4cedc5e39b10c",0);
+    PRINT1("REF1 = %p = %zd,  REF2 = %p = %zd\n",
+		r1, r1 ? r1-s1ref_list : -1, r2, r2 ? r2-s1ref_list : -1 );
+ #endif
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void DefineSha1Ref ( cvp source, uint len )
+{
+    ScanText_t st;
+    SetupScanText(&st,source,len);
+    ScanSha1Ref(&st);
+    ResetScanText(&st);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const sha1_reference_t * FindSha1RefBin ( sha1_hash_t sha1 )
+{
+    int beg = 0;
+    int end = (int)s1ref_used - 1;
+    while ( beg <= end )
+    {
+	const int idx = (beg+end)/2;
+	int stat = memcmp(sha1,s1ref_list[idx].sha1,sizeof(sha1_hash_t));
+	if ( stat < 0 )
+	    end = idx - 1 ;
+	else if ( stat > 0 )
+	    beg = idx + 1;
+	else
+	    return s1ref_list + idx;
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const sha1_reference_t * FindSha1RefHex ( ccp sha1, ccp end )
+{
+    if (!sha1)
+	return 0;
+
+    sha1_hash_t hash;
+    Sha1Hex2Bin(hash,sha1,end);
+    return FindSha1RefBin(hash);
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			split_filename_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4689,6 +4845,7 @@ void AnalyseSPF
 	spf->f_d.ptr = end;
 	spf->f_d.len = 2;
 	nlen -= 2;
+	spf->distrib_flags |= G_DTA_IS_D;
     }
 
     spf->f_name.ptr = name;
@@ -4793,11 +4950,25 @@ void AnalyseSPF
 		spf->le_flags |= G_LEFL_RND_GROUP;
 	    }
 	    else if ( !StrCmpMem(p,"new") )
+	    {
 		spf->le_flags |= G_LEFL_NEW;
+		spf->distrib_flags |= G_DTA_NEW;
+	    }
+	    else if ( !StrCmpMem(p,"again") )
+		spf->distrib_flags |= G_DTA_AGAIN;
+	    else if ( !StrCmpMem(p,"update") || !StrCmpMem(p,"upd") )
+		spf->distrib_flags |= G_DTA_UPDATE;
+	    else if ( !StrCmpMem(p,"fill") )
+		spf->distrib_flags |= G_DTA_FILL;
+	    else if ( !StrCmpMem(p,"boost") )
+		spf->distrib_flags |= G_DTA_BOOST;
 	    else if ( !StrCmpMem(p,"texture") || !StrCmpMem(p,"temp-allow") )
 		spf->le_flags |= G_LEFL_TEXTURE;
 	    else if ( !StrCmpMem(p,"hidden") )
+	    {
 		spf->le_flags |= G_LEFL_HIDDEN;
+		spf->distrib_flags |= G_DTA_HIDDEN;
+	    }
 	    else if (!memcmp(p.ptr,"order=",6))
 		spf->attrib_order = str2l(p.ptr+6,0,10);
 	    else
@@ -4945,12 +5116,13 @@ void AnalyseSPF
 
     if (!strncasecmp(name,"boost:",6))
     {
-	    spf->boost.ptr = name;
-	    spf->boost.len = 6;
-	    name += 6;
-	    if ( *name == ' ' )
-		name++;
-	    nlen = end - name;
+	spf->distrib_flags |= G_DTA_BOOST;
+	spf->boost.ptr = name;
+	spf->boost.len = 6;
+	name += 6;
+	if ( *name == ' ' )
+	    name++;
+	nlen = end - name;
     }
 
 

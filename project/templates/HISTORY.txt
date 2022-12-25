@@ -663,6 +663,24 @@ szs v2.30a r8708 - 2022-11-11
       the cup type (battle or versus). This is important for random tracks.
 
 
+szs v2.31a r8725 - 2022-12-16
+
+ - Updated integrated LE-CODE binaries to v5 build 36.
+ - LPAR: Official support of new features BT-WORLDWIDE and VS-WORLDWIDE. This
+   was already implemented hidden in version v2.29a.
+ - File format LE-DEF: Instructions STANDARD-BATTLE-ARENAS and/or
+   STANDARD-VERSUS-TRACKS will be executed automatically if no other battle
+   arena or no other versus track are defined.
+ - wlect DISTRIB: 
+    - Bug fix: Random slots are ignored now if adding missed tracks to cups.
+    - Fixed import of LE-CODE binaries without standard tracks.
+    - New instructions: CUP-ICONS, CUP-INFO (both are experimental).
+    - New processing option OUT-DUMMY to accept/ignore generic dummy names.
+ - Tool wimgt supports generic images. The main application is the creation of
+   cup-icons, as used e.g. by MKW-Fun. At the moment only an incomplete
+   documentation is available at https://szs.wiimm.de/doc/genericimg .
+
+
 @@MODULE(last-history.txt)@@
 
 

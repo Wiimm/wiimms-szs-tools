@@ -341,9 +341,13 @@ void SetupColors()
 {
     //----- setup colors
 
-    colorize_stdout = colorize_stdlog = opt_colorize; // reset it first
-    colorize_stdout = GetFileColorized(stdout);
-    colorize_stdlog = GetFileColorized(stdlog);
+    if ( opt_colorize >= COLMD_ON )
+	colorize_stdout = colorize_stdlog = opt_colorize; // reset it first
+
+    if ( colorize_stdout == COLMD_AUTO )
+	colorize_stdout = GetFileColorized(stdout);
+    if ( colorize_stdlog == COLMD_AUTO )
+	colorize_stdlog = GetFileColorized(stdlog);
 
     colout = GetColorSet(colorize_stdout);
     collog = GetColorSet(colorize_stdlog);
@@ -664,7 +668,7 @@ const KeywordTab_t * CheckCommandHelper
 	    PrintKeywordError(key_tab,arg,cmd_stat,0,0);
 	else if ( opt_colorize < COLMD_ON )
 	{
-	    opt_colorize = COLMD_ON;
+	    //colorize_stdout = COLMD_ON;
 	    SetupColors();
 	}
     }
@@ -712,9 +716,14 @@ void SetupPager(void)
     if ( !opt_no_pager && isatty(fileno(stdout)) )
     {
 	fflush(stdout);
-	opt_colorize = 1;
+	colorize_stdout = 1;
+	const bool same = stdlog == stdout;
+	if (same)
+	    colorize_stdlog = 1;
 	SetupColors();
 	StdoutToPager();
+	if (same)
+	    stdlog = stdout;
     }
 }
 
@@ -3675,6 +3684,7 @@ void cmd_version_section
     printf(
 	"prog=%s\n"
 	"name=%s\n"
+	"path=%s\n"
 	"version=" VERSION "\n"
 	"beta=%d\n"
 	"revision=" REVISION  "\n"
@@ -3685,6 +3695,7 @@ void cmd_version_section
 	"url=" URI_HOME "%s\n"
 	, name_short
 	, name_long
+	, ProgramPath()
 	, BETA_VERSION
 	, e[0], e[1], e[2], e[3]
 	, endian == 0x01020304 ? "little"

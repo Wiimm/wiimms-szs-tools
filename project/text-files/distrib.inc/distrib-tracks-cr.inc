@@ -7,18 +7,19 @@
 
 # This is the track listing. 2 formats are supported:
 #	old:	SHA1 CUP NAME
-#	new:	TYPE FLAGS LE_FLAGS SHA1 TRACK_SLOT CUP NAME
+#	new:	TYPE DISTRIB_FLAGS LE_FLAGS SHA1 TRACK_SLOT CUP NAME
 
 #   TYPE is either 'vs' or 'bt'. When TYPE is present, then TRACK_SLOT is
 #	expected. SHA1 is the SHA1 checksunm of the track.
 #
-#   FLAGS information about features:
-#	d:is _d file / t:title only / h:hidden / o:original track
+#   DISTRIB_FLAGS is an information used by ct.wiimm.de and wiimmfi.de:
+#	B: boost, N: new, A: again, U: update, F: fill
+#	d: is _d file, t: title only, h: hidden, o: original track
 #
 #   LE_FLAGS are LE-CODE track flags:
 #	Flag   1:  B: battle arena, V: versus track, r: random slot.
 #	Flag   2:  Used in: o: original cup, c custom cup, b: both.
-#	Flag   3:  H: header of group, G: group member, X: header of group and group member.
+#	Flag   3:  H: header of group, G: group member, X: both.
 #	Flags  4:  N: new track, T: texture hack, 2: both.
 #	Flags 5+6: A: alias, i: invisible/hidden.
 #

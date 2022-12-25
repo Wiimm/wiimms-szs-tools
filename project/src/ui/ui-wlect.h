@@ -312,6 +312,9 @@ typedef enum enumOptions
 //				| OB_IGNORE
 //				| OB_CREATE_DISTRIB,
 //
+//	OB_CMD_TIMESTAMP	= OB_GRP_DEST
+//				| OB_IGNORE,
+//
 //	OB_CMD_LPAR		= OB_GRP_PATCH
 //				| OB_GRP_DEST
 //				| OB_GRP_TEXTOUT,
@@ -384,6 +387,7 @@ typedef enum enumCommands
 	CMD_DLLL,
 	CMD_BIN_DIFF,
 	CMD_PATCH,
+	CMD_TIMESTAMP,
 	CMD_LPAR,
 
 	CMD_CREATE,
@@ -393,7 +397,7 @@ typedef enum enumCommands
 	CMD_ENCODE,
 
 
-	CMD__N // == 30
+	CMD__N // == 31
 
 } enumCommands;
 

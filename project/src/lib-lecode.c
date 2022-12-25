@@ -3854,17 +3854,14 @@ void CopyLecodeFlags ( le_analyze_t * ana )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void PatchLECODE ( le_analyze_t * ana )
+enumError PatchLECODE ( le_analyze_t * ana )
 {
     DASSERT(ana);
     PRINT("PatchLECODE() opt_lpar=%s\n",opt_lpar);
 
     ccp warn = GetLecodeSupportWarning(ana);
     if (warn)
-    {
-	ERROR0(ERR_INVALID_DATA,"Can't use or patch LE-CODE because %s.",warn);
-	return;
-    }
+	return ERROR0(ERR_INVALID_DATA,"Can't use or patch LE-CODE because %s.",warn);
 
     u8 *saved = MEMDUP(ana->data,ana->data_size);
 
@@ -3891,6 +3888,7 @@ void PatchLECODE ( le_analyze_t * ana )
     }
 
     FREE(saved);
+    return ERR_OK;
 }
 
 //

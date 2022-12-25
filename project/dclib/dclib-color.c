@@ -45,6 +45,7 @@
 
 #include "dclib-color.h"
 #include "dclib-basics.h"
+#include "dclib-file.h"
 #include "dclib-utf8.h"
 
 #ifdef DCLIB_TERMINAL
@@ -3925,7 +3926,7 @@ const ColorSet_t * GetColorSet ( ColorMode_t col_mode )
 
 const ColorSet_t * GetFileColorSet ( FILE *f )
 {
-     return GetColorSet(GetFileColorized(f));
+    return GetColorSet(GetFileColorized(f));
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5080,6 +5081,10 @@ ColorMode_t GetFileColorized ( FILE *f )
     if (!stdmsg)
 	SetupStdMsg();
 
+    // assume original stdout if 'f' is pager-input
+    if ( f && f == pager_file )
+	f = pager_stdout;
+
     return !f						? COLMD_OFF
 	 : f == stdlog && colorize_stdlog != COLMD_AUTO	? colorize_stdlog
 	 : f == stdout && colorize_stdout != COLMD_AUTO	? colorize_stdout
@@ -5088,7 +5093,7 @@ ColorMode_t GetFileColorized ( FILE *f )
 	 : f == stdwrn && colorize_stdwrn != COLMD_AUTO	? colorize_stdwrn
 	 : opt_colorize >= COLMD_ON			? opt_colorize
 	 : opt_colorize == COLMD_AUTO && isatty(fileno(f))
-							? COLMD_AUTO
+							? COLMD_ON
 	 : COLMD_OFF;
 }
 
