@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2023 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -6329,7 +6329,19 @@ const KeywordTab_t * ScanKeywordEx
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 // new keyword list interface
+
+void InitializeKeyListParam ( KeyListParam_t *par )
+{
+    DASSERT(klist);
+    memset(par,0,sizeof(*par));
+    par->force_case	= LOUP_UPPER;
+    par->allow_prefix	= true;
+    par->err_code	= ERR_SYNTAX;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 s64 ScanKeywordListP
 (
@@ -6343,10 +6355,7 @@ s64 ScanKeywordListP
     KeyListParam_t localpar;
     if (!par)
     {
-	memset(&localpar,0,sizeof(localpar));
-	localpar.force_case	= LOUP_UPPER;
-	localpar.allow_prefix	= true;
-	localpar.err_code	= ERR_SYNTAX;
+	InitializeKeyListParam(&localpar);
 	par = &localpar;
     }
 
@@ -6380,6 +6389,15 @@ s64 ScanKeywordListP
 			&& ( *arg != '+' || arg == key ))
 	{
 	    arg++;
+	}
+
+	if (par->func_arg)
+	{
+	    const int stat = par->func_arg(par,key,arg-key,key_tab);
+	    if ( stat < 0 && !(par->err_mode & 1) )
+		break;
+	    if (stat)
+		continue;
 	}
 
 	int prefix = 0, abbrev_count;
@@ -6443,13 +6461,13 @@ s64 ScanKeywordListP
 	    break;
 	}
 
-	if (par->func)
+	if (par->func_key)
 	{
-	    const int stat = par->func(key,arg-key,par,key_tab,cptr,prefix);
+	    const int stat = par->func_key(par,key,arg-key,key_tab,cptr,prefix);
 	    if ( stat < 0 && !(par->err_mode & 1) )
 		break;
 	    if (stat)
-		prefix = 0;
+		continue;
 	}
 
 	switch (prefix)

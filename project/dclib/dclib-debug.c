@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2023 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1100,7 +1100,7 @@ void * dclib_realloc ( MPARAM void * ptr, size_t size )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-char * dclib_strdup  ( MPARAM ccp src )
+char * dclib_strdup ( MPARAM ccp src )
 {
     char * res = strdup(src?src:"");
     if (!res)
@@ -1331,7 +1331,7 @@ static void MemLogItem
     if (func)
 	fprintf(stderr,"MEM-ERR[%s] %s() @ %s#%u\n",
 		info, func, file, line );
-    fprintf(stderr,"MEM-ERR[%s,%u] %s() @ %s#%u\n",
+    fprintf(stderr,"MEM-ERR[%s,%07u] %s() @ %s#%u\n",
 		info, mi->seqnum, mi->func, mi->file, mi->line );
     fflush(stderr);
 
@@ -1340,13 +1340,13 @@ static void MemLogItem
 	if (func)
 	    fprintf(MEM_LOG_FILE,"[%s] %s() @ %s#%u\n",
 		    info, func, file, line );
-	fprintf(MEM_LOG_FILE,"[%s,%u] %s() @ %s#%u\n",
+	fprintf(MEM_LOG_FILE,"[%s,%07u] %s() @ %s#%u\n",
 		    info, mi->seqnum, mi->func, mi->file, mi->line );
 	if (mi->filler)
 	{
-	    HexDump16( MEM_LOG_FILE, 10, 0,
+	    HexDump( MEM_LOG_FILE, 8, 0, 7, 16,
 			mi->data - MEM_FILLER_SIZE, 2*MEM_FILLER_SIZE );
-	    HexDump16( MEM_LOG_FILE, 10, mi->size + MEM_FILLER_SIZE,
+	    HexDump( MEM_LOG_FILE, 8, mi->size + MEM_FILLER_SIZE, 7, 16,
 			mi->data + mi->size - MEM_FILLER_SIZE, 2 * MEM_FILLER_SIZE );
 	}
 	fputc('\n',MEM_LOG_FILE);
@@ -1431,8 +1431,8 @@ int CheckTraceAlloc ( ccp func, ccp file, uint line )
 
     if (count)
     {
-	fprintf(stderr,"MEM-ERR: %u errors found -> %s() @ %s#%u\n",
-		count, func, file, line );
+	fprintf(stderr,"MEM-ERR: %u error%s found -> %s() @ %s#%u\n",
+		count, count == 1 ? "" : "s", func, file, line );
 	fflush(stderr);
 
 	if (OpenMemLog())

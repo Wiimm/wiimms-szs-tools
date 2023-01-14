@@ -10,7 +10,7 @@
 	" SZS, U8, PACK, BRRES, BREFF and BREFT archives. Additonally, RARC" \
 	" archive can be extracted. It is also a wrapper to all other tools." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wszst VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -75,6 +75,13 @@
 	"wszst FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
 	" each file as list. All tools know the FILETYPE command." )
+
+#:def_cmd( "UI_CHECK", "UI-CHECK|UC|UICHECK", \
+	"wszst UI-CHECK file...", \
+	"Classify SZS files from directory .../Scene/UI/. For the analysis," \
+	" the filename is ignored and only the content is examined.$Wildcards$" \
+	" are accepted. After evaluating the wildcards, all input files are" \
+	" sorted according to their path and duplicates are deleted." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wszst FILEATTRIB [keyword]...", \
@@ -179,32 +186,44 @@
 	"wszst LIST [source]...", \
 	"List all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
 	" archives. If listing a directory, then a virtual SZS file is created" \
-	" (like CREATE does it) and listed." )
+	" (like CREATE does it) and listed. $Wildcards$ are accepted. After" \
+	" evaluating the wildcards, all input files are sorted according to" \
+	" their path and duplicates are deleted." )
 
 #:def_cmd( "LIST_L", "LIST-L|LL|LISTL", \
 	"wszst LIST-L [source]...", \
 	"List all sub files with size. 'LIST-L' and 'LL' are short cuts for" \
-	" {LIST --long}." )
+	" {LIST --long}. $Wildcards$ are accepted. After evaluating the" \
+	" wildcards, all input files are sorted according to their path and" \
+	" duplicates are deleted." )
 
 #:def_cmd( "LIST_LL", "LIST-LL|LLL|LISTLL", \
 	"wszst LIST-LL [source]...", \
 	"List all sub files with offset and size. 'LIST-LL' and 'LLL' are" \
-	" short cuts for {LIST --long --long}." )
+	" short cuts for {LIST --long --long}. $Wildcards$ are accepted. After" \
+	" evaluating the wildcards, all input files are sorted according to" \
+	" their path and duplicates are deleted." )
 
 #:def_cmd( "LIST_LLL", "LIST-LLL|LLLL|LISTLLL", \
 	"wszst LIST-LLL [source]...", \
 	"List all sub files with offset and size in debugging mode. 'LIST-LLL'" \
-	" and 'LLLL' are short cuts for {LIST --long --long --long}." )
+	" and 'LLLL' are short cuts for {LIST --long --long --long}." \
+	" $Wildcards$ are accepted. After evaluating the wildcards, all input" \
+	" files are sorted according to their path and duplicates are deleted." )
 
 #:def_cmd( "LIST_A", "LIST-A|LA|LISTA", \
 	"wszst LIST-A [source]...", \
 	"List recursive all sub files with size. 'LIST-A' and 'LA' are short" \
-	" cuts for {LIST --long --all --all}." )
+	" cuts for {LIST --long --all --all}. $Wildcards$ are accepted. After" \
+	" evaluating the wildcards, all input files are sorted according to" \
+	" their path and duplicates are deleted." )
 
 #:def_cmd( "LIST_LA", "LIST-LA|LLA|LISTLA", \
 	"wszst LIST-LA [source]...", \
 	"List recursive all sub files with offset and size. 'LIST-LA' and" \
-	" 'LLA' are short cuts for {LIST --long --long --all --all}." )
+	" 'LLA' are short cuts for {LIST --long --long --all --all}." \
+	" $Wildcards$ are accepted. After evaluating the wildcards, all input" \
+	" files are sorted according to their path and duplicates are deleted." )
 
 #:def_cmd( "NAME_REF", "NAME-REF|NAMEREF", \
 	"wszst NAME-REF [source]...", \
@@ -362,7 +381,8 @@
 	"Patch an U8 archive, compressed or not: Load the archive, apply all" \
 	" patching and transforming options and store the file again." \
 	" Compressed sources are compressed again. The destination is only" \
-	" written if any data changed." )
+	" written if any data changed or if stored in another file." \
+	" $Wildcards$ are accepted." )
 
 #:def_cmd( "COPY", "COPY|CP", \
 	"wszst COPY source dest\n" \
@@ -1296,13 +1316,40 @@
 	"  With v2.01a, this option was renamed from --msg to the more" \
 	" meaningful name --filter-bmg. The old name is still available." )
 
+#:def_opt( "LE_MENU", "le-menu|lemenu", "C", \
+	"", \
+	"Patch language independent SZS files from directory .../Scene/UI/ to" \
+	" change the menu as required by LE-CODE to be able to select tracks" \
+	" from more than 8 cups." )
+
+#:def_opt( "TITLE_SCREEN", "title-screen|titlescreen", "CP", \
+	"dir", \
+	"Specify a directory from which to search and replace title screens." \
+	" Title screens only appear in the file 'Title.szs' and there in the" \
+	" sub-directory './title/timg/'. If the replacement file is not found," \
+	" then search file 'title1.szs' to patch standard files or file" \
+	" 'title2.szs' to patch bokeboke files." )
+
+#:def_opt( "CUP_ICONS", "cup-icons|cupicons", "CP", \
+	"image", \
+	"Load given image, convert it to TPL.CMPR and add the result as" \
+	" sub-files 'button/timg/ct_icons.tpl' and as" \
+	" 'control/timg/ct_icons.tpl' to files 'Channel.szs', 'MenuMulti.szs'" \
+	" and 'MenuSingle.szs'. Both sub-files are always linked, so that" \
+	" storage space is saved." )
+
+#:def_opt( "NO_COPY", "no-copy|nocopy", "C", \
+	"", \
+	"Don't copy a file if it was not modified." )
+
 #:def_opt( "CACHE", "cache", "GP", \
 	"dir", \
-	"Define a directory for a SZS cache.If creating a YAZ0 compressed file" \
-	" with standard compression (level 9), the cache is searched for the" \
-	" compressed version. File cache-content.txt is used as file list with" \
-	" hash values. If the cache file is not found or the content differ," \
-	" the file is (re-)created and exit status 2=differ is returned.\n" \
+	"Define a directory for a SZS cache. If creating a YAZ0 compressed" \
+	" file with standard compression (level 9), the cache is searched for" \
+	" the compressed version. File cache-content.txt is used as file list" \
+	" with hash values. If the cache file is not found or the content" \
+	" differ, the file is (re-)created and exit status 2=differ is" \
+	" returned.\n" \
 	"  Background: Loading a compressed SZS and content verification is" \
 	" much faster than YAZ compression.\n" \
 	"  For legay reasons: If parameter DIR is a file, it is split into" \
@@ -1315,6 +1362,11 @@
 	"Name of the first cache file. This parameter overrides the generated" \
 	" cache name. The name is used only once for the very first cache" \
 	" candidate." )
+
+#:def_opt( "PARALLEL", "parallel", "G", \
+	"", \
+	"Tell the tool that it will be called multiple times in parallel." \
+	" Currently it only has an effect if {--cache} is enabled." )
 
 #:def_opt( "ID", "id", "C", \
 	"", \
@@ -1365,6 +1417,11 @@
 	"Suppress information lines in decoded text files. This includes" \
 	" syntax information ({--no-header}). If set twice, the output of" \
 	" unneeded sections is also suppressed." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "CM", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
 
 #:def_opt( "PIPE", "pipe", "CM", \
 	"", \
@@ -2138,6 +2195,22 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "UI_CHECK", "LONG", \
+	"", \
+	"Print the result as technical list." )
+
+#:def_cmd_opt( "UI_CHECK", "NO_HEADER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UI_CHECK", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UI_CHECK", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
 	"" )
@@ -2429,6 +2502,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST", "IGNORE_SETUP", \
 	"", \
 	"" )
@@ -2627,6 +2704,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_L", "NO_HEADER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -2831,6 +2912,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LL", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LL", "IGNORE_SETUP", \
 	"", \
 	"" )
@@ -3029,6 +3114,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LLL", "NO_HEADER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -3233,6 +3322,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_A", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_A", "IGNORE_SETUP", \
 	"", \
 	"" )
@@ -3431,6 +3524,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LA", "NO_HEADER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -6170,6 +6267,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SLOTS", "IGNORE", \
 	"", \
 	"" )
@@ -6531,6 +6640,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SLOTS", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "STGI", "COLORS", \
 	"", \
 	"" )
@@ -6878,6 +6999,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "NORMALIZE", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "DEST", \
 	"", \
 	"" )
@@ -6911,6 +7044,10 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "REMOVE_SRC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "NO_COPY", \
 	"", \
 	"" )
 
@@ -7186,6 +7323,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PATCH", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COPY", "DEST", \
 	"", \
 	"" )
@@ -7219,6 +7368,10 @@
 	"" )
 
 #:def_cmd_opt( "COPY", "REMOVE_SRC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "NO_COPY", \
 	"", \
 	"" )
 
@@ -7494,6 +7647,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COPY", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUPLICATE", "GAMEMODES", \
 	"", \
 	"" )
@@ -7531,6 +7696,10 @@
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "REMOVE_SRC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "NO_COPY", \
 	"", \
 	"" )
 
@@ -7803,6 +7972,18 @@
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "CUP_ICONS", \
 	"", \
 	"" )
 
@@ -8299,6 +8480,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COMPRESS", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DECOMPRESS", "DEST", \
 	"", \
 	"" )
@@ -8576,6 +8769,18 @@
 	"" )
 
 #:def_cmd_opt( "DECOMPRESS", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECOMPRESS", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECOMPRESS", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECOMPRESS", "CUP_ICONS", \
 	"", \
 	"" )
 
@@ -8869,6 +9074,18 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "CUP_ICONS", \
 	"", \
 	"" )
 
@@ -9269,6 +9486,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "UPDATE", "SOURCE", \
 	"", \
 	"" )
@@ -9546,6 +9775,18 @@
 	"" )
 
 #:def_cmd_opt( "UPDATE", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UPDATE", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UPDATE", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UPDATE", "CUP_ICONS", \
 	"", \
 	"" )
 
@@ -9849,6 +10090,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "EXTRACT", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "EXTRACT", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "EXTRACT", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "XDECODE", "DEST", \
 	"", \
 	"" )
@@ -10146,6 +10399,18 @@
 	"" )
 
 #:def_cmd_opt( "XDECODE", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "CUP_ICONS", \
 	"", \
 	"" )
 
@@ -10449,6 +10714,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "XEXPORT", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XEXPORT", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XEXPORT", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "XALL", "DEST", \
 	"", \
 	"" )
@@ -10746,6 +11023,18 @@
 	"" )
 
 #:def_cmd_opt( "XALL", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "CUP_ICONS", \
 	"", \
 	"" )
 
@@ -11328,6 +11617,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "KCL", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KCL", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KCL", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "KMP", "IGNORE", \
 	"", \
 	"" )
@@ -11540,6 +11841,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "KMP", "LE_MENU", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KMP", "TITLE_SCREEN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KMP", "CUP_ICONS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LEX", "IGNORE", \
 	"", \
 	"" )
@@ -11696,7 +12009,7 @@
 	"wbmgt [option]... command [option|parameter|@file]...", \
 	"Wiimms BMG Tool : Convert and patch raw and text BMG (message) files." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wbmgt VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -12994,7 +13307,7 @@
 	"Wiimms CT-CODE Tool : Manage the $CT-CODE$ extension. BRRES, TEX0," \
 	" CT-CODE, CT-TEXT and LE-BIN files are accepted as input." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wctct VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -14420,7 +14733,7 @@
 	"Wiimms Image Tool : Extract and convert graphic images. The file" \
 	" formats TPL, TEX, BTI, BREFT and PNG are supported." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wimgt VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -15355,7 +15668,7 @@
 	"Wiimms KCL Tool : Analyze, modify, export and create KCL and OBJ" \
 	" files." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wkclt VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -17895,7 +18208,7 @@
 	"Wiimms KMP Tool : Analyze, modify, export and create (compile) KMP" \
 	" files." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wkmpt VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -20043,7 +20356,7 @@
 	"wlect [option]... command [option|parameter|@file]...", \
 	"Wiimms LE-CODE Tool : Manage the $LE-CODE$ and LEX extensions." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wlect VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -20195,10 +20508,10 @@
 	"wlect DISTRIBUTION [argument]...", \
 	"This command manages data for LE-CODE track distributions. It reads" \
 	" any number of source files with different file types, collects the" \
-	" data and creates any number of files with different file types.\n" \
-	"  Use the command without keyword to get an extended description.\n" \
-	" This command is still under development. Its use is therefore" \
-	" EXPERIMENTAL!" )
+	" data and creates any number of files with different file types." \
+	" Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for" \
+	" details.\n" \
+	"  Use the command without keyword to get an extended description." )
 
 #:def_cmd( "CAT", "CAT", \
 	"wlect CAT [source]...", \
@@ -21711,7 +22024,7 @@
 	"wmdlt [option]... command [option|parameter|@file]...", \
 	"Wiimms MDL Tool : Decode raw MDL and encode text MDL files." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wmdlt VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -23027,7 +23340,7 @@
 	"wpatt [option]... command [option|parameter|@file]...", \
 	"Wiimms PAT Tool : Decode raw PAT and encode text PAT files." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wpatt VERSION [ignored]...", \
 	"Print program name and version and exit." )
 
@@ -23646,7 +23959,7 @@
 	"Wiimms StaticR Tool : Manipulate the 'main.dol' and 'StaticR.rel'" \
 	" files of Mario Kart Wii." )
 
-#:def_cmd( "VERSION", "VERSION", \
+#:def_cmd( "VERSION", "VERSION|V", \
 	"wstrt VERSION [ignored]...", \
 	"Print program name and version and exit." )
 

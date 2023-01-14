@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -55,6 +55,12 @@
 
 #include "dclib-gen-ui.h"
 #include "ui-head.inc"
+
+//----------------------------------
+// \1 : Text only for built in help
+// \2 : Text only for ui.def
+// \3 : Text for all (default)
+//----------------------------------
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -165,6 +171,16 @@ bool DefineIntVar ( VarMap_t * vm, ccp varname, int value ) { return false; }
 	"If " src " starts with colon (@:@), then it may be a generic image" \
 	" instead of a real file." \
 	"\1 See https://szs.wiimm.de/doc/genericimg for details."
+
+#define WILDCARDS \
+	"\1Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for details." \
+	"\2$Wildcards$ are accepted.\3"
+
+#define WILDCARDS_SORT \
+	"\1Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for details." \
+	"\2$Wildcards$ are accepted.\3" \
+	" After evaluating the wildcards, all input files are sorted according" \
+	" to their path and duplicates are deleted."
 
 //
 ///////////////////////////////////////////////////////////////////////////////

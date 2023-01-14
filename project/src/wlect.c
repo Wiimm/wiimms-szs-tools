@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1249,7 +1249,7 @@ static void help_distrib ( enumError exit_code )
 	" They supplement or overwrite the internal data structure with its diverse data.\n"
 	"\n"
 	"  |If a file does not exist but the associated filename contains wildcards"
-	" (any of »{file|*?[}«), then all matching files are loaded as source."
+	" (any of »{file|*?[{}«), then all matching files are loaded as source."
 	" So it's possible to keep the command line small if using »{file|'*.szs'}«"
 	" (with apostrophs) instead of »{file|*.szs}«.\n"
 	"\n"
@@ -1332,6 +1332,13 @@ static void help_distrib ( enumError exit_code )
 	" If a filename is a minus sign only, then {file|stdout} is used."
 	" Existing files are only overwritten if at least one of the options"
 	" {opt|--overwrite} (short: {opt|-o}) or {opt|--remove-dest} (short: {opt|-r}) is set.\n"
+	"\n"
+	"  |If a filename beginns with a plus sign, the plus sign is removed"
+	" and the output file is opened in append mode. If a file is to be created with"
+	" a plus sign at the beginning, then »{file|./}« should be put in front."
+	" If an output file is opened for the second time,"
+	" then it is automatically opened in append mode.\n"
+	"\n"
 	"\n|[4,14]"
 
 	//-------------------------
@@ -1436,21 +1443,32 @@ static void help_distrib ( enumError exit_code )
 		"\r\r"
 		"{syntax|OPTIONS} is a comma separated list of keywords to select the kind of analysis."
 		" If no option is set, all are enabled."
-		" To find duplicate tracks, families or clans, the definition file must support SHA1"
-		" checksums and a SHA1 reference file must be loaded."
+		" To list by classes and to find duplicate tracks, families or clans,"
+		" the definition file must support SHA1 checksums"
+		" and a SHA1 reference file must be loaded."
 		" You can get the reference file from {file|https://ct.wiimm.de/export/sha1ref/view}."
 		"\n\n"
 		"|[17,29]"
+		"\t{par|@varname}:\t|Use another predefined string instead of '{name|name}'"
+			" as source for option {par|names}."
+			" See section »{name|Processing Options: Storage}« for details.\n"
+		"\t{par|[key]}:\t|Like {par|@varname}, but use a user defined string as source.\n"
 		"\t{par|counters}:\t|Count track and arena types in different ways.\n"
+		"\t{par|classes}:\t|List tracks by track class, except classes {name|SELECT} and {name|NINTENDO}.\n"
+		"\t{par|xclasses}:\t|List tracks by track class without exceptions."
+			"This option is excluded from {par|default}.\n"
 		"\t{par|names}:\t|Find track names that are used"
 			" by two or more distinct tracks or arenas.\n"
 		"\t{par|tracks}:\t|Find tracks that are used two or more times and list them.\n"
 		"\t{par|families}:\t|Find tracks that are in the same family and list them.\n"
-		"\t{par|clans}:\t|Find tracks that are in the same clan and list them.\n"
+		"\t{par|clans}:\t|Find track families that are in the same clan and list them.\n"
 		"\t{par|duplicates}:\t|Short cut for »{par|names,tracks,families,clans}«.\n"
-		"\t{par|all}:\t|Short cut for all of above and default if no option is set."
+		"\t{par|all}:\t|Short cut for all lists of above."
 			" To exclude something, you can write e.g. »{par|all,-clans}«,"
 			" or shorter »{par|-clans}«.\n"
+		"\t{par|default}:\t|Select all standard analyses."
+			" This option is used automatically if no other option is specified."
+			" At the moment it is the same as »{par|all,-xclasses}«.\n"
 	"\n|[4,15]"
 	"\t{name|DEBUG}:\t|"
 		"Print some statistics for debugging."
@@ -1466,7 +1484,7 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|CUP-ICONS}:\t|"
 		"Create an image file with cup icons."
 		"\r\r"
-		"  {heading|Syntax:} {syntax|CUP-ICON '=' [STORAGE,] [OPTIONS] '=' FILE}"
+		"  {heading|Syntax:} {syntax|CUP-ICON '=' [OPTIONS] '=' FILE}"
 		"\r\r"
 		"If the output goes to a terminal, then use instruction {name|CUP-INFO} instead."
 		" To determine the file type, the file extension is analyzed."
@@ -1476,29 +1494,28 @@ static void help_distrib ( enumError exit_code )
 		" 5 characters of the name without a prefix, shown in blue at the bottom."
 		" If a name is wider than 128 pixels, than it is horizontal shrinked to 128 pixels."
 		"\r\r"
-		"{syntax|STORAGE} is an optional storage indicator for the source"
-		" explained in section »{name|Processing Options: Storage}«."
-		" Separate STORAGE and OPTIONS by a comma."
-		" If not set, then {name|NAME} is used as source."
-		"\r\r"
 		"{syntax|OPTIONS} is a comma separated list of keywords:\n"
 		"|[17,27]"
-		"\t{par|original}:\t|Add 8 original cup icons.\n"
-		"\t{par|swapped}:\t|Add 8 original cup icons in swapped order.\n"
+		"\t{par|@varname}:\t|Use another predefined string instead of '{name|name}' as source."
+			" See section »{name|Processing Options: Storage}« for details.\n"
+		"\t{par|[key]}:\t|Like {par|@varname}, but use a user defined string as source.\n"
+		"\t{par|original}:\t|Use the original cup icons for the first 8 cups.\n"
+		"\t{par|swapped}:\t|Use the original cup icons for the first 8 cups, but in sapped order."
+			" This is recommended for LE-CODE if using the 32 original tracks.\n"
 		"\t{par|1wiimm}:\t|Use Wiimms avatar for the first cup, but only if original icons are not used.\n"
 		"\t{par|9wiimm}:\t|Use Wiimms avatar for the ninth cup.\n"
 		"\t{par|xwiimm}:\t|Use Wiimms avatar for the last cup.\n"
 		"\t{par|plus}:\t|If a plus prefix exists, then insert it and an additional space.\n"
 		"\t{par|xplus}:\t|Same as option {par|plus},"
-			" but apppend an underline character instead of a space after the plus prefix."
+			" but append an underline character instead of a space after the plus prefix."
 			" Underline characters are printed like spaces, but they are ignored by option {par|space}.\n"
 		"\t{par|game}:\t|If a game prefix exists, then insert it and an additional space.\n"
 		"\t{par|xgame}:\t|Same as option {par|game},"
-			" but apppend an underline character instead of a space after the game prefix.\n"
+			" but append an underline character instead of a space after the game prefix.\n"
 		"\t{par|space}:\t|Finish the name part at first space."
-			" Ignore tabulators and undercore characters for this.\n"
+			" Ignore tabulators and underline characters for this.\n"
 		"\t{par|0} .. {par|15}:\t|"
-			"Define the maximum number of charaters for the name part"
+			"Define the maximum number of characters for the name part"
 			" to any value between 0 and 15. The default is 5 characters.\n"
 	"\n|[4,15]"
 	"\t{name|CUP-INFO}:\t|"
@@ -1900,11 +1917,21 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 {
     u_nsec_t start_nsec = GetTimerNSec();
 
-    enum { C_NAMES, C_INFO, C_RATING, C_LEINFO, C_SHA1, C_DISTRIB,
+    enum {	C_NAMES, C_INFO, C_RATING, C_LEINFO, C_SHA1, C_DISTRIB,
 		C_CTDEF, C_LEDEF, C_LEREF, C_STRINGS, C_DUMP, 
+	#if LE_DIS_PATCH_ENABLED
+		C_DEST, C_PATCH,
+	#endif
 		C_LECODE, C_LECODE4, C_LPAR,
 		C_BMG, C_CUPICON, C_SEPARATOR, C_COPY, C_SPLIT, C_SUBST,
-		C_TRACKS, C_SORT, C_PREFIX, C_RESERVE, C_DEBUG, C_REPORT };
+		C_TRACKS,
+	#if LE_DIS_SORTTRACKS_ENABLED
+		C_SORT_TRACKS,
+	#endif
+	#if LE_DIS_SORTCUPS_ENABLED
+		C_SORT_CUPS,
+	#endif
+		C_PREFIX, C_RESERVE, C_DEBUG, C_REPORT };
 
     enum
     {
@@ -1916,6 +1943,9 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	O_PARAM_OPT1	= 0x1000, // 
 	O_PARAM_OPT2	= 0x2000, // scan options before additional '='
 	O_PARAM_A	= 0x4000, // allow additonal arguments
+     #if LE_DIS_PATCH_ENABLED
+	O_FILE_LIST	= 0x8000, // create a file list by the final filename
+     #endif
     };
 
     static const KeywordTab_t tab[] =
@@ -1941,6 +1971,11 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_STRINGS,	"STRINGS",		"STR",		0  },
 	{ C_DUMP,	"DUMP",			0,		0  },
 
+     #if LE_DIS_PATCH_ENABLED
+	{ C_DEST,	"DEST",			0,		0  },
+	{ C_PATCH,	"PATCH",		0,		O_PARAM_OPT2 | O_FILE_LIST  },
+     #endif
+
 	{ C_LECODE,	"PAL",			0,		LEREG_PAL },
 	{ C_LECODE,	"USA",			0,		LEREG_USA },
 	{ C_LECODE,	"JAP",			0,		LEREG_JAP },
@@ -1952,8 +1987,8 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_BMG,	"BMG",			"BMGBIN",	0  },
 	{ C_BMG,	"BMG-TXT",		"BMGTXT",	 1 },
 
-	{ C_CUPICON,	"CUP-ICONS",		"CUPICONS",	O_PARAM_OPTSRC|O_PARAM_OPT2  },
-	{ C_CUPICON,	"CUP-INFO",		"CUPINFO",	O_PARAM_OPTSRC|O_PARAM_OPT2 | 1 },
+	{ C_CUPICON,	"CUP-ICONS",		"CUPICONS",	O_PARAM_OPT2  },
+	{ C_CUPICON,	"CUP-INFO",		"CUPINFO",	O_PARAM_OPT2 | 1 },
 
 	{ C_SEPARATOR,	"SEPARATOR",		"SEP",		0 },
 	{ C_COPY,	"COPY",			0,		O_PARAM_D|O_PARAM_SS },
@@ -1961,12 +1996,17 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_SUBST,	"SUBST",		0,		O_PARAM_D|O_PARAM_A },
 
 	{ C_TRACKS,	"TRACKS",		0,		0  },
-	{ C_SORT,	"SORT",			0,		O_PARAM_OPTSRC|O_PARAM_OPT1 },
+     #if LE_DIS_SORTTRACKS_ENABLED
+	{ C_SORT_TRACKS,"SORT-TRACKS",		"SORTTRACKS",	O_PARAM_OPTSRC|O_PARAM_OPT1 },
+     #endif
+     #if LE_DIS_SORTCUPS_ENABLED
+	{ C_SORT_CUPS,	"SORT-CUPS",		"SORTCUPS",	O_PARAM_OPTSRC|O_PARAM_OPT1 },
+     #endif
 
 	{ C_PREFIX,	"PREFIX",		0,		0  },
 	{ C_RESERVE,	"RESERVE",		0,		0  },
 	{ C_DEBUG,	"DEBUG",		0,		0  },
-	{ C_REPORT,	"REPORT",		0,		O_PARAM_OPT2  },
+	{ C_REPORT,	"REPORT",		0,		O_PARAM_OPT2 },
 
 	{ 0,0,0,0 }
     };
@@ -2023,14 +2063,14 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     const le_options_t opt = cmd->opt;
 
     if ( opt & O_PARAM_OPTSRC )
-	arg = ScanOptionalLSP(&par_opt,arg,LTT_NAME,&err);
+	arg = ScanOptionalLSP(&par_opt,arg,-1,LTT_NAME,&err);
 
     if ( opt & (O_PARAM_D|O_PARAM_S) )
     {
 	if ( opt & O_PARAM_D )
 	{
 	    par_dest = ld->spar;
-	    char *end = ScanLSP(&par_dest,arg,&err);
+	    char *end = ScanLSP(&par_dest,arg,-1,&err);
 	    if ( opt & (O_PARAM_S|O_PARAM_A) )
 	    {
 		if ( *end != '=' && *end != ',' )
@@ -2059,7 +2099,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	    while ( n_par_src < max )
 	    {
 		*src = ld->spar;
-		char *end = ScanLSP(src,arg,&err);
+		char *end = ScanLSP(src,arg,-1,&err);
 		if (err)
 		    goto err_param12;
 		if ( verbose >= 2 )
@@ -2107,7 +2147,24 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	case C_COPY:		err = CopyLD(ld,&par_dest,par_src,n_par_src); break;
 	case C_SPLIT:		err = SplitLD(ld,&par_dest,par_src,arg); break;
 	case C_SUBST:		err = SubstLD(ld,&par_dest,arg); break;
-	case C_SORT:		err = SortTracksLD(ld,&par_opt,mem_opt); break;
+
+     #if LE_DIS_SORTTRACKS_ENABLED
+	case C_SORT_TRACKS:	err = SortTracksLD(ld,&par_opt,mem_opt); break;
+     #endif
+
+     #if LE_DIS_SORTCUPS_ENABLED
+	case C_SORT_CUPS:	err = SortCupsLD(ld,&par_opt,mem_opt); break;
+     #endif
+
+     #if LE_DIS_PATCH_ENABLED
+	case C_DEST:
+	    if ( arg && *arg && strcmp(arg,"-") )
+		SetDest(arg,true);
+	    else
+		opt_dest = 0;
+	    err = ERR_OK;
+	    break;
+     #endif
 
 	case C_TRACKS:
 	    cmd = ScanKeyword(&cmd_stat,arg,tracks_tab);
@@ -2169,6 +2226,25 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     }
 
 
+    //-- create a file list
+    
+ #if LE_DIS_PATCH_ENABLED
+    if ( err == ~0 && opt & O_FILE_LIST )
+    {
+	StringField_t filelist;
+	InitializeStringField(&filelist);
+	InsertStringFieldExpand(&filelist,arg,0,true);
+
+	switch (cmd->id)
+	{
+	  case C_PATCH:	err = PatchLD(ld,mem_opt,&filelist); break;
+	  default:	err = ERR_ERROR;
+	}
+	ResetStringField(&filelist);
+    }
+ #endif // LE_DIS_PATCH_ENABLED
+
+
     //-- with opened file
 
     if ( err == ~0 )
@@ -2182,7 +2258,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
      #endif
 
 	File_t F;
-	err = CreateFileOpt(&F,true,arg,false,0);
+	err = CreateFileOptAppend(&F,true,arg,false,0);
 	if (!err)
 	{
 	    ld_out_param_t lop = { .fname = arg, .f = F.f,
@@ -2212,7 +2288,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	      case C_LECODE:  err = CreateLecodeLD(F.f,ld,cmd->opt); break;
 	      case C_LPAR:    err = CreateLparLD(F.f,ld,true); break;
 	      case C_BMG:     err = CreateBmgLD(F.f,ld,variant||F.is_stdio); break;
-	      case C_CUPICON: err = CreateCupIconsLD(F.f,ld,lop.fname,&par_opt,mem_opt,variant||F.is_stdio); break;
+	      case C_CUPICON: err = CreateCupIconsLD(&lop,mem_opt,variant||F.is_stdio); break;
 	      case C_PREFIX:  err = SavePrefixTable(F.f,0); break;
 	      case C_DEBUG:   err = CreateDebugLD(F.f,ld); break;
 	      case C_REPORT:  err = CreateReportLD(&lop,mem_opt); break;

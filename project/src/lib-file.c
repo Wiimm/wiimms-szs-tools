@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -80,6 +80,19 @@
 	char *res = AllocNormalizedFilenameCygwin(param->arg,false);
 	FREE(param->arg);
 	param->arg = res;
+    }
+ }
+
+ void NormalizeFilenameParamList ( ParamList_t *param )
+ {
+    for ( ; param; param = param->next )
+    {
+	if (*param->arg)
+	{
+	    char *res = AllocNormalizedFilenameCygwin(param->arg,false);
+	    FREE(param->arg);
+	    param->arg = res;
+	}
     }
  }
 
@@ -227,6 +240,7 @@ FileMode_t GetFileModeByOpt
     if ( opt_number )		fmode |= FM_NUMBER;
     if ( opt_remove_dest )	fmode |= FM_REMOVE;
     if ( opt_update )		fmode |= FM_UPDATE;
+    if ( opt_append )		fmode |= FM_APPEND;
 
     if ( opt_overwrite || fname1 && *fname1 && fname2 && !strcmp(fname1,fname2) )
 	fmode |= FM_OVERWRITE;
@@ -251,6 +265,41 @@ enumError CreateFileOpt
 
     FileMode_t fmode = GetFileModeByOpt(testmode,fname,srcfile) | FM_TOUCH;
     return CreateFile(f,initialize,fname,fmode);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CreateFileOptAppend
+(
+    File_t		* f,		// file structure
+    bool		initialize,	// true: initialize 'f'
+    ccp			fname,		// file to open
+    bool		testmode,	// true: don't open
+    ccp			srcfile		// NULL or src file name
+					// if fname == srcfile: overwrite enabled
+)
+{
+    DASSERT(f);
+    DASSERT(fname);
+
+    FileMode_t fmode = FM_TOUCH;
+    if ( fname && *fname == '+' )
+    {
+	fname++;
+	fmode |= FM_APPEND;
+    }
+
+    static StringField_t list = {0};
+    bool found = FindStringField(&list,fname) != 0;
+    if (found)
+	fmode |= FM_APPEND;
+
+    fmode |= GetFileModeByOpt(testmode,fname,srcfile);
+    const enumError err = CreateFile(f,initialize,fname,fmode);
+
+    if ( !err && !found )
+	InsertStringField(&list,fname,false);
+    return err;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4598,6 +4647,7 @@ void ScanSha1Ref   ( struct ScanText_t *st )
 	IDX_TRACK,
 	IDX_FAMILY,
 	IDX_CLAN,
+	IDX_CLASS,
 	IDX__N
     };
 
@@ -4618,11 +4668,13 @@ void ScanSha1Ref   ( struct ScanText_t *st )
 	if ( n <= IDX__N )
 	    continue;
 
-	PRINT0("LINE: %.*s | %.*s | %.*s | %.*s |\n",
+	PRINT_IF0(!(s1ref_used%1000),"LINE[%u]: %.*s | %.*s | %.*s | %.*s | %.*s |\n",
+		s1ref_used,
 		src[IDX_SHA1].len, src[IDX_SHA1].ptr,
 		src[IDX_TRACK].len, src[IDX_TRACK].ptr,
 		src[IDX_FAMILY].len, src[IDX_FAMILY].ptr,
-		src[IDX_CLAN].len, src[IDX_CLAN].ptr );
+		src[IDX_CLAN].len, src[IDX_CLAN].ptr,
+		src[IDX_CLASS].len, src[IDX_CLASS].ptr );
 
 	if ( src[IDX_SHA1].len != 40 )
 	    continue;
@@ -4650,6 +4702,8 @@ void ScanSha1Ref   ( struct ScanText_t *st )
 	p->clan = strtoul(src[IDX_CLAN].ptr,0,10);
 	if ( s1ref_max1_clan < p->clan )
 	     s1ref_max1_clan = p->clan;
+
+	p->tclass = ScanTrackClass(src[IDX_CLASS].ptr,src[IDX_CLASS].len);
     }
 
     s1ref_max1_track++;

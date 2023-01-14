@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -51,7 +51,7 @@
   //
   //---------- list of all wszst commands ----------
 
-  { T_DEF_CMD,	"VERSION",	"VERSION",
+  { T_DEF_CMD,	"VERSION",	"VERSION|V",
 		    "wszst VERSION [ignored]...",
 		"Print program name and version and exit." },
 
@@ -124,6 +124,12 @@
 		"Scan the header of the entered files and print file type"
 		" and path for each file as list."
 		" All tools know the FILETYPE command." },
+
+  { T_DEF_CMD,	"UI_CHECK",	"UI-CHECK|UC|UICHECK",
+		    "wszst UI-CHECK file...",
+		"Classify SZS files from directory .../Scene/UI/."
+		" For the analysis, the filename is ignored and only the content is examined."
+		"" WILDCARDS_SORT },
 
   { T_DEF_CMD,	"FILEATTRIB",	"FILEATTRIB|FA",
 		    "wszst FILEATTRIB [keyword]...",
@@ -273,34 +279,39 @@
 		    "wszst LIST [source]...",
 		"List all sub files of " ARCHIVES_AND " archives."
 		" If listing a directory, then a virtual SZS file"
-		" is created (like CREATE does it) and listed." },
+		" is created (like CREATE does it) and listed."
+		" " WILDCARDS_SORT },
 
   { T_DEF_CMD,	"LIST_L",	"LIST-L|LL|LISTL",
 		    "wszst LIST-L [source]...",
 		"List all sub files with size."
-		" 'LIST-L' and 'LL' are short cuts for {LIST --long}." },
+		" 'LIST-L' and 'LL' are short cuts for {LIST --long}."
+		" " WILDCARDS_SORT },
 
   { T_DEF_CMD,	"LIST_LL",	"LIST-LL|LLL|LISTLL",
 		    "wszst LIST-LL [source]...",
 		"List all sub files with offset and size."
-		" 'LIST-LL' and 'LLL' are short cuts for {LIST --long --long}." },
+		" 'LIST-LL' and 'LLL' are short cuts for {LIST --long --long}."
+		" " WILDCARDS_SORT },
 
   { T_DEF_CMD,	"LIST_LLL",	"LIST-LLL|LLLL|LISTLLL",
 		    "wszst LIST-LLL [source]...",
 		"List all sub files with offset and size in debugging mode."
 		" 'LIST-LLL' and 'LLLL' are short cuts"
-		" for {LIST --long --long --long}." },
+		" for {LIST --long --long --long}."
+		" " WILDCARDS_SORT },
 
   { T_DEF_CMD,	"LIST_A",	"LIST-A|LA|LISTA",
 		    "wszst LIST-A [source]...",
 		"List recursive all sub files with size."
-		" 'LIST-A' and 'LA' are short cuts for {LIST --long --all --all}." },
+		" 'LIST-A' and 'LA' are short cuts for {LIST --long --all --all}."
+		" " WILDCARDS_SORT },
 
   { T_DEF_CMD,	"LIST_LA",	"LIST-LA|LLA|LISTLA",
 		    "wszst LIST-LA [source]...",
 		"List recursive all sub files with offset and size."
-		" 'LIST-LA' and 'LLA' are short cuts"
-		" for {LIST --long --long --all --all}." },
+		" 'LIST-LA' and 'LLA' are short cuts for {LIST --long --long --all --all}."
+		" " WILDCARDS_SORT },
 
   { T_DEF_CMD,	"NAME_REF",	"NAME-REF|NAMEREF",
 		    "wszst NAME-REF [source]...",
@@ -485,7 +496,8 @@
 		" Load the archive, apply all patching and transforming options"
 		" and store the file again."
 		" Compressed sources are compressed again."
-		" The destination is only written if any data changed." },
+		" The destination is only written if any data changed or if stored in another file."
+		" " WILDCARDS },
 
   { T_DEF_CMD,	"COPY",		"COPY|CP",
 		    "wszst COPY source dest\n"
@@ -1589,10 +1601,35 @@
 		" meaningful name --filter-bmg. The old name is still available."
 		"\1\n  Read https://szs.wiimm.de/opt/filter-bmg for more details." },
 
+  { T_OPT_C,	"LE_MENU",	"le-menu|lemenu",
+		0,
+		"Patch language independent SZS files from directory .../Scene/UI/"
+		" to change the menu as required by LE-CODE"
+		" to be able to select tracks from more than 8 cups." },
+
+  { T_OPT_CP,	"TITLE_SCREEN",	"title-screen|titlescreen",
+		"dir",
+		"Specify a directory from which to search and replace title screens."
+		" Title screens only appear in the file 'Title.szs'"
+		" and there in the sub-directory './title/timg/'."
+		" If the replacement file is not found, then search file 'title1.szs'"
+		" to patch standard files or file 'title2.szs' to patch bokeboke files." },
+
+  { T_OPT_CP,	"CUP_ICONS",	"cup-icons|cupicons",
+		"image",
+		"Load given image, convert it to TPL.CMPR and add the result as sub-files"
+		" 'button/timg/ct_icons.tpl' and as 'control/timg/ct_icons.tpl'"
+		" to files 'Channel.szs', 'MenuMulti.szs' and 'MenuSingle.szs'."
+		" Both sub-files are always linked, so that storage space is saved." },
+
+  { T_OPT_C,	"NO_COPY",	"no-copy|nocopy",
+		0,
+		"Don't copy a file if it was not modified." },
+
   { T_OPT_GP,	"CACHE",	"cache",
 		"dir",
 		"Define a directory for a SZS cache."
-		"If creating a YAZ0 compressed file with standard compression (level 9),"
+		" If creating a YAZ0 compressed file with standard compression (level 9),"
 		" the cache is searched for the compressed version."
 		" File cache-content.txt is used as file list with hash values."
 		" If the cache file is not found or the content differ,"
@@ -1611,6 +1648,11 @@
 		"Name of the first cache file."
 		" This parameter overrides the generated cache name."
 		" The name is used only once for the very first cache candidate." },
+
+  { T_OPT_G,	"PARALLEL",	"parallel",
+		0,
+		"Tell the tool that it will be called multiple times in parallel."
+		" Currently it only has an effect if {--cache} is enabled." },
 
   { T_OPT_C,	"ID",		"id",
 		0,
@@ -1667,8 +1709,14 @@
 		" This includes syntax information ({--no-header})."
 		" If set twice, the output of unneeded sections is also suppressed." },
 
+  { T_OPT_CM,	"IN_ORDER",	"in-order|inorder",
+		0,
+		"Process the input files in order of the command line"
+		" and don't delete duplicates." },
+
   { T_OPT_CM,	"PIPE",		"pipe",
-		0, "Use pipe sign instead of spaces to separate columns." },
+		0,
+		"Use pipe sign instead of spaces to separate columns." },
 
   { T_OPT_C,	"DELTA",	"delta",
 		0,
@@ -2516,6 +2564,9 @@
   { T_COPT,	"PATCH_BMG",	0,0,0 },
   { T_COPT,	"MACRO_BMG",	0,0,0 },
   { T_COPT,	"FILTER_BMG",	0,0,0 },
+  { T_COPT,	"LE_MENU",	0,0,0 },
+  { T_COPT,	"TITLE_SCREEN",	0,0,0 },
+  { T_COPT,	"CUP_ICONS",	0,0,0 },
 
   //---------- wszst GROUP DEST ----------
 
@@ -2791,6 +2842,16 @@
   { T_COPT,	"NO_HEADER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
 
+  //---------- COMMAND wszst UI_CHECK ----------
+
+  { T_CMD_BEG,	"UI_CHECK",	0,0,0 },
+
+  { T_COPT,	"LONG",		0,0,
+	"Print the result as technical list." },
+  { T_COPT,	"NO_HEADER",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+
   //---------- COMMAND wszst FILEATTRIB ----------
 
   { T_CMD_BEG,	"FILEATTRIB",	0,0,0 },
@@ -2952,6 +3013,7 @@
 	" If set three times, debugging mode is enabled." },
   { T_COPT,	"SORT",		0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPY_GRP,	"CREATE",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"NORM",		0,0,0 },
@@ -3268,6 +3330,7 @@
   { T_CMD_BEG,	"PATCH",	0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"REMOVE_SRC",	0,0,0 },
+  { T_COPT,	"NO_COPY",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"FFORMAT1",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },

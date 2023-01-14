@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -330,6 +330,7 @@ typedef struct le_lpar_t
     u8  bt_textures;		// &1: enable texture hacks for battles, &2:alternable
     u8  vs_textures;		// &1: enable texture hacks for versus, &2:alternable
     u8  block_textures;		// >0: enable blocking of recent texture hacks
+    u8  staticr_points;		// >0: use points definied by StaticR.rel
 
     u8  debug_mode;		// debug mode
     u8  debug_predef[LEDEB__N_CONFIG];
@@ -828,9 +829,9 @@ __attribute__ ((packed)) le_binpar_v1_264_t;
 _Static_assert(sizeof(le_binpar_v1_264_t)==0x264,"le_binpar_v1_264_t");
 
 //-----------------------------------------------------------------------------
-// [[le_binpar_v1_26c_t]]
+// [[le_binpar_v1_269_t]]
 
-typedef struct le_binpar_v1_26c_t
+typedef struct le_binpar_v1_269_t
 {
  /*000*/ char magic[8];			// LE_PARAM_MAGIC
  /*008*/ u32  version;			// always 1 for v1
@@ -873,21 +874,71 @@ typedef struct le_binpar_v1_26c_t
  /*267*/ u8   vs_textures;		// &1: enable texture hacks for versus, &2:alternable
  /*268*/ u8   block_textures;		// >0: enable blocking of recent texture hacks
 
- /*269*/ u8   padding_269;
- /*26a*/ u8   padding_26a;
- /*26b*/ u8   padding_26b;
-
- /*268*/
+ /*269*/
 
 }
-__attribute__ ((packed)) le_binpar_v1_26c_t;
+__attribute__ ((packed)) le_binpar_v1_269_t;
 
-_Static_assert(sizeof(le_binpar_v1_26c_t)==0x26c,"le_binpar_v1_26c_t");
+_Static_assert(sizeof(le_binpar_v1_269_t)==0x269,"le_binpar_v1_269_t");
+
+//-----------------------------------------------------------------------------
+// [[le_binpar_v1_26a_t]]
+
+typedef struct le_binpar_v1_26a_t
+{
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*008*/ u32  version;			// always 1 for v1
+ /*00c*/ u32  size;			// size (and minor version)
+ /*010*/ u32  off_eod;			// offset of end-of-data
+
+ /*014*/ u32  off_cup_par;		// offset to cup param
+ /*018*/ u32  off_cup_track;		// offset of cup-track list
+ /*01c*/ u32  off_cup_arena;		// offset of cup-arena list
+ /*020*/ u32  off_course_par;		// offset of course param
+ /*024*/ u32  off_property;		// offset of property list
+ /*028*/ u32  off_music;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of flags
+
+ /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
+ /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
+ /*034*/ u8   enable_perfmon;		// >0: performance monitor enabled; >1: for dolphin too
+ /*035*/ u8   enable_custom_tt;		// TRUE: time trial for cusotm tracks enabled
+ /*036*/ u8   enable_xpflags;		// TRUE: extended presence flags enabled
+ /*037*/ u8   block_track;		// block used track for 0.. tracks
+ /*038*/ u16  chat_mode_1[BMG_N_CHAT];	// mode for each chat message
+ /*0f8*/ u16  chat_mode_2[BMG_N_CHAT];	// mode for each chat message
+ /*1b8*/ u8   enable_speedo;		// speedometer selection (0..2), see SPEEDO_*
+ /*1b9*/ u8   no_speedo_if_debug;	// if bit is set: suppress speedometer
+ /*1ba*/ u8   debug_mode;		// debug mode (0..), see DEBUGMD_*
+ /*1bb*/ u8   item_cheat;		// 0:disabled, 1:enabled
+
+ /*1bc*/ u8   debug_predef[LEDEB__N_CONFIG];
+					// information about used predefined mode
+ /*1c0*/ u32  debug[LEDEB__N_CONFIG][LEDEB__N_LINE];
+					// debug line settings, see LEDEB_*
+
+ /*260*/ u8   cheat_mode;		// 0:off, 1:debug only, 2:allow all
+ /*261*/ u8   drag_blue_shell;		// >0: allow dragging of blue shell
+ /*262*/ u16  thcloud_frames;		// number of frames a player is small after thundercloud hit
+
+ /*264*/ u8   bt_worldwide;		// >0: enable worldwide battles
+ /*265*/ u8   vs_worldwide;		// >0: enable worldwide versus races
+ /*266*/ u8   bt_textures;		// &1: enable texture hacks for battles, &2:alternable
+ /*267*/ u8   vs_textures;		// &1: enable texture hacks for versus, &2:alternable
+ /*268*/ u8   block_textures;		// >0: enable blocking of recent texture hacks
+ /*269*/ u8   staticr_points;		// >0: use points definied by StaticR.rel
+
+ /*26a*/
+
+}
+__attribute__ ((packed)) le_binpar_v1_26a_t;
+
+_Static_assert(sizeof(le_binpar_v1_26a_t)==0x26a,"le_binpar_v1_26a_t");
 
 //-----------------------------------------------------------------------------
 // [[le_binpar_v1_t]] [[new-lpar]]
 
-typedef struct le_binpar_v1_26c_t le_binpar_v1_t;
+typedef struct le_binpar_v1_26a_t le_binpar_v1_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -943,7 +994,7 @@ typedef struct le_analyze_t
 
     uint	param_offset;	// not NULL: offset of LPAR
     uint	param_vers;	// not NULL: version number of LPAR
-    uint	param_size;	// not NULL: size told by LPAR
+    uint	param_size;	// not NULL: (max usable) param size
 
 
     //--- working data

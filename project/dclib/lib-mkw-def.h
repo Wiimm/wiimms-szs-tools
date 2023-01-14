@@ -11,7 +11,7 @@
  *                                                                      *
  *                     A library by Dirk Clemens                        *
  *                                                                      *
- *   Copyright (c) 2014-2022 by Dirk Clemens <develop@cle-mens.de>      *
+ *   Copyright (c) 2014-2023 by Dirk Clemens <develop@cle-mens.de>      *
  *                                                                      *
  ************************************************************************
  *                                                                      *
@@ -142,6 +142,58 @@ typedef enum DistribFlags_t
 DistribFlags_t;
 
 #define DB_DTA_TYPE               "smallint unsigned"
+
+//
+///////////////////////////////////////////////////////////////////////////////
+/////////////////////////////   Track Class Index   ///////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// [[TrackClassIndex_t]]
+typedef enum TrackClassIndex_t
+{
+	G_TCLSI_UNKNOWN             = 0,
+	G_TCLSI_PRIVATE             = 1,	// P: marked as private
+	G_TCLSI_TEST                = 2,	// T: marked as test
+	G_TCLSI_BAD                 = 3,	// B: marked as bad
+	G_TCLSI_FAIL                = 4,	// F: marked as fail
+	G_TCLSI_FREEZE              = 5,	// Z: marked as freeze
+	G_TCLSI_STOCK               = 6,	// K: part of stock
+	G_TCLSI_SELECT              = 7,	// S: selected track
+	G_TCLSI_NINTENDO            = 8,	// N: original Nintendo track
+	G_TCLSI_BOOST               = 9,	// O: boost track
+	G_TCLSI_INCOME              = 10,	// I: new track, not evaluated yet
+	G_TCLSI_WAIT                = 11,	// W: new track, not evaluated yet, have to wait until support
+	G_TCLSI__N                  = 12,
+}
+__attribute__ ((packed)) TrackClassIndex_t;
+
+#define DB_TRACK_CLASS_INDEX_TYPE "tinyint unsigned"
+
+//
+///////////////////////////////////////////////////////////////////////////////
+////////////////////////////////   Track Class   //////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+// [[TrackClass_t]]
+typedef enum TrackClass_t
+{
+	G_TCLS_UNKNOWN             = 0x0000,	// u: unknown at all
+	G_TCLS_PRIVATE             = 0x0002,	// P: marked as private
+	G_TCLS_TEST                = 0x0004,	// T: marked as test
+	G_TCLS_BAD                 = 0x0008,	// B: marked as bad
+	G_TCLS_FAIL                = 0x0010,	// F: marked as fail
+	G_TCLS_FREEZE              = 0x0020,	// Z: marked as freeze
+	G_TCLS_STOCK               = 0x0040,	// K: part of stock
+	G_TCLS_SELECT              = 0x0080,	// S: selected track
+	G_TCLS_NINTENDO            = 0x0100,	// N: original Nintendo track
+	G_TCLS_BOOST               = 0x0200,	// O: boost track
+	G_TCLS_INCOME              = 0x0400,	// I: new track, not evaluated yet
+	G_TCLS_WAIT                = 0x0800,	// W: new track, not evaluated yet, have to wait until support
+	G_TCLS__ALL                = 0x0fff,
+}
+__attribute__ ((packed)) TrackClass_t;
+
+#define DB_TRACK_CLASS_TYPE       "smallint unsigned"
 
 //
 ///////////////////////////////////////////////////////////////////////////////

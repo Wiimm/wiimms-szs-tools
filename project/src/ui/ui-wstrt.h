@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -596,7 +596,7 @@ typedef enum enumGetOpt
 //extern const struct option OptionLong[];
 //extern u8 OptionUsed[OPT__N_TOTAL+1];
 //extern const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE];
-//UIOPT_INDEX_SIZE := 0x136 = 310
+//UIOPT_INDEX_SIZE := 0x140 = 320
 //extern const InfoCommand_t CommandInfo[CMD__N+1];
 extern const InfoUI_t InfoUI_wstrt;
 

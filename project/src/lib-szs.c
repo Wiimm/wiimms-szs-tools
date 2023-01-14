@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -50,6 +50,7 @@
 #include "lib-image.h"
 #include "lib-bzip2.h"
 #include "lib-checksum.h"
+#include "dclib-utf8.h"
 #include "crypt.h"
 
 //
@@ -2159,10 +2160,18 @@ enumError CompressBZ ( szs_file_t * szs, bool remove_uncompressed )
 ///////////////			create u8			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void PrintFileHeadSZS()
+int PrintFileHeadSZS ( int fw_name )
 {
-    printf("\n idx     offset/hex  size/hex size/dec magic f.form vers file or directory\n"
-	   "%.119s\n", Minus300 );
+    if ( fw_name <= 0 )
+	fw_name = 62;
+    if ( fw_name <= 17 )
+	fw_name = 17;
+    fw_name += 58;
+
+    printf("\n%s idx     offset/hex  size/hex size/dec magic f.form vers file or directory\n"
+	   "%s%.*s%s\n",
+	   colout->heading, colout->heading, 3*fw_name, ThinLine300_3, colout->reset );
+    return fw_name;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2171,7 +2180,7 @@ void PrintVersionSZS ( char *buf, uint buf_size, struct szs_iterator_t *it )
 {
     DASSERT(buf);
     DASSERT(it);
-    *buf =  0;
+    *buf = 0;
 
 // [[version-suffix]]
 
@@ -2263,6 +2272,7 @@ enumError CreateU8
     bool		create_pt_dir	// create directory '.' as base
 )
 {
+    DASSERT(szs);
     PRINT("CreateU8() namesize=%x, totsize=%x, align=%x, .dir=%d\n",
 		namepool_size, total_size, opt_align_u8, create_pt_dir );
 
@@ -2475,9 +2485,7 @@ enumError CreateU8
     DASSERT_MSG( name_ptr == name_pool + namepool_size,
 		"name pool underflow: %zx/%x\n", name_ptr - name_pool, namepool_size );
 
-    if (u8link)
-	FREE(u8link);
-
+    FREE(u8link);
     ClearSpecialFilesSZS(szs);
 
 
@@ -2491,6 +2499,22 @@ enumError CreateU8
     }
 
     return max_err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CreateU8ByInfo
+(
+    szs_file_t		* szs,		// valid szs
+    ccp			source_dir,	// NULL or path to source dir
+    u8			* source_data,	// NULL or source data
+    szs_u8_info_t	* u8info	// valid data
+)
+{
+    DASSERT(szs);
+    DASSERT(u8info);
+    return CreateU8( szs, source_dir, source_data,
+		u8info->namepool_size, u8info->total_size, u8info->have_pt_dir );
 }
 
 //
@@ -2938,6 +2962,194 @@ enumError LoadRawData
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			    UI-Check			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+
+const char ui_type_char[UIT__N+1] = "?-ACEFGMOSPRTl";
+
+const ccp ui_type_name[UIT__N+1] =
+{
+    "?",
+    "-",
+    "Award",
+    "Channel",
+    "Event",
+    "Font",
+    "Globe",
+    "MenuMulti",
+    "MenuOther",
+    "MenuSingle",
+    "Present",
+    "Race",
+    "Title",
+    "language",
+    0
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetUiTypeColor ( const ColorSet_t *colset, ui_type_t type )
+{
+    if (!colset)
+	return "";
+
+    switch(type)
+    {
+	case UIT_UNDEFINED: return colset->bad;
+	case UIT_UNKNOWN:   return colset->warn;
+	case UIT_LANGUAGE:  return colset->hint;
+	case UIT_FONT:      return colset->mark;
+	default:	    return colset->info;
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static int ui_check_func
+(
+    struct szs_iterator_t	*it,	// iterator struct with all infos
+    bool			term	// true: termination hint
+)
+{
+    DASSERT(it);
+    if (term)
+	return 0;
+
+    ui_check_t *uc = it->param;
+    DASSERT(uc);
+
+    ccp path = it->path;
+    if( path[0] == '.' && path[1] == '/' )
+	path += 2;
+
+    if (!strcmp(path,"message/Common.bmg"))
+    {
+	uc->is_ui = OFFON_OFF;
+	uc->is_korean = OFFON_AUTO;
+	uc->type = UIT_LANGUAGE;
+	return 1;
+    }
+
+    if ( uc->is_korean == OFFON_AUTO && strstr(path,"/blyt/national_flag.brlyt") )
+    {
+	if ( it->size == 232 )
+	    uc->is_korean = OFFON_ON;
+	else if ( it->size == 16380 )
+	    uc->is_korean = OFFON_OFF;
+    }
+
+    if ( uc->is_korean == OFFON_AUTO && strstr(path,"/blyt/chara_flag_machine_picture_common.brlyt") )
+    {
+	if ( it->size == 232 )
+	    uc->is_korean = OFFON_ON;
+	else if ( it->size == 33120 )
+	    uc->is_korean = OFFON_OFF;
+    }
+
+    if (!memcmp(path,"title/timg/tt_title_screen_peachi",33))
+    {
+	uc->type = UIT_TITLE;
+	if ( uc->is_korean != OFFON_AUTO )
+	    return 1;
+    }
+
+    if (!strcmp(path,"indicator_font.brfnt"))
+    {
+	uc->is_korean = OFFON_OFF;
+	uc->type = UIT_FONT;
+	return 1;
+    }
+
+    if (!strcmp(path,"parameter/mission_ui_single.bin"))
+    {
+	uc->type = UIT_MENU_SINGLE;
+	if ( uc->is_korean != OFFON_AUTO )
+	    return 1;
+    }
+
+    if (!strcmp(path,"button/ctrl/AfterMenuBT.brctr"))
+    {
+	uc->type = UIT_RACE;
+	return 1;
+    }
+
+    if (!strcmp(path,"control/blyt/present_message_window_course.brlyt"))
+    {
+	uc->type = UIT_PRESENT;
+	return 1;
+    }
+
+    if (!strcmp(path,"globe/timg/tt_star_01.tpl"))
+    {
+	uc->type = UIT_GLOBE;
+	return 1;
+    }
+
+    if (it->is_dir)
+    {
+	if (!strcmp(path,"award/"))
+	    uc->type = UIT_AWARD;
+	else if (!strcmp(path,"ranking/ctrl/"))
+	{
+	    uc->type = UIT_CHANNEL;
+	    return 1;
+	}
+    }
+
+    if (!strcmp(path,"bg/anim/option_bg_Loop.brlan"))
+	uc->possible &= UIT_M_CHANNEL | UIT_M_MENU_OTHER;
+
+    if (!strcmp(path,"bg/ctrl/EventObiTop.brctr"))
+	uc->possible &= UIT_M_CHANNEL | UIT_M_EVENT;
+
+    if (!strcmp(path,"control/timg/tt_baby_daisy_64x64.tpl"))
+	uc->possible &= UIT_M_CUP_ICONS;
+
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void UiCheck ( ui_check_t *uc, szs_file_t *szs )
+{
+    DASSERT(ui);
+    DASSERT(szs);
+    memset(uc,0,sizeof(*uc));
+    uc->type = UIT_UNKNOWN;
+    uc->possible = UIT_M_ALL;
+
+    IterateFilesParSZS(szs,ui_check_func,uc,false,false,-1,-1,SORT_NONE);
+
+    if ( uc->is_korean == OFFON_ON && uc->is_ui == OFFON_AUTO )
+	uc->is_ui = OFFON_ON;
+
+    if ( uc->type <= UIT_UNKNOWN )
+    {
+	if ( uc->possible == (UIT_M_CHANNEL|UIT_M_EVENT) )
+	    uc->type = UIT_EVENT;
+	if ( uc->possible == (UIT_M_CHANNEL|UIT_M_MENU_OTHER) )
+	    uc->type = UIT_MENU_OTHER;
+	if ( uc->possible == (UIT_M_CHANNEL|UIT_M_MENU_MULTI|UIT_M_MENU_SINGLE) )
+	    uc->type = UIT_MENU_MULTI;
+
+	for ( ui_type_t type = 1; type < UIT__N; type++ )
+	{
+	    const uint mask = 1 << type;
+	    if ( uc->possible == mask )
+	    {
+		uc->type = type;
+		break;
+	    }
+	}
+    }
+
+    if (uc->type)
+	uc->possible = 1 << uc->type;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			IterateFilesU8()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2996,11 +3208,7 @@ int IterateFilesU8
 
     //----- cut files?
 
- #if USE_ITERATOR_PARAM
     if (it->itpar.cut_files)
- #else
-    if (it->cut_files)
- #endif
     {
 	it->index	= 0;
 	it->fst_item	= 0;
@@ -3039,11 +3247,7 @@ int IterateFilesU8
 
     int stat = 0;
     const u8_node_t *fst;
- #if USE_ITERATOR_PARAM
     for ( fst = fst_base + !it->itpar.show_root_node; fst < fst_end && !stat; fst++ )
- #else
-    for ( fst = fst_base + !it->show_root_node; fst < fst_end && !stat; fst++ )
- #endif
     {
 	while ( fst >= dir_end && stack > stack_buf )
 	{
@@ -3057,7 +3261,6 @@ int IterateFilesU8
 	ccp fname = (ccp)fst_end + (ntohl(fst->name_off)&0xffffff);
 	it->name = fname;
 	char *path_dest = it->trail_path = path_ptr;
- #if USE_ITERATOR_PARAM
 	while ( path_dest < path_end && *fname )
 	{
 	    const char ch = *fname++;
@@ -3067,16 +3270,6 @@ int IterateFilesU8
 	if ( it->itpar.clean_path && path_dest == path_ptr+2
 			&& path_ptr[0] == '.' && path_ptr[1] == '.' )
 	    path_dest--;
- #else
-	while ( path_dest < path_end && *fname )
-	{
-	    const char ch = *fname++;
-	    if ( ch != '\\' && ch != '/' || !it->clean_path )
-		*path_dest++ = ch;
-	}
-	if ( it->clean_path && path_dest == path_ptr+2 && path_ptr[0] == '.' && path_ptr[1] == '.' )
-	    path_dest--;
- #endif
 
 	it->index	= fst - fst_base;
 	it->fst_item	= (u8_node_t*)fst;
@@ -3243,11 +3436,7 @@ static int iterate_sort_files
 	return 0;
     }
 
- #if USE_ITERATOR_PARAM
     SortSubFilesSZS(it->szs,it->itpar.sort_mode);
- #else
-    SortSubFilesSZS(it->szs,it->sort_mode);
- #endif
 
     const szs_subfile_t * ptr = it->szs->subfile.list;
     const szs_subfile_t * end = ptr + it->szs->subfile.used;
@@ -3323,17 +3512,9 @@ static int iterate_sub_files
 	szs_iterator_func it_func = 0;
 	if ( it->recurse_level < it->recurse_max )
 	{
-	 #if USE_ITERATOR_PARAM
 	    it_func = GetIteratorFunction(fform,it->itpar.cut_files);
-	 #else
-	    it_func = GetIteratorFunction(fform,it->cut_files);
-	 #endif
 	}
-     #if USE_ITERATOR_PARAM
 	else if ( it->itpar.cut_files )
-     #else
-	else if ( it->cut_files )
-     #endif
 	{
 	    it_func = GetIteratorFunction(fform,true);
 	    if (GetIteratorFunction(fform,false))
@@ -3413,15 +3594,7 @@ int IterateFilesSZS
 
     szs_iterator_t it = {0};
     it.szs		= szs;
- #if USE_ITERATOR_PARAM
     it.itpar		= itpar;
- #else
-    it.cut_files	= itpar->cut_files > 0;
-    it.sort_mode	= itpar->sort_mode;
-    it.clean_path	= itpar->clean_path;
-    it.show_root_node	= itpar->show_root_node;
- #endif
-
     it.func_sub		= func;
     it.func_sort	= recurse || itpar.cut_files ? iterate_sub_files : func;
     it.func_it		= sort_files ? iterate_sort_files : it.func_sort;
@@ -3456,49 +3629,12 @@ int IterateFilesParSZS
     DASSERT(szs);
     DASSERT(func);
 
- #if USE_ITERATOR_PARAM
     iterator_param_t itpar	= {0};
     itpar.cut_files		= cut_files > 0;
     itpar.sort_mode		= sort_mode;
     itpar.clean_path		= clean_path;
     itpar.show_root_node	= show_root_node;
     return IterateFilesSZS(szs,func,param,&itpar,recurse);
- #else
-    PRINT("IterateFilesParSZS(clean=%d,rec=%d,cut=%d,sort=%d) ff=%s\n",
-	clean_path,recurse, cut_files, sort_mode,
-	GetNameFF(szs->fform_file,szs->fform_arch));
-
-    szs_iterator_func ifunc = GetIteratorFunction(szs->fform_arch,cut_files>=0);
-    if (!ifunc)
-	return -1;
-
-    if ( sort_mode == SORT_NONE && IsBRSUB(szs->fform_arch) )
-	sort_mode = SORT_OFFSET;
-    const bool sort_files = sort_mode != SORT_NONE;
-    if ( sort_files && szs->subfile.used )
-	ResetFileSZS(szs,false);
-
-    szs_iterator_t it = {0};
-    it.szs		= szs;
-    it.cut_files	= cut_files > 0;
-    it.sort_mode	= sort_mode;
-    it.func_sub		= func;
-    it.func_sort	= recurse || it.cut_files ? iterate_sub_files : func;
-    it.func_it		= sort_files ? iterate_sort_files : it.func_sort;
-    it.param		= param;
-    it.endian		= &be_func;
-    it.clean_path	= clean_path;
-    it.show_root_node	= show_root_node;
-    it.recurse_max	= recurse >= 0 ? recurse : INT_MAX;
-    it.group		= GROUP_INVALID;
-    it.entry		= ENTRY_INVALID;
-
-    const int stat = ifunc(&it,false);
-    it.name = 0;
-    *it.path = 0;
-    const int stat_term = it.func_it(&it,true);
-    return stat ? stat : stat_term;
- #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3549,6 +3685,7 @@ static int collect_r_func
 {
     DASSERT(it);
     DASSERT(it->szs);
+    szs_file_t *szs = it->szs;
 
     collect_recurse_t *cr = it->param;
     DASSERT(cr);
@@ -3588,6 +3725,20 @@ static int collect_r_func
 	StringCopyE(cr->path_end,cr->path+sizeof(cr->path),it->path);
 	cr->last_off = it->off + cr->add_off;
 
+	const int path_len = strlen8(it->path);
+	if (it->is_dir)
+	{
+	    szs->n_dirs++;
+	    if ( szs->fw_dirs < path_len )
+		 szs->fw_dirs = path_len;
+	}
+	else
+	{
+	    szs->n_files++;
+	    if ( szs->fw_files < path_len )
+		 szs->fw_files = path_len;
+	}
+
 	szs_subfile_t * file = AppendSubfileSZS(cr->szs,it,STRDUP(cr->path));
 	DASSERT(file);
 	file->offset = cr->last_off;
@@ -3615,6 +3766,11 @@ uint CollectFilesSZS
 	ResetFileSZS(szs,false);
     const uint base = szs->subfile.used;
     DecompressSZS(szs,true,0);
+
+    szs->n_dirs		= 0;
+    szs->n_files	= 0;
+    szs->fw_dirs	= 0;
+    szs->fw_files	= 0;
 
     if ( recurse < 0 || recurse > MAX_COLLECT_RECURSE )
 	recurse = MAX_COLLECT_RECURSE;
@@ -3844,11 +4000,7 @@ int CutFilesBRSUB
 				(brsub_header_t*)data,n_grp,it->endian);
     u32 name_off = bcut.endian->rd32(data+brsub_header_size-4);
     ccp name_str = GETSTR(name_off,0);
- #if USE_ITERATOR_PARAM
     if (it->itpar.cut_files)
- #else
-    if (it->cut_files)
- #endif
     {
 	it->name = name_str;
 	stat = func(&bcut,GROUP_IDX_BRSUB_HEADER,ENTRY_IDX_ETC);
@@ -3896,11 +4048,7 @@ int CutFilesBRSUB
 	    if ( x_size > bg_size )
 		goto plain;
 
-	 #if USE_ITERATOR_PARAM
 	    if (it->itpar.cut_files)
-	 #else
-	    if (it->cut_files)
-	 #endif
 	    {
 		bcut.path_end = it->path
 		    + snprintf(it->path,sizeof(it->path),".%s.s%0*u%s.header.n%u.bin",
@@ -3993,11 +4141,7 @@ int CutFilesBRSUB
 	}
     }
 
- #if USE_ITERATOR_PARAM
     if ( it->itpar.cut_files && bcut.brsub_size < bcut.size )
- #else
-    if ( it->cut_files && bcut.brsub_size < bcut.size )
- #endif
     {
 	it->off	 = bcut.brsub_size;
 	it->size = bcut.size - bcut.brsub_size;

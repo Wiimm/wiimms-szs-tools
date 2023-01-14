@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2023 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -484,11 +484,23 @@ typedef ccp (*PrintLEFL_func) ( le_flags_t flags, bool aligned );
 static inline PrintLEFL_func GetPrintLEFL ( uint flags_bits )
 	{ return flags_bits == 16 ? PrintLEFL16 : PrintLEFL8; }
 
-//-----------------------------------------------------------------------------
-// distrib flags (G_DTA_*)
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			distribution flags		///////////////
+///////////////////////////////////////////////////////////////////////////////
 
 DistribFlags_t ScanDTA ( ccp text );
 ccp PrintDTA ( DistribFlags_t flags, bool aligned );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			track class			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+TrackClass_t	ScanTrackClass		( ccp text, int text_len );
+ccp		PrintTrackClass		( TrackClass_t flags, bool aligned );
+TrackClassIndex_t GetTrackClassIndex	( TrackClass_t flags );
+ccp		GetTrackClassName	( TrackClassIndex_t idx, ccp return_on_none );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

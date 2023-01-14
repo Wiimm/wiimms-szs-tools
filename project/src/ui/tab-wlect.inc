@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -48,7 +48,7 @@
   //
   //---------- list of all wlect commands ----------
 
-  { T_DEF_CMD,	"VERSION",	"VERSION",
+  { T_DEF_CMD,	"VERSION",	"VERSION|V",
 		    "wlect VERSION [ignored]...",
 		0 /* copy of wszst */ },
 
@@ -191,10 +191,9 @@
 		"This command manages data for LE-CODE track distributions."
 		" It reads any number of source files with different file types,"
 		" collects the data and creates any number of files with different file types."
+		" Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for details."
 		"\n "
-		" Use the command without keyword to get an extended description."
-		"\n "
-		"This command is still under development. Its use is therefore EXPERIMENTAL!" },
+		" Use the command without keyword to get an extended description." },
 
   { T_DEF_CMD,	"CAT",		"CAT",
 		    "wlect CAT [source]...",

@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -721,7 +721,7 @@ static enumError CalcImageBlock
     if ( calc_only || xwidth > 0 && xheight > 0 && size <= img->data_size )
 	return ERR_OK;
 
-    PRINT("h=%u,%u,%u  v=%u,%u,%u, size=%u/%u <= %x/%x\n",
+    PRINT1("h=%u,%u,%u  v=%u,%u,%u, size=%u/%u <= %x/%x\n",
 		img->width, block_width, xwidth,
 		img->height, block_height, xheight,
 		size, img->data_size, size, img->data_size );

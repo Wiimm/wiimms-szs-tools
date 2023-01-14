@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -236,10 +236,12 @@ int IsSSChecksum ( sha1_size_t *res, ccp source, int slen )
 
 ccp		szs_cache_dir		= 0;
 ParamField_t	szs_cache		= {0};
+ParamField_t	szs_cache_append	= {0};
 
 static bool	szs_cache_loaded	= false;
 static bool	szs_cache_dirty		= false;
 static u64	szs_cache_last_scan	= 0;
+//static u64	szs_cache_last_append	= 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -299,7 +301,7 @@ void ScanSZSCache ( ccp dir_name, bool purge )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError LoadSZSCache()
+enumError LoadSZSCache(void)
 {
     if ( szs_cache_loaded || !szs_cache_dir )
 	return ERR_OK;
@@ -314,6 +316,9 @@ enumError LoadSZSCache()
     enumError err = OpenFile(&F,true,path,FM_SILENT,0,0);
     if (err)
 	return err;
+
+    const typeof(parallel_count) saved_parallel_count = parallel_count;
+    parallel_count = 0;
 
     while (fgets(buf,sizeof(buf)-1,F.f))
     {
@@ -351,6 +356,8 @@ enumError LoadSZSCache()
 		*name = 0;
 		if (!strcmp(name_buf,"LAST-CACHE-SCAN"))
 		    szs_cache_last_scan = strtoul(ptr,0,10);
+	//	else if (!strcmp(name_buf,"APPEND"))
+	//	    szs_cache_last_append = strtoul(ptr,0,10);
 	    }
 	    continue;
 	}
@@ -373,6 +380,8 @@ enumError LoadSZSCache()
     }
 
     CloseFile(&F,0);
+    parallel_count = saved_parallel_count;
+
     return ERR_OK;
 }
 
@@ -393,6 +402,9 @@ static int cmp_szs_cache ( const void * va, const void * vb )
 
 enumError SaveSZSCache()
 {
+    if ( parallel_count > 0 )
+	return AppendSZSCache();
+
     if ( !szs_cache_dir || !szs_cache_dirty )
 	return ERR_NOTHING_TO_DO;
     szs_cache_dirty = false;
@@ -447,6 +459,41 @@ enumError SaveSZSCache()
 	}
 
 	FREE(list);
+    }
+
+    CloseFile(&F,0);
+    return ERR_OK;
+}
+
+//-----------------------------------------------------------------------------
+
+enumError AppendSZSCache()
+{
+    if ( !szs_cache_dir || !szs_cache_append.used)
+	return ERR_NOTHING_TO_DO;
+
+    char path_buf[PATH_MAX];
+    ccp path = PathCatPP(path_buf,sizeof(path_buf),szs_cache_dir,SZS_CACHE_FNAME);
+    PRINT("SaveSZSCache() N=%u, %s\n",szs_cache.used,path);
+
+    File_t F;
+    enumError err = CreateFile(&F,true,path,FM_APPEND);
+    if (err)
+	return err;
+
+    time_t tim = time(0);
+    if ( tim >= F.st.st_mtime + 10 )
+    {
+	char tbuf[50];
+	struct tm *tm = localtime(&tim);
+	strftime(tbuf,sizeof(tbuf),"%F %T %z",tm);
+	fprintf(F.f,"\n@APPEND = %s\n",tbuf);
+    }
+
+    for ( int i = 0; i < szs_cache_append.used; i++ )
+    {
+	const ParamFieldItem_t *it = szs_cache_append.field+i;
+	fprintf(F.f,"%s %s\n",it->key,(ccp)it->data);
     }
 
     CloseFile(&F,0);
@@ -513,7 +560,8 @@ ParamFieldItem_t * StoreSZSCache
     }
 
     bool found;
-    ParamFieldItem_t *it = FindInsertParamField(&szs_cache,checksum,false,0,&found);
+    ParamField_t *the_cache = parallel_count > 0 ? &szs_cache_append : &szs_cache;
+    ParamFieldItem_t *it = FindInsertParamField(the_cache,checksum,false,0,&found);
     if (found)
     {
 	DASSERT(it);
@@ -526,7 +574,7 @@ ParamFieldItem_t * StoreSZSCache
 	if (r_exists)
 	    *r_exists = true;
 
-	if ( !rename_file || !fname || !strcmp(fname,(ccp)it->data) )
+	if ( parallel_count > 0 || !rename_file || !fname || !strcmp(fname,(ccp)it->data) )
 	    return it;
 
 	if (!path)

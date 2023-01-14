@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -819,6 +819,16 @@ enumError CreateFileOpt
 					// if fname == srcfile: overwrite enabled
 );
 
+enumError CreateFileOptAppend
+(
+    File_t		* f,		// file structure
+    bool		initialize,	// true: initialize 'f'
+    ccp			fname,		// file to open
+    bool		testmode,	// true: don't open
+    ccp			srcfile		// NULL or src file name
+					// if fname == srcfile: overwrite enabled
+);
+
 enumError AppendFILE
 (
     File_t		* f,		// file structure
@@ -1608,6 +1618,13 @@ int AddParam ( ccp arg );
 void AtExpandParam ( ParamList_t ** param );
 void AtExpandAllParam ( ParamList_t ** first_param );
 
+void CollectExpandParam
+(
+    StringField_t   *plist,	// insert or append (inorder_count>0) to this list
+    ParamList_t	    *param,	// first param to add
+    int		    max		// max num of param to add; -1: add all param
+);
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			general list support		///////////////
@@ -1696,9 +1713,13 @@ static inline uint GetStrIdxCountMIL ( const MemItem_t * mi )
   void NormalizeFilenameParam ( ParamList_t *param );
   #define NORMALIZE_FILENAME_PARAM(p) NormalizeFilenameParam(p)
 
+  void NormalizeFilenameParamList ( ParamList_t *param );
+  #define NORMALIZE_FILENAME_PARAM_LIST(p) NormalizeFilenameParamList(p)
+
 #else
 
   #define NORMALIZE_FILENAME_PARAM(p)
+  #define NORMALIZE_FILENAME_PARAM_LIST(p)
 
 #endif // __CYGWIN__
 
@@ -2277,6 +2298,7 @@ typedef struct sha1_reference_t
 	    u16 clan;
 	};
     };
+    TrackClass_t tclass;
 }
 sha1_reference_t;
 
@@ -2649,6 +2671,8 @@ extern const u8 TestDataLEX[8*1];
 ///////////////			    vars			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+typedef struct Image_t Image_t;
+
 extern ccp		opt_config;
 extern bool		opt_no_pager;
 extern ccp		config_path;
@@ -2680,6 +2704,7 @@ extern StringField_t	source_list;
 extern ccp		opt_reference;
 extern ccp		opt_dest;
 extern bool		opt_mkdir;
+extern bool		opt_append;
 extern bool		opt_overwrite;
 extern bool		opt_number;
 extern bool		opt_remove_src;
@@ -2723,10 +2748,12 @@ extern EncodeMode_t	opt_coding64;
 extern bool		opt_verify;
 extern ccp		opt_cache;
 extern ccp		opt_cname;
+extern int		parallel_count;
 extern bool		opt_round;
 extern int		brief_count;
 extern int		long_count;
 //extern int		full_count;
+extern int		inorder_count;
 extern int		pipe_count;
 extern int		delta_count;
 extern int		diff_count;
@@ -2735,11 +2762,15 @@ extern int		export_count;
 extern int		all_count;
 extern bool		raw_mode;
 extern SortMode_t	opt_sort;
+extern bool		opt_le_menu;
+extern ccp		opt_cup_icons;
+extern ccp		opt_title_screen;
 extern u32		opt_max_file_size;
 extern int		opt_compr_mode;
 extern u32		opt_compr;
 extern bool		opt_norm;
 extern int		need_norm;		// enabled if > 0
+extern bool		opt_no_copy;
 extern bool		opt_fast;
 extern char		*opt_basedir;
 extern int		opt_recurse;

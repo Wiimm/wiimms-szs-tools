@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1312,6 +1312,7 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
     lp->bt_textures		&= LE_M_TEXTURE;
     lp->vs_textures		&= LE_M_TEXTURE;
     lp->block_textures		= lp->block_textures > 0;
+    lp->staticr_points		= lp->staticr_points > 0;
 
     if ( build >= 37 )
     {
@@ -1414,6 +1415,8 @@ static void CopyLPAR2Data ( le_analyze_t * ana )
 	h->vs_textures = lp->vs_textures;
     if ( offsetof(le_binpar_v1_t,block_textures) < ana->param_size )
 	h->block_textures = lp->block_textures;
+    if ( offsetof(le_binpar_v1_t,staticr_points) < ana->param_size )
+	h->staticr_points = lp->staticr_points;
 
     // [[new-lpar]]
 }
@@ -1570,6 +1573,7 @@ enumError WriteSectionLPAR
 		,lpar_std_flags( lpar->bt_textures & LE_M_TEXTURE )
 		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
 		,lpar->block_textures
+		,lpar->staticr_points
 		);
     }
     else
@@ -1595,6 +1599,7 @@ enumError WriteSectionLPAR
 	       "BT-TEXTURES	= %s\r\n"
 	       "VS-TEXTURES	= %s\r\n"
 	       "BLOCK-TEXTURES	= %u\r\n"
+	       "STATICR-POINTS	= %u\r\n"
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
 		,lpar->cheat_mode
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
@@ -1613,6 +1618,7 @@ enumError WriteSectionLPAR
 		,lpar_std_flags( lpar->bt_textures & LE_M_TEXTURE )
 		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
 		,lpar->block_textures
+		,lpar->staticr_points
 		);
     }
 
@@ -1954,15 +1960,21 @@ enumError AnalyzeLEBinary
 	&& !memcmp(data+off_param,LE_PARAM_MAGIC,4) )
     {
 	le_binary_param_t *param = (le_binary_param_t*)(data+off_param);
-	const uint param_size = ntohl(param->size);
+	uint param_size = ntohl(param->size);
 	if (   off_param + param_size <= data_size
 	    && off_param + param_size <= ana->data_size )
 	{
+	    if ( ntohl(head->v3.build_number) < 37 && param_size >= sizeof(le_binpar_v1_269_t) )
+	    {
+		param_size = sizeof(le_binpar_v1_269_t);
+		param->size = htonl(param_size);
+	    }
+
+	    ana->param_size	= param_size;
 	    ana->valid		|= LE_PARAM_FOUND;
 	    ana->param		= param;
 	    ana->param_offset	= off_param;
 	    ana->param_vers	= ntohl(param->version);
-	    ana->param_size	= param_size;
 
 	    const uint max_off = ana->data_size - off_param;
 
@@ -2062,14 +2074,20 @@ enumError AnalyzeLEBinary
 //		    ana->lpar.thcloud_frames	= 300;
 //		}
 
-		if ( param_size >= sizeof(le_binpar_v1_26c_t) )
+		if ( param_size >= sizeof(le_binpar_v1_269_t) )
 		{
-		    le_binpar_v1_26c_t *p	= (le_binpar_v1_26c_t*)(data+off_param);
+		    le_binpar_v1_269_t *p	= (le_binpar_v1_269_t*)(data+off_param);
 		    ana->lpar.bt_worldwide	= p->bt_worldwide;
 		    ana->lpar.vs_worldwide	= p->vs_worldwide;
 		    ana->lpar.bt_textures	= p->bt_textures;
 		    ana->lpar.vs_textures	= p->vs_textures;
 		    ana->lpar.block_textures	= p->block_textures;
+		}
+
+		if ( param_size >= sizeof(le_binpar_v1_26a_t) )
+		{
+		    le_binpar_v1_26a_t *p	= (le_binpar_v1_26a_t*)(data+off_param);
+		    ana->lpar.staticr_points	= p->staticr_points;
 		}
 
 		// [[new-lpar]]
@@ -3208,7 +3226,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		);
 	}
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_26c_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_269_t)  )
 	{
 	    fprintf(f,
 		"%*s" "Worldwide:         battle=%s, versus=%s\n"
@@ -3221,6 +3239,14 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 			,ana_std_flags( h->bt_textures & LE_M_TEXTURE )
 			,ana_std_flags( h->vs_textures & LE_M_TEXTURE )
 		,indent,"", h->block_textures
+		);
+	}
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_26a_t)  )
+	{
+	    fprintf(f,
+		"%*s" "Points by StaticR: %u\n"
+		,indent,"", h->staticr_points
 		);
 	}
 
@@ -3932,6 +3958,7 @@ static enumError ScanTextLPAR_PARAM
 	{ "BT-TEXTURES",	SPM_U8,  &lpar->bt_textures },
 	{ "VS-TEXTURES",	SPM_U8,  &lpar->vs_textures },
 	{ "BLOCK-TEXTURES",	SPM_U8,  &lpar->block_textures },
+	{ "STATICR-POINTS",	SPM_U8,  &lpar->staticr_points },
 
 	// [[new-lpar]]
 	{0}

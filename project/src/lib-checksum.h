@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -99,8 +99,9 @@ static inline bool IsSZSCacheEnabled()
 void SetupSZSCache ( ccp dir_name, bool use_dirname );
 
 void ScanSZSCache ( ccp dir_name, bool purge );
-enumError LoadSZSCache();
-enumError SaveSZSCache();
+enumError LoadSZSCache(void);
+enumError SaveSZSCache(void);
+enumError AppendSZSCache(void);
 
 ParamFieldItem_t * StoreSZSCache
 (

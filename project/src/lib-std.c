@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -104,6 +104,7 @@ StringField_t	source_list		= {0};
 ccp		opt_reference		= 0;
 ccp		opt_dest		= 0;
 bool		opt_mkdir		= false;
+bool		opt_append		= false;
 bool		opt_overwrite		= false;
 bool		opt_number		= false;
 bool		opt_remove_src		= false;
@@ -147,10 +148,12 @@ EncodeMode_t	opt_coding64		= ENCODE_OFF;
 bool		opt_verify		= false;
 ccp		opt_cache		= 0;
 ccp		opt_cname		= 0;
+int		parallel_count		= 0;
 bool		opt_round		= false;
 int		brief_count		= 0;
 int		long_count		= 0;
 //int		full_count		= 0;
+int		inorder_count		= 0;
 int		pipe_count		= 0;
 int		delta_count		= 0;
 int		diff_count		= 0;
@@ -159,11 +162,15 @@ int		export_count		= 0;
 int		all_count		= 0;
 bool		raw_mode		= false;
 SortMode_t	opt_sort		= SORT_NONE;
+bool		opt_le_menu		= false;
+ccp		opt_cup_icons		= 0;
+ccp		opt_title_screen	= 0;
 u32		opt_max_file_size	= 100*MiB;
 int		opt_compr_mode		= 0;
 u32		opt_compr		= 9;
 bool		opt_norm		= false;
 int		need_norm		= 0;	// enabled if > 0
+bool		opt_no_copy		= false;
 bool		opt_fast		= false;
 char		*opt_basedir		= 0;
 int		opt_recurse		= -1;
@@ -2500,6 +2507,33 @@ void AtExpandAllParam ( ParamList_t ** p_param )
 	    AtExpandParam(p_param);
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+void CollectExpandParam
+(
+    StringField_t   *plist,	// insert or append (inorder_count>0) to this list
+    ParamList_t	    *param,	// first param to add
+    int		    max		// max num of param to add; -1: add all param
+)
+{
+    if ( plist && param && max )
+    {
+	for ( ; param; param = param->next )
+	{
+	    if (*param->arg)
+	    {
+		NORMALIZE_FILENAME_PARAM(param);
+		if ( inorder_count > 0 )
+		    AppendStringFieldExpand(plist,param->arg,0,false);
+		else
+		    InsertStringFieldExpand(plist,param->arg,0,false);
+	    }
+	    if (!--max)
+		break;
+	}
+    }
+}
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			tiny support			///////////////
@@ -4011,13 +4045,7 @@ enumError cmd_error()
 
 enumError cmd_filetype()
 {
- #ifdef __CYGWIN__
-    {
-	ParamList_t *param;
-	for ( param = first_param; param; param = param->next )
-	    NORMALIZE_FILENAME_PARAM(param);
-    }
- #endif
+    NORMALIZE_FILENAME_PARAM_LIST(first_param);
 
     if (print_header)
     {

@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1200,18 +1200,29 @@ enumError SaveIMG
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError SaveTPL
+void ResetRawTPL ( tpl_raw_t *raw )
+{
+    if (raw)
+    {
+	for ( int i = 0; i < raw->n_image; i++ )
+	    ResetMMI(raw->mmi+i);
+	FREE(raw->mmi);
+	FreeString(raw->data.ptr);
+	memset(raw,0,sizeof(*raw));
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+enumError CreateRawTPL
 (
-    Image_t		* src_img,	// pointer to valid source img
-    FILE		*f,		// output file, if NULL then use fname+overwrite
-    ccp			fname,		// filename of source
-    bool		overwrite	// true: force overwriting
+    tpl_raw_t	* raw,		// results with alloced data
+    Image_t	* src_img	// pointer to valid source img
 )
 {
     DASSERT(src_img);
-    DASSERT(fname);
-
-    PRINT("SaveTPL(o=%d) %s\n", overwrite, fname );
+    DASSERT(raw);
+    memset(raw,0,sizeof(*raw));
 
 
     //--- special handling for cup icons
@@ -1223,16 +1234,18 @@ enumError SaveTPL
     //--- setup images
 
     u8 *data = 0;
-    const int n_image = CountMipmapsIMG(src_img) + 1;
-    mipmap_info_t *mmi = CALLOC(n_image,sizeof(*mmi));
-    enumError err = ERR_OK;
+    const int n_image	= CountMipmapsIMG(src_img) + 1;
+    mipmap_info_t *mmi	= CALLOC(n_image,sizeof(*mmi));
+    raw->n_image	= n_image;
+    raw->mmi		= mmi;
+    enumError err	= ERR_OK;
 
     const uint align	= 0x20;
     const uint tab_off	= sizeof(tpl_header_t);
     uint data_off	= tab_off + n_image * sizeof(tpl_imgtab_t);
 
-    mipmap_info_t *m = mmi;
-    const Image_t *img = src_img;
+    mipmap_info_t *m	= mmi;
+    const Image_t *img	= src_img;
 
 
     //--- first loop: setup header offsets
@@ -1243,7 +1256,7 @@ enumError SaveTPL
 	DASSERT(img);
 	err = PrepareImages1(m,img);
 	if (err)
-	    goto abort;
+	    return err;
 
 	m->pal_head_off = 0;
 	m->img_head_off = data_off;
@@ -1278,7 +1291,10 @@ enumError SaveTPL
     //--- alloc data & setup file header
 
     data = CALLOC(1,data_off);
+    raw->data.ptr = (ccp)data;
+    raw->data.len = data_off;
     const endian_func_t * endian = src_img->endian;
+    raw->endian	= endian;
 
     tpl_header_t * tpl = (tpl_header_t*)data;
     endian->wr32(tpl->magic,TPL_MAGIC_NUM);
@@ -1314,19 +1330,33 @@ enumError SaveTPL
 
 	err = WriteImageData( m, data + m->img_data_off );
 	if (err)
-	    goto abort;
+	    return err;
     }
 
+    raw->valid = true;
+    return ERR_OK;
+}
 
-    //--- save to file & clean
+//-----------------------------------------------------------------------------
 
-    err = SaveFILE2(f,fname,0,overwrite,data,data_off,0);
+enumError SaveTPL
+(
+    Image_t		*src_img,	// pointer to valid source img
+    FILE		*f,		// output file, if NULL then use fname+overwrite
+    ccp			fname,		// filename of source
+    bool		overwrite	// true: force overwriting
+)
+{
+    DASSERT(src_img);
+    DASSERT(fname);
 
- abort:
-    for ( i = 0; i < n_image; i++ )
-	ResetMMI(mmi+i);
-    FREE(mmi);
-    FREE(data);
+    PRINT("SaveTPL(o=%d) %s\n", overwrite, fname );
+
+    tpl_raw_t raw;
+    enumError err = CreateRawTPL(&raw,src_img);
+    if (raw.valid)
+	err = SaveFILE2(f,fname,0,overwrite,raw.data.ptr,raw.data.len,0);
+    ResetRawTPL(&raw);
     return err;
 }
 

@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -406,11 +406,17 @@ typedef struct szs_file_t
     DataContainer_t	*old_container;	// old data [[container]] support, init with NULL
     Container_t		container;	// container data
 
+    //--- statistics, determined by CollectFilesSZS()( and collect_r_func()
+
+    uint		n_dirs;		// number of directories in archive
+    uint		n_files;	// number of files in archive
+    uint		fw_dirs;	// max UTF8 length of all dirs
+    uint		fw_files;	// max UTF8 length of all files
 
     //--- statistics, determined by LoadObjFileListSZS()
 
     UsedFileFILE_t	*used_file;	// NULL or alloced and set vector
-    DbFlags_t		found_flags;	// summery (or'ed) of 'used_file'
+    DbFlags_t		found_flags;	// summary (or'ed) of 'used_file'
     MissedFile_t	missed_file;	// missed files by DBT_* groups
     MissedFile_t	modified_file;	// modified files by DBT_* groups
     ParamField_t	*required_file;	// list with required files by setting
@@ -497,6 +503,17 @@ typedef enum szs_norm_info_t
 szs_norm_info_t;
 
 //-----------------------------------------------------------------------------
+// [[szs_u8_info_t]]
+
+typedef struct szs_u8_info_t
+{
+    u32		namepool_size;	// calculated size of name-pool
+    u32		total_size;	// calculated total size
+    bool	have_pt_dir;	// true: have './' prefix
+}
+szs_u8_info_t;
+
+//-----------------------------------------------------------------------------
 // [[szs_norm_t]]
 // [[norm]]
 
@@ -504,19 +521,18 @@ typedef struct szs_norm_t
 {
     //--- status
 
-    u32		namepool_size;
-    u32		total_size;
-    bool	have_pt_dir;
+    szs_u8_info_t u8;			// relevant data to create an U8 archive
 
     //--- jobs
 
     bool	force_pt_dir;		// force './' as prefix for each subfile
     bool	rm_aiparam;		// remove subfiles with name 'aiparam*'
     bool	clean_lex;		// [[obsolete]] when following params become active
+    bool	auto_add;		// true: autoadd files
+    bool	add_cup_icons;		// true: add cup icons
+    
+    //--- [[2do]] not implemented yet
 
-    //--- not implemented yet
-
-    bool	auto_add;		// autoadd files
     bool	norm_speed;		// normalize speed (KMP/STGI)
     u8		max_laps;		// >0: limit number of laps (KMP/STGI)
     u8		set_laps;		// >0: set number of laps (KMP/STGI)
@@ -724,6 +740,14 @@ enumError CreateU8
     bool		create_pt_dir	// create directory '.' as base
 );
 
+enumError CreateU8ByInfo
+(
+    szs_file_t		* szs,		// valid szs
+    ccp			source_dir,	// NULL or path to source dir
+    u8			* source_data,	// NULL or source data
+    szs_u8_info_t	* u8info	// valid data
+);
+
 enumError CreateSZS
 (
     szs_file_t		* szs,		// valid szs
@@ -916,8 +940,6 @@ typedef struct iterator_param_t
 }
 iterator_param_t;
 
-#define USE_ITERATOR_PARAM 1
-
 //-----------------------------------------------------------------------------
 // [[szs_iterator_t]]
 
@@ -927,14 +949,7 @@ typedef struct szs_iterator_t
 
     szs_file_t		* szs;		// valid szs pointer
     const endian_func_t	* endian;	// endian functions
- #if USE_ITERATOR_PARAM
     iterator_param_t	itpar;		// global parameters
- #else
-    bool		clean_path;	// true: clean path
-    bool		show_root_node;	// true: show root node
-    bool		cut_files;	// true: cut files into peaces
-    SortMode_t		sort_mode;	// sort files
- #endif
 
     //--- client values
 
@@ -1042,7 +1057,8 @@ uint CollectFilesSZS
     SortMode_t		sort_mode	// sort subfiles
 );
 
-void PrintFileHeadSZS();
+int PrintFileHeadSZS( int fw_name );
+
 int PrintFileSZS
 (
     struct szs_iterator_t	*it,	// iterator struct with all infos
@@ -1368,6 +1384,72 @@ enumError ExtractFilesSZS
 );
 
 ccp GetOptBasedir();
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			    UI-Check			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[ui_type_t]]
+
+typedef enum ui_type_t
+{
+    UIT_UNDEFINED,	// ?
+    UIT_UNKNOWN,	// -
+    UIT_AWARD,		// A
+    UIT_CHANNEL,	// C
+    UIT_EVENT,		// E
+    UIT_FONT,		// F
+    UIT_GLOBE,		// G
+    UIT_MENU_MULTI,	// M
+    UIT_MENU_OTHER,	// O
+    UIT_MENU_SINGLE,	// S
+    UIT_PRESENT,	// P
+    UIT_RACE,		// R
+    UIT_TITLE,		// T
+    UIT_LANGUAGE,	// l
+    UIT__N,
+
+    UIT_M_AWARD		= 1 << UIT_AWARD,
+    UIT_M_CHANNEL	= 1 << UIT_CHANNEL,
+    UIT_M_EVENT		= 1 << UIT_EVENT,
+    UIT_M_FONT		= 1 << UIT_FONT,
+    UIT_M_GLOBE		= 1 << UIT_GLOBE,
+    UIT_M_MENU_MULTI	= 1 << UIT_MENU_MULTI,
+    UIT_M_MENU_OTHER	= 1 << UIT_MENU_OTHER,
+    UIT_M_MENU_SINGLE	= 1 << UIT_MENU_SINGLE,
+    UIT_M_PRESENT	= 1 << UIT_PRESENT,
+    UIT_M_RACE		= 1 << UIT_RACE,
+    UIT_M_TITLE		= 1 << UIT_TITLE,
+    UIT_M_LANGUAGE	= 1 << UIT_LANGUAGE,
+    UIT_M_ALL		= ( 1 << UIT__N ) -1,
+
+    UIT_M_CUP_ICONS	= UIT_M_CHANNEL | UIT_M_MENU_MULTI | UIT_M_MENU_SINGLE,
+}
+ui_type_t;
+
+//-----------------------------------------------------------------------------
+
+extern const char ui_type_char[UIT__N+1];
+extern const ccp  ui_type_name[UIT__N+1];
+
+ccp GetUiTypeColor ( const ColorSet_t *colset, ui_type_t type );
+
+///////////////////////////////////////////////////////////////////////////////
+// [[ui_check_t]]
+
+typedef struct ui_check_t
+{
+    OffOn_t	is_ui;		// is language independent UI file
+    OffOn_t	is_korean;	// is korean variant
+
+    uint	possible;	// mask of possible types (1<<UIT_*)
+    ui_type_t	type;		// final detected type
+}
+ui_check_t;
+
+//-----------------------------------------------------------------------------
+
+void UiCheck ( ui_check_t *uc, szs_file_t *szs );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

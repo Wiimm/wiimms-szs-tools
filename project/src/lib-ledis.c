@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -108,6 +108,38 @@ static const le_cup_ref_t mkwfun_random_ref[MKW_N_LE_RANDOM] =
 #else
  static inline void DumpCupSlots ( le_distrib_t const *ld, ccp info ) {}
 #endif
+
+///////////////////////////////////////////////////////////////////////////////
+
+static int scan_source_opt
+(
+    // return : -1:error + abort, 0:ignored, 1 processed + next_arg
+    KeyListParam_t	*par,		// parameters and current result
+    ccp			name,		// name of option as written
+    uint		name_len,	// length of 'name'
+    const KeywordTab_t	*key_tab	// valid pointer to command table
+)
+{
+    ASSERT(par);
+    ASSERT(par->user_param);
+    ASSERT(name);
+    ASSERT(key_tab); // not needed here
+
+    le_strpar_t *lepar = (le_strpar_t*)par->user_param;
+    if ( !lepar || name_len < 1 || *name != '@' && *name != '[' )
+	return 0;
+
+    enumError err;
+    ccp res = ScanLSP(lepar,name,name_len,&err);
+    if ( !err && res == name + name_len )
+	return 1;
+
+    par->valid = false;
+    par->result = ~0;
+
+    ERROR0(err,"Invalid string selector: %.*s\n",name_len,name);
+    return -1;
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -496,7 +528,7 @@ void ResetLSP ( le_strpar_t *par )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-char * ScanLSP ( le_strpar_t *par, ccp arg, enumError *ret_err )
+char * ScanLSP ( le_strpar_t *par, ccp arg, int arg_len, enumError *ret_err )
 {
     static const KeywordTab_t keytab[] =
     {
@@ -523,13 +555,14 @@ char * ScanLSP ( le_strpar_t *par, ccp arg, enumError *ret_err )
     if ( !par || !arg )
 	return (char*)arg;
 
+    ccp arg_end = arg + ( arg_len < 0 ? strlen(arg) : arg_len );
     ccp src = arg;
-    while ( *src > 0 && *src <= ' ' )
+    while ( src < arg_end && (uchar)*src <= ' ' )
 	src++;
     if ( *src == '@' )
     {
 	src++;
-	while ( *src > 0 && *src <= ' ' )
+	while ( src < arg_end && (uchar)*src <= ' ' )
 	    src++;
     }
 
@@ -557,7 +590,7 @@ char * ScanLSP ( le_strpar_t *par, ccp arg, enumError *ret_err )
 	*nptr = 0;
 
 	int abbrev_count;
-	const KeywordTab_t *cmd = ScanKeyword(&abbrev_count,name,keytab);
+	const KeywordTab_t *cmd = ScanKeywordEx(&abbrev_count,name,nptr-name,LOUP_UPPER,keytab);
 
 	if (!cmd)
 	    err = ERR_SEMANTIC;
@@ -572,7 +605,7 @@ char * ScanLSP ( le_strpar_t *par, ccp arg, enumError *ret_err )
 
     if ( err == ERR_OK )
     {
-	while ( *src > 0 && *src <= ' ' )
+	while ( src < arg_end && (uchar)*src <= ' ' )
 	    src++;
 	arg = src;
     }
@@ -583,7 +616,7 @@ char * ScanLSP ( le_strpar_t *par, ccp arg, enumError *ret_err )
 ///////////////////////////////////////////////////////////////////////////////
 
 char * ScanOptionalLSP
-	( le_strpar_t *par, ccp arg, le_track_text_t fallback, enumError *ret_err )
+	( le_strpar_t *par, ccp arg, int arg_len, le_track_text_t fallback, enumError *ret_err )
 {
     if (ret_err)
 	*ret_err = ERR_NOT_EXISTS;
@@ -592,15 +625,16 @@ char * ScanOptionalLSP
     if ( !par || !arg )
 	return (char*)arg;
 
+    ccp arg_end = arg + ( arg_len < 0 ? strlen(arg) : arg_len );
     ccp src = arg;
-    while ( *src > 0 && (uchar)*src <= ' ' )
+    while ( src < arg_end && (uchar)*src <= ' ' )
 	src++;
 
     if ( *src != '[' && *src != '@' )
 	return (char*)src;
 
-    src = ScanLSP(par,arg,ret_err);
-    while ( *src > 0 && ( *src <= ' ' || *src == ',' ))
+    src = ScanLSP(par,arg,arg_len,ret_err);
+    while ( src < arg_end && ( *src <= ' ' || *src == ',' ))
 	src++;
     return (char*)src;
 }
@@ -652,7 +686,7 @@ enumError ScanOptionsLSP ( le_strpar_t *par, ccp arg, ccp err_info )
     if ( *arg == '[' )
     {
 	enumError err;
-	arg = ScanLSP(par,arg,&err);
+	arg = ScanLSP(par,arg,-1,&err);
 	if (err)
 	    return err;
     }
@@ -2603,7 +2637,7 @@ void ScanStrSTLD
 	    continue;
      #endif
 	else
-	    ScanLSP(&spar,src[IDX_NAME].ptr,0);
+	    ScanLSP(&spar,src[IDX_NAME].ptr,src[IDX_NAME].len,0);
 
 	char buf[LE_TRACK_STRING_MAX+1];
 	StringCopySM(buf,sizeof(buf),src[IDX_STRING].ptr,src[IDX_STRING].len);
@@ -4683,8 +4717,8 @@ static enumError search_func
 	return ERR_JOB_IGNORED;
 
     struct search_t *s = (struct search_t*)param;
-    ASSERT(s);
-    ASSERT(s->ld);
+    DASSERT(s);
+    DASSERT(s->ld);
 
     raw_data_t raw;
     enumError err = LoadRawData(&raw,true,path.ptr,0,opt_ignore>0,0);
@@ -6034,18 +6068,17 @@ enumError CreateBmgLD ( FILE *f, le_distrib_t *ld, bool bmg_text )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError CreateCupIconsLD
-	( FILE *f, le_distrib_t *ld, ccp fname, const le_strpar_t *src,
-						mem_t mem_opt, bool print_info )
+enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info )
 {
-    if ( !f || !ld )
+    if (!lop)
 	return ERR_MISSING_PARAM;
+
 
     //--- setup buffer
 
     char namebuf[50], *nameend = namebuf + sizeof(namebuf) - 3;
 
-    const uint bufsize = ld->cup_versus.used * 21 + 200;
+    const uint bufsize = lop->ld->cup_versus.used * 21 + 200;
     char *buf = MALLOC(bufsize), *dest = buf, *bufend = buf + bufsize - 1;
 
     dest = StringCopyE(dest,bufend,":cup-icon=");
@@ -6111,11 +6144,23 @@ enumError CreateCupIconsLD
 	{0,0,0,0}
     };
 
-    StringUpper(mem_opt.ptr);
-    PRINT0("CreateCupIconsLD(%s,%d), opt=%.*s|\n",GetNameLSP(src),print_info,mem_opt.len,mem_opt.ptr);
-    int opt = ScanKeywordList(mem_opt.ptr,keytab,0,true,0,O__DEFAULT,"CUP-ICONS",ERR_SYNTAX);
-    if ( opt < 0 )
-	opt = 0;
+    le_strpar_t lepar = { .opt = LTT_NAME };
+    KeyListParam_t keypar;
+    InitializeKeyListParam(&keypar);
+    keypar.func_arg = scan_source_opt;
+    keypar.user_param = &lepar;
+
+    uint opt = 0;
+    if (mem_opt.len)
+    {
+	s64 res = ScanKeywordListP(&keypar,mem_opt.ptr,mem_opt.len,O__DEFAULT,keytab);
+	if ( res < 0 )
+	    return ERR_SYNTAX;
+	if ( res >= 0 )
+	    opt = res;
+    }
+    if (!opt)
+	opt = O__DEFAULT;
 
     int cup_index = 0;
     if ( opt & O_SWAPPED )
@@ -6131,7 +6176,7 @@ enumError CreateCupIconsLD
 
     const int wiimm1 = opt & O_1WIIMM ? 0 : -1;
     const int wiimm9 = opt & O_9WIIMM ? 8 : -1;
-    const int wiimmx = opt & O_XWIIMM ? ld->cup_versus.used - 1 : -1;
+    const int wiimmx = opt & O_XWIIMM ? lop->ld->cup_versus.used - 1 : -1;
 
     const bool use_plus_prefix = (opt & (O_PLUS|O_XPLUS)) != 0;
     const bool use_game_prefix = (opt & (O_GAME|O_XGAME)) != 0;
@@ -6144,7 +6189,7 @@ enumError CreateCupIconsLD
 
     //--- add cup names
 
-    for ( ; cup_index < ld->cup_versus.used; cup_index++ )
+    for ( ; cup_index < lop->ld->cup_versus.used; cup_index++ )
     {
 	if ( cup_index == wiimm1 || cup_index == wiimm9 || cup_index == wiimmx )
 	{
@@ -6154,11 +6199,11 @@ enumError CreateCupIconsLD
 
 	dest = snprintfE(dest,bufend,"%u-",cup_index+1);
 
-	le_cup_ref_t *ref = GetLECUP(&ld->cup_versus,cup_index);
+	le_cup_ref_t *ref = GetLECUP(&lop->ld->cup_versus,cup_index);
 	if (ref)
 	{
-	    le_track_t *lt = GetTrackLD(ld,*ref);
-	    ccp text = GetTextLT(lt,src,0);
+	    le_track_t *lt = GetTrackLD(lop->ld,*ref);
+	    ccp text = GetTextLT(lt,&lepar,0);
 	    if ( text && *text )
 	    {
 		split_filename_t spf;
@@ -6199,7 +6244,7 @@ enumError CreateCupIconsLD
 
     *dest = 0;
     if (print_info)
-	fwrite(cuplist,dest-cuplist,1,f);
+	fwrite(cuplist,dest-cuplist,1,lop->f);
     else
     {
 	GenericImgParam_t genpar;
@@ -6209,8 +6254,8 @@ enumError CreateCupIconsLD
 	    err = CreateGenericIMG(&genpar,&img,true);
 	    if (!err)
 	    {
-		const file_format_t fform = GetImageFFByFName(fname,FF_TPL,true);
-		err = SaveIMG(&img,fform,0,f,fname,false);
+		const file_format_t fform = GetImageFFByFName(lop->fname,FF_TPL,true);
+		err = SaveIMG(&img,fform,0,lop->f,lop->fname,false);
 	    }
 	}
     }
@@ -6551,6 +6596,20 @@ static void report_duplicates
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static TrackClassIndex_t get_track_class_index ( const le_track_t *lt )
+{
+    ccp sha1 = GetSha1LT(lt,false,0);
+    if (sha1)
+    {
+	const sha1_reference_t *ref = FindSha1RefHex(sha1,0);
+	if (ref)
+	    return GetTrackClassIndex(ref->tclass);
+    }
+    return -1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt ) 
 {
     if (!lop)
@@ -6559,40 +6618,72 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
     enum
     {
 	O_COUNTERS	= 0x0001,
-	O_NAMES		= 0x0002,
-	O_TRACKS	= 0x0004,
-	O_FAMILIES	= 0x0008,
-	O_CLANS		= 0x0010,
+	O_CLASSES	= 0x0002,
+	O_XCLASSES	= 0x0004,
+	O_NAMES		= 0x0008,
+	O_TRACKS	= 0x0010,
+	O_FAMILIES	= 0x0020,
+	O_CLANS		= 0x0040,
 
-	O_ALL		= 0x001f,
+	O_ALL		= 0x007f,
 	O_M_DUPLICATES	= O_NAMES | O_TRACKS | O_FAMILIES | O_CLANS,
-	O_DEFAULT	= O_COUNTERS | O_M_DUPLICATES,
+	O_NEED_SHA1_REF	= O_CLASSES | O_XCLASSES | O_TRACKS | O_FAMILIES | O_CLANS,
+	O_DEFAULT	= O_ALL & ~O_XCLASSES,
     };
 
     static const KeywordTab_t keytab[] =
     {
 	{ O_COUNTERS,		"COUNTERS",	0,		0 },
+	{ O_CLASSES,		"CLASSES",	0,		0 },
+	{ O_XCLASSES,		"XCLASSES",	0,		0 },
 	{ O_NAMES,		"NAMES",	0,		0 },
 	{ O_TRACKS,		"TRACKS",	0,		0 },
 	{ O_FAMILIES,		"FAMILIES",	"FAMILY",	0 },
 	{ O_CLANS,		"CLANS",	0,		0 },
 	{ O_M_DUPLICATES,	"DUPLICATES",	0,		O_M_DUPLICATES },
+	{ O_DEFAULT,		"DEFAULT",	0,		O_DEFAULT },
 	{ O_ALL,		"ALL",		0,		O_ALL },
 	{0,0,0,0}
     };
 
+    le_strpar_t lepar = { .opt = LTT_NAME };
+    KeyListParam_t keypar;
+    InitializeKeyListParam(&keypar);
+    keypar.func_arg = scan_source_opt;
+    keypar.user_param = &lepar;
+
     u32 opt = 0;
-    if ( mem_opt.len)
+    if (mem_opt.len)
     {
 	const s64 def = *mem_opt.ptr == '-' ? O_ALL : 0;
-	s64 res = ScanKeywordListP(0,mem_opt.ptr,mem_opt.len,def,keytab);
+	s64 res = ScanKeywordListP(&keypar,mem_opt.ptr,mem_opt.len,def,keytab);
+	if ( res < 0 )
+	    return ERR_SYNTAX;
 	if ( res >= 0 )
 	    opt = res;
     }
     if (!opt)
 	opt = O_DEFAULT;
 
+    PRINT0("SOURCE: %s\n",GetNameLSP(&lepar));
     UpdateCupsLD(lop->ld);
+
+    const int n_tracks = lop->ld->tlist_used;
+
+
+    //--- check need of sha1 reference
+
+    if ( opt & O_NEED_SHA1_REF && !s1ref_used )
+    {
+	static char msg[] = "\r\n"
+		"{warn|Without a SHA1 reference file"
+		" (see https://ct.wiimm.de/export/sha1ref/view)"
+		" the analysis of classes and a search for duplicate tracks,"
+		" families or clans is not possible.}";
+	PutColoredLines(lop->f,lop->colset,0,GetTermWidth(80,40)-1,0,0,msg);
+
+	opt &= ~O_NEED_SHA1_REF;
+    }
 
 
     //--- counters
@@ -6604,7 +6695,7 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 	report_counter_t versus = {0}, battle = {0};
 
 	le_track_t *lt = lop->ld->tlist;
-	for ( int slot = 0; slot < lop->ld->tlist_used; slot++, lt++ )
+	for ( int slot = 0; slot < n_tracks; slot++, lt++ )
 	{
 	    if ( lt->track_status < LTS_ACTIVE )
 		continue;
@@ -6648,6 +6739,56 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
     }
 
 
+    //--- find classes
+
+    if ( opt & (O_CLASSES|O_XCLASSES) )
+    {
+	uint *counter = CALLOC(G_TCLSI__N,sizeof(*counter));
+	TrackClassIndex_t *list = CALLOC(n_tracks,sizeof(*list));
+
+	le_track_t *lt = lop->ld->tlist;
+	for ( int slot = 0; slot < n_tracks; slot++, lt++ )
+	{
+	    if (IsTitleLT(lt))
+		continue;
+
+	    const TrackClassIndex_t tidx = get_track_class_index(lt);
+	    list[slot] = tidx;
+	    if ( tidx >= 0 )
+		counter[tidx]++;
+	}
+	if ( !(opt&O_XCLASSES) )
+	{
+	    counter[G_TCLSI_NINTENDO] = 0;
+	    counter[G_TCLSI_SELECT] = 0;
+	}
+
+	for ( int ci = 0; ci < G_TCLSI__N; ci++ )
+	{
+	    const uint n = counter[ci];
+	    if (!n)
+		continue;
+
+	    fprintf(lop->f,"\r\n\r\n%s%u track%s of class %s%s\r\n\r\n",
+			lop->colset->caption,
+			n, n == 1 ? "" : "s", GetTrackClassName(ci,0),
+			lop->colset->reset );
+
+	    le_track_t *lt = lop->ld->tlist;
+	    for ( int slot = 0; slot < n_tracks; slot++, lt++ )
+	    {
+		if ( !IsTitleLT(lt) && get_track_class_index(lt) == ci )
+		    fprintf(lop->f,"  %s %4u %s %s\r\n",
+			PrintLEFL16(lt->flags,true),
+			lt->track_slot, GetCupAlignLT(lt), GetXName2LT(lt,"-") );
+	    }
+	}
+
+	FREE(list);
+	FREE(counter);
+    }
+
+
     //--- find duplicate names
 
     if ( opt & O_NAMES )
@@ -6661,18 +6802,18 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 	// collect data
 	uint n = 0;
 	le_track_t *lt = lop->ld->tlist;
-	for ( int slot = 0; slot < lop->ld->tlist_used; slot++, lt++ )
+	for ( int slot = 0; slot < n_tracks; slot++, lt++ )
 	{
 	    if (IsTitleLT(lt))
 		continue;
-	    ccp name = GetNameLT(lt,0);
-	    if (name)
+	    ccp text = GetTextLT(lt,&lepar,0);
+	    if (text)
 	    {
 		ccp sha1 = GetSha1LT(lt,false,0);
 		if ( sha1 && !InsertStringField(&sha1_list,sha1,false) )
 		    continue;
 
-		ParamFieldItem_t *it = FindInsertParamField(&pf,name,false,0,0);
+		ParamFieldItem_t *it = FindInsertParamField(&pf,text,false,0,0);
 		if ( ++it->num == 2 )
 		    n++;
 	    }
@@ -6695,7 +6836,7 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 
 		fputs("\r\n",lop->f);
 		le_track_t *lt = lop->ld->tlist;
-		for ( int slot = 0; slot < lop->ld->tlist_used; slot++, lt++ )
+		for ( int slot = 0; slot < n_tracks; slot++, lt++ )
 		{
 		    if (IsTitleLT(lt))
 			continue;
@@ -6717,17 +6858,6 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 
     //--- find duplicate tracks, families and clans
 
-    if ( opt & O_M_DUPLICATES && !s1ref_used )
-    {
-	static char msg[] = "\r\n"
-		"{warn|Without a SHA1 reference file"
-		" (see https://ct.wiimm.de/export/sha1ref/view)"
-		" a search for duplicate tracks, families or clans is not possible.}";
-	PutColoredLines(lop->f,lop->colset,0,GetTermWidth(80,40)-1,0,0,msg);
-
-	opt &= ~O_M_DUPLICATES;
-    }
-
     if ( opt & O_M_DUPLICATES )
     {
 	//-- search duplicates
@@ -6740,7 +6870,7 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 	int have_dup_clan   = 0;
 
 	le_track_t *lt = lop->ld->tlist;
-	for ( int slot = 0; slot < lop->ld->tlist_used; slot++, lt++ )
+	for ( int slot = 0; slot < n_tracks; slot++, lt++ )
 	{
 	    if ( IsTitleLT(lt) )
 		continue;
@@ -6751,7 +6881,6 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 		const sha1_reference_t *ref = FindSha1RefBin((void*)sha1);
 		if (ref)
 		{
-		 #if 1
 		    if ( track_count[ref->track]++ )
 		    {
 			if ( track_count[ref->track] == 2 )
@@ -6767,19 +6896,6 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 			if ( clan_count[ref->clan] == 2 )
 			    have_dup_clan++;
 		    }
-		 #else
-		    track_count[ref->track]++;
-		    if ( track_count[ref->track] == 2 )
-			have_dup_track++;
-
-		    family_count[ref->family]++;
-		    if ( family_count[ref->family] == 2 )
-			have_dup_family++;
-
-		    clan_count[ref->clan]++;
-		    if ( clan_count[ref->clan] == 2 )
-			have_dup_clan++;
-		 #endif
 		}
 	    }
 	}
@@ -6813,6 +6929,138 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
     return ERR_OK;
 }
 
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////		  le_distrib_t: patch szs files		///////////////
+///////////////////////////////////////////////////////////////////////////////
+#if LE_DIS_PATCH_ENABLED
+
+int patch_ld
+(
+    szs_iterator_t	*it,	// iterator struct with all infos
+    bool		term	// true: termination hint
+)
+{
+    if (!term)
+    {
+	ccp path = it->path;
+	if ( path[0] == '.' && path[1] == '/' )
+	    path += 2;
+	printf("     >> %s\n",path);
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError PatchLD ( le_distrib_t *ld, mem_t mem_opt, StringField_t *filelist )
+{
+    if ( !ld || !filelist )
+	return ERR_MISSING_PARAM;
+
+    enum
+    {
+	O_MENU		= 0x0001,
+
+	O_ALL		= 0x0001,
+	O_DEFAULT	= O_ALL,
+
+	O_F_TESTMODE	= 0x0002,
+    };
+
+    static const KeywordTab_t keytab[] =
+    {
+	{ O_MENU,		"MENUS",	0,		0 },
+	{ O_DEFAULT,		"DEFAULT",	0,		O_DEFAULT },
+	{ O_ALL,		"ALL",		0,		O_ALL },
+
+	{ O_F_TESTMODE,		"TESTMODE",	0,		0 },
+
+	{0,0,0,0}
+    };
+
+    le_strpar_t lepar = { .opt = LTT_NAME };
+    KeyListParam_t keypar;
+    InitializeKeyListParam(&keypar);
+    keypar.func_arg = scan_source_opt;
+    keypar.user_param = &lepar;
+
+    u32 opt = 0;
+    if (mem_opt.len)
+    {
+	const s64 def = *mem_opt.ptr == '-' ? O_ALL : 0;
+	s64 res = ScanKeywordListP(&keypar,mem_opt.ptr,mem_opt.len,def,keytab);
+	if ( res < 0 )
+	    return ERR_SYNTAX;
+	if ( res >= 0 )
+	    opt = res;
+    }
+    if (!opt)
+	opt = O_DEFAULT;
+
+    PRINT0("SOURCE: %s\n",GetNameLSP(&lepar));
+    PRINT0("DEST: %s\n",opt_dest);
+    const int testmode = opt & O_F_TESTMODE;
+    ccp mydest = opt_dest && *opt_dest && strcmp(opt_dest,"-") ? opt_dest : 0;
+
+
+    //--- main loop
+
+    raw_data_t raw;
+    InitializeRawData(&raw);
+
+    ccp *ptr = filelist->field, *end = ptr + filelist->used;
+    for ( ; ptr < end; ptr++ )
+    {
+     #ifdef __CYGWIN__
+	ccp fname = AllocNormalizedFilenameCygwin(*ptr,false);
+     #else
+	ccp fname = *ptr;
+     #endif
+
+	enumError err = LoadRawData(&raw,false,fname,0,false,0);
+	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
+	    continue;
+	if ( err > ERR_WARNING )
+	    return err;
+
+	char dest[PATH_MAX];
+	SubstDest(dest,sizeof(dest),fname,mydest,"\1P/\1F",
+			GetExtFF(raw.fform_file,raw.fform),false);
+	const bool dest_is_source = IsSameFilename(dest,fname);
+
+	if ( verbose >= 1 || testmode )
+	{
+	    ccp ff_name = GetNameFF(raw.fform_file,raw.fform);
+	    if (dest_is_source)
+		fprintf(stdlog,"  > %satch %s:%s\n",
+			testmode ? "Would p" : "P",
+			ff_name, dest );
+	    else
+		fprintf(stdlog,"  > %satch %s:%s -> %s:%s\n",
+			testmode ? "Would p" : "P",
+			ff_name, raw.fname,
+			ff_name, dest );
+	    fflush(stdlog);
+	}
+
+	szs_file_t szs;
+	AssignSZS(&szs,true,raw.data,raw.data_size,false,raw.fform,raw.fname);
+
+	int count = 0;
+	int stat = IterateFilesSZS(&szs,patch_ld,&count,0,0);
+	MARK_USED(stat,count);
+	
+	ResetSZS(&szs);
+	if ( fname != *ptr )
+	    FreeString(fname);
+    }
+
+    ResetRawData(&raw);
+    return ERR_OK;
+}
+
+#endif // LE_DIS_PATCH_ENABLED
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////		le_distrib_t: text jobs			///////////////
@@ -6998,30 +7246,24 @@ enumError TransferFilesLD ( le_distrib_t *ld, bool logit, bool testmode )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////		  le_distrib_t: sort tracks and cups	///////////////
+///////////////		    le_distrib_t: sort tracks		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enum // sort option
+enum // sort track options
 {
 	// sort tracks
 
-	SO_NONE		= 0x0000,
-	SO_NAME		= 0x0001,
-	SO_ID		= 0x0002,
-	SO_SHA1		= 0x0003,
-	SO_M_TRACK	= SO_NAME | SO_ID | SO_SHA1,
+	STO_NONE	= 0x0000,
+	STO_NAME	= 0x0001,
+	STO_ID		= 0x0002,
+	STO_SHA1	= 0x0003,
+	STO_M_JOBS	= STO_NAME | STO_ID | STO_SHA1,
 
-	SO_KEEP_VS	= 0x0010,
-	SO_KEEP_BT	= 0x0020,
-	SO_M_KEEP	= SO_KEEP_VS | SO_KEEP_BT,
+	STO_KEEP_VS	= 0x0010,
+	STO_KEEP_BT	= 0x0020,
+	STO_M_KEEP	= STO_KEEP_VS | STO_KEEP_BT,
 
-	// sort cups
-
-	SO_VERSUS	= 0x0100,
-	SO_BATTLE	= 0x0200,
-	SO_M_TYPE	= SO_VERSUS | SO_BATTLE,
-
-	SO_DEFAULT	= SO_NAME | SO_M_TYPE,
+	STO_DEFAULT	= 0,
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -7056,7 +7298,7 @@ static void sort_tracks ( le_distrib_t *ld, const le_strpar_t *src, uint opt )
     sort_track_t *xlist = CALLOC(ld->tlist_used,sizeof(sort_track_t*));
     sort_track_t *xptr  = xlist;
 
-    
+
 // [[2do]] ???
 MARK_USED(xptr);
 
@@ -7084,17 +7326,14 @@ bool SortTracksLD ( le_distrib_t *ld, const le_strpar_t *src, mem_t mem_opt )
 
     static const KeywordTab_t keytab[] =
     {
-	{ SO_NONE,		"NONE",		0,		SO_M_TRACK },
-	{ SO_NAME,		"NAME",		0,		SO_M_TRACK },
-	{ SO_ID,		"ID",		0,		SO_M_TRACK },
-	{ SO_SHA1,		"SHA1",		0,		SO_M_TRACK },
+	{ STO_NONE,		"NONE",		0,		STO_M_JOBS },
+	{ STO_NAME,		"NAME",		0,		STO_M_JOBS },
+	{ STO_ID,		"ID",		0,		STO_M_JOBS },
+	{ STO_SHA1,		"SHA1",		0,		STO_M_JOBS },
 
-	{ SO_KEEP_VS,		"KEEP-VS",	"KEEPVS",	0 },
-	{ SO_KEEP_BT,		"KEEP-BT",	"KEEPBT",	0 },
-	{ SO_M_KEEP,		"KEEP-ALL",	"KEEPALL",	0 },
-
-	{ SO_VERSUS,		"VERSUS",	0,		0 },
-	{ SO_BATTLE,		"BATTLE",	0,		0 },
+	{ STO_KEEP_VS,		"KEEP-VS",	"KEEPVS",	0 },
+	{ STO_KEEP_BT,		"KEEP-BT",	"KEEPBT",	0 },
+	{ STO_M_KEEP,		"KEEP-ALL",	"KEEPALL",	0 },
 
 	{0,0,0,0}
     };
@@ -7108,16 +7347,140 @@ bool SortTracksLD ( le_distrib_t *ld, const le_strpar_t *src, mem_t mem_opt )
 	opt = res;
     }
 
-    if ( !opt )			opt = SO_DEFAULT;
-    if ( !(opt & SO_M_TYPE) )	opt |= SO_M_TYPE;
+    if (!(opt&STO_M_JOBS))
+    {
+	// [[2do]] warning
+	return false;
+    }
 
 
     //--- sort tracks
 
     UpdateCupsLD(ld);
+    sort_tracks(ld,src,opt);
 
-    if ( opt & SO_M_TRACK )
-	sort_tracks(ld,src,opt);
+
+    //--- sort cups
+
+    return true;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			le_distrib_t: sort cups		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enum // sort cup options
+{
+	// sort cups
+
+	SCO_VS_ORIG	= 0x0001,
+	SCO_VS_CUSTOM	= 0x0002,
+	SCO_VS_ALL	= SCO_VS_ORIG | SCO_VS_CUSTOM,
+
+	SCO_BT_ORIG	= 0x0004,
+	SCO_BT_CUSTOM	= 0x0008,
+	SCO_BT_ALL	= SCO_BT_ORIG | SCO_BT_CUSTOM,
+
+	SCO_M_JOB	= SCO_VS_ALL | SCO_BT_ALL,
+
+	SCO_USE_PLUS	= 0x0010,
+	SCO_USE_GAME	= 0x0020,
+
+	SCO_DEFAULT	= 0,
+};
+
+///////////////////////////////////////////////////////////////////////////////
+
+#define MAX_SORT_MEMBERS 4
+
+typedef struct sort_cup_t
+{
+    int dummy;
+    ccp			key;		// allocaed key for sorting
+}
+sort_cup_t;
+
+///////////////////////////////////////////////////////////////////////////////
+#if 0
+
+static void sort_cupss ( le_distrib_t *ld, const le_strpar_t *src, uint opt )
+{
+    DASSERT(ld);
+
+    //-- setup data
+
+    sort_track_t *slist = CALLOC(ld->tlist_used,sizeof(*slist));
+    sort_track_t *slist_end = slist + ld->tlist_used;
+
+    sort_track_t *xlist = CALLOC(ld->tlist_used,sizeof(sort_track_t*));
+    sort_track_t *xptr  = xlist;
+
+
+// [[2do]] ???
+MARK_USED(xptr);
+
+
+    //-- free data
+
+    for ( sort_track_t *p = slist; p < slist_end; p++ )
+    {
+	FreeString(p->key);
+	if ( p->grp_member != p->grp_buf )
+	    FREE(p->grp_member);
+    }
+    FREE(slist);
+    FREE(xlist);
+}
+
+#endif
+///////////////////////////////////////////////////////////////////////////////
+
+bool SortCupsLD ( le_distrib_t *ld, const le_strpar_t *src, mem_t mem_opt )
+{
+    if (!ld)
+	return false;
+
+    //--- check options
+
+    static const KeywordTab_t keytab[] =
+    {
+	{ SCO_VS_ORIG,		"VS-ORIGINAL",	"VSORIGINAL",	0 },
+	{ SCO_VS_CUSTOM,	"VS-CUSTOM",	"VSCUSTOM",	0 },
+	{ SCO_VS_ALL,		"VS-ALL",	"VSALL",	0 },
+
+	{ SCO_BT_ORIG,		"BT-ORIGINAL",	"BTORIGINAL",	0 },
+	{ SCO_BT_CUSTOM,	"BT-CUSTOM",	"BTCUSTOM",	0 },
+	{ SCO_BT_ALL,		"BT-ALL",	"BTALL",	0 },
+
+	{ SCO_USE_PLUS,		"PLUS",		0,		0 },
+	{ SCO_USE_GAME,		"GAME",		0,		0 },
+
+	{0,0,0,0}
+    };
+
+    uint opt = 0;
+    if (mem_opt.len)
+    {
+	s64 res = ScanKeywordListP(0,mem_opt.ptr,mem_opt.len,0,keytab);
+	if ( res < 0 )
+	    return false;
+	opt = res;
+    }
+
+    if (!(opt&SCO_M_JOB))
+    {
+	// [[2do]] warning
+	return false;
+    }
+
+
+    //--- sort cups
+
+    UpdateCupsLD(ld);
+
+    // [[2do]] ???
+
 
 
     //--- sort cups

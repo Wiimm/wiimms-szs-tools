@@ -17,7 +17,7 @@
 ##   This file is part of the SZS project.                         ##
 ##   Visit https://szs.wiimm.de/ for project details and sources.  ##
 ##                                                                 ##
-##   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>      ##
+##   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>      ##
 ##                                                                 ##
 #####################################################################
 
@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.32a
+VERSION_NUM		= 2.33a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -142,7 +142,7 @@ DEFINES1	+= -DLARGE_FILES -D_FILE_OFFSET_BITS=64
 DEFINES1	+= -DWSZST			# compile szs tools (switch for shared sources)
 DEFINES1	+= -DDEBUG_ASSERT		# enable ASSERTions in release version too
 DEFINES1	+= -DEXTENDED_ERRORS=1		# enable extended error messages (function,line,file)
-DEFINES1	+= -DUIOPT_INDEX_SIZE=310	# define max number of options (default 0x100)
+DEFINES1	+= -DUIOPT_INDEX_SIZE=320	# define max number of options (default 0x100)
 
 CFLAGS		+= -std=gnu99 -fomit-frame-pointer -fno-strict-aliasing -funroll-loops
 CFLAGS		+= -Wall -Wno-parentheses -Wno-unused-function
@@ -426,6 +426,7 @@ endif
 
 ifeq ($(WIIMM).$(NOWIIMM).$(HAVE_WORK_SRC),1..1)
     DEFINES1	+= -DHAVE_WIIMM_EXT=1
+    #DEFINES1	+= -DMEMDEBUG=1
     CFLAGS	+= -I./work/src
     VPATH	+= ./work/src
     DIR_LIST	+= ./work/src

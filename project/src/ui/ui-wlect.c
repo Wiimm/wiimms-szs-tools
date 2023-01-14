@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -805,7 +805,7 @@ static const InfoOption_t option_cmd_BIN_DIFF_VERBOSE =
 
 static const KeywordTab_t CommandTab[] =
 {
-    { CMD_VERSION,	"VERSION",	0,		0 },
+    { CMD_VERSION,	"VERSION",	"V",		0 },
     { CMD_HELP,		"HELP",		"H",		0 },
     { CMD_HELP,		"?",		0,		0 },
     { CMD_CONFIG,	"CONFIG",	0,		0 },
@@ -1116,7 +1116,7 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x100   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x110   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	/* 0x130   */	 0,0,0,0, 0,0,
+	/* 0x130   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 };
 
 //
@@ -1854,7 +1854,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	false,
 	false,
 	"VERSION",
-	0,
+	"V",
 	"wlect VERSION [ignored]...",
 	"Print program name and version and exit.",
 	0,
@@ -2279,10 +2279,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wlect DISTRIBUTION [argument]...",
 	"This command manages data for LE-CODE track distributions. It reads"
 	" any number of source files with different file types, collects the"
-	" data and creates any number of files with different file types.\n"
-	"  Use the command without keyword to get an extended description.\n"
-	" This command is still under development. Its use is therefore"
-	" EXPERIMENTAL!",
+	" data and creates any number of files with different file types."
+	" Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for"
+	" details.\n"
+	"  Use the command without keyword to get an extended description.",
 	0,
 	21,
 	option_tab_cmd_DISTRIBUTION,

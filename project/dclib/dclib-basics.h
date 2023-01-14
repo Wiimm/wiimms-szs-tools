@@ -14,7 +14,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2023 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -997,7 +997,13 @@ static inline exmem_t ExMemCalloc ( int size )
 static inline exmem_t ExMemDup ( cvp src, int size )
 {
     char *data = MEMDUP(src,size);
-    exmem_t em = { .data={ data, size+1 }, .is_original=true, .is_alloced=true };
+    exmem_t em = { .data={ data, size }, .is_original=true, .is_alloced=true };
+    return em;
+}
+
+static inline exmem_t ExMemMove ( cvp src, int size )
+{
+    exmem_t em = { .data={ src, size }, .is_original=true, .is_alloced=true };
     return em;
 }
 
@@ -3471,16 +3477,32 @@ static inline const KeywordTab_t * ScanKeyword
     return ScanKeywordEx(res_abbrev,arg,-1,LOUP_UPPER,key_tab);
 }
 
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 // new keyword list interface
 
 typedef struct KeyListParam_t KeyListParam_t;
 
-typedef int (*KeywordListFunc)
+typedef int (*KeywordListFuncArg)
 (
+    // return : -1:error + abort, 0:ignored, 1 processed + next_arg
+    // function must set 'par->valid' and 'par->result'.
+
+    KeyListParam_t	*par,		// parameters and current result
     ccp			name,		// name of option as written
     uint		name_len,	// length of 'name'
+    const KeywordTab_t	*key_tab	// valid pointer to command table
+);
+
+typedef int (*KeywordListFuncKey)
+(
+    // return : -1:error + abort, 0:ignored, 1 processed + next_arg
+    // function must set 'par->valid' and 'par->result'.
+
     KeyListParam_t	*par,		// parameters and current result
+    ccp			name,		// name of option as written
+    uint		name_len,	// length of 'name'
     const KeywordTab_t	*key_tab,	// valid pointer to command table
     const KeywordTab_t	*key,		// valid pointer to found command
     char		prefix		// 0 | '-' | '+' | '='
@@ -3494,9 +3516,11 @@ typedef struct KeyListParam_t
     bool		allow_prefix;	// allow '-' | '+' | '=' as prefix
     LowerUpper_t	force_case;	// change case of scanned arg if LOUP_LOWER|LOUP_UPPER
 
-    // call back funtion
-    KeywordListFunc	func;		// NULL or calculation function
-    void		*user_param;	// user defined parameter
+    // call back funtions, functions must set 'valid' and 'result'.
+    KeywordListFuncArg	func_arg;	// NULL or function with raw argument.
+    KeywordListFuncKey	func_key;	// NULL or function with normalized argument,
+					// called after successfull 'key_tab' scanning 
+    const void		*user_param;	// user defined parameter
 
     // Scan for integer numbers, if min_number < max_number
     // special case: if min_number >= 0 && max_number < 0 && min_number < (u64)max_number,
@@ -3521,6 +3545,11 @@ typedef struct KeyListParam_t
 KeyListParam_t;
 
 //-----------------------------------------------------------------------------
+// interface
+
+// Initialize with standard values as alternative to: KeyListParam_t par = {0};
+// Same as: par = { .force_case = LOUP_UPPER, allow_prefix = true, err_code = ERR_SYNTAX };
+void InitializeKeyListParam ( KeyListParam_t *par );
 
 s64 ScanKeywordListP
 (
@@ -6199,7 +6228,7 @@ int FindStringFieldIndex ( const StringField_t * sf, ccp key, int not_found_valu
 ccp FindStringField ( const StringField_t * sf, ccp key );
 
 // return: true if item inserted/deleted
-bool InsertStringField ( StringField_t * sf, ccp key,  bool move_key );
+bool InsertStringField ( StringField_t * sf, ccp key, bool move_key );
 bool RemoveStringField ( StringField_t * sf, ccp key );
 uint RemoveStringFieldByIndex ( StringField_t * sf, int index, int n );
 

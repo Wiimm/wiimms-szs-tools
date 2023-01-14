@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -374,6 +374,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(tpl_imgtab_t)
 	SIZEOF_INFO_ENTRY(tpl_pal_header_t)
 	SIZEOF_INFO_ENTRY(tpl_img_header_t)
+	SIZEOF_INFO_ENTRY(tpl_raw_t)
 	SIZEOF_INFO_ENTRY(bti_header_t)
 
     SIZEOF_INFO_TITLE("KCL")
@@ -793,6 +794,95 @@ static enumError cmd_test()
     return ERR_OK;
 
  #endif
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			command ui-check		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError cmd_ui_check()
+{
+    SetupPager();
+
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1);
+
+    const bool have_dump = long_count >= 1;
+    const bool have_header = !have_dump && !brief_count && print_header;
+
+    int sep_len = 0;
+    if (have_header)
+    {
+	int fw_file = 4;
+	ccp *ptr = plist.field, *end;
+	for ( end = ptr + plist.used; ptr < end; ptr++ )
+	{
+	    const int fw = strlen8(*ptr);
+	    if ( fw_file < fw )
+		 fw_file = fw;
+	}
+	sep_len = ( fw_file + 21 ) * 3;
+	printf("\n%s Type       Korean  File\n%s%.*s%s\n",
+		colset->heading, colset->heading, sep_len, ThinLine300_3, colset->reset );
+    }
+
+    for ( int argi = 0; argi < plist.used; argi++ )
+    {
+	ccp arg = plist.field[argi];
+
+	szs_file_t szs;
+	InitializeSZS(&szs);
+	enumError err = LoadSZS(&szs,arg,false,opt_ignore>0,true);
+	if ( err > ERR_WARNING || err == ERR_NOT_EXISTS )
+	    continue;
+
+	DecompressSZS(&szs,true,0);
+
+	if (have_dump)
+	{
+	    u_usec_t dur = -GetTimerUSec();
+	    ui_check_t uc;
+	    UiCheck(&uc,&szs);
+	    dur += GetTimerUSec();
+
+	    printf("%c%c "
+		,uc.is_ui       >= OFFON_ON ? 'U' : uc.is_ui	   > OFFON_OFF ? 'u' : '-' 
+		,uc.is_korean   >= OFFON_ON ? 'K' : uc.is_korean   > OFFON_OFF ? 'k' : '-'
+		);
+
+	    for ( ui_type_t t = 1; t < UIT__N; t++ )
+	    {
+		uint mask = 1 << t;
+		putchar( uc.possible & mask ? ui_type_char[t] : '-');
+	    }
+
+	    printf(" %c %6lluµs  %s\n",ui_type_char[uc.type],dur,arg);
+	}
+	else
+	{
+	    ui_check_t uc;
+	    UiCheck(&uc,&szs);
+
+	    ccp col = GetUiTypeColor(colout,uc.type);
+	    printf("%s %-10s %-6s  %s%s\n",
+		col,
+		ui_type_name[uc.type],
+		uc.is_korean > OFFON_AUTO ? "Korean" : "-",
+		arg, *col ? colout->reset : "" );
+	}
+    }
+
+    if (have_header)
+    {
+	if ( plist.used >= 3 )
+	    printf("%s%.*s%s\n\n", colset->heading, sep_len, ThinLine300_3, colset->reset );
+	else
+	    putchar('\n');
+    }
+
+    ResetStringField(&plist);
+    return ERR_OK;
 }
 
 //
@@ -1751,6 +1841,7 @@ static int list_func
 
 static enumError cmd_list ( int long_level )
 {
+    SetupPager();
     SetPatchFileModeReadonly();
 
     if ( opt_recurse < 0 )
@@ -1762,49 +1853,77 @@ static enumError cmd_list ( int long_level )
 	long_count += long_level;
     }
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
 	    return err;
 
+
+	CollectFilesSZS(&szs,true,-1,-1,SORT_NONE);
 	if ( opt_norm || need_norm > 0 )
 	    NormalizeSZS(&szs);
 
 	if (print_header)
-	{
-	    printf("\n* Files of %s:%s\n",
-			GetNameFF_SZS(&szs), param->arg );
+	    printf("\n%s> %u director%s + %u file%s of %s:%s %s\n",
+		colout->stat_line,
+		szs.n_dirs, szs.n_dirs == 1 ? "y" : "ies",
+		szs.n_files, szs.n_files == 1 ? "" : "s",
+		GetNameFF_SZS(&szs), arg,
+		colout->reset );
 
+	int fw_name = szs.fw_files, seplen = 0;
+	if ( long_count >= 3 )
+	    fw_name++;
+	if ( fw_name < 17 )
+	    fw_name = 17;
+
+	if (print_header)
+	{
 	    static ccp f_or_d = "file or directory";
 	    if ( long_count > 2 )
-		PrintFileHeadSZS();
+		seplen = PrintFileHeadSZS(fw_name) * 3;
 	    else if ( long_count > 1 )
-		printf("\noff/hex siz/hex size/dec magic vers %s\n%.79s\n",f_or_d,Minus300);
+	    {
+		seplen = ( fw_name + 37 ) * 3;
+		printf("\n%soff/hex siz/hex size/dec magic vers %s\n%s%.*s%s\n",
+			colout->heading, f_or_d,
+			colout->heading, seplen, ThinLine300_3, colout->reset );
+	    }
 	    else if ( long_count > 0 )
-		printf("\nsize/dec  magic %s\n%.79s\n",f_or_d,Minus300);
+	    {
+		seplen = ( fw_name + 17 ) * 3;
+		printf("\n%ssize/dec  magic %s\n%s%.*s%s\n",
+			colout->heading, f_or_d,
+			colout->heading, seplen, ThinLine300_3, colout->reset );
+	    }
 	    else
 		putchar('\n');
 	}
-	else if ( n_param > 1 )
-	    printf("\n* Files of %s\n",param->arg);
 
 	if ( long_count > 2 )
 	    IterateFilesParSZS(&szs,PrintFileSZS,0,false,true,opt_recurse,opt_cut,opt_sort);
 	else
 	    IterateFilesParSZS(&szs,list_func,0,false,false,opt_recurse,opt_cut,opt_sort);
+
+	if (print_header)
+	{
+	    if ( seplen && szs.n_dirs + szs.n_files > 2 )
+		printf("%s%.*s%s\n\n", colout->heading, seplen, ThinLine300_3, colout->reset );
+	    else
+		putchar('\n');
+	}
 	ResetSZS(&szs);
     }
-
-    if (print_header)
-	putchar('\n');
 
     return ERR_OK;
 }
@@ -3570,6 +3689,220 @@ static bool ScanByExtFF
 
 //-----------------------------------------------------------------------------
 
+struct cmd_patch_search_t
+{
+    int			count;
+    enumError		max_err;
+};
+
+//-----------------------------------------------------------------------------
+
+static enumError patch_file_helper
+(
+    ccp		fname,			// file name of source
+    bool	use_wildcard		// true & file not exist: search files
+);
+
+//-----------------------------------------------------------------------------
+
+static enumError patch_file_search
+(
+    mem_t	path,		// full path of existing file, never NULL
+    uint	st_mode,	// copy of struct stat.st_mode, see "man 2 stat"
+    void	*param		// user defined parameter
+)
+{
+    enumError err = S_ISREG(st_mode) ? patch_file_helper(path.ptr,false) : ERR_JOB_IGNORED;
+
+    struct cmd_patch_search_t *s = (struct cmd_patch_search_t*)param;
+    ASSERT(s);
+
+    s->count++;
+    if ( s->max_err < err )
+	 s->max_err = err;
+    return err;
+}
+
+//-----------------------------------------------------------------------------
+
+static enumError patch_file_helper
+(
+    ccp		fname,			// file name of source
+    bool	use_wildcard		// true & file not exist: search files
+)
+{
+    struct stat st;
+    if ( use_wildcard && HaveWildcards(MemByString(fname)) && stat(fname,&st) )
+    {
+	PRINT0(" > SEARCH %s\n",fname);
+	struct cmd_patch_search_t param = {0};
+	SearchPaths(fname,0,false,patch_file_search,&param);
+	return param.count
+	    ? param.max_err
+	    : ERROR0(ERR_CANT_OPEN,"File not found: %s\n",fname);
+    }
+
+    exmem_t orig = {0}, data = {0};
+
+    szs_file_t szs;
+    InitializeSZS(&szs);
+    enumError err = LoadSZS(&szs,fname,false,opt_ignore>0,true);
+
+    if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
+    {
+	const bool was_compressed = szs.cdata != 0;
+	if (was_compressed)
+	{
+	    DecompressSZS(&szs,false,0);
+	    DASSERT(szs.cdata);
+	    DASSERT(szs.cdata_alloced);
+	    orig = ExMemMove(szs.cdata,szs.csize);
+	    szs.cdata = 0;
+	    szs.cdata_alloced = false;
+	    data = ExMemDup(szs.data,szs.size);
+	}
+	else
+	{
+	    DASSERT(szs.data);
+	    data = ExMemDup(szs.data,szs.size);
+	 #if 1
+	    orig = data;
+	    orig.is_alloced = false;
+	 #else
+	    orig = ExMemDup(szs.data,szs.size);
+	 #endif
+	}
+
+	const ccp src_format = GetNameFF_SZS(&szs);
+	const bool convert_wu8 = opt_fform == FF_WU8
+		    || opt_fform == FF_UNKNOWN && szs.fform_arch == FF_WU8;
+	PRINT("CONVERT_WU8=%d, FF=%s\n", convert_wu8, src_format );
+
+	DecodeWU8(&szs);
+
+	//szs.allow_ext_data = opt_norm;
+	szs.allow_ext_data = true;
+
+	bool dirty = PatchSZS(&szs);
+	if (( opt_norm || need_norm || opt_auto_add || opt_cup_icons || dirty )
+		&& NormalizeSZS(&szs) )
+	{
+	    dirty = true;
+	}
+	if ( OptionUsed[OPT_MINIMAP] && AutoAdjustMinimap(&szs) )
+	    dirty = true;
+
+	if (convert_wu8)
+	{
+	    err = EncodeWU8(&szs);
+	    if (err)
+		goto abort;
+	}
+
+
+	//--- dest file
+
+	char dest[PATH_MAX];
+	if ( opt_fform == FF_U8 || opt_fform == FF_WU8 )
+	{
+	    SubstDest( dest, sizeof(dest), fname,
+		opt_dest && *opt_dest ? opt_dest : "\1P/\1N\1?T", "\1N\1?T",
+		GetExtFF(szs.fform_file,opt_fform), false );
+	}
+	else if ( opt_dest && *opt_dest )
+	{
+	    SubstDest( dest, sizeof(dest), fname, opt_dest, 0,
+		GetExtFF(szs.fform_file,szs.fform_arch), false );
+	}
+	else
+	    StringCopyS(dest,sizeof(dest),fname);
+
+
+	//--- check dirty
+
+	const ccp dest_format = GetNameFF_SZScurrent(&szs);
+	const bool src_dest_diff
+	    = strcmp(src_format,dest_format) || strcmp(dest,fname);
+
+//X	if ( !dirty && opt_norm )
+	if (!dirty)
+	    dirty = data.data.len != szs.size || memcmp(data.data.ptr,szs.data,szs.size);
+
+	if ( !dirty && ( !src_dest_diff || opt_no_copy ) )
+	    goto abort;
+	
+
+	//--- compression and SZS cache
+
+	if (dirty)
+	{
+	    if (was_compressed)
+	    {
+		CompressSZS(&szs,true);
+		FreeExMem(&orig);
+		orig = ExMemByS(szs.cdata,szs.csize);
+	    }
+	    else
+	    {
+		FreeExMem(&orig);
+		orig = ExMemByS(szs.data,szs.size);
+	    }
+	}
+
+
+	if ( dirty || src_dest_diff )
+	{
+	    if ( verbose >= 0 || testmode )
+	    {
+		if (src_dest_diff)
+		    fprintf(stdlog,"%s%s%s %s:%s -> %s:%s\n",
+			    testmode ? "WOULD " : "",
+			    opt_norm ? "NORMALIZE" : dirty ? "PATCH" : "COPY ",
+			    szs.aiparam_removed ? " [-AIParam]" : "",
+			    src_format, fname, dest_format, dest );
+		else
+		    fprintf(stdlog,"%s%s%s %s:%s\n",
+			    testmode ? "WOULD " : "",
+			    opt_norm ? "NORMALIZE" : "PATCH",
+			    szs.aiparam_removed ? " [-AIParam]" : "",
+			    dest_format, dest );
+		fflush(stdlog);
+	    }
+
+	    File_t F;
+	    err = CreateFileOpt(&F,true,dest,testmode,fname);
+	    if (F.f)
+	    {
+		SetFileAttrib(&F.fatt,&szs.fatt,0);
+		size_t wstat = fwrite(orig.data.ptr,1,orig.data.len,F.f);
+		if ( wstat != orig.data.len )
+		    err = FILEERROR1(&F,
+			    ERR_WRITE_FAILED,
+			    "Writing %u bytes failed [%zu bytes written]: %s\n",
+			    orig.data.len, wstat, dest );
+	    }
+	    ResetFile(&F,opt_preserve);
+	    if ( !err && opt_remove_src )
+		RemoveSource(fname,dest,verbose>=0,testmode);
+	}
+	else if ( verbose > 0 )
+	{
+	    fprintf(stdlog,"ALREADY NORMALIZED: %s:%s\n", src_format, fname );
+	    fflush(stdlog);
+	}
+
+	LinkCacheRAW(szs.cache_fname,dest,orig.data.ptr,orig.data.len);
+    }
+
+  abort:;
+    FreeExMem(&orig);
+    FreeExMem(&data);
+    ResetSZS(&szs);
+    return err;
+}
+
+//-----------------------------------------------------------------------------
+
 static enumError cmd_patch()
 {
  #if HAVE_PRINT
@@ -3581,171 +3914,15 @@ static enumError cmd_patch()
  #endif
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    for ( ParamList_t *param = first_param; param; param = param->next )
     {
 	if (!param->arg)
 	    continue;
 	NORMALIZE_FILENAME_PARAM(param);
 
-	szs_file_t szs;
-	InitializeSZS(&szs);
-	enumError err = LoadSZS(&szs,param->arg,false,opt_ignore>0,true);
-
-	//PRINT_DATA;
-
-	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
-	{
-	    u8 * orig_data;
-	    uint orig_size;
-
-	    const bool was_compressed = szs.cdata != 0;
-	    if (was_compressed)
-	    {
-		DecompressSZS(&szs,false,0);
-		DASSERT(szs.cdata);
-		DASSERT(szs.cdata_alloced);
-		orig_data = szs.cdata;
-		orig_size = szs.csize;
-		szs.cdata = 0;
-		szs.cdata_alloced = false;
-	    }
-	    else
-	    {
-		DASSERT(szs.data);
-		orig_data = MEMDUP(szs.data,szs.size);
-		orig_size = szs.size;
-	    }
-
- #ifdef TEST0
-	    const ccp src_format = GetNameFF_SZS(&szs);
-	    file_format_t local_ff_compr = opt_fform;
-	    file_format_t local_ff_arch  = fform_compr;
- #else
-	    const ccp src_format = GetNameFF_SZS(&szs);
-	    const bool convert_wu8 = opt_fform == FF_WU8
-			|| opt_fform == FF_UNKNOWN && szs.fform_arch == FF_WU8;
-	    PRINT("CONVERT_WU8=%d, FF=%s\n", convert_wu8, src_format );
- #endif
-
-	    DecodeWU8(&szs);
-
-	    //szs.allow_ext_data = opt_norm;
-	    szs.allow_ext_data = true;
-
-	    bool dirty = PatchSZS(&szs);
-	    if ( ( opt_norm || need_norm || opt_auto_add || dirty )
-		    && NormalizeSZS(&szs) )
-	    {
-		dirty = true;
-	    }
-	    if ( OptionUsed[OPT_MINIMAP] && AutoAdjustMinimap(&szs) )
-		dirty = true;
-
-	    if (convert_wu8)
-	    {
-		err = EncodeWU8(&szs);
-		if (err)
-		    goto abort;
-	    }
-
-
-	    //--- dest file
-
-	    char dest[PATH_MAX];
-	    if ( opt_fform == FF_U8 || opt_fform == FF_WU8 )
-	    {
-		SubstDest( dest, sizeof(dest), param->arg,
-		    opt_dest && *opt_dest ? opt_dest : "\1P/\1N\1?T", "\1N\1?T",
-		    GetExtFF(szs.fform_file,opt_fform), false );
-	    }
-	    else if ( opt_dest && *opt_dest )
-	    {
-		SubstDest( dest, sizeof(dest), param->arg, opt_dest, 0,
-		    GetExtFF(szs.fform_file,szs.fform_arch), false );
-	    }
-	    else
-		StringCopyS(dest,sizeof(dest),param->arg);
-
-
-	    //--- compression and SZS cache
-
-	    if (was_compressed)
-	    {
-		CompressSZS(&szs,true);
-
-		//PRINT_DATA;
-		if ( opt_norm && !dirty )
-		    dirty = orig_size != szs.csize
-				|| memcmp(orig_data,szs.cdata,orig_size);
-		FREE(orig_data);
-		orig_data = szs.cdata;
-		orig_size = szs.csize;
-	    }
-	    else
-	    {
-		//PRINT_DATA;
-		if (!dirty)
-		    dirty = orig_size != szs.size
-				|| memcmp(orig_data,szs.data,orig_size);
-		FREE(orig_data);
-		orig_data = szs.data;
-		orig_size = szs.size;
-	    }
-
-	    const ccp dest_format = GetNameFF_SZScurrent(&szs);
-	    const bool src_dest_diff
-		= strcmp(src_format,dest_format) || strcmp(dest,param->arg);
-
-	    if ( dirty || src_dest_diff )
-	    {
-		if ( verbose >= 0 || testmode )
-		{
-		    if (src_dest_diff)
-			fprintf(stdlog,"%s%s%s %s:%s -> %s:%s\n",
-				testmode ? "WOULD " : "",
-				opt_norm ? "NORMALIZE" : "PATCH",
-				szs.aiparam_removed ? " [-AIParam]" : "",
-				src_format, param->arg, dest_format, dest );
-		    else
-			fprintf(stdlog,"%s%s%s %s:%s\n",
-				testmode ? "WOULD " : "",
-				opt_norm ? "NORMALIZE" : "PATCH",
-				szs.aiparam_removed ? " [-AIParam]" : "",
-				dest_format, dest );
-		    fflush(stdlog);
-		}
-
-		//PRINT_DATA;
-		File_t F;
-		err = CreateFileOpt(&F,true,dest,testmode,param->arg);
-		if (F.f)
-		{
-		    SetFileAttrib(&F.fatt,&szs.fatt,0);
-		    size_t wstat = fwrite(orig_data,1,orig_size,F.f);
-		    if ( wstat != orig_size )
-			err = FILEERROR1(&F,
-				ERR_WRITE_FAILED,
-				"Writing %u bytes failed [%zu bytes written]: %s\n",
-				orig_size, wstat, dest );
-		}
-		ResetFile(&F,opt_preserve);
-		if ( !err && opt_remove_src )
-		    RemoveSource(param->arg,dest,verbose>=0,testmode);
-	    }
-	    else if ( verbose > 0 )
-	    {
-		fprintf(stdlog,"ALREADY NORMALIZED: %s:%s\n", src_format, param->arg );
-		fflush(stdlog);
-	    }
-
-	    LinkCacheRAW(szs.cache_fname,dest,orig_data,orig_size);
-
-	}
-      abort:
+	const enumError err = patch_file_helper(param->arg,true);
 	if ( max_err < err )
 	     max_err = err;
-	ResetSZS(&szs);
     }
 
     return max_err;
@@ -5636,6 +5813,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_COMPRESS:	err += ScanOptCompr(optarg); break;
 	case GO_FAST:		opt_fast = true; err += ScanOptCompr("fast"); break;
 	case GO_NORM:		opt_norm = true; break;
+	case GO_NO_COPY:	opt_no_copy = true; break;
 	case GO_MAX_FILE_SIZE:	err += ScanOptMaxFileSize(optarg); break;
 	case GO_TRACKS:		err += ScanOptTracks(optarg); break;
 	case GO_ARENAS:		err += ScanOptArenas(optarg); break;
@@ -5643,6 +5821,9 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_PATCH_BMG:	err += ScanOptPatchMessage(optarg); break;
 	case GO_MACRO_BMG:	err += ScanOptMacroBMG(optarg); break;
 	case GO_FILTER_BMG:	filter_bmg = optarg; break;
+	case GO_LE_MENU:	opt_le_menu = true; break;
+	case GO_CUP_ICONS:	opt_cup_icons = optarg; break;
+	case GO_TITLE_SCREEN:	opt_title_screen = optarg; break;
 	case GO_AUTOADD_PATH:	DefineAutoAddPath(optarg); break;
 
 	case GO_ENCODE_ALL:	opt_encode_all = true; break;
@@ -5674,6 +5855,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_BRIEF:		brief_count++; break;
 	case GO_PIPE:		pipe_count++; break;
+	case GO_IN_ORDER:	inorder_count++; break;
 	case GO_DELTA:		delta_count++; break;
 	case GO_DIFF:		diff_count++; break;
 	case GO_NO_PARAM:	print_param = false; break;
@@ -5694,6 +5876,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_NO_BMG_INLINE:	opt_bmg_inline_attrib = false; break;
 	case GO_CACHE:		opt_cache = optarg; break;
 	case GO_CNAME:		opt_cname = optarg; break;
+	case GO_PARALLEL:	parallel_count++; break;
 	case GO_ID:		opt_id = true; break;
 	case GO_BASE64:		opt_base64 = true; err += ScanOptCoding64(optarg); break;
 	case GO_DB64:		opt_db64 = true; err += ScanOptCoding64(optarg); break;
@@ -5786,6 +5969,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0); break;
 	case CMD_ERROR:		err = cmd_error(); break;
 	case CMD_FILETYPE:	err = cmd_filetype(); break;
+	case CMD_UI_CHECK:	err = cmd_ui_check(); break;
 	case CMD_FILEATTRIB:	err = cmd_fileattrib(); break;
 	case CMD_BRSUB:		err = cmd_brsub(); break;
 

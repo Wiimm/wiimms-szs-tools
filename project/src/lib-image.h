@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -380,10 +380,31 @@ enumError SaveIMG
 );
 
 ///////////////////////////////////////////////////////////////////////////////
+// [[tpl_raw_t]]
+
+typedef struct tpl_raw_t
+{
+    bool		valid;		// 'data' is valid
+    mem_t		data;	        // raw data, alloced
+    int			n_image;	// number of images including mainn image
+    struct mipmap_info_t *mmi;		// 'n_images' info recored, alloced
+    const endian_func_t *endian;	// endian functions
+}
+tpl_raw_t;
+
+void ResetRawTPL ( tpl_raw_t *raw );
+
+enumError CreateRawTPL
+(
+    tpl_raw_t		* raw,		// results with alloced data
+    Image_t		* src_img	// pointer to valid source img
+);
+
+//-----------------------------------------------------------------------------
 
 enumError SaveTPL
 (
-    Image_t		* src_img,	// pointer to valid source img
+    Image_t		*src_img,	// pointer to valid source img
     FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: force overwriting

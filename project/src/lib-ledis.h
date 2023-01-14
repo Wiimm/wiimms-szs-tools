@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -61,6 +61,24 @@
 // number of strings that can be accessed by '[name]'.
 
 #define LE_STRING_SET_ENABLED 1
+
+///////////////////////////////////////////////////////////////////////////////
+
+// if 1, then instruction 'patch=...' is enabled (in development)
+
+#define LE_DIS_PATCH_ENABLED 0
+
+//-----------------------------------------------------------------------------
+
+// if 1, then instruction 'sort-tracks=...' is enabled (in development)
+
+#define LE_DIS_SORTTRACKS_ENABLED 0
+
+//-----------------------------------------------------------------------------
+
+// if 1, then instruction 'sort-cups=...' is enabled (in development)
+
+#define LE_DIS_SORTCUPS_ENABLED 0
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -373,9 +391,9 @@ void ResetLSP ( le_strpar_t *par );
 static inline void SetOptionsLSP ( le_strpar_t *par, le_options_t opt )
 	{ if (par) par->opt = opt; }
 
-char * ScanLSP ( le_strpar_t *par, ccp arg, enumError *ret_err );
+char * ScanLSP ( le_strpar_t *par, ccp arg, int arg_len, enumError *ret_err );
 char * ScanOptionalLSP
-	( le_strpar_t *par, ccp arg, le_track_text_t fallback, enumError *ret_err );
+	( le_strpar_t *par, ccp arg, int arg_len, le_track_text_t fallback, enumError *ret_err );
 
 ccp GetNameLSP ( const le_strpar_t *par );
 ccp GetOptionsLSP ( const le_strpar_t *par, le_options_t mask );
@@ -975,14 +993,21 @@ enumError CreateLeDefLD    ( FILE *f, le_distrib_t *ld );
 enumError CreateLecodeLD   ( FILE *f, le_distrib_t *ld, le_region_t region );
 enumError CreateLparLD     ( FILE *f, le_distrib_t *ld, bool print_full );
 enumError CreateBmgLD	   ( FILE *f, le_distrib_t *ld, bool bmg_text );
-enumError CreateCupIconsLD ( FILE *f, le_distrib_t *ld, ccp fname, const le_strpar_t *src,
-							mem_t mem_opt, bool print_info );
 
 enumError CreateLeInfoLD   ( FILE *f, const le_distrib_t *ld, bool list_only );
 enumError CreateDebugLD    ( FILE *f, const le_distrib_t *ld );
+
+enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info );
 enumError CreateReportLD   ( ld_out_param_t *lop, mem_t mem_opt );
 
 enumError CreateLecode4LD  ( ccp fname, le_distrib_t *ld );
+
+//-----------------------------------------------------------------------------
+// patch files
+
+#if LE_DIS_PATCH_ENABLED
+    enumError PatchLD ( le_distrib_t *ld, mem_t mem_opt, StringField_t *filelist );
+#endif
 
 //-----------------------------------------------------------------------------
 // string functions
@@ -1005,7 +1030,14 @@ enumError TransferFilesLD ( le_distrib_t *ld, bool logit, bool testmode );
 
 void UpdateDistribLD ( le_distrib_t *ld, bool overwrite );
 bool AddDistribParamLD ( le_distrib_t *ld, ccp src, ccp end );
-bool SortTracksLD ( le_distrib_t *ld, const le_strpar_t *src, mem_t mem_opt );
+
+#if LE_DIS_SORTTRACKS_ENABLED
+    bool SortTracksLD ( le_distrib_t *ld, const le_strpar_t *src, mem_t mem_opt );
+#endif
+
+#if LE_DIS_SORTCUPS_ENABLED
+    bool SortCupsLD   ( le_distrib_t *ld, const le_strpar_t *src, mem_t mem_opt );
+#endif
 
 enumError ImportDistribLD ( le_distrib_t *ld, cvp data, uint size );
 enumError ImportDistribSTLD ( le_distrib_t *ld, ScanText_t *st );

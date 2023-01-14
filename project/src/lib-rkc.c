@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -105,11 +105,7 @@ int IterateFilesRKC
     it->fst_item = 0;
     it->is_dir   = 0;
 
- #if USE_ITERATOR_PARAM
     if (it->itpar.cut_files)
- #else
-    if (it->cut_files)
- #endif
     {
 	it->no_recurse++;
 	it->off		= 0;
@@ -140,11 +136,7 @@ int IterateFilesRKC
 	return it->func_it(it,false);
     }
 
- #if USE_ITERATOR_PARAM
     if ( it->itpar.cut_files && sizeof(rkct_t)+sizeof(rkco_t) < u8_off )
- #else
-    if ( it->cut_files && sizeof(rkct_t)+sizeof(rkco_t) < u8_off )
- #endif
     {
 	it->off  = sizeof(rkct_t)+sizeof(rkco_t);
 	it->size = u8_off - it->off;
@@ -165,13 +157,8 @@ int IterateFilesRKC
 // [[fname+]]
 	InitializeSubSZS(&szs2,szs,u8_off,u8_end-u8_off,FF_UNKNOWN,it->path,true);
 
-     #if USE_ITERATOR_PARAM
 	szs_iterator_func it_func
 		= GetIteratorFunction(szs2.fform_arch,it->itpar.cut_files);
-     #else
-	szs_iterator_func it_func
-		= GetIteratorFunction(szs2.fform_arch,it->cut_files);
-     #endif
 
 	if (it_func)
 	{

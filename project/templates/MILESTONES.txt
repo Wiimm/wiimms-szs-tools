@@ -157,3 +157,6 @@ szs v2.15a r8176 - 2020-04-03
 szs v2.28a
  - wlect distribution and new self defined file formats.
 
+szs v2.31a
+ - Support of cup icons.
+

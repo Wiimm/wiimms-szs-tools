@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -827,11 +827,7 @@ static int iterate_brres_group
     const brres_entry_t * entry_end	= entry + n_entries;
     int stat				= 0;
 
- #if USE_ITERATOR_PARAM
     if (it->itpar.cut_files)
- #else
-    if (it->cut_files)
- #endif
     {
 	it->index	= 0;
 	it->fst_item	= 0;
@@ -973,11 +969,7 @@ int IterateFilesBRRES
 
     //----- cut files?
 
- #if USE_ITERATOR_PARAM
     if (it->itpar.cut_files)
- #else
-    if (it->cut_files)
- #endif
     {
 	it->index	= 0;
 	it->fst_item	= 0;
@@ -1351,11 +1343,7 @@ int IterateStringsBRSUB
     it2.size		= it->file_size;
     it2.endian		= it->endian;
     //it2.clean_path	= ;
- #if USE_ITERATOR_PARAM // [[itpar]] copy itpar
     it2.itpar.cut_files	= true;
- #else
-    it2.cut_files	= true;
- #endif
     CutFilesBRSUB( &it2, brsub_string_func, it, 0, 0 );
     return count + it2.index;
 }

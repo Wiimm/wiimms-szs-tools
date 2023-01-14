@@ -681,6 +681,20 @@ szs v2.31a r8725 - 2022-12-16
    documentation is available at https://szs.wiimm.de/doc/genericimg .
 
 
+szs v2.32a r8742 - 2022-12-25
+
+ - wszst SPLIT: New output record: distrib_flags="number flags".
+ - wlect DISTRIB:
+    - Instructions cup-icons= and cup-info=:
+       - By default, 5 characters are used for the name part. The source can
+         now be specified as an optional storage indicator.
+       - Fixed some issues.
+    - Instruction distrib=: Improved track list.
+    - New instruction report=: Analyse the distribution and print a report.
+ - Tool wimgt: Improved generic images.
+ - Fixed some pager and color issues.
+
+
 @@MODULE(last-history.txt)@@
 
 

@@ -123,3 +123,10 @@ VS-TEXTURES	= %s
 
 BLOCK-TEXTURES	= %u
 
+# LE-CODE usually (0) overwrites the table that determines the distribution of
+# points in private races. Nintendo has defined values between 0 and 15 in
+# StaticR.rel, LE-CODE defines values between 1 and 25. If this parameter is
+# set to 1, then the values are read from StaticR.rel.
+
+STATICR-POINTS	= %u
+

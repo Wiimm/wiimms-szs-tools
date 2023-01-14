@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -62,6 +62,7 @@
 #include "crypt.h"
 
 #include "setup.inc"
+#include "le-menu.inc"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -146,6 +147,37 @@ typedef struct scan_data_t
     u32		align;			// data alignmet
 
 } scan_data_t;
+
+///////////////////////////////////////////////////////////////////////////////
+// [[add_missing_t]]
+
+typedef struct add_missing_t
+{
+    szs_file_t		*szs;		// valid szs
+    scan_data_t		*sd;		// NULL or valid scan data
+    szs_norm_t		*norm;		// NULL or valid norm data
+
+    szs_subfile_t	*link;		// not NULL: link to this file
+    void		*data;		// not NULL: add this data (no autoadd)
+    uint		size;		// size of 'data'
+    bool		move_data;	// data is alloced
+
+    szs_subfile_t	*last_subfile;	// last added file, set by add_missing_file()
+
+    bool		print_err;	// true: print errors about missing files
+    int			log_indent;	// >-1: print log with indention
+
+}
+add_missing_t;
+
+//-----------------------------------------------------------------------------
+
+static int add_missing_file
+(
+    ccp			path,		// calculated path
+    file_format_t	fform,		// FF_BRRES | FF_BREFF | FF_BREFT
+    add_missing_t	*am		// user defined parameter
+);
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1043,9 +1075,9 @@ enumError LoadObjFileListSZS
     if (szs->used_file)
 	return ERR_OK;
 
-    PRINT("sizeof(UsedFileFILE_t)=%zu\n",sizeof(UsedFileFILE_t));
     szs->used_file = CALLOC(1,sizeof(*szs->used_file));
     szs->required_file = CALLOC(1,sizeof(*szs->required_file));
+    PRINT0("sizeof(UsedFileFILE_t)=%zu=%zu\n",sizeof(UsedFileFILE_t),sizeof(*szs->used_file));
     InitializeParamField(szs->required_file);
 
 
@@ -1207,16 +1239,19 @@ enumError LoadObjFileListSZS
 		*flags |= F_IS_OBJECT;
 
 		sha1_hash_t hash;
-		SHA1( szs->data+file->offset, file->size, hash );
-
 		bool found = false;
-		const s16 *ref = DbFileRefFILE + ptr->ref;
-		while ( !found && *ref >= 0 )
+		if (file->offset)
 		{
-		    DASSERT( *ref < N_DB_FILE );
-		    const DbFile_t *db = DbFile + *ref++;
-		    DASSERT( db->sha1 < N_DB_FILE_SHA1 );
-		    found = !memcmp(hash,DbFileSHA1[db->sha1].sha1,sizeof(hash));
+		    SHA1( szs->data+file->offset, file->size, hash );
+
+		    const s16 *ref = DbFileRefFILE + ptr->ref;
+		    while ( !found && *ref >= 0 )
+		    {
+			DASSERT( *ref < N_DB_FILE );
+			const DbFile_t *db = DbFile + *ref++;
+			DASSERT( db->sha1 < N_DB_FILE_SHA1 );
+			found = !memcmp(hash,DbFileSHA1[db->sha1].sha1,sizeof(hash));
+		    }
 		}
 		if (!found)
 		    *flags |= F_MODIFIED;
@@ -1517,13 +1552,16 @@ static int norm_collect_func
 	depth--;
 	if (!*path)
 	{
-	    norm->have_pt_dir = true;
+	    norm->u8.have_pt_dir = true;
 	    return 0;
 	}
     }
 
     if (!*path)
 	return 0;
+
+    if ( opt_cup_icons && !strcasecmp(path,"control/timg/tt_baby_daisy_64x64.tpl"))
+	norm->add_cup_icons = true;
 
     if ( norm->rm_aiparam && !strncasecmp(path,"aiparam",7) )
     {
@@ -1574,7 +1612,7 @@ static int norm_collect_func
     if ( *ptr == '/' )
 	ptr++;
 
-    norm->namepool_size += strlen(ptr);
+    norm->u8.namepool_size += strlen(ptr);
     noPRINT("ADD: %s[%zu+%u]\n",ptr,strlen(ptr),!it->is_dir);
     if (it->is_dir)
     {
@@ -1605,7 +1643,7 @@ static int norm_collect_func
 
 		    if ( f->removed)
 		    {
-			norm->namepool_size -= strlen(ptr)+1;
+			norm->u8.namepool_size -= strlen(ptr)+1;
 			relevant_size = 0;
 		    }
 		}
@@ -1623,9 +1661,9 @@ static int norm_collect_func
 			lptr->link_index, lptr->path, file->path );
 	}
 	else
-	    norm->total_size += ALIGN32(relevant_size,opt_align_u8);
+	    norm->u8.total_size += ALIGN32(relevant_size,opt_align_u8);
 
-	norm->namepool_size++;
+	norm->u8.namepool_size++;
     }
     return 0;
 }
@@ -1653,11 +1691,36 @@ bool NormalizeExSZS
     ResetFileSZS(szs,false);
 
 // [[norm]]
-    szs_norm_t norm;
-    memset(&norm,0,sizeof(norm));
-    norm.rm_aiparam = rm_aiparam;
-    norm.clean_lex = clean_lex;
+    szs_norm_t norm = { .rm_aiparam = rm_aiparam, .clean_lex = clean_lex };
     IterateFilesParSZS(szs,norm_collect_func,&norm,false,false,0,-1,SORT_NONE);
+
+    if (norm.add_cup_icons)
+    {
+	static tpl_raw_t raw = {0};
+	if (!raw.valid)
+	{
+	    Image_t img;
+	    enumError err = LoadIMG(&img,true,opt_cup_icons,0,false,false,false);
+	    if (!err)
+	    {
+		img.is_cup_icon = true;
+		CreateRawTPL(&raw,&img);
+	    }
+	    if (!raw.valid)
+		opt_cup_icons = 0;
+	}
+	if (raw.valid)
+	{
+	    add_missing_t am = { .szs = szs, .norm = &norm,
+				.data = (u8*)raw.data.ptr, .size = raw.data.len,
+				.print_err = true };
+	    am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
+	    add_missing_file("button/timg/ct_icons.tpl",FF_TPL,&am);
+//ALWAYS    if (opt_links)
+		am.link = am.last_subfile;
+	    add_missing_file("control/timg/ct_icons.tpl",FF_TPL,&am);
+	}
+    }
 
     if (autoadd)
 	AddMissingFiles(szs,0,0,&norm,2);
@@ -1671,7 +1734,7 @@ bool NormalizeExSZS
     szs->data		= 0;
     szs->data_alloced	= false;
 
-    CreateU8(szs,0,old_data,norm.namepool_size,norm.total_size,norm.have_pt_dir);
+    CreateU8ByInfo(szs,0,old_data,&norm.u8);
 
     bool dirty = old_size != szs->size || memcmp(old_data,szs->data,old_size);
     if (old_alloced)
@@ -1684,18 +1747,6 @@ bool NormalizeExSZS
 ///////////////			AddMissingFiles()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-typedef struct add_missing_t
-{
-    szs_file_t		* szs;		// valid szs
-    scan_data_t		* sd;		// NULL or valid scan data
-    szs_norm_t		* norm;		// NULL or valid norm data
-    int			log_indent;	// >-1: print log with indention
-    bool		print_err;	// true: print errors about missing files
-
-} add_missing_t;
-
-//-----------------------------------------------------------------------------
-
 static int add_missing_file
 (
     ccp			path,		// calculated path
@@ -1707,11 +1758,14 @@ static int add_missing_file
     DASSERT(fform);
     DASSERT(am);
     DASSERT(am->szs);
-    DASSERT( am->sd || am->norm );
+    DASSERT( am->sd || am->norm || am->link || am->data );
 
     noPRINT("--> %s:%s\n", GetNameFF(0,fform), path );
 
-    szs_subfile_list_t *subfile = &am->szs->subfile;
+    szs_file_t *szs = am->szs;
+    am->last_subfile = 0;
+
+    szs_subfile_list_t *subfile = &szs->subfile;
     szs_subfile_t *sptr, *send = subfile->list + subfile->used;
     for ( sptr = subfile->list; sptr < send; sptr++ )
     {
@@ -1734,6 +1788,16 @@ static int add_missing_file
     {
 	StringCopyS(load_path,sizeof(load_path),path);
     }
+    else if ( am->link > 0 )
+    {
+	size = am->link->size;
+	load_path[0] = 0;
+    }
+    else if ( am->data > 0 )
+    {
+	size = am->size;
+	load_path[0] = 0;
+    }
     else
     {
 	size = FindAutoAdd(path,0,load_path,sizeof(load_path));
@@ -1746,17 +1810,18 @@ static int add_missing_file
 	 #ifdef TEST
 	    if (verbose>=0)
 		ERROR0(ERR_WARNING,"Missing sub file '%s': %s\n",
-		    path, am->szs->fname );
+		    path, szs->fname );
 	 #endif
 	    return 0;
 	}
     }
 
     if ( am->log_indent >= 0 )
-	fprintf(stdlog,"%*s%sAUTO-ADD %s\n",
+	fprintf(stdlog,"%*s>> %s%s [%llu] %s\n",
 			am->log_indent, "",
-			testmode ? "WOULD " : "",
-			load_path );
+			testmode ? "would " : "",
+			am->link ? "link" : am->data ? "add" : "auto-add",
+			size, *load_path ? load_path : path );
 
     int stack[10], *stack_end = stack;
     int dir_id = 0;
@@ -1800,14 +1865,13 @@ static int add_missing_file
 	}
 	else
 	{
-
 	    if (am->sd)
 	    {
 		int *stack_ptr;
 		for ( stack_ptr = stack; stack_ptr < stack_end; stack_ptr++ )
 		    subfile->list[*stack_ptr].size++;
 
-		sptr = AppendSubfileSZS(am->szs,0,0);
+		sptr = AppendSubfileSZS(szs,0,0);
 	    }
 	    else
 	    {
@@ -1819,7 +1883,7 @@ static int add_missing_file
 			(*stack_ptr)++;
 		}
 
-		sptr = InsertSubfileSZS(am->szs,++dir_id,0,0);
+		sptr = InsertSubfileSZS(szs,++dir_id,0,0);
 	    }
 	    DASSERT(sptr);
 
@@ -1835,7 +1899,7 @@ static int add_missing_file
 	    }
 	    else if (am->norm)
 	    {
-		am->norm->namepool_size += ptr - start;
+		am->norm->u8.namepool_size += ptr - start;
 		sptr->offset = stack_end - stack + 1;
 	    }
 	}
@@ -1849,19 +1913,55 @@ static int add_missing_file
     if ( is_course_lex )
     {
 	InitializeLEX(&lex);
-	if ( PatchLEX(&lex,&am->szs->have) && CreateRawLEX(&lex) == ERR_OK )
+	if ( PatchLEX(&lex,&szs->have) && CreateRawLEX(&lex) == ERR_OK )
 	    size = lex.raw_data_size;
 	PRINT0("LEX size=%lld\n",size);
     }
 
     szs_subfile_t *file = 0;
-    if (!size)
+    if (am->link)
+    {
+	file = InsertSubfileSZS(szs,dir_id+1,0,0);
+
+	file->dir_id		= dir_id;
+	file->is_dir		= false;
+	file->path		= pt_prefix ? STRDUP2("./",path) : STRDUP(path);
+	if (!am->link->link_index)
+	    am->link->link_index = ++szs->subfile.link_count;
+	file->link_index	= am->link->link_index;
+	
+
+	if (am->norm)
+	{
+	    ccp fname = strrchr(path,'/');
+	    am->norm->u8.namepool_size += strlen(fname ? fname+1 : path) + 1;
+	}
+    }
+    else if (am->data)
+    {
+	file = InsertSubfileSZS(szs,dir_id+1,0,0);
+
+	file->dir_id		= dir_id;
+	file->is_dir		= false;
+	file->path		= pt_prefix ? STRDUP2("./",path) : STRDUP(path);
+	file->data		= am->move_data ? am->data : MEMDUP(am->data,size);
+	file->size		= size;
+	file->data_alloced	= true;
+
+	if (am->norm)
+	{
+	    ccp fname = strrchr(path,'/');
+	    am->norm->u8.namepool_size += strlen(fname ? fname+1 : path) + 1;
+	    am->norm->u8.total_size  += ALIGN32(file->size,opt_align_u8);
+	}
+    }
+    else if (!size)
     {
 	// [[2do]] maybe remove "course.lex" from list
     }
     else if (am->sd)
     {
-	file = AppendSubfileSZS(am->szs,0,0);
+	file = AppendSubfileSZS(szs,0,0);
 	DASSERT(file);
 	ccp fname = strrchr(path,'/');
 	am->sd->namepool_size_u8 += strlen(fname ? fname+1 : path) + 1;
@@ -1878,7 +1978,7 @@ static int add_missing_file
     }
     else if (am->norm)
     {
-	file = InsertSubfileSZS(am->szs,dir_id+1,0,0);
+	file = InsertSubfileSZS(szs,dir_id+1,0,0);
 
 	file->dir_id	= dir_id;
 	file->is_dir	= false;
@@ -1889,12 +1989,13 @@ static int add_missing_file
 	    file->load_path = STRDUP(load_path);
 
 	ccp fname = strrchr(path,'/');
-	am->norm->namepool_size += strlen(fname ? fname+1 : path) + 1;
-	am->norm->total_size  += ALIGN32(file->size,opt_align_u8);
+	am->norm->u8.namepool_size += strlen(fname ? fname+1 : path) + 1;
+	am->norm->u8.total_size  += ALIGN32(file->size,opt_align_u8);
 
-	PRINT("ADD-FILE[%d,%zd]: %s, %u bytes\n",
-		dir_id+1, file-am->szs->subfile.list, path, file->size );
+	PRINT1("ADD-FILE[%d,%zd]: %s, %u bytes\n",
+		dir_id+1, file-szs->subfile.list, path, file->size );
     }
+    am->last_subfile = file;
 
     if (is_course_lex)
     {
@@ -1977,8 +2078,8 @@ enumError AddMissingFiles
     am.norm		= norm;
     am.log_indent	= log_indent;
 
-    int i, insert_count = 0;
-    for ( i = 0; i < N_DB_FILE_FILE; i++ )
+    int insert_count = 0;
+    for ( int i = 0; i < N_DB_FILE_FILE; i++ )
 	if (szs->used_file->d[i])
 	{
 	    const DbFileFILE_t *ptr = DbFileFILE + i;
@@ -2508,6 +2609,146 @@ static int IterateFilesKMP
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			PatchSZS()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[patch_szs_par_t]]
+
+typedef struct patch_szs_par_t
+{
+    uint	modified;	// >0: any data modified
+    ccp		path;		// path without leading "./"
+}
+patch_szs_par_t;
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void patch_file
+(
+    struct szs_iterator_t *it,		// itarator data
+    const void		*new_data,	// new data
+    uint		new_size,	// size of 'new_data'
+    bool		move_data	// true: 'new_data' is alloced
+)
+{
+    DASSERT(it);
+    DASSERT(data||!size);
+
+    szs_file_t *szs = it->szs;
+    DASSERT(szs);
+    u8 *data = szs->data + it->off;
+
+    if ( it->size == new_size )
+    {
+	if ( verbose >= 2 )
+	    fprintf(stdlog,"  >> overwrite [%u] %s \n",new_size,it->path);
+
+	memcpy(data,new_data,new_size);
+	if (move_data)
+	    FREE((void*)new_data);
+    }
+    else
+    {
+	if ( verbose >= 2 )
+	    fprintf(stdlog,"  >> replace [%u] %s \n",new_size,it->path);
+
+	szs_subfile_t *file = AppendSubFileList(&szs->ext_data,it->path,false);
+	DASSERT(file);
+	file->load_path = move_data ? new_data : MEMDUP(new_data,new_size);
+	it->off += (u8*)file->load_path - data;
+	it->size = file->size = new_size;
+    }
+
+    patch_szs_par_t *ppar = it->param;
+    DASSERT(ppar);
+    ppar->modified++;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void patch_le_menu ( struct szs_iterator_t *it )
+{
+    struct tab_t
+    {
+	ccp		fname;
+	BZ2Manager_t	*bz2mgr;
+    };
+
+    static const struct tab_t tab[] =
+    {
+	{ "button/ctrl/Back.brctr",			&back_brctr_mgr },
+	{ "control/ctrl/CourseSelectCup.brctr",		&courseselectcup_brctr_mgr },
+	{ "button/ctrl/CupSelectCup.brctr",		&cupselectcup_brctr_mgr },
+	{ "demo/blyt/course_name.brlyt",		&course_name_brlyt_mgr },
+	{ "button/blyt/cup_icon_64x64_common.brlyt",	&cup_icon_64x64_common_brlyt_mgr },
+	{ "control/blyt/cup_icon_64x64_common.brlyt",	&cup_icon_64x64_common_brlyt_mgr },
+	{ "demo/timg/tt_hatena_64x64.tpl",		&tt_hatena_64x64_tpl_mgr },
+	{0,0}
+    };
+
+    patch_szs_par_t *ppar = it->param;
+    DASSERT(ppar);
+
+    for ( const struct tab_t *ptr = tab; ptr->fname; ptr++ )
+    {
+	if (!strcasecmp(ppar->path,ptr->fname))
+	{
+	    BZ2Manager_t *bm = ptr->bz2mgr;
+	    DecodeBZIP2Manager(bm);
+	    patch_file(it,bm->data,bm->size,false);
+	}
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void patch_title_screen ( struct szs_iterator_t *it )
+{
+    patch_szs_par_t *ppar = it->param;
+    DASSERT(ppar);
+    ccp base_name = strrchr(ppar->path,'/');
+    if (!base_name)
+	base_name = ppar->path;
+    
+    u8 *data;
+    size_t size;
+    LoadFileAlloc(opt_title_screen,base_name,0,&data,&size,0,2,0,false);
+    if (data)
+	patch_file(it,data,size,true);
+    else if (strstr(ppar->path,"/tt_title_screen_"))
+    {
+	char path_buf[PATH_MAX];
+	const bool bokeboke = strstr(ppar->path,"bokeboke") != 0;
+	ccp path = PathCatPP(path_buf,sizeof(path_buf),
+			opt_title_screen, bokeboke ? "title2.png" : "title1.png" );
+	Image_t patch;
+	enumError err = LoadIMG(&patch,true,path,0,false,false,true);
+	if (!err)
+	{
+	    Image_t img;
+	    u8 *data = it->szs->data + it->off;
+	    data = MEMDUP(data,it->size);
+	    err = AssignIMG(&img,true,data,it->size,0,false,&be_func,it->path);
+	    ConvertIMG(&patch,false,0,IMG_X_RGB,PAL_AUTO);
+	    ConvertIMG(&img,false,0,IMG_X_RGB,PAL_AUTO);
+	    err = PatchIMG(&img,&img,&patch,PIM_TOP|PIM_FOREGROUND);
+	    if (!err)
+	    {
+		ConvertIMG(&img,false,0,IMG_RGB565,PAL_AUTO);
+		tpl_raw_t raw = {0};
+		CreateRawTPL(&raw,&img);
+		if (raw.valid)
+		{
+		    patch_file(it,raw.data.ptr,raw.data.len,true);
+		    raw.data.ptr = 0;
+		}
+		ResetRawTPL(&raw);
+	    }
+	    ResetIMG(&img);
+	    FREE(data);
+	}
+	ResetIMG(&patch);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 static int transform_collect_func
 (
@@ -2516,10 +2757,22 @@ static int transform_collect_func
 )
 {
     DASSERT(it);
-    if ( !term && !it->is_dir )
+    if (term)
+	return 0;
+
+    patch_szs_par_t *ppar = it->param;
+    DASSERT(ppar);
+
+    ccp path = it->path;
+    if ( path[0] == '.' && path[1] == '/' )
+	path += 2;
+    ppar->path = path;
+
+    if (it->is_dir)
     {
-	int *dirty = it->param;
-	DASSERT(dirty);
+    }
+    else
+    {
 	szs_file_t *szs = it->szs;
 	DASSERT(szs);
 	u8 * data = szs->data + it->off;
@@ -2550,7 +2803,7 @@ static int transform_collect_func
 				PATCH_ACTION_LOG("Patch","BMG/RAW","%s\n",it->name);
 				memcpy(data,bmg.raw_data,it->size);
 				it->size = bmg.raw_data_size;
-				*dirty = 1;
+				ppar->modified++;
 			    }
 			    else if ( szs->allow_ext_data )
 			    {
@@ -2563,7 +2816,7 @@ static int transform_collect_func
 				it->off += bmg.raw_data - data;
 				it->size = bmg.raw_data_size;
 				bmg.raw_data = 0;
-				*dirty = 1;
+				ppar->modified++;
 			    }
 			    else
 				ERROR0(ERR_WARNING,
@@ -2619,14 +2872,14 @@ static int transform_collect_func
 			    it->off += (u8*)file->load_path - data;
 			    it->size = file->size = kcl.raw_data_size;
 			}
-			*dirty = 1;
+			ppar->modified++;
 		    }
 		    ResetKCL(&kcl);
 		}
 		else if (PatchRawDataKCL(data,it->size,it->name))
 		{
 		    PATCH_ACTION_LOG("Patch","KCL/RAW","%s\n",it->name);
-		    *dirty = 1;
+		    ppar->modified++;
 		}
 		break;
 
@@ -2667,14 +2920,14 @@ static int transform_collect_func
 			    it->size = kmp.raw_data_size;
 			    kmp.raw_data = 0;
 			}
-			*dirty = 1;
+			ppar->modified++;
 		    }
 		    ResetKMP(&kmp);
 		}
 		else if (PatchRawDataKMP(data,it->size))
 		{
 		    PATCH_ACTION_LOG("Patch","KMP/RAW","%s\n",it->name);
-		    *dirty = 1;
+		    ppar->modified++;
 		}
 		break;
 
@@ -2721,7 +2974,7 @@ static int transform_collect_func
 			    it->size = lex.raw_data_size;
 			    lex.raw_data = 0;
 			}
-			*dirty = 1;
+			ppar->modified++;
 		    }
 		    PRINT("PATCH/LEX: modified=%d, have_lex:%x,%x\n",
 				lex.modified, lex.have_sect, lex.have_feat );
@@ -2762,12 +3015,16 @@ static int transform_collect_func
 			PATCH_ACTION_LOG(" Patch","MDL/RAW","%s%s\n",
 				it->name,
 				stat&2 ? " (vector transformation recognized)" : "" );
-			*dirty = 1;
+			ppar->modified++;
 		    }
 		}
 		break;
 
 	    default:
+		if (opt_le_menu)
+		    patch_le_menu(it);
+		if ( opt_title_screen && !memcmp(ppar->path,"title/timg/",11) )
+		    patch_title_screen(it);
 		break;
 	}
     }
@@ -2796,26 +3053,31 @@ bool PatchSZS ( szs_file_t * szs )
     }
  #endif
 
-    int dirty = 0;
+    patch_szs_par_t ppar = {0};
     if ( szs->data && szs->size )
     {
 	if (patch_lex)
 	{
 	    CalcHaveSZS(szs);
-	    dirty |= NormalizeExSZS(szs,0,0,0);
+	    ppar.modified |= NormalizeExSZS(szs,0,0,0);
 	}
 
-	if ( have_patch_count > 0 || opt_lex_purge )
+	if (  have_patch_count > 0
+	   || opt_lex_purge
+	   || opt_le_menu
+//DEL	   || opt_cup_icons
+	   || opt_title_screen
+	   )
 	{
 	    PRINT("** PatchSZS() **\n");
 	    ScanTformBegin();
-	    IterateFilesParSZS(szs,transform_collect_func,&dirty,false,false,-1,-1,SORT_NONE);
+	    IterateFilesParSZS(szs,transform_collect_func,&ppar,false,false,-1,-1,SORT_NONE);
 	    TformScriptEnd();
 	    ClearSpecialFilesSZS(szs);
 	}
     }
 
-    return dirty != 0;
+    return ppar.modified != 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -3138,7 +3400,6 @@ static int check_file_func
 	    if (chk->num_mdl)
 		chk->num_mdl[0]++;
 	    szs_file_t subszs;
-// [[fname+]]
 	    InitializeSubSZS(&subszs,it->szs,it->off,it->size,fform,it->path,false);
 	    subszs.fname = it->path;
 	    IterateFilesParSZS(&subszs,check_mdl_func,chk,false,true,0,1,SORT_NONE);

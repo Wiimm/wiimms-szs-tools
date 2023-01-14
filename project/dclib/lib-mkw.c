@@ -15,7 +15,7 @@
  *                                                                         *
  ***************************************************************************
  *                                                                         *
- *        Copyright (c) 2012-2022 by Dirk Clemens <wiimm@wiimm.de>         *
+ *        Copyright (c) 2012-2023 by Dirk Clemens <wiimm@wiimm.de>         *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1513,6 +1513,131 @@ ccp PrintDTA ( DistribFlags_t flags, bool aligned )
 	*d = 0;
     }
     return buf;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			track class			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+TrackClass_t ScanTrackClass ( ccp text, int text_len )
+{
+    TrackClass_t res = 0;
+    if (text)
+    {
+	ccp end = text + ( text_len < 0 ? strlen(text) : text_len );
+	while ( text < end )
+	{
+	    const int ch = tolower(*text++);
+	    switch (ch)
+	    {
+		case 'p': res |= G_TCLS_PRIVATE; break;
+		case 't': res |= G_TCLS_TEST; break;
+		case 'b': res |= G_TCLS_BAD; break;
+		case 'f': res |= G_TCLS_FAIL; break;
+		case 'z': res |= G_TCLS_FREEZE; break;
+		case 'k': res |= G_TCLS_STOCK; break;
+		case 's': res |= G_TCLS_SELECT; break;
+		case 'n': res |= G_TCLS_NINTENDO; break;
+		case 'o': res |= G_TCLS_BOOST; break;
+		case 'i': res |= G_TCLS_INCOME; break;
+		case 'w': res |= G_TCLS_WAIT; break;
+	    }
+	}
+PRINT0("%04x <= %.*s\n",res,text_len,text-text_len);
+    }
+    return res;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintTrackClass ( TrackClass_t flags, bool aligned )
+{
+    char *buf = GetCircBuf(12);
+
+    if (aligned)
+    {
+	buf[ 0] = flags & G_TCLS_PRIVATE	? 'P' : '-';
+	buf[ 1] = flags & G_TCLS_TEST		? 'T' : '-';
+	buf[ 2] = flags & G_TCLS_BAD		? 'B' : '-';
+	buf[ 3] = flags & G_TCLS_FAIL		? 'F' : '-';
+	buf[ 4] = flags & G_TCLS_FREEZE		? 'Z' : '-';
+	buf[ 5] = flags & G_TCLS_STOCK		? 'K' : '-';
+	buf[ 6] = flags & G_TCLS_SELECT		? 'S' : '-';
+	buf[ 7] = flags & G_TCLS_NINTENDO	? 'N' : '-';
+	buf[ 8] = flags & G_TCLS_BOOST		? 'O' : '-';
+	buf[ 9] = flags & G_TCLS_INCOME		? 'I' : '-';
+	buf[10] = flags & G_TCLS_WAIT		? 'W' : '-';
+	buf[11] = 0;
+    }
+    else
+    {
+	char *d = buf;
+	if ( flags & G_TCLS_PRIVATE	) *d++ = 'P';
+	if ( flags & G_TCLS_TEST	) *d++ = 'T';
+	if ( flags & G_TCLS_BAD		) *d++ = 'B';
+	if ( flags & G_TCLS_FAIL	) *d++ = 'F';
+	if ( flags & G_TCLS_FREEZE	) *d++ = 'Z';
+	if ( flags & G_TCLS_STOCK	) *d++ = 'K';
+	if ( flags & G_TCLS_SELECT	) *d++ = 'S';
+	if ( flags & G_TCLS_NINTENDO	) *d++ = 'N';
+	if ( flags & G_TCLS_BOOST	) *d++ = 'O';
+	if ( flags & G_TCLS_INCOME	) *d++ = 'I';
+	if ( flags & G_TCLS_WAIT	) *d++ = 'W';
+	if ( d == buf )
+	    *d++ = '-';
+	*d = 0;
+    }
+    return buf;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+TrackClassIndex_t GetTrackClassIndex ( TrackClass_t flags )
+{
+    static const TrackClassIndex_t tab[] =
+    {
+	G_TCLSI_INCOME,
+	G_TCLSI_WAIT,
+	 G_TCLSI_PRIVATE,
+	 G_TCLSI_TEST,
+	G_TCLSI_FREEZE,
+	G_TCLSI_FAIL,
+	G_TCLSI_BAD,
+	 G_TCLSI_NINTENDO,
+	 G_TCLSI_SELECT,
+	 G_TCLSI_BOOST,
+	 G_TCLSI_STOCK,
+	0,
+    };
+
+    for ( const TrackClassIndex_t *ptr = tab; *ptr; ptr++ )
+	if ( 1 << *ptr & flags )
+	    return *ptr;
+
+    return 0;
+}
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetTrackClassName ( TrackClassIndex_t idx, ccp return_on_none )
+{
+    static const char tab[G_TCLSI__N][9] =
+    {
+	"UNKNOWN",
+	"PRIVATE",
+	"TEST",
+	"BAD",
+	"FAIL",
+	"FREEZE",
+	"STOCK",
+	"SELECT",
+	"NINTENDO",
+	"BOOST",
+	"INCOME",
+	"WAIT",
+    };
+
+    return (uint)idx < G_TCLSI__N ? tab[idx] : return_on_none;
 }
 
 //

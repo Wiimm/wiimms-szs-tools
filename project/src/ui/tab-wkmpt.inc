@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -48,7 +48,7 @@
   //
   //---------- list of all wkmpt commands ----------
 
-  { T_DEF_CMD,	"VERSION",	"VERSION",
+  { T_DEF_CMD,	"VERSION",	"VERSION|V",
 		    "wkmpt VERSION [ignored]...",
 		0 /* copy of wszst */ },
 
@@ -193,8 +193,7 @@
 		" The default destination is @'%P/%N.kmp.obj'@."
 		"\n "
 		" Automated dropping of bad KCL triangles is enabled"
-		" if no drop option is specified by option {--kcl}."
-		},
+		" if no drop option is specified by option {--kcl}." },
 
   { T_DEF_CMD,	"CHECK",	"CHECK|CHK",
 		    "wkmpt CHECK source...",

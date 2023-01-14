@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -1138,7 +1138,7 @@ static const InfoOption_t option_cmd_WIM0_LONG =
 
 static const KeywordTab_t CommandTab[] =
 {
-    { CMD_VERSION,	"VERSION",	0,		0 },
+    { CMD_VERSION,	"VERSION",	"V",		0 },
     { CMD_HELP,		"HELP",		"H",		0 },
     { CMD_HELP,		"?",		0,		0 },
     { CMD_CONFIG,	"CONFIG",	0,		0 },
@@ -1461,7 +1461,7 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x100   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x110   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	/* 0x130   */	 0,0,0,0, 0,0,
+	/* 0x130   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 };
 
 //
@@ -2249,7 +2249,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	false,
 	false,
 	"VERSION",
-	0,
+	"V",
 	"wkmpt VERSION [ignored]...",
 	"Print program name and version and exit.",
 	0,

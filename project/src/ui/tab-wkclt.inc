@@ -17,7 +17,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -48,7 +48,7 @@
   //
   //---------- list of all wkclt commands ----------
 
-  { T_DEF_CMD,	"VERSION",	"VERSION",
+  { T_DEF_CMD,	"VERSION",	"VERSION|V",
 		    "wkclt VERSION [ignored]...",
 		0 /* copy of wszst */ },
 

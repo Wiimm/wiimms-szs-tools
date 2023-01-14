@@ -16,7 +16,7 @@
  *   This file is part of the SZS project.                                 *
  *   Visit https://szs.wiimm.de/ for project details and sources.          *
  *                                                                         *
- *   Copyright (c) 2011-2022 by Dirk Clemens <wiimm@wiimm.de>              *
+ *   Copyright (c) 2011-2023 by Dirk Clemens <wiimm@wiimm.de>              *
  *                                                                         *
  ***************************************************************************
  *                                                                         *
@@ -99,6 +99,10 @@ typedef enum enumOptions
 	OPT_PATCH_BMG,
 	OPT_MACRO_BMG,
 	OPT_FILTER_BMG,
+	OPT_LE_MENU,
+	OPT_TITLE_SCREEN,
+	OPT_CUP_ICONS,
+	OPT_NO_COPY,
 	OPT_ID,
 	OPT_BASE64,
 	OPT_DB64,
@@ -108,6 +112,7 @@ typedef enum enumOptions
 	OPT_LONG,
 	OPT_NO_HEADER,
 	OPT_BRIEF,
+	OPT_IN_ORDER,
 	OPT_PIPE,
 	OPT_DELTA,
 	OPT_DIFF,
@@ -193,7 +198,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 137
+	OPT__N_SPECIFIC, // == 142
 
 	//----- global options -----
 
@@ -251,6 +256,7 @@ typedef enum enumOptions
 	OPT_LEX_RM_FEAT,
 	OPT_CACHE,
 	OPT_CNAME,
+	OPT_PARALLEL,
 	OPT_MAX_FILE_SIZE,
 	OPT_TRACKS,
 	OPT_ARENAS,
@@ -279,7 +285,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 218
+	OPT__N_TOTAL // == 224
 
 } enumOptions;
 
@@ -337,6 +343,10 @@ typedef enum enumOptions
 //	OB_PATCH_BMG		= 1llu << OPT_PATCH_BMG,
 //	OB_MACRO_BMG		= 1llu << OPT_MACRO_BMG,
 //	OB_FILTER_BMG		= 1llu << OPT_FILTER_BMG,
+//	OB_LE_MENU		= 1llu << OPT_LE_MENU,
+//	OB_TITLE_SCREEN		= 1llu << OPT_TITLE_SCREEN,
+//	OB_CUP_ICONS		= 1llu << OPT_CUP_ICONS,
+//	OB_NO_COPY		= 1llu << OPT_NO_COPY,
 //	OB_ID			= 1llu << OPT_ID,
 //	OB_BASE64		= 1llu << OPT_BASE64,
 //	OB_DB64			= 1llu << OPT_DB64,
@@ -346,6 +356,7 @@ typedef enum enumOptions
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
 //	OB_BRIEF		= 1llu << OPT_BRIEF,
+//	OB_IN_ORDER		= 1llu << OPT_IN_ORDER,
 //	OB_PIPE			= 1llu << OPT_PIPE,
 //	OB_DELTA		= 1llu << OPT_DELTA,
 //	OB_DIFF			= 1llu << OPT_DIFF,
@@ -459,7 +470,10 @@ typedef enum enumOptions
 //				| OB_MINIMAP
 //				| OB_PATCH_BMG
 //				| OB_MACRO_BMG
-//				| OB_FILTER_BMG,
+//				| OB_FILTER_BMG
+//				| OB_LE_MENU
+//				| OB_TITLE_SCREEN
+//				| OB_CUP_ICONS,
 //
 //	OB_GRP_DEST		= OB_DEST
 //				| OB_DEST2
@@ -598,6 +612,11 @@ typedef enum enumOptions
 //				| OB_NO_HEADER
 //				| OB_IGNORE,
 //
+//	OB_CMD_UI_CHECK		= OB_LONG
+//				| OB_NO_HEADER
+//				| OB_IN_ORDER
+//				| OB_IGNORE,
+//
 //	OB_CMD_FILEATTRIB	= OB_NO_HEADER,
 //
 //	OB_CMD_BRSUB		= OB_IGNORE
@@ -655,6 +674,7 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_SORT
 //				| OB_NO_HEADER
+//				| OB_IN_ORDER
 //				| OB_GRP_CREATE
 //				| OB_IGNORE
 //				| OB_NORM
@@ -798,6 +818,7 @@ typedef enum enumOptions
 //
 //	OB_CMD_PATCH		= OB_GRP_DEST
 //				| OB_REMOVE_SRC
+//				| OB_NO_COPY
 //				| OB_GRP_FFORMAT1
 //				| OB_IGNORE
 //				| OB_COMPRESS
@@ -972,6 +993,7 @@ typedef enum enumCommands
 	CMD_COLORS,
 	CMD_ERROR,
 	CMD_FILETYPE,
+	CMD_UI_CHECK,
 	CMD_FILEATTRIB,
 	CMD_BRSUB,
 	CMD_SYMBOLS,
@@ -1051,7 +1073,7 @@ typedef enum enumCommands
 
 	CMD_VEHICLE,
 
-	CMD__N // == 81
+	CMD__N // == 82
 
 } enumCommands;
 
@@ -1189,14 +1211,20 @@ typedef enum enumGetOpt
 	GO_PATCH_BMG,
 	GO_MACRO_BMG,
 	GO_FILTER_BMG,
+	GO_LE_MENU,
+	GO_TITLE_SCREEN,
+	GO_CUP_ICONS,
+	GO_NO_COPY,
 	GO_CACHE,
 	GO_CNAME,
+	GO_PARALLEL,
 	GO_ID,
 	GO_BASE64,
 	GO_DB64,
 	GO_CODING,
 	GO_VERIFY,
 	GO_ROUND,
+	GO_IN_ORDER,
 	GO_PIPE,
 	GO_DELTA,
 	GO_DIFF,
@@ -1298,7 +1326,7 @@ typedef enum enumGetOpt
 //extern const struct option OptionLong[];
 //extern u8 OptionUsed[OPT__N_TOTAL+1];
 //extern const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE];
-//UIOPT_INDEX_SIZE := 0x136 = 310
+//UIOPT_INDEX_SIZE := 0x140 = 320
 //extern const InfoCommand_t CommandInfo[CMD__N+1];
 extern const InfoUI_t InfoUI_wszst;
 
