@@ -256,6 +256,7 @@ typedef enum enumOptions
 	OPT_LEX_RM_FEAT,
 	OPT_CACHE,
 	OPT_CNAME,
+	OPT_LOG_CACHE,
 	OPT_PARALLEL,
 	OPT_MAX_FILE_SIZE,
 	OPT_TRACKS,
@@ -285,7 +286,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 224
+	OPT__N_TOTAL // == 225
 
 } enumOptions;
 
@@ -598,6 +599,9 @@ typedef enum enumOptions
 //
 //	OB_CMD_EXPAND		= ~(u64)0,
 //
+//	OB_CMD_WILDCARDS	= OB_IGNORE
+//				| OB_IN_ORDER,
+//
 //	OB_CMD_TEST		= ~(u64)0,
 //
 //	OB_CMD_COLORS		= OB_LONG
@@ -654,7 +658,8 @@ typedef enum enumOptions
 //				| OB_PIPE
 //				| OB_LOAD_BMG,
 //
-//	OB_CMD_SCANCACHE	= OB_PURGE,
+//	OB_CMD_SCANCACHE	= OB_PURGE
+//				| OB_FAST,
 //
 //	OB_CMD_EXPORT		= 0,
 //
@@ -989,6 +994,7 @@ typedef enum enumCommands
 	CMD_INSTALL,
 	CMD_ARGTEST,
 	CMD_EXPAND,
+	CMD_WILDCARDS,
 	CMD_TEST,
 	CMD_COLORS,
 	CMD_ERROR,
@@ -1073,7 +1079,7 @@ typedef enum enumCommands
 
 	CMD_VEHICLE,
 
-	CMD__N // == 82
+	CMD__N // == 83
 
 } enumCommands;
 
@@ -1217,6 +1223,7 @@ typedef enum enumGetOpt
 	GO_NO_COPY,
 	GO_CACHE,
 	GO_CNAME,
+	GO_LOG_CACHE,
 	GO_PARALLEL,
 	GO_ID,
 	GO_BASE64,

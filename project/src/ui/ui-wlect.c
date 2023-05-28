@@ -1927,9 +1927,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"This debug command accepts (like ARGTEST) all kinds of parameters and"
 	" prints one line for each parameter. After that, the parameter is"
 	" treated as a filename with wildcards and all matching files are"
-	" searched. The special parameters '+h' and '/h' enable or disable the"
+	" searched. The special parameters '+h' and '_h' enable or disable the"
 	" search for hidden directories and files (files beginning with a"
-	" point). All tools know the EXPAND command.",
+	" point) for the following parameters. All tools know the EXPAND"
+	" command.",
 	0,
 	0,
 	option_tab_cmd_EXPAND,

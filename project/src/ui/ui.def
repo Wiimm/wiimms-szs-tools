@@ -50,9 +50,20 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
+
+#:def_cmd( "WILDCARDS", "WILDCARDS", \
+	"wszst WILDCARDS pattern...", \
+	" Each parameter is treated as a filename. $Wildcards$ are accepted." \
+	" After evaluating the wildcards, all input files are sorted according" \
+	" to their path and duplicates are deleted. The special parameters" \
+	" '+h' and '_h' enable or disable the search for hidden directories" \
+	" and files (files beginning with a point) for the following" \
+	" parameters. Finally, one line is printed for each file name of the" \
+	" list." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wszst TEST [options]... [ignored]...", \
@@ -600,7 +611,7 @@
 	"Be verbose and print more progress information. Multiple usage is" \
 	" possible. The impact is command dependent." )
 
-#:def_opt( "LOGGING", "L|logging", "GM", \
+#:def_opt( "LOGGING", "L|logging|log", "GM", \
 	"", \
 	"This debug option enables the logging of internal lists and maps. Set" \
 	" it up to three times to be more verbose." )
@@ -1362,6 +1373,11 @@
 	"Name of the first cache file. This parameter overrides the generated" \
 	" cache name. The name is used only once for the very first cache" \
 	" candidate." )
+
+#:def_opt( "LOG_CACHE", "log-cache|logcache", "GP", \
+	"file", \
+	"Define a file to log chache activities. The file is openend in" \
+	" append-mode." )
 
 #:def_opt( "PARALLEL", "parallel", "G", \
 	"", \
@@ -2144,6 +2160,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "WILDCARDS", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "WILDCARDS", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
 	"Print the matrices of transformations." )
@@ -2416,9 +2440,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SCANCACHE", "LOG_CACHE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SCANCACHE", "PURGE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "SCANCACHE", "FAST", \
+	"", \
+	"Scan 'cache-content.txt' and remove duplicates. Ignore option" \
+	" {--purge}." )
 
 #:def_cmd_opt( "SIZEOF", "SORT", \
 	"", \
@@ -5597,7 +5630,7 @@
 
 #:def_cmd_opt( "FEATURES", "BRIEF", \
 	"", \
-	"Suppres any comments at all. If set twice, suppress empty lines (for" \
+	"Suppres comments at all. If set twice, suppress empty lines (for" \
 	" grouping) too. If set three times, omit inactive features (value 0)" \
 	" too." )
 
@@ -12043,9 +12076,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wbmgt TEST [options]... [ignored]...", \
@@ -13341,9 +13375,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wctct TEST [options]... [ignored]...", \
@@ -14767,9 +14802,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wimgt TEST [options]... [ignored]...", \
@@ -15702,9 +15738,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wkclt TEST [options]... [ignored]...", \
@@ -18242,9 +18279,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wkmpt TEST [options]... [ignored]...", \
@@ -20390,9 +20428,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wlect TEST [options]... [ignored]...", \
@@ -20509,8 +20548,7 @@
 	"This command manages data for LE-CODE track distributions. It reads" \
 	" any number of source files with different file types, collects the" \
 	" data and creates any number of files with different file types." \
-	" Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for" \
-	" details.\n" \
+	" $Wildcards$ are accepted.\n" \
 	"  Use the command without keyword to get an extended description." )
 
 #:def_cmd( "CAT", "CAT", \
@@ -22058,9 +22096,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wmdlt TEST [options]... [ignored]...", \
@@ -23374,9 +23413,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wpatt TEST [options]... [ignored]...", \
@@ -23993,9 +24033,10 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '/h' enable or disable the" \
+	" searched. The special parameters '+h' and '_h' enable or disable the" \
 	" search for hidden directories and files (files beginning with a" \
-	" point). All tools know the EXPAND command." )
+	" point) for the following parameters. All tools know the EXPAND" \
+	" command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wstrt TEST [options]... [ignored]...", \
@@ -24044,10 +24085,13 @@
 	" @PAL@ (default), @USA@, @JAPAN@, @KOREA@, or any abbreviation of" \
 	" them. They select the region for the following addresses. The hex" \
 	" numbers (with or without @0x@ prefix) are interpreted as addresses." \
-	" If an address begins with @m@ or @s@, then it is interpreted as a" \
-	" file offset for @main.dol@ or @staticr.rel@. All addresses are" \
-	" ported to all other regions. The result is printed as colorized" \
-	" table." )
+	" If an address begins with @m@, @M@, @s@ or @S@, then it is" \
+	" interpreted as a file offset for @main.dol@ or @staticr.rel@. If the" \
+	" number begins with a point (@.@), then it is interpreted as a cheat" \
+	" code. In this case, the lowest 25 bits are interpreted as address" \
+	" and the highest 7 bits are saved and used for the address output." \
+	" All addresses are ported to all other regions. The result is printed" \
+	" as colorized table." )
 
 #:def_cmd( "WHERE", "WHERE", \
 	"wstrt WHERE address...", \

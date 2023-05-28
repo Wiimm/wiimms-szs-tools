@@ -148,6 +148,7 @@ EncodeMode_t	opt_coding64		= ENCODE_OFF;
 bool		opt_verify		= false;
 ccp		opt_cache		= 0;
 ccp		opt_cname		= 0;
+ccp		opt_log_cache		= 0;
 int		parallel_count		= 0;
 bool		opt_round		= false;
 int		brief_count		= 0;
@@ -2513,25 +2514,57 @@ void CollectExpandParam
 (
     StringField_t   *plist,	// insert or append (inorder_count>0) to this list
     ParamList_t	    *param,	// first param to add
-    int		    max		// max num of param to add; -1: add all param
+    int		    max,	// max num of param to add; -1: add all param
+    uint	    hidden	// bit field:
+				//  1 : allow hidden files
+				//  2 : '+h' and '/h' enables or disables hidden files
 )
 {
     if ( plist && param && max )
     {
+	bool allow_hidden = hidden & 1;
 	for ( ; param; param = param->next )
 	{
 	    if (*param->arg)
 	    {
+		if ( hidden & 2 )
+		{
+		    if (!strcmp(param->arg,"+h"))
+		    {
+			allow_hidden = true;
+			continue;
+		    }
+		    if (!strcmp(param->arg,"_h"))
+		    {
+			allow_hidden = false;
+			continue;
+		    }
+		}
+
 		NORMALIZE_FILENAME_PARAM(param);
 		if ( inorder_count > 0 )
-		    AppendStringFieldExpand(plist,param->arg,0,false);
+		    AppendStringFieldExpand(plist,param->arg,0,allow_hidden);
 		else
-		    InsertStringFieldExpand(plist,param->arg,0,false);
+		    InsertStringFieldExpand(plist,param->arg,0,allow_hidden);
 	    }
 	    if (!--max)
 		break;
 	}
     }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError cmd_wildcards ( int argc, char ** argv )
+{
+    SetupPager();
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,2);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
+	printf("%s\n",plist.field[argi]);
+    ResetStringField(&plist);
+    return ERR_OK;
 }
 
 //
@@ -3932,7 +3965,7 @@ enumError cmd_expand ( int argc, char ** argv )
     bool allow_hidden = false;
     for ( ParamList_t *param = first_param; param; param = param->next )
     {
-	if (!strcmp(param->arg,"/h"))
+	if (!strcmp(param->arg,"_h"))
 	{
 	    allow_hidden = false;
 	    printf("%sIgnore hidden files.%s\n", colout->info, colout->reset );

@@ -245,6 +245,48 @@ static u64	szs_cache_last_scan	= 0;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void LogCacheActivity ( ccp keyword, ccp format, ... )
+{
+    static FILE *f = 0;
+    static char myid[12];
+
+    if (!f)
+    {
+	if (!opt_log_cache)
+	    return;
+	f = fopen(opt_log_cache,"a");
+	if (!f)
+	{
+	    ERROR1(ERR_CANT_CREATE,"Can't create log file: %s\n",opt_log_cache);
+	    opt_log_cache = 0;
+	    return;
+	}
+
+	char buf[4];
+	write_le32(buf,getpid());
+	buf[3] = GetTimeUSec(false);
+	EncodeBase64(myid,sizeof(myid),buf,4,0,true,0,0);
+	PRINT0("%5u %.4s -> %s\n",getpid(),buf,myid);
+	myid[5] = 0;
+    }
+
+    char buf[PATH_MAX+100];
+    *buf = 0;
+    if (format)
+    {
+	va_list arg;
+	va_start(arg,format);
+	vsnprintf(buf,sizeof(buf),format,arg);
+	va_end(arg);
+    }
+
+    fprintf(f,"%s %s %-4s %s\n",
+	PrintMTimeByFormat("%F %T.@@@",GetTimeMSec(false)), myid, keyword, buf );
+    fflush(f);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SetupSZSCache ( ccp dir_name, bool use_dirname )
 {
     PRINT("SetupSZSCache(%s,%d)\n",dir_name,use_dirname);
@@ -308,14 +350,19 @@ enumError LoadSZSCache(void)
     szs_cache_loaded = true;
     szs_cache_last_scan = 0;
 
-    char buf[PATH_MAX];
-    ccp path = PathCatPP(buf,sizeof(buf),szs_cache_dir,SZS_CACHE_FNAME);
+    const u_nsec_t start_time = GetTimerNSec();
+
+    char fbuf[PATH_MAX], buf[PATH_MAX];
+    ccp path = PathCatPP(fbuf,sizeof(fbuf),szs_cache_dir,SZS_CACHE_FNAME);
     PRINT("LoadSZSCache() %s\n",path);
 
     File_t F;
     enumError err = OpenFile(&F,true,path,FM_SILENT,0,0);
     if (err)
+    {
+	LogCacheActivity("!LOAD","Loading cache failed: %s",path);
 	return err;
+    }
 
     const typeof(parallel_count) saved_parallel_count = parallel_count;
     parallel_count = 0;
@@ -380,6 +427,12 @@ enumError LoadSZSCache(void)
     }
 
     CloseFile(&F,0);
+    if (opt_log_cache)
+	LogCacheActivity("LOAD","%u entries in %s: %s",
+		szs_cache.used,
+		PrintTimerNSec6(0,0,GetTimerNSec()-start_time,0),
+		path );
+
     parallel_count = saved_parallel_count;
 
     return ERR_OK;
@@ -400,18 +453,18 @@ static int cmp_szs_cache ( const void * va, const void * vb )
 
 //-----------------------------------------------------------------------------
 
-enumError SaveSZSCache()
+enumError SaveSZSCache ( bool force )
 {
     if ( parallel_count > 0 )
 	return AppendSZSCache();
 
-    if ( !szs_cache_dir || !szs_cache_dirty )
+    if ( !szs_cache_dir || !szs_cache_dirty && !force )
 	return ERR_NOTHING_TO_DO;
     szs_cache_dirty = false;
 
     char path_buf[PATH_MAX];
     ccp path = PathCatPP(path_buf,sizeof(path_buf),szs_cache_dir,SZS_CACHE_FNAME);
-    PRINT("SaveSZSCache() N=%u, %s\n",szs_cache.used,path);
+    PRINT1("SaveSZSCache() N=%u, %s\n",szs_cache.used,path);
 
     File_t F;
     enumError err = CreateFile(&F,true,path,FM_REMOVE);
@@ -560,8 +613,10 @@ ParamFieldItem_t * StoreSZSCache
     }
 
     bool found;
-    ParamField_t *the_cache = parallel_count > 0 ? &szs_cache_append : &szs_cache;
-    ParamFieldItem_t *it = FindInsertParamField(the_cache,checksum,false,0,&found);
+    ParamFieldItem_t *it = FindInsertParamField(&szs_cache,checksum,false,0,&found);
+    if ( !found && parallel_count > 0 )
+	it = FindInsertParamField(&szs_cache_append,checksum,false,0,&found);
+
     if (found)
     {
 	DASSERT(it);
@@ -584,7 +639,7 @@ ParamFieldItem_t * StoreSZSCache
 	    return it;
 
 	FreeString(it->data);
-	it->data = NULL;
+	it->data = fname ? STRDUP(fname) : 0;
     }
 
     if (it)

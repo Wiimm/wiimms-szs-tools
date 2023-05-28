@@ -6995,7 +6995,7 @@ enumError SaveTextKMP
 	 case GOBJ_ELINE_CONTROL:
 	    {
 		const int idx = IS_M1(gobj->setting[7]) ? -1 : gobj->setting[7];
-		if ( (uint)idx < KMP_MAX_GROUP && kmp->enph.gname[idx] )
+		if ( (uint)idx < KMP_MAX_GROUP )
 		    snprintf(temp_buf,sizeof(temp_buf),"E.%s",kmp->enph.gname[idx]);
 		else
 		    snprintf(temp_buf,sizeof(temp_buf),"%6d",idx);

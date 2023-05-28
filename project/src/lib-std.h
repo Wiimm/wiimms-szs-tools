@@ -1189,7 +1189,7 @@ typedef enum image_format_t
 //-----------------------------------------------------------------------------
 
 extern const KeywordTab_t cmdtab_image_format[];
-int ScanImageFormat ( ccp arg );
+image_format_t ScanImageFormat ( ccp arg );
 ccp GetImageFormatName ( image_format_t iform, ccp unknown_value );
 
 #define MAX_MIPMAPS 20
@@ -1218,7 +1218,7 @@ typedef enum palette_format_t
 //-----------------------------------------------------------------------------
 
 extern const KeywordTab_t cmdtab_palette_format[];
-int ScanPaletteFormat ( ccp arg );
+palette_format_t ScanPaletteFormat ( ccp arg );
 ccp GetPaletteFormatName ( palette_format_t pform, ccp unknown_value );
 
 //
@@ -1622,8 +1622,13 @@ void CollectExpandParam
 (
     StringField_t   *plist,	// insert or append (inorder_count>0) to this list
     ParamList_t	    *param,	// first param to add
-    int		    max		// max num of param to add; -1: add all param
+    int		    max,	// max num of param to add; -1: add all param
+    uint	    hidden	// bit field:
+				//  1 : allow hidden files
+				//  2 : '+h' and '/h' enables or disables hidden files
 );
+
+enumError cmd_wildcards ( int argc, char ** argv );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2748,6 +2753,7 @@ extern EncodeMode_t	opt_coding64;
 extern bool		opt_verify;
 extern ccp		opt_cache;
 extern ccp		opt_cname;
+extern ccp		opt_log_cache;
 extern int		parallel_count;
 extern bool		opt_round;
 extern int		brief_count;

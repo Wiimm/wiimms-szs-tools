@@ -628,9 +628,10 @@ szs v2.29a r8691 - 2022-10-27
  - Bug fix: The wildcard ** did not work correctly. The recursion depth was
    always 1 level higher than specified. So level 0 was never possible.
    See https://szs.wiimm.de/doc/wildcards#2stars for details.
- - wszst ANALYZE: Added support for LE-CODE binaries.
- - wszst ANALYZE: A track can be valid, even if vrcorn_model.brres is missed.
- - wszst ANALYZE: Support of edit-slot ('e12' or 'ea12').
+ - wszst ANALYZE:
+    - Added support for LE-CODE binaries.
+    - A track can be valid, even if vrcorn_model.brres is missed.
+    - Support of edit-slot ('e12' or 'ea12').
  - wszst SPLIT: Added support for "(author1,author2,,editor1,editor2)",
    LE-CODE flags + group, order by attribute, and for track category.
  - New file type: MTCAT: Import and export 'MKW Track Category' files.
@@ -693,6 +694,49 @@ szs v2.32a r8742 - 2022-12-25
     - New instruction report=: Analyse the distribution and print a report.
  - Tool wimgt: Improved generic images.
  - Fixed some pager and color issues.
+
+
+szs v2.33a r8773 - 2023-01-14
+
+ - Fixed a bug that probably exists since v2.29a: Using option --auto-add with
+   SZS files with unusal or empty sub-files could cause a crash in certain
+   circumstances.
+ - Updated prefix database (added MP7).
+ - Optimized spacing of fonts for cup icons.
+ - wszst LIST including all short cuts like 'wszst LLL':
+    - Wildcards are accepted as source. See https://szs.wiimm.de/doc/wildcards
+      for details. After evaluating the wildcards, all input files are sorted
+      according to their path and duplicates are deleted.
+    - Option --in-order: Display the input files in order of the command line
+      and don't delete duplicates.
+    - Tuned table output.
+ - wszst PATCH:
+    - Wildcards are accepted as source. See https://szs.wiimm.de/doc/wildcards
+      for details.
+    - New option --no-copy: Don't copy a file if it was not modified.
+    - New option --le-menu: Patch SZS files from directory .../Scene/UI/ to
+      change the menu as required by LE-CODE to be able to select tracks from
+      more than 8 cups.
+    - New option --title-screen=dir: Specify a directory from which to search
+      and replace title screens. Title screens only appear in the file
+      'Title.szs' and there in the sub-directory './title/timg/'.
+    - New option --cup-icons=file: Load given image, convert it to TPL.CMPR
+      and add the result as sub-files 'button/timg/ct_icons.tpl' and as
+      'control/timg/ct_icons.tpl' to files 'Channel.szs', 'MenuMulti.szs' and
+      'MenuSingle.szs'.
+ - wlect DISTRIB:
+    - If a filename beginns with a plus sign, the plus sign is removed and the
+      output file is opened in append mode.
+    - If an output file is opened for the second time, then it is
+      automatically opened in append mode.
+    - Instruction report=: Added methods of analysis: CLASSES, XCLASSES.
+ - New command: wszst UI-CHECK: Classify SZS files from directory ./Scene/UI/.
+   For the analysis, the filename is ignored and only the content is examined.
+   Wildcards and option --in-order are supported.
+ - New option: wszst --parallel: Tell the tool that it will be called multiple
+   times in parallel. Currently it only has an effect if --cache is enabled.
+ - New LPAR setting: STATICR-POINTS.
+ - All tools: Command V is a well defined short cut for command VERSION.
 
 
 @@MODULE(last-history.txt)@@

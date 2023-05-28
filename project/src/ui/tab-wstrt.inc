@@ -120,8 +120,11 @@
 		" Keywords are @PAL@ (default), @USA@, @JAPAN@, @KOREA@, or any abbreviation of them."
 		" They select the region for the following addresses."
 		" The hex numbers (with or without @0x@ prefix) are interpreted as addresses."
-		" If an address begins with @m@ or @s@,"
+		" If an address begins with @m@, @M@, @s@ or @S@,"
 		" then it is interpreted as a file offset for @main.dol@ or @staticr.rel@."
+		" If the number begins with a point (@.@), then it is interpreted as a cheat code."
+		" In this case, the lowest 25 bits are interpreted as address"
+		" and the highest 7 bits are saved and used for the address output."
 		" All addresses are ported to all other regions."
 		" The result is printed as colorized table."
 		"\1 See https://szs.wiimm.de/cmd/wstrt/port for more details." },

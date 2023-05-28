@@ -806,7 +806,7 @@ enumError cmd_ui_check()
     SetupPager();
 
     StringField_t plist = {0};
-    CollectExpandParam(&plist,first_param,-1);
+    CollectExpandParam(&plist,first_param,-1,0);
 
     const bool have_dump = long_count >= 1;
     const bool have_header = !have_dump && !brief_count && print_header;
@@ -1294,14 +1294,25 @@ static enumError cmd_scancache()
 {
     if (opt_cache)
 	AddParam(opt_cache);
+
     if ( n_param != 1 )
 	return ERROR0(ERR_SYNTAX,"Exact one parameter (directory) expected.\n");
 
-    if (!IsDirectory(first_param->arg,false))
-	return ERROR0(ERR_SEMANTIC,"Directory expected: %s\n",first_param->arg);
+    szs_cache_dir = first_param->arg;
+    if (!IsDirectory(szs_cache_dir,false))
+	return ERROR0(ERR_SEMANTIC,"Directory expected: %s\n",szs_cache_dir);
 
-    ScanSZSCache(first_param->arg,opt_purge);
-    return SaveSZSCache();
+    bool force = false;
+    parallel_count = 0;
+    if (opt_fast)
+    {
+	LoadSZSCache();
+	force = true;
+    }
+    else
+	ScanSZSCache(first_param->arg,opt_purge);
+
+    return SaveSZSCache(force);
 }
 
 //
@@ -1854,7 +1865,7 @@ static enumError cmd_list ( int long_level )
     }
 
     StringField_t plist = {0};
-    CollectExpandParam(&plist,first_param,-1);
+    CollectExpandParam(&plist,first_param,-1,0);
 
     for ( int argi = 0; argi < plist.used; argi++ )
     {
@@ -3739,6 +3750,8 @@ static enumError patch_file_helper
 	SearchPaths(fname,0,false,patch_file_search,&param);
 	return param.count
 	    ? param.max_err
+	    : opt_ignore > 0
+	    ? ERR_NOTHING_TO_DO
 	    : ERROR0(ERR_CANT_OPEN,"File not found: %s\n",fname);
     }
 
@@ -3898,7 +3911,7 @@ static enumError patch_file_helper
     FreeExMem(&orig);
     FreeExMem(&data);
     ResetSZS(&szs);
-    return err;
+    return parallel_count > 0 && err == ERR_NOTHING_TO_DO ? ERR_OK : err;
 }
 
 //-----------------------------------------------------------------------------
@@ -4475,7 +4488,7 @@ static enumError cmd_compress()
 		    CompressSZS(&szs,true);
 		    szs.dest_fname = 0;
 
-		    if ( szs.cache_used && (int)max_err < ERR_CACHE_USED )
+		    if ( szs.cache_used && (int)max_err < ERR_CACHE_USED && parallel_count <= 0 )
 			max_err = ERR_CACHE_USED;
 
 		    File_t F;
@@ -5876,6 +5889,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_NO_BMG_INLINE:	opt_bmg_inline_attrib = false; break;
 	case GO_CACHE:		opt_cache = optarg; break;
 	case GO_CNAME:		opt_cname = optarg; break;
+	case GO_LOG_CACHE:	opt_log_cache = optarg; break;
 	case GO_PARALLEL:	parallel_count++; break;
 	case GO_ID:		opt_id = true; break;
 	case GO_BASE64:		opt_base64 = true; err += ScanOptCoding64(optarg); break;
@@ -5965,6 +5979,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_INSTALL:	err = cmd_install(); break;
 	case CMD_ARGTEST:	err = cmd_argtest(argc,argv); break;
 	case CMD_EXPAND:	err = cmd_expand(argc,argv); break;
+	case CMD_WILDCARDS:	err = cmd_wildcards(argc,argv); break;
 	case CMD_TEST:		err = cmd_test(); break;
 	case CMD_COLORS:	err = Command_COLORS(brief_count?-brief_count:long_count,0,0); break;
 	case CMD_ERROR:		err = cmd_error(); break;
@@ -6058,7 +6073,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	    help_exit(false);
     }
 
-    SaveSZSCache();
+    SaveSZSCache(false);
     return PrintErrorStat(err,verbose,cmd_ct->name1);
 }
 
@@ -6227,7 +6242,7 @@ int main_wrapper ( int argc, char ** argv )
     const uint bash	= param & C_BASH;
     const uint desttype	= param & C_M_DEST;
 
-    char mypath[PATH_MAX], dest[PATH_MAX+20];
+    char mypath[PATH_MAX], dest[sizeof(mypath)+20];
     GetProgramPath(mypath,sizeof(mypath),true,argv[0]);
     if (verbose)
 	printf("My Path: %s\n",mypath);
@@ -6236,7 +6251,7 @@ int main_wrapper ( int argc, char ** argv )
 	&& Count1Bits(&desttype,sizeof(desttype)) == 1
 	&& *mypath )
     {
-	memcpy(dest,mypath,sizeof(dest));
+	memcpy(dest,mypath,sizeof(mypath));
 	char *fname = strrchr(dest,'/');
 	fname = fname ? fname+1 : dest;
 	if (!*fname)

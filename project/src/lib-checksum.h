@@ -93,6 +93,9 @@ extern ParamField_t	szs_cache;
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void LogCacheActivity ( ccp keyword, ccp format, ... )
+	__attribute__ ((__format__(__printf__,2,3)));
+
 static inline bool IsSZSCacheEnabled()
 	{ return szs_cache_dir != 0; }
 
@@ -100,7 +103,7 @@ void SetupSZSCache ( ccp dir_name, bool use_dirname );
 
 void ScanSZSCache ( ccp dir_name, bool purge );
 enumError LoadSZSCache(void);
-enumError SaveSZSCache(void);
+enumError SaveSZSCache ( bool force );
 enumError AppendSZSCache(void);
 
 ParamFieldItem_t * StoreSZSCache

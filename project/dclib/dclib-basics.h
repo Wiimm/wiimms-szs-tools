@@ -1751,11 +1751,32 @@ char * CopyCircBuf
     u32		data_size	// see GetCircBuf()
 );
 
+// variant to supress warning "return-local-addr"
+char * CopyCircBufIf
+(
+    // Never returns NULL, but always ALIGN(4)
+
+    bool	condition,	// use CopyCircBuf() if true
+    cvp		data,		// source to copy
+    u32		data_size	// see GetCircBuf()
+);
+
 char * CopyCircBuf0
 (
     // Like CopyCircBuf(), but an additional char is alloced and set to NULL
     // Never returns NULL, but always ALIGN(4).
 
+    cvp		data,		// source to copy
+    u32		data_size	// see GetCircBuf()
+);
+
+// variant to supress warning "return-local-addr"
+char * CopyCircBuf0If
+(
+    // Like CopyCircBuf(), but an additional char is alloced and set to NULL
+    // Never returns NULL, but always ALIGN(4).
+
+    bool	condition,	// use CopyCircBuf0() if true
     cvp		data,		// source to copy
     u32		data_size	// see GetCircBuf()
 );
@@ -1995,7 +2016,7 @@ FastBuf_t;
 //
 //------------------------------------------------------------------
 
-FastBuf_t * InitializeFastBuf ( cvp mem, uint size );
+FastBuf_t * InitializeFastBuf ( void * mem, uint size );
 FastBuf_t * InitializeFastBufAlloc ( FastBuf_t *fb, uint size );
 
 void ResetFastBuf	( FastBuf_t *fb );
@@ -4093,7 +4114,8 @@ typedef enum size_mode_t
     DC_SIZE_T,			// force output in TB or TiB (tera,tebi)
     DC_SIZE_P,			// force output in PB or PiB (peta,pebi)
     DC_SIZE_E,			// force output in EB or EiB (exa, exbi)
-				// zetta/zebi & yotta/yobi not supported because >2^64
+				// zetta/zebi, yotta/yobi, ronna and quetta
+				// are not supported because >2^64
 
     DC_SIZE_N_MODES,		// number of modes
 
@@ -4673,7 +4695,7 @@ ccp PrintNTimeByFormat
 
     ccp			format,		// format string for strftime()
 					// 1-9 '@' in row replaced by digits of 'usec'
-    u_nsec_t		ntime
+    u_nsec_t		ntime		// time in nsec, e.g. get by GetTimeNSec(false)
 );
 
 ccp PrintNTimeByFormatUTC
@@ -4682,7 +4704,7 @@ ccp PrintNTimeByFormatUTC
 
     ccp			format,		// format string for strftime()
 					// 1-9 '@' in row replaced by digits of 'usec'
-    u_nsec_t		ntime
+    u_nsec_t		ntime		// time in nsec, e.g. get by GetTimeNSec(false)
 );
 
 //-----------------------------------------------------------------------------
@@ -4719,7 +4741,7 @@ ccp PrintUTimeByFormat
 
     ccp			format,		// format string for strftime()
 					// 1-9 '@' in row replaced by digits of 'usec'
-    u_usec_t		utime
+    u_usec_t		utime		// time in usec, e.g. get by GetTimeUSec(false)
 );
 
 ccp PrintUTimeByFormatUTC
@@ -4728,7 +4750,7 @@ ccp PrintUTimeByFormatUTC
 
     ccp			format,		// format string for strftime()
 					// 1-9 '@' in row replaced by digits of 'usec'
-    u_usec_t		utime
+    u_nsec_t		utime		// time in usec, e.g. get by GetTimeUSec(false)
 );
 
 //-----------------------------------------------------------------------------
@@ -4738,7 +4760,7 @@ static inline ccp PrintMSecByFormat
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-					// 1-9 '@' in row replaced by digits of 'usec'
+					// 1-9 '@' in row replaced by digits of 'msec'
     time_t		tim,		// seconds since epoch
     uint		msec		// millisecond of second
 )
@@ -4751,7 +4773,7 @@ static inline ccp PrintMSecByFormatUTC
     // returns temporary buffer by GetCircBuf();
 
     ccp			format,		// format string for strftime()
-					// 1-9 '@' in row replaced by digits of 'usec'
+					// 1-9 '@' in row replaced by digits of 'msec'
     time_t		tim,		// seconds since epoch
     uint		msec		// millisecond of second
 )
@@ -4765,7 +4787,7 @@ ccp PrintMTimeByFormat
 
     ccp			format,		// format string for strftime()
 					// 1-9 '@' in row replaced by digits of 'usec'
-    u_msec_t		mtime
+    u_msec_t		mtime		// time in msec, e.g. get by GetTimeMSec(false)
 );
 
 ccp PrintMTimeByFormatUTC
@@ -4774,7 +4796,7 @@ ccp PrintMTimeByFormatUTC
 
     ccp			format,		// format string for strftime()
 					// 1-9 '@' in row replaced by digits of 'usec'
-    u_msec_t		mtime
+    u_msec_t		mtime		// time in msec, e.g. get by GetTimeMSec(false)
 );
 
 //-----------------------------------------------------------------------------

@@ -5181,7 +5181,7 @@ enumError CreateRefLD ( FILE *f, le_distrib_t *ld, bool add_strings )
 		lt->flags, IsHiddenLEFL(lt->flags),
 		lt->lap_count, lt->speed_factor,
 		GetSha1LT(lt,0,""),
-		no_d ? 0 : GetSha1LT(lt,1,"") );
+		no_d ? "" : GetSha1LT(lt,1,"") );
 
 	if (add_strings)
 	{
@@ -6144,7 +6144,7 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	{0,0,0,0}
     };
 
-    le_strpar_t lepar = { .opt = LTT_NAME };
+    le_strpar_t lepar = { .opt = LEO_NAME };
     KeyListParam_t keypar;
     InitializeKeyListParam(&keypar);
     keypar.func_arg = scan_source_opt;
@@ -6646,7 +6646,7 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 	{0,0,0,0}
     };
 
-    le_strpar_t lepar = { .opt = LTT_NAME };
+    le_strpar_t lepar = { .opt = LEO_NAME };
     KeyListParam_t keypar;
     InitializeKeyListParam(&keypar);
     keypar.func_arg = scan_source_opt;
@@ -6979,7 +6979,7 @@ enumError PatchLD ( le_distrib_t *ld, mem_t mem_opt, StringField_t *filelist )
 	{0,0,0,0}
     };
 
-    le_strpar_t lepar = { .opt = LTT_NAME };
+    le_strpar_t lepar = { .opt = LEO_NAME };
     KeyListParam_t keypar;
     InitializeKeyListParam(&keypar);
     keypar.func_arg = scan_source_opt;

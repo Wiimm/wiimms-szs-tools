@@ -1442,6 +1442,7 @@ enumError ClassicCompressYAZ ( yaz_compr_t *yaz )
 			&& !memcmp(yaz->src,cache.data,cache.size))
 		{
 		    PRINT("CACHE USED\n");
+		    LogCacheActivity("USE","%s %s",it->key,(ccp)it->data);
 		    cache.csize -= sizeof(yaz0_header_t);
 		    memmove(cache.cdata,cache.cdata+sizeof(yaz0_header_t),cache.csize);
 
@@ -1458,8 +1459,12 @@ enumError ClassicCompressYAZ ( yaz_compr_t *yaz )
 		    return ERR_OK;
 		}
 	    }
+	    else
+		LogCacheActivity("!USE","%s %s",it->key,(ccp)it->data);
 	    ResetSZS(&cache);
 	}
+	else
+	    LogCacheActivity("MISS","%s",iobuf);
 
 	if (it)
 	{
@@ -3113,7 +3118,7 @@ static int ui_check_func
 
 void UiCheck ( ui_check_t *uc, szs_file_t *szs )
 {
-    DASSERT(ui);
+    DASSERT(uc);
     DASSERT(szs);
     memset(uc,0,sizeof(*uc));
     uc->type = UIT_UNKNOWN;

@@ -205,6 +205,7 @@ int ScanOptPng ( ccp arg )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			SaveImageKCL()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[png_param_t]]
 
 typedef struct png_param_t
 {
@@ -523,10 +524,7 @@ enumError SaveImageKCL
 
     //--- setup parameters
 
-    png_param_t param;
-    memset(&param,0,sizeof(param));
-    param.kcl = kcl;
-    param.type_mask = opt_png_type_mask;
+    png_param_t param = { .kcl = kcl, .type_mask = opt_png_type_mask };
     InitializeIMG(&param.img);
     SETCOLOR(param.col_bg,0,0,0x80,0xff);
 
@@ -559,8 +557,11 @@ enumError SaveImageKCL
 
     //--- calc colors
 
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Warray-bounds"
     Color_t *kclcol2 = (Color_t*)kcl_color;
     param.kclcol2 = kclcol2 - N_KCL_FLAG;
+ #pragma GCC diagnostic pop
 
     memset(param.kclcol1,0x00,sizeof(param.kclcol1));
     uint *flag_count = AllocFlagCount();

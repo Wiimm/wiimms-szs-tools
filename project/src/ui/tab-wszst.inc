@@ -98,9 +98,19 @@
 		" and prints one line for each parameter."
 		" After that, the parameter is treated as a filename with wildcards"
 		" and all matching files are searched."
-		" The special parameters '+h' and '/h' enable or disable the search"
-		" for hidden directories and files (files beginning with a point)."
+		" The special parameters '+h' and '_h' enable or disable the search"
+		" for hidden directories and files (files beginning with a point)"
+		" for the following parameters."
 		" All tools know the EXPAND command." },
+
+  { T_DEF_CMD,	"WILDCARDS",	"WILDCARDS",
+		    "wszst WILDCARDS pattern...",
+		" Each parameter is treated as a filename. "
+		WILDCARDS_SORT
+		" The special parameters '+h' and '_h' enable or disable the search"
+		" for hidden directories and files (files beginning with a point)"
+		" for the following parameters."
+		" Finally, one line is printed for each file name of the list." },
 
   { T_DEF_CMD,	"TEST",		"TEST",
 		    "wszst TEST [options]... [ignored]...",
@@ -754,7 +764,7 @@
 		" Multiple usage is possible."
 		" The impact is command dependent." },
 
-  { T_OPT_GM,	"LOGGING",	"L|logging",
+  { T_OPT_GM,	"LOGGING",	"L|logging|log",
 		0,
 		"This debug option enables the logging of internal lists and maps."
 		" Set it up to three times to be more verbose." },
@@ -1648,6 +1658,11 @@
 		"Name of the first cache file."
 		" This parameter overrides the generated cache name."
 		" The name is used only once for the very first cache candidate." },
+
+  { T_OPT_GP,	"LOG_CACHE",	"log-cache|logcache",
+		"file",
+		"Define a file to log chache activities."
+		" The file is openend in append-mode." },
 
   { T_OPT_G,	"PARALLEL",	"parallel",
 		0,
@@ -2800,6 +2815,12 @@
   { T_CMD_BEG,	"EXPAND",	0,0,0 },
   { T_ALL_OPT,	0,		0,0,0 },
 
+  //---------- COMMAND wszst WILDCARDS ----------
+
+  { T_CMD_BEG,	"WILDCARDS",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+
   //---------- COMMAND wszst TEST ----------
 
   { T_CMD_BEG,	"TEST",		0,0,0 },
@@ -2969,7 +2990,11 @@
 
   { T_CMD_BEG,	"SCANCACHE",	0,0,0 },
   { T_COPT,	"CACHE",	0,0,0 },
+  { T_COPT,	"LOG_CACHE",	0,0,0 },
   { T_COPT,	"PURGE",	0,0,0 },
+  { T_COPT,	"FAST",		0,0,
+	"Scan 'cache-content.txt' and remove duplicates."
+	" Ignore option {--purge}." },
 
   //---------- COMMAND wszst _EXPORT ----------
 
@@ -3206,7 +3231,7 @@
 
   { T_CMD_BEG,	"FEATURES",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
-	"Suppres any comments at all."
+	"Suppres comments at all."
 	" If set twice, suppress empty lines (for grouping) too."
 	" If set three times, omit inactive features (value 0) too." },
   { T_COPT,	"LONG",		0,0,

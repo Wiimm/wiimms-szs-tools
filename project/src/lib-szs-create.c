@@ -1205,21 +1205,7 @@ enumError LoadObjFileListSZS
 	if ( path[0] == '.' && path[1] == '/' )
 	    path += 2;
 	int fidx = FindDbFile(path);
-	if ( fidx < 0 )
-	{
-	    bool found = false;
-	    int i;
-	    for ( i = 0; i < HAVESZS__N; i++ )
-		if (strcasecmp(path,have_szs_file[i]))
-		{
-		    found = true;
-		    break;
-		}
-
-	    if (!found)
-		szs->used_file->d[fidx] |= F_NOT_FOUND;
-	}
-	else
+	if ( fidx >= 0 )
 	{
 	    u8 *flags = szs->used_file->d + fidx;
 	    *flags |= F_FOUND;
@@ -1992,7 +1978,7 @@ static int add_missing_file
 	am->norm->u8.namepool_size += strlen(fname ? fname+1 : path) + 1;
 	am->norm->u8.total_size  += ALIGN32(file->size,opt_align_u8);
 
-	PRINT1("ADD-FILE[%d,%zd]: %s, %u bytes\n",
+	PRINT0("ADD-FILE[%d,%zd]: %s, %u bytes\n",
 		dir_id+1, file-szs->subfile.list, path, file->size );
     }
     am->last_subfile = file;
@@ -2128,7 +2114,7 @@ void AddSectionsLEX ( szs_file_t *szs, szs_norm_t *norm, const szs_have_t * have
     }
 
     if (add_course_lex)
-	AddMissingFileSZS(szs,"course.lex", FF_LEX, norm, verbose >= 1 ? 0 : -1 );
+	AddMissingFileSZS(szs,"course.lex", FF_LEX, norm, verbose >= 2 ? 0 : -1 );
 }
 
 //
@@ -2629,7 +2615,7 @@ static void patch_file
 )
 {
     DASSERT(it);
-    DASSERT(data||!size);
+    DASSERT(new_data||!new_size);
 
     szs_file_t *szs = it->szs;
     DASSERT(szs);

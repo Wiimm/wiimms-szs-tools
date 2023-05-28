@@ -174,7 +174,7 @@ typedef enum features_szs_value_t
 {
     // values for struct features_szs_t
 
-    FZV_UNDEF,		// feature not defined
+    FZV_UNDEF,		// feature not used/defined
     FZV_NO_IMPACT,	// feature defined but without gameplay impact
     FZV_MAYBE_IMPACT,	// feature defined, gameplay impact is possible
     FZV_IMPACT,		// feature defined, with gameplay impact

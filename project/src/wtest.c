@@ -1890,7 +1890,7 @@ int test ( int argc, char ** argv )
     c.g = 0x02;
     c.b = 0x03;
     c.a = 0x04;
-    printf("col=%x\n",c.val);
+    printf("col:%x\n",c.val);
 
     return 0;
 }
@@ -4545,6 +4545,7 @@ static enumError develop ( int argc, char ** argv )
 enum
 {
     CMD_HELP,			// help_exit()
+    CMD_RELAX,			// --
     CMD_TEST,			// test()
     CMD_DEVELOP,		// develop(argc,argv)
 
@@ -4623,6 +4624,7 @@ enum
 static const KeywordTab_t CommandTab[] =
 {
 	{ CMD_HELP,		"HELP",		"?",		0 },
+	{ CMD_RELAX,		"RELAX",	0,		0 },
 	{ CMD_TEST,		"TEST",		"T",		0 },
 	{ CMD_DEVELOP,		"DEVELOP",	"D",		0 },
 
@@ -4788,8 +4790,11 @@ int main ( int argc, char ** argv )
     if (!cmd_ct->opt&1)
     {
 	printf("*****  %s  *****\n",TITLE);
+	fprintf(stdout,"DCLIB_GNUC_VERSION = %d, DCLIB_GLIBC_VERSION = %d\n",
+		DCLIB_GNUC_VERSION, DCLIB_GLIBC_VERSION );
 	printf("term width = %d\n",GetTermWidth(80,0));
     }
+
     fflush(stdout);
 
     argv[1] = argv[0];
@@ -4798,6 +4803,7 @@ int main ( int argc, char ** argv )
 
     switch(cmd_ct->id)
     {
+	case CMD_RELAX:			break;
 	case CMD_TEST:			test(argc,argv); break;
 	case CMD_DEVELOP:		develop(argc,argv); break;
 

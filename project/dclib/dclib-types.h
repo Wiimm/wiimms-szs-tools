@@ -50,6 +50,34 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			versions			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// Predefined Macros: https://gcc.gnu.org/onlinedocs/cpp/Predefined-Macros.html
+
+#if defined(__GNUC__)
+  #if defined(__GNUC_MINOR__)
+    #define DCLIB_GNUC_VERSION ( 1000 * __GNUC__ + __GNUC_MINOR__ )
+  #else
+    #define DCLIB_GNUC_VERSION ( 1000 * __GNUC__ )
+  #endif
+#else
+    #define DCLIB_GNUC_VERSION 0
+#endif
+
+//-----------------------------------------------------------------------------
+
+#if defined(__GLIBC__)
+  #if defined(__GLIBC_MINOR__)
+    #define DCLIB_GLIBC_VERSION ( 1000 * __GLIBC__ + __GLIBC_MINOR__ )
+  #else
+    #define DCLIB_GLIBC_VERSION ( 1000 * __GLIBC__ )
+  #endif
+#else
+    #define DCLIB_GLIBC_VERSION 0
+#endif
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			endian				///////////////
 ///////////////////////////////////////////////////////////////////////////////
 

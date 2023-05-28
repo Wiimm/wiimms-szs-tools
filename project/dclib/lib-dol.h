@@ -457,7 +457,7 @@ typedef struct wch_header_t
 {
     // big endian!
 
-    u32	magic;			// magic: 'W\x{05}CH' (Gecko Code Handler)
+    u32	magic;			// magic: 'W\x{05}CH' (Wiimm's Code Handler)
     u32 version;		// 0: raw, 1: bzip2
     u32	size;			// total size of (uncompressed) segment data
 

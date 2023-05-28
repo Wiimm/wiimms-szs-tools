@@ -4221,7 +4221,7 @@ enumError SavePrefixTable ( FILE *f, const mkw_prefix_t * tab )
 
     fprintf(f,
 	"#PREFIX1\r\n"
-	"#> prefix|info|flags|order|color_index|\r\n"
+	"@CONTENT=prefix|info|flags|order|color_index|\r\n"
 	"# Info flags: N: by Nintento,  M: Original Mario Kart\r\n"
 	"# Functional flags: 1|2: Can be used as first|second part of a combi\r\n"
 	"#%.68s\r\n"
@@ -4546,7 +4546,7 @@ enumError SaveCategoryList ( FILE *f, const mkw_category_list_t * clist )
 
     fprintf(f,
 	"#MTCAT03\r\n"
-	"#> category|mode|ban|char1|char2|abbrev|name|info|fg_color|bg_color|color_name|attribs|\r\n"
+	"@CONTENT=category|mode|ban|char1|char2|abbrev|name|info|fg_color|bg_color|color_name|attribs|\r\n"
 	"# Category: Unique category identifier\r\n"
 	"# Mode is a bit field: 1: Unknown, 2: Default, 4: Custom,\r\n"
 	"#                      0x10: Nintendo, 0x20: Hack of Nintendo, 0x40: Created to cheat\r\n"

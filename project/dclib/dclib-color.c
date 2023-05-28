@@ -4967,11 +4967,15 @@ void ViewColorsPredef ( ColorView_t *cv, ColorSelect_t colsel )
 	colsel = COLSEL_M_MODE;
     cv->print_alt = ( colsel & COLSEL_F_ALT ) != 0;
 
+ // use #pragma to fix a gcc error
+ #pragma GCC diagnostic push
+ #pragma GCC diagnostic ignored "-Wformat-overflow"
     fprintf(cv->f,
 	"%s\n%*sPredefined%s color names for mode %s:\n\n",
 	cv->colset->reset, cv->indent, "",
 	colsel & COLSEL_NAME ? " semantic" : "",
 	GetColorModeName(cv->col_mode,0) );
+ #pragma GCC diagnostic pop
 
     if ( (colsel & COLSEL_NAME) == COLSEL_NAME )
 	ViewColorsPredef_helper(cv,ch_tab_name);

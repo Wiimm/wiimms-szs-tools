@@ -2187,6 +2187,21 @@ char * CopyCircBuf
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+// variant to supress warning "return-local-addr"
+
+char * CopyCircBufIf
+(
+    // Never returns NULL, but always ALIGN(4)
+
+    bool	condition,	// use CopyCircBuf() if true
+    cvp		data,		// source to copy
+    u32		data_size	// see GetCircBuf()
+)
+{
+    return condition ? CopyCircBuf(data,strlen(data)) : (char*)data;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 
 char * CopyCircBuf0
 (
@@ -2201,6 +2216,22 @@ char * CopyCircBuf0
     memcpy(dest,data,data_size);
     dest[data_size] = 0;
     return dest;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// variant to supress warning "return-local-addr"
+
+char * CopyCircBuf0If
+(
+    // Like CopyCircBuf(), but an additional char is alloced and set to NULL
+    // Never returns NULL, but always ALIGN(4).
+
+    bool	condition,	// use CopyCircBuf0() if true
+    cvp		data,		// source to copy
+    u32		data_size	// see GetCircBuf()
+)
+{
+    return condition ? CopyCircBuf0(data,strlen(data)) : (char*)data;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2381,7 +2412,7 @@ ccp GetLineByListHelper ( const int *list, ccp beg, ccp mid, ccp end, ccp line )
 ///////////////			struct FastBuf_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-FastBuf_t * InitializeFastBuf ( cvp mem, uint size )
+FastBuf_t * InitializeFastBuf ( void * mem, uint size )
 {
     DASSERT(mem);
     DASSERT( size >= sizeof(FastBuf_t) );
@@ -6334,7 +6365,7 @@ const KeywordTab_t * ScanKeywordEx
 
 void InitializeKeyListParam ( KeyListParam_t *par )
 {
-    DASSERT(klist);
+    DASSERT(par);
     memset(par,0,sizeof(*par));
     par->force_case	= LOUP_UPPER;
     par->allow_prefix	= true;
@@ -6423,7 +6454,7 @@ s64 ScanKeywordListP
 		    continue;
 		}
 	    }
-	    else if (  par->min_number < par->max_number )
+	    else if ( par->min_number < par->max_number )
 	    {
 		// scan signed number
 		char *end;
@@ -6919,7 +6950,12 @@ char * PrintKeywordList
     if (ret_length)
 	*ret_length = len;
 
+ #pragma GCC diagnostic push
+ #if __GNUC__ >= 9
+  #pragma GCC diagnostic ignored "-Wreturn-local-addr"
+ #endif
     return buf == temp ? CopyCircBuf(temp,len+1) : buf;
+ #pragma GCC diagnostic pop
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -8798,7 +8834,7 @@ void DumpEML ( FILE *f, int indent, const exmem_list_t * eml, ccp info )
 	     fw_key = 30;
 
 	uint idx = 0;
-	for (  ptr = eml->list; ptr < end; ptr++, idx++ )
+	for ( ptr = eml->list; ptr < end; ptr++, idx++ )
 	    fprintf(f,"%*d [%c%c%c%c] %-*s = [%x] %s\n",
 		fw_idx, idx,
 		ptr->data.is_key_alloced? 'a' : '-',	// flags: same as in PrintExMem()

@@ -13,6 +13,12 @@
  #                       Wiimms source code library                        #
  #                                                                         #
  ###########################################################################
+ #                                                                         #
+ #        Copyright (c) 2012-2023 by Dirk Clemens <wiimm@wiimm.de>         #
+ #                                                                         #
+ ###########################################################################
+
+# make manual: https://www.gnu.org/software/make/manual/make.html
 
 #------------------------------------------------------------------------------
 # standard object files
@@ -69,32 +75,57 @@ ifeq ($(origin DCLIB_HAVE_USABLE_SIZE), undefined)
 endif
 
 #------------------------------------------------------------------------------
-# add libraries and guardian macros
+# gcc version dependent cflags
+
+DCLIB_GCC	= $(GCC)
+ifeq ($(DCLIB_GCC),)
+    DCLIB_GCC	:= gcc
+endif
+
+DCLIB_GCC_VERSION = $(shell $(DCLIB_GCC) -dumpversion)
+
+ifeq ($(shell expr $(DCLIB_GCC_VERSION) '>=' 7 ),1)
+  DCLIB_CFLAGS += -Wno-format-truncation
+else
+  DCLIB_CFLAGS += -Wno-pragmas -Wno-unknown-pragmas
+endif
+
+ifeq ($(shell expr $(DCLIB_GCC_VERSION) '>=' 9 ),1)
+  DCLIB_CFLAGS += -Wno-address-of-packed-member
+endif
+
+#------------------------------------------------------------------------------
+# add object files and guardian macros
 
 ifeq ($(DCLIB_THREAD),1)
     DCLIB_O += dclib-thread.o
-    DCLIB_FLAGS += -DDCLIB_THREAD=1
+    DCLIB_DEFINES += -DDCLIB_THREAD=1
 endif
 
 ifeq ($(DCLIB_NETWORK),1)
     DCLIB_O += dclib-network.o dclib-punycode.o
-    DCLIB_FLAGS += -DDCLIB_NETWORK=1
+    DCLIB_DEFINES += -DDCLIB_NETWORK=1
 else
     DCLIB_MYSQL := 0
 endif
 
 ifeq ($(DCLIB_MYSQL),1)
     DCLIB_O += dclib-mysql.o
-    DCLIB_FLAGS += -DDCLIB_MYSQL=1
+    DCLIB_DEFINES += -DDCLIB_MYSQL=1
 endif
 
 ifeq ($(DCLIB_TERMINAL),1)
     DCLIB_O += dclib-terminal.o dclib-command.o
-    DCLIB_FLAGS += -DDCLIB_TERMINAL=1
+    DCLIB_DEFINES += -DDCLIB_TERMINAL=1
 endif
 
 ifeq ($(DCLIB_HAVE_USABLE_SIZE),1)
-    DCLIB_FLAGS += -DDCLIB_HAVE_USABLE_SIZE=1
+    DCLIB_DEFINES += -DDCLIB_HAVE_USABLE_SIZE=1
 endif
+
+#------------------------------------------------------------------------------
+
+# support for deprecated DCLIB_FLAGS (2023-04-14)
+DCLIB_FLAGS := $(DCLIB_DEFINES) $(DCLIB_CFLAGS)
 
 #------------------------------------------------------------------------------

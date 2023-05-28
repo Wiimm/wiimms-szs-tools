@@ -7487,7 +7487,7 @@ CpuStatus_t GetCpuStatus ( CpuStatus_t * prev_cpuinfo )
     static int n_cpu = -1;
     static int clock_ticks = 100;
 
-    char buf[1000];
+    char buf[5000];
 
     if ( n_cpu < 0 )
     {
@@ -7541,20 +7541,46 @@ CpuStatus_t GetCpuStatus ( CpuStatus_t * prev_cpuinfo )
     if (f_stat)
     {
 	while (fgets(buf,sizeof(buf),f_stat))
-	    if ( !memcmp(buf,"cpu ",4) )
+	    if (!memcmp(buf,"cpu ",4)) // only cpu summary is relevant
 	    {
-		char *ptr	= buf;
-		current.user	= strtol(ptr+4,&ptr,10) * 10000 / clock_ticks;
-		current.nice	= strtol(ptr,&ptr,10)   * 10000 / clock_ticks;
-		current.system	= strtol(ptr,&ptr,10)   * 10000 / clock_ticks;
-		current.idle	= strtol(ptr,&ptr,10)   * 10000 / clock_ticks;
+		char *ptr = buf+4;
+		for ( int i = 1; i < 100; i++ )
+		{
+		    char *begin = ptr;
+		    u64 val = strtol(ptr,&ptr,10) * 10000 / clock_ticks;
+		    if ( begin == ptr )
+			break;
+
+		    switch (i)
+		    {
+			case  1: current.user	= val; break;
+			case  2: current.nice	= val; break;
+			case  3: current.system	= val; break;
+			case  4: current.idle	= val; break;
+			case  5: current.iowait	= val; break;
+
+			case  6:
+			case  7: current.irq	+= val; break;
+
+			case  8:
+			case  9:
+			case 10: current.virtual += val; break;
+
+			default: current.unknown += val; break;
+		    }
+		}
 		break;
 	    }
 	fclose(f_stat);
     }
 
     if (!prev_cpuinfo)
+    {
+	current.have_irq     = current.irq > 0;
+	current.have_virtual = current.virtual > 0;
+	current.have_unknown = current.unknown > 0;
 	return current; 
+    }
 
 
     //--- get delta for result
@@ -7562,12 +7588,20 @@ CpuStatus_t GetCpuStatus ( CpuStatus_t * prev_cpuinfo )
     if (!prev_cpuinfo->valid)
 	*prev_cpuinfo = current;
 
+    current.have_irq     = prev_cpuinfo->have_irq	|| current.irq > 0;
+    current.have_virtual = prev_cpuinfo->have_virtual	|| current.virtual > 0;
+    current.have_unknown = prev_cpuinfo->have_unknown	|| current.unknown > 0;
+
     CpuStatus_t res = current;
     res.nsec	-= prev_cpuinfo->nsec;
     res.user	-= prev_cpuinfo->user;
     res.nice	-= prev_cpuinfo->nice;
     res.system	-= prev_cpuinfo->system;
     res.idle	-= prev_cpuinfo->idle;
+    res.iowait	-= prev_cpuinfo->iowait;
+    res.irq	-= prev_cpuinfo->irq;
+    res.virtual	-= prev_cpuinfo->virtual;
+    res.unknown	-= prev_cpuinfo->unknown;
 
     *prev_cpuinfo = current;
     return res;
@@ -7581,11 +7615,13 @@ ccp PrintCpuStatus ( const CpuStatus_t * cpuinfo )
 	return "INVALID";
 
     return PrintCircBuf(
-	"ticks=%d, cpus=%d, times=%lld+%lld+%lld+%lld=%lld, avg=%4.2f,%4.2f,%4.2f %u/%u, nsec=%llu",
+	"ticks=%d, cpus=%d, times=%lld+%lld+%lld+%lld+%lld+%lld+%lld+%lld=%lld, avg=%4.2f,%4.2f,%4.2f %u/%u, nsec=%llu",
 	cpuinfo->clock_ticks,
 	cpuinfo->n_cpu,
 	cpuinfo->user, cpuinfo->nice, cpuinfo->system, cpuinfo->idle,
-	cpuinfo->user + cpuinfo->nice + cpuinfo->system + cpuinfo->idle,
+	cpuinfo->iowait, cpuinfo->irq, cpuinfo->virtual, cpuinfo->unknown,
+	cpuinfo->user + cpuinfo->nice + cpuinfo->system + cpuinfo->idle
+	+ cpuinfo->iowait + cpuinfo->irq + cpuinfo->virtual + cpuinfo->unknown,
 	cpuinfo->loadavg[0], cpuinfo->loadavg[1], cpuinfo->loadavg[2],
 	cpuinfo->running_proc, cpuinfo->total_proc,
 	cpuinfo->nsec );

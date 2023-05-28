@@ -253,6 +253,16 @@ typedef enum le_options_t
 
     LEO_LTT_SELECTOR	= 0x0000000f,  // mask to store le_track_text_t selector
 
+    LEO_UNDEFINED	= LTT_UNDEFINED,	// always NULL to support GetTextLEO()
+    LEO_SHA1		= LTT_SHA1,		// access SHA1 checksum (standard)
+    LEO_SHA1_D		= LTT_SHA1_D,		// access SHA1 checksum (_d file)
+    LEO_IDENT		= LTT_IDENT,		// access identification (standard)
+    LEO_IDENT_D		= LTT_IDENT_D,		// access identification (_d file)
+    LEO_FILE		= LTT_FILE,		// access file name
+    LEO_NAME		= LTT_NAME,		// access name
+    LEO_XNAME		= LTT_XNAME,		// access xname
+    LEO_XNAME2		= LTT_XNAME2,		// access xname with fallback to name
+
 
     //-- BMG input source selector. If none is set then use all
 

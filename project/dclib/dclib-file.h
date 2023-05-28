@@ -1679,15 +1679,23 @@ __attribute__ ((__format__(__printf__,3,4)));
 typedef struct CpuStatus_t
 {
     bool	valid;		// TRUE: data valid (setup done)
+    bool	have_irq;	// TRUE if 'irq' ever >0
+    bool	have_virtual;	// TRUE if 'virtual' ever >0
+    bool	have_unknown;	// TRUE if 'unknown' ever >0
+
     u_nsec_t	nsec;		// GetTimerNSec()
     int		clock_ticks;	// number of clock ticks per second
     int		n_cpu;		// total number of cpus
 
     // all times in 1e4 ticks per second (in 0.01%)
-    u64		user;		// time spent in user mode.
-    u64		nice;		// time spent in user mode with low priority.
-    u64		system;		// time spent in system mode.
-    u64		idle;		// time spent in the idle task.
+    u64		user;		// 1: time spent in user mode.
+    u64		nice;		// 2: time spent in user mode with low priority.
+    u64		system;		// 3: time spent in system mode.
+    u64		idle;		// 4: time spent in the idle task.
+    u64		iowait;		// 5: time waiting for I/O to complete (not reliable).
+    u64		irq;		// 6..7:  Time servicing (soft-)interrupts.
+    u64		virtual;	// 8..10: time for virtual os.
+    u64		unknown;	// 11...: time for future extentions
 
     int		running_proc;	// currently runnable processes
     int		total_proc;	// currently total processes

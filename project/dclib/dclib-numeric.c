@@ -3281,7 +3281,7 @@ ccp PrintNTimeByFormatUTC
 
     ccp			format,		// format string for strftime()
 					// 1-9 '@' in row replaced by digits of 'usec'
-    u_nsec_t		ntime
+    u_nsec_t		ntime		// time in nsec, e.g. get by GetTimeNSec(false)
 )
 {
     return PrintNSecByFormatUTC(format,ntime/NSEC_PER_SEC,ntime%NSEC_PER_SEC);
@@ -3295,7 +3295,7 @@ ccp PrintUTimeByFormat
 
     ccp			format,		// format string for strftime()
 					// 1-9 '@' in row replaced by digits of 'usec'
-    u_usec_t		utime
+    u_usec_t		utime		// time in nsec, e.g. get by GetTimeNSec(false)
 )
 {
     return PrintNSecByFormat(format,utime/USEC_PER_SEC,utime%USEC_PER_SEC*NSEC_PER_USEC);
@@ -3936,7 +3936,7 @@ ccp PrintTimer6N
 	}
     }
 
-    return buf == temp ? CopyCircBuf0(buf,strlen(buf)) : buf;
+    return CopyCircBuf0If(buf==temp,buf,strlen(buf));
 }
 
 ///////////////////////////////////////////////////////////////////////////////

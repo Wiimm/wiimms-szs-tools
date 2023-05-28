@@ -2175,6 +2175,19 @@ static u32 calc_stat_oct
 		 kcl->max_o_offset = val;
 	}
     }
+
+    const uint max = kcl->octree_size;
+    if ( kcl->max_l_offset > max )
+    {
+	kcl->max_l_offset = max;
+	kcl->octree_valid = false;
+    }
+    if ( kcl->max_o_offset > max )
+    {
+	kcl->max_o_offset = max;
+	kcl->octree_valid = false;
+    }
+
     return offset;
 }
 
@@ -2427,18 +2440,24 @@ void CalcStatisticsKCL
 
     //--- calc triangle usage
 
-    noPRINT("OFF: %x .. %x\n",kcl->min_l_offset,kcl->max_l_offset);
+    PRINT("OFF: %x .. %x, max=%x\n",kcl->min_l_offset,kcl->max_l_offset,kcl->raw_data_size);
+
+    const  u8 *max_vptr = kcl->raw_data + kcl->raw_data_size;
     for ( offset = kcl->min_l_offset; offset < kcl->max_l_offset; offset += 2 )
     {
-	uint val = be16( kcl->octree + offset );
-	if (val)
+	const u8 *vptr = kcl->octree + offset;
+	if ( vptr < max_vptr )
 	{
-	    if ( --val >= n_tri )
-		kcl->n_invalid_tri_ref++;
-	    else if (!tri_used[val])
+	    uint val = be16( kcl->octree + offset );
+	    if (val)
 	    {
-		tri_used[val] = 1;
-		kcl->n_tri_used++;
+		if ( --val >= n_tri )
+		    kcl->n_invalid_tri_ref++;
+		else if (!tri_used[val])
+		{
+		    tri_used[val] = 1;
+		    kcl->n_tri_used++;
+		}
 	    }
 	}
     }

@@ -477,7 +477,7 @@ typedef struct kcl_t
     u8			*octree;		// NULL or pointer to octree
     uint		octree_size;		// size of 'octree'
     bool		octree_valid;		// octree & header data are valid
-    bool		octree_alloced;		// true: FREE(octree)
+    bool		octree_alloced;		// true: FREE(octree) on reset
     bool		recreate_octree;	// true: recreate octree before storing
 
 

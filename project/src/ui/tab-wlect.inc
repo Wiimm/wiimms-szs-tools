@@ -191,7 +191,7 @@
 		"This command manages data for LE-CODE track distributions."
 		" It reads any number of source files with different file types,"
 		" collects the data and creates any number of files with different file types."
-		" Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for details."
+		" " WILDCARDS
 		"\n "
 		" Use the command without keyword to get an extended description." },
 
