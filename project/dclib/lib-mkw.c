@@ -1322,6 +1322,63 @@ ccp GetVehicleName4 ( u8 vehicle )
 ///////////////			LE-CODE track flags		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+typedef struct use_color_t
+{
+    char	*buf;	// valid destination buffer
+    char	*ptr;	// current pointer for appends, if NULL: set to 'buf' first
+    uint	size;	// size of 'buf'
+    ColorSet_t	*col;	// valid color definition, never NULL
+    int		index;	// current color index: 0:off, 1:on, 2:bold
+}
+use_color_t;
+
+//-----------------------------------------------------------------------------
+
+static char * UseColor
+(
+    // returns 'ucol.ptr'
+    use_color_t	*ucol,	// initialized data structure
+    int		index,	// next color
+    char	ch	// not NULL: Append character
+)
+{
+    DASSERT(ucol);
+    DASSERT(ucol->buf);
+    DASSERT(ucol->col);
+    if (!ucol->ptr)
+	ucol->ptr = ucol->buf;
+
+    ccp copy_src = 0;
+    int copy_len = 0;
+    if ( ucol->index != index )
+    {
+	ucol->index = index;
+	switch (index)
+	{
+	    case 1:  copy_src = ucol->col->info; break;
+	    case 2:  copy_src = ucol->col->hint; break;
+	    default: copy_src = ucol->col->reset; break;
+	}
+	copy_len = strlen(copy_src);
+    }
+
+    if ( ucol->ptr + copy_len < ucol->buf + ucol->size - 1 )
+    {
+	if (copy_len)
+	{
+	    memcpy(ucol->ptr,copy_src,copy_len);
+	    ucol->ptr += copy_len;
+	}
+	if (ch)
+	    *ucol->ptr++ = ch;
+    }
+
+    *ucol->ptr = 0;
+    return ucol->ptr;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 le_flags_t ScanLEFL ( ccp text )
 {
     // automatic flags are not scannend!
@@ -1374,6 +1431,21 @@ ccp PrintLEFL8 ( le_flags_t flags, bool aligned )
 	*d = 0;
     }
     return buf;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintLEFL8col ( le_flags_t flags, bool aligned, ColorSet_t *col )
+{
+ #if 1
+    return PrintLEFL8(flags,aligned);
+ #else
+    if (!col)
+	return PrintLEFL8(flags,aligned);
+
+    // ??? [[2do]]
+    return PrintLEFL8(flags,aligned);
+ #endif
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1443,6 +1515,72 @@ ccp PrintLEFL16 ( le_flags_t flags, bool aligned )
     }
     *d = 0;
     return buf;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp PrintLEFL16col ( le_flags_t flags, bool aligned, ColorSet_t *col )
+{
+    if ( !col || (flags & ~G_LEFL__XALL) )
+	return PrintLEFL16(flags,aligned);
+
+    char buf[300];
+    use_color_t ucol = { .buf = buf, .size = sizeof(buf), .col = col };
+
+    switch ( flags & (G_LEFL_BATTLE|G_LEFL_VERSUS|G_LEFL_RANDOM) )
+    {
+	case G_LEFL_BATTLE: UseColor(&ucol,1,'B'); break;
+	case G_LEFL_VERSUS: UseColor(&ucol,0,'V'); break;
+	case G_LEFL_RANDOM: UseColor(&ucol,2,'r'); break;
+	default:
+	    if ( aligned )
+		UseColor(&ucol,0,'-');
+    }
+
+    switch ( flags & (G_LEFL_ORIG_CUP|G_LEFL_CUSTOM_CUP) )
+    {
+	case G_LEFL_ORIG_CUP:				UseColor(&ucol,0,'o'); break;
+	case G_LEFL_CUSTOM_CUP:				UseColor(&ucol,1,'c'); break;
+	case G_LEFL_ORIG_CUP | G_LEFL_CUSTOM_CUP:	UseColor(&ucol,2,'b'); break;
+	default:
+	    if ( aligned )
+		UseColor(&ucol,0,'-');
+    }
+
+    switch ( flags & (G_LEFL_RND_HEAD|G_LEFL_RND_GROUP) )
+    {
+	case G_LEFL_RND_HEAD:				UseColor(&ucol,1,'H'); break;
+	case G_LEFL_RND_GROUP:				UseColor(&ucol,0,'G'); break;
+	case G_LEFL_RND_HEAD | G_LEFL_RND_GROUP:	UseColor(&ucol,2,'X'); break;
+	default:
+	    if ( aligned )
+		UseColor(&ucol,0,'-');
+    }
+
+    switch ( flags & (G_LEFL_NEW|G_LEFL_TEXTURE) )
+    {
+	case G_LEFL_NEW:				UseColor(&ucol,0,'N'); break;
+	case G_LEFL_TEXTURE:				UseColor(&ucol,1,'T'); break;
+	case G_LEFL_NEW | G_LEFL_TEXTURE:		UseColor(&ucol,2,'2'); break;
+	default:
+	    if ( aligned )
+		UseColor(&ucol,0,'-');
+    }
+
+    if (aligned)
+    {
+	UseColor(&ucol,0, flags & G_LEFL_ALIAS	? 'A' : '-' );
+	UseColor(&ucol,0, flags & G_LEFL_HIDDEN	? 'i' : '-' );
+    }
+    else
+    {
+	if ( flags & G_LEFL_ALIAS	) UseColor(&ucol,0,'A');
+	if ( flags & G_LEFL_HIDDEN	) UseColor(&ucol,0,'i');
+	if ( ucol.ptr == buf )
+	    UseColor(&ucol,0,'-');
+    }
+
+    return CopyCircBuf0(buf,ucol.ptr-buf);
 }
 
 //

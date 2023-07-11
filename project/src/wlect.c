@@ -1004,7 +1004,7 @@ static enumError cmd_create()
     //--- data
 
     enum { C_HELP,
-		C_LEX, C_FEATURES, C_SET1, C_CANNON, C_HIDE_PT, C_TEST,
+		C_LEX, C_FEATURES, C_SET1, C_CANNON, C_HIDE_PT, C_RND_ITPH, C_TEST,
 		C_LPAR, C_LEDEF, C_PREFIX, C_CATEGORY,
 		C_LEINFO,
     };
@@ -1020,6 +1020,7 @@ static enumError cmd_create()
 	{ C_SET1,	"SET1",		0,		0 },
 	{ C_CANNON,	"CANNONS",	0,		0 },
 	{ C_HIDE_PT,	"HIPT",		0,		0 },
+	{ C_RND_ITPH,	"RITP ",	0,		0 },
 	{ C_TEST,	"TEST",		0,		0 },
 
 	{ C_LPAR,	"LPAR",		0,		0 },
@@ -1071,15 +1072,17 @@ static enumError cmd_create()
      case C_SET1:
      case C_CANNON:
      case C_HIDE_PT:
+     case C_RND_ITPH:
 	{
 	    lex_t lex;
 	    InitializeLEX(&lex);
 	    switch (cmd->id)
 	    {
-	      case C_FEATURES: AppendFeatLEX(&lex,false,0); break;
-	      case C_SET1:     AppendSet1LEX(&lex,false); break;
-	      case C_CANNON:   AppendCannLEX(&lex,false); break;
-	      case C_HIDE_PT:  AppendHiptLEX(&lex,false); break;
+	      case C_FEATURES:	AppendFeatLEX(&lex,false,0); break;
+	      case C_SET1:	AppendSet1LEX(&lex,false); break;
+	      case C_CANNON:	AppendCannLEX(&lex,false); break;
+	      case C_HIDE_PT:	AppendHiptLEX(&lex,false); break;
+	      case C_RND_ITPH:	AppendRitpLEX(&lex,false); break;
 	    }
 	    err = SaveTextLEX(&lex,opt_dest,false);
 	    ResetLEX(&lex);

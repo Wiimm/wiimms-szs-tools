@@ -56,15 +56,17 @@ typedef struct ScanText_t
     //-- options
 
     bool	ignore_comments;	// true: ignore lines with leading '#'
+    bool	ignore_values;		// true: ignore lines with leading '@'
     int		detect_sections;	// >0: detect lines of format '[...]'
 
-    //-- current statee
+    //-- current state
 
     ccp		ptr;			// current text position
     ccp		eot;			// end of text
     ccp		line;			// current line
     ccp		eol;			// end of current line
 
+    bool	is_value;		// current line begins with '@'
     bool	is_eot;			// end of text reached
     bool	is_section;		// new section reached
     bool	is_term;		// := is_eot || is_section

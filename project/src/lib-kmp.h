@@ -494,7 +494,7 @@ __attribute__ ((packed)) kmp_poti_group_t;
 // [[kmp_poti_point_t]]
 
 typedef struct kmp_poti_point_t
-{
+{ 
   // Routes
 
   /*0x00*/  float32	position[3];
@@ -581,7 +581,7 @@ typedef struct kmp_stgi_entry_t
 {
   //  Stage Information
 
-  /*0x00*/  u8		lap_count;		// XML suggest but ignored
+  /*0x00*/  u8		lap_count;		// XML suggest, used by lap_modifier
   /*0x01*/  u8		pole_pos;		// 0:left, 1:right
   /*0x02*/  u8		narrow_start;		// 0:normal, 1:closer together
   /*0x03*/  u8		enable_lens_flare;	// 0:off, 1:enabled

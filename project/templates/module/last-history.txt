@@ -1,16 +1,11 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Windows only: Updated 64 bit version of Cygwin to DLL 3.4.3 / 2022-12-16.
- - GNU Compiler (GNUC) upto version 13 supported.
- - wstrt PORT: Updated porting database.
- - Updated prefix database:
-    - Added LBPK, M&SOWG, MP5, MP6, MSS, S1, S2, S3 and WFUS.
-    - Renamed RV to Re-Volt
- - wszst PATCH --ignore: Keep silent if a wildcard pattern matches no file.
- - New command: wszst WILDCARDS: Each parameter is treated as a file name and
-   wildcards are expanded. Finally, one line is printed for each matched name.
- - Tool wszst: New otpion --log-cache=file: Log some cache activities to FILE.
- - Improved detection of invalid references in KCL octree (avoid crash).
+ - Updated prefix database: Added MK8DX (alias of SW), MK8S, SBSPBfBB, SMB,
+   SMBM, TFR, ZeldaWW (alias of WW).
+ - Support for online-time-limit by LPAR and LEX:SET1.
+ - Support for new LEX section RITP (Random next-links @KMP:ITPH).
+ - Fixed end-of-line bugs in LEX text output (CR+LF required for Windows).
+ - wlect dump: Colored flags.
 
 ~ - MDL support: Scanning a MDL file and transferring the data into an internal
 ~   format was already implemented, but only used for analysis purposes. Now it

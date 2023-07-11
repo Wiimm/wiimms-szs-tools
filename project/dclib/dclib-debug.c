@@ -597,6 +597,21 @@ bool mark_used ( ccp name, ... )
 ///////////////			    hexdump			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+uint HexDump ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
+		const void * p_data, size_t count )
+{
+    // return the number of printed lines
+    if ( !f || !p_data || !count )
+	return 0;
+
+    XDump_t xd;
+    InitializeXDumpEx(&xd,f,indent,addr,addr_fw,row_len);
+    const int stat = XDump(&xd,p_data,count,true);
+    return stat < 0 ? 0 : stat;
+}
+
+//-----------------------------------------------------------------------------
+
 uint HexDump16 ( FILE * f, int indent, u64 addr,
 		 const void * data, size_t count )
 {
@@ -613,19 +628,32 @@ uint HexDump20 ( FILE * f, int indent, u64 addr,
     return HexDump(f,indent,addr,4,20,data,count);
 }
 
-//-----------------------------------------------------------------------------
+///////////////////////////////////////////////////////////////////////////////
 
-uint HexDump ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
+uint HexDumpCRLF ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
 		const void * p_data, size_t count )
 {
-    // return the number of printed lines
-    if ( !f || !p_data || !count )
-	return 0;
+    const typeof(hexdump_eol)saved_eol = hexdump_eol;
+    hexdump_eol = "\r\n";
+    const uint stat = HexDump(f,indent,addr,addr_fw,row_len,p_data,count);
+    hexdump_eol = saved_eol;
+    return stat;
+}
 
-    XDump_t xd;
-    InitializeXDumpEx(&xd,f,indent,addr,addr_fw,row_len);
-    const int stat = XDump(&xd,p_data,count,true);
-    return stat < 0 ? 0 : stat;
+//-----------------------------------------------------------------------------
+
+uint HexDump16CRLF ( FILE * f, int indent, u64 addr, const void * data, size_t count )
+{
+    // return the number of printed lines
+    return HexDumpCRLF(f,indent,addr,4,16,data,count);
+}
+
+//-----------------------------------------------------------------------------
+
+uint HexDump20CRLF ( FILE * f, int indent, u64 addr, const void * data, size_t count )
+{
+    // return the number of printed lines
+    return HexDumpCRLF(f,indent,addr,4,20,data,count);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

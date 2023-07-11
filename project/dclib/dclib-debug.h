@@ -171,6 +171,13 @@ uint HexDump16 ( FILE * f, int indent, u64 addr,
 uint HexDump20 ( FILE * f, int indent, u64 addr,
 			const void * data, size_t count );
 
+uint HexDumpCRLF ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
+		const void * p_data, size_t count );
+uint HexDump16CRLF ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+uint HexDump20CRLF ( FILE * f, int indent, u64 addr,
+			const void * data, size_t count );
+
 uint HexDumpBE2 ( FILE * f, int indent, u64 addr, int addr_fw, int row_len,
 			const void * data, size_t count );
 uint HexDump16BE2 ( FILE * f, int indent, u64 addr,

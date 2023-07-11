@@ -604,9 +604,9 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_LT_RANDOM, false, false, false, false, false, 0, "lt-random",
 	"index",
-	"Force a random scenario, if between 1 and 8. Value 0 enables auto"
-	" selection and -1 disables this option. If needed, LEX section TEST"
-	" is created or removed if empty."
+	"Force a random scenario, if INDEX is between 1 and 8. Value 0 enables"
+	" auto selection and -1 disables this option. If needed, LEX section"
+	" TEST is created or removed if empty."
     },
 
     {	OPT_LEX_PURGE, false, false, false, false, false, 0, "lex-purge",

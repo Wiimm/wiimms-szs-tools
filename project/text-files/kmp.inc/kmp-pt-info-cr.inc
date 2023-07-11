@@ -31,6 +31,6 @@
 # If you enable EXPORT-FLAGS (set it to 1), the flags are exported using the
 # lowest byte of WIDTH FACTOR. The factor needs only 2 or 3 digits, so this
 # has no disadvantage on the width factors. 5 of the 8 bits are used to verify
-# changes by other tools on import. If at least 1 of these bit of all points
+# changes by other tools on import. If at least 1 of these bit of any point
 # is wrong, import is canceled.
 @EXPORT-FLAGS = %d  # 0=disabled, 1=enabled (overridden by option --export-flags)

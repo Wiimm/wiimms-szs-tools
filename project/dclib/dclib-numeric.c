@@ -968,6 +968,41 @@ int CheckIndexCEnd ( int max, int * p_begin, int count )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			struct IntMode_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetIntModeName ( IntMode_t mode )
+{
+    switch(mode)
+    {
+	case IMD_UNSET: return "-";
+
+	case IMD_BE0:	return "BE";
+	case IMD_BE1:	return "BE1";
+	case IMD_BE2:	return "BE2";
+	case IMD_BE3:	return "BE3";
+	case IMD_BE4:	return "BE4";
+	case IMD_BE5:	return "BE5";
+	case IMD_BE6:	return "BE6";
+	case IMD_BE7:	return "BE7";
+	case IMD_BE8:	return "BE8";
+
+	case IMD_LE0:	return "LE";
+	case IMD_LE1:	return "LE1";
+	case IMD_LE2:	return "LE2";
+	case IMD_LE3:	return "LE3";
+	case IMD_LE4:	return "LE4";
+	case IMD_LE5:	return "LE5";
+	case IMD_LE6:	return "LE6";
+	case IMD_LE7:	return "LE7";
+	case IMD_LE8:	return "LE8";
+
+	default:	return "?";
+    }
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			    lt/eq/gt			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -8335,6 +8370,56 @@ char * PrintSize1024
 
     return buf;
 };
+
+//-----------------------------------------------------------------------------
+
+char * PrintHMS
+(
+    char		*buf,		// result buffer
+					// NULL: use a local circulary static buffer
+    size_t		buf_size,	// size of 'buf', ignored if buf==NULL
+
+    int			seconds,	// seconds to print
+    int			min_seconds,	// print only if 'seconds >= min_seconds'
+    ccp			pre_text,	// not NULL: Print text before H:M:S
+    ccp			post_text	// not NULL: Print text behind H:M:S
+)
+{
+    if ( seconds < min_seconds )
+    {
+	if (!buf)
+	    return "";
+	    
+	*buf = 0;
+	return buf;
+    }
+
+    if (!pre_text)
+	pre_text = "";
+    if (!post_text)
+	post_text = "";
+
+    const ccp sign = seconds < 0 ? "-" : "";
+    seconds = abs(seconds);
+    const int hours   = seconds / 3600;
+    const int minutes = seconds % 3600 / 60;
+    seconds = seconds % 60;
+
+    if (!buf)
+	return hours
+		? PrintCircBuf("%s%s%u:%02u:%02u%s",pre_text,sign,hours,minutes,seconds,post_text)
+		: minutes
+		? PrintCircBuf("%s%s%u:%02u%s",pre_text,sign,minutes,seconds,post_text)
+		: PrintCircBuf("%s%s%02us%s",pre_text,sign,seconds,post_text);
+    
+    if (hours)
+	snprintf(buf,buf_size,"%s%s%u:%02u:%02u%s",pre_text,sign,hours,minutes,seconds,post_text);
+    else if (minutes)
+	snprintf(buf,buf_size,"%s%s%u:%02u%s",pre_text,sign,minutes,seconds,post_text);
+    else
+	snprintf(buf,buf_size,"%s%s%02us%s",pre_text,sign,seconds,post_text);
+    return buf;
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////

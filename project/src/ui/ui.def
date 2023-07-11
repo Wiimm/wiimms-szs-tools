@@ -1252,8 +1252,8 @@
 
 #:def_opt( "LT_RANDOM", "lt-random|ltrandom", "GP", \
 	"index", \
-	"Force a random scenario, if between 1 and 8. Value 0 enables auto" \
-	" selection and -1 disables this option. Only track.szs files are" \
+	"Force a random scenario, if INDEX is between 1 and 8. Value 0 enables" \
+	" auto selection and -1 disables this option. Only track.szs files are" \
 	" modified. If needed, file course.lex and section TEST are created or" \
 	" removed if empty." )
 
@@ -20805,9 +20805,9 @@
 
 #:def_opt( "LT_RANDOM", "lt-random|ltrandom", "GP", \
 	"index", \
-	"Force a random scenario, if between 1 and 8. Value 0 enables auto" \
-	" selection and -1 disables this option. If needed, LEX section TEST" \
-	" is created or removed if empty." )
+	"Force a random scenario, if INDEX is between 1 and 8. Value 0 enables" \
+	" auto selection and -1 disables this option. If needed, LEX section" \
+	" TEST is created or removed if empty." )
 
 #:def_opt( "LEX_PURGE", "lex-purge|lexpurge", "G", \
 	"", \

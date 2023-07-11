@@ -160,6 +160,9 @@ __attribute__ ((packed)) dcEndian_t;
 #define ALIGNOFF32(d,a) ((d)&~(u32)((a)-1))
 #define ALIGNOFF64(d,a) ((d)&~(u64)((a)-1))
 
+#define MINMAX(v,min,max) ( v < min ? min : v > max ? max : v )
+#define MINMAX0(v,min,max) ( v == 0 ? 0 : v < min ? min : v > max ? max : v )
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			  error codes			///////////////

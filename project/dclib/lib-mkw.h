@@ -474,11 +474,18 @@ static inline bool IsRandomLEFL ( le_flags_t flags )
 
 le_flags_t ScanLEFL ( ccp text );
 
-ccp PrintLEFL8  ( le_flags_t flags, bool aligned );
-ccp PrintLEFL16 ( le_flags_t flags, bool aligned );
+ccp PrintLEFL8     ( le_flags_t flags, bool aligned );
+ccp PrintLEFL16    ( le_flags_t flags, bool aligned );
+
+// use PrintLEFL8() or PrintLEFL16() if col==0
+ccp PrintLEFL8col  ( le_flags_t flags, bool aligned, ColorSet_t *col );
+ccp PrintLEFL16col ( le_flags_t flags, bool aligned, ColorSet_t *col );
 
 static inline ccp PrintLEFL ( le_flags_t flags_bits, le_flags_t flags, bool aligned )
 	{ return ( flags_bits == 16 ? PrintLEFL16 : PrintLEFL8 )(flags,aligned); }
+
+static inline ccp PrintLEFLcol ( le_flags_t flags_bits, le_flags_t flags, bool aligned, ColorSet_t *col )
+	{ return ( flags_bits == 16 ? PrintLEFL16col : PrintLEFL8col )(flags,aligned,col); }
 
 typedef ccp (*PrintLEFL_func) ( le_flags_t flags, bool aligned );
 static inline PrintLEFL_func GetPrintLEFL ( uint flags_bits )

@@ -49,6 +49,7 @@ void SetupScanText ( ScanText_t *st, cvp data, uint data_size )
     st->data		= data;
     st->data_size	= data_size;
     st->ignore_comments	= true;
+    st->ignore_values	= true;
     
     RewindScanText(st);
 }
@@ -97,6 +98,7 @@ bool NextLineScanText ( ScanText_t *st )
 {
     DASSERT(st);
     st->is_section = false;
+    st->is_value = false;
 
     ccp ptr = st->ptr;
     ccp eot = st->eot;
@@ -120,7 +122,8 @@ bool NextLineScanText ( ScanText_t *st )
 	while ( eol > line && eol[-1] == ' ' || eol[-1] == '\t' )
 	    eol--;
 
-	if ( line == eol || *line == '#' && st->ignore_comments )
+	st->is_value = *line == '@';
+	if ( line == eol || *line == '#' && st->ignore_comments || st->is_value && st->ignore_values )
 	    continue;
 	if ( st->detect_sections > 0
 	   && *line == '['

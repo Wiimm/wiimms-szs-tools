@@ -4254,10 +4254,10 @@ enumError SavePrefixTable ( FILE *f, const mkw_prefix_t * tab )
     fprintf(f,
 	"#-------------------\r\n"
 	"# %u prefixes total\r\n"
-	"# Max prefix len:%2u\r\n"
-	"# Max info len:%4u\r\n"
+	"# Max prefix len:%3u\r\n"
+	"# Max info len:%5u\r\n"
 	,count
-	,fw_prefix
+	,fw_prefix 
 	,fw_info
 	);
 
@@ -4653,6 +4653,7 @@ void ScanSha1Ref   ( struct ScanText_t *st )
 
     uint good_size = 0;
 
+    st->ignore_values = false;
     while ( NextLineScanText(st) )
     {
 	mem_t srcline = { .ptr = st->line, .len = st->eol - st->line };

@@ -1806,7 +1806,6 @@ void PrintNameIL
 ///////////////			color conversions		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-
 int ScanOptCmprDefault ( ccp arg )
 {
     DASSERT( opt_cmpr_def[4] == 0xff );
@@ -2007,41 +2006,6 @@ const u8 cc86[256] = // convert 8-bit color to 6-bit color
     0x37,0x38,0x38,0x38, 0x38,0x39,0x39,0x39, 0x39,0x3a,0x3a,0x3a, 0x3a,0x3b,0x3b,0x3b,
     0x3b,0x3c,0x3c,0x3c, 0x3c,0x3d,0x3d,0x3d, 0x3d,0x3e,0x3e,0x3e, 0x3e,0x3f,0x3f,0x3f
 };
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			    misc			///////////////
-///////////////////////////////////////////////////////////////////////////////
-
-ccp GetIntModeName ( IntMode_t mode )
-{
-    switch(mode)
-    {
-	case IMD_UNSET: return "-";
-
-	case IMD_BE0:	return "BE";
-	case IMD_BE1:	return "BE1";
-	case IMD_BE2:	return "BE2";
-	case IMD_BE3:	return "BE3";
-	case IMD_BE4:	return "BE4";
-	case IMD_BE5:	return "BE5";
-	case IMD_BE6:	return "BE6";
-	case IMD_BE7:	return "BE7";
-	case IMD_BE8:	return "BE8";
-
-	case IMD_LE0:	return "LE";
-	case IMD_LE1:	return "LE1";
-	case IMD_LE2:	return "LE2";
-	case IMD_LE3:	return "LE3";
-	case IMD_LE4:	return "LE4";
-	case IMD_LE5:	return "LE5";
-	case IMD_LE6:	return "LE6";
-	case IMD_LE7:	return "LE7";
-	case IMD_LE8:	return "LE8";
-
-	default:	return "?";
-    }
-}
 
 //
 ///////////////////////////////////////////////////////////////////////////////

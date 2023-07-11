@@ -1081,6 +1081,19 @@ bool LimitToLparMode ( le_lpar_t * lp, lpar_mode_t lpmode )
 	    { lp->enable_perfmon  = 1; modified = true; }
     }
 
+ #if 0
+    // [[time-limit]]
+    if ( lpmode <= LPM_TESTING )
+    {
+	if ( lp->default_online_sec > LE_MAX_ONLINE_SEC )
+	    { lp->default_online_sec = LE_MAX_ONLINE_SEC; modified = true; }
+	if ( lp->min_online_sec > LE_MAX_ONLINE_SEC )
+	    { lp->min_online_sec = LE_MAX_ONLINE_SEC; modified = true; }
+	if ( lp->max_online_sec > LE_MAX_ONLINE_SEC )
+	    { lp->max_online_sec = LE_MAX_ONLINE_SEC; modified = true; }
+    }
+ #endif
+
     // [[new-lpar]]
 
     return modified;
@@ -1266,6 +1279,10 @@ void InitializeLPAR ( le_lpar_t *lpar, bool load_lpar )
     lpar->drag_blue_shell	=   1;
     lpar->thcloud_frames	= 300;
     lpar->block_textures	=   1;
+// [[time-limit]]
+    lpar->default_online_sec	= LE_DEF_ONLINE_SEC;
+    lpar->min_online_sec	= LE_DEF_ONLINE_SEC;
+    lpar->max_online_sec	= LE_MAX_WD_ONLINE_SEC;
 
     // [[new-lpar]]
 
@@ -1323,6 +1340,16 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
     {
 	lp->bt_worldwide	&= 1;
 	lp->vs_worldwide	&= 1;
+    }
+
+// [[time-limit]]
+    lp->default_online_sec = MINMAX( lp->default_online_sec, LE_MIN_ONLINE_SEC, LE_MAX_ONLINE_SEC );
+    if ( !lp->min_online_sec || lp->min_online_sec > lp->max_online_sec )
+	lp->min_online_sec = lp->max_online_sec = 0;
+    else 
+    {
+	lp->min_online_sec = MINMAX( lp->min_online_sec, LE_MIN_ONLINE_SEC,  LE_MAX_ONLINE_SEC );
+	lp->max_online_sec = MINMAX( lp->max_online_sec, lp->min_online_sec, LE_MAX_ONLINE_SEC );
     }
 
     // [[new-lpar]]
@@ -1417,6 +1444,14 @@ static void CopyLPAR2Data ( le_analyze_t * ana )
 	h->block_textures = lp->block_textures;
     if ( offsetof(le_binpar_v1_t,staticr_points) < ana->param_size )
 	h->staticr_points = lp->staticr_points;
+
+// [[time-limit]]
+    if ( offsetof(le_binpar_v1_t,default_online_sec) < ana->param_size )
+	h->default_online_sec = htons(lp->default_online_sec);
+    if ( offsetof(le_binpar_v1_t,min_online_sec) < ana->param_size )
+	h->min_online_sec = htons(lp->min_online_sec);
+    if ( offsetof(le_binpar_v1_t,max_online_sec) < ana->param_size )
+	h->max_online_sec = htons(lp->max_online_sec);
 
     // [[new-lpar]]
 }
@@ -1574,6 +1609,13 @@ enumError WriteSectionLPAR
 		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
 		,lpar->block_textures
 		,lpar->staticr_points
+// [[time-limit]]
+		,LE_MIN_ONLINE_SEC ,PrintHMS(0,0,LE_MIN_ONLINE_SEC,LE_VIEW_ONLINE_HMS," (",")")
+		,LE_MAX_ONLINE_SEC ,PrintHMS(0,0,LE_MAX_ONLINE_SEC,LE_VIEW_ONLINE_HMS," (",")")
+		,LE_MAX_WD_ONLINE_SEC ,PrintHMS(0,0,LE_MAX_WD_ONLINE_SEC,LE_VIEW_ONLINE_HMS," (",")")
+		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
+		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
+		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		);
     }
     else
@@ -1600,6 +1642,9 @@ enumError WriteSectionLPAR
 	       "VS-TEXTURES	= %s\r\n"
 	       "BLOCK-TEXTURES	= %u\r\n"
 	       "STATICR-POINTS	= %u\r\n"
+	       "DEF-ONLINE-SEC	= %3u%s\r\n"
+	       "MIN-ONLINE-SEC	= %3u%s\r\n"
+	       "MAX-ONLINE-SEC	= %3u%s\r\n"
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
 		,lpar->cheat_mode
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
@@ -1619,6 +1664,10 @@ enumError WriteSectionLPAR
 		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
 		,lpar->block_textures
 		,lpar->staticr_points
+// [[time-limit]]
+		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
+		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
+		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		);
     }
 
@@ -2090,6 +2139,15 @@ enumError AnalyzeLEBinary
 		    ana->lpar.staticr_points	= p->staticr_points;
 		}
 
+		if ( param_size >= sizeof(le_binpar_v1_270_t) )
+		{
+// [[time-limit]]
+		    le_binpar_v1_270_t *p	 = (le_binpar_v1_270_t*)(data+off_param);
+		    ana->lpar.default_online_sec = ntohs(p->default_online_sec);
+		    ana->lpar.min_online_sec	 = ntohs(p->min_online_sec);
+		    ana->lpar.max_online_sec	 = ntohs(p->max_online_sec);
+		}
+
 		// [[new-lpar]]
 
 		break;
@@ -2547,11 +2605,11 @@ static ccp GetSlotInfo
 	return flags & G_LEFL_ALIAS
 		? PrintCircBuf("[%s->%4x %s,%s] ",
 				col->differ, TrackByAliasLE(prop,music),
-				col->reset, PrintLEFL(ana->flags_bits,flags,true) )
+				col->reset, PrintLEFLcol(ana->flags_bits,flags,true,col) )
 		: PrintCircBuf("[%s%s%s,%s%s%s,%s]%c",
 				prop1, propx, prop0,
 				music1, musicx, music0,
-				PrintLEFL(ana->flags_bits,flags,true), warn_list[warn] );
+				PrintLEFLcol(ana->flags_bits,flags,true,col), warn_list[warn] );
     }
 
     if (col)
@@ -3247,6 +3305,21 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	    fprintf(f,
 		"%*s" "Points by StaticR: %u\n"
 		,indent,"", h->staticr_points
+		);
+	}
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_270_t)  )
+	{
+// [[time-limit]]
+	    const uint def = ntohs(h->default_online_sec);
+	    const uint min = ntohs(h->min_online_sec);
+	    const uint max = ntohs(h->max_online_sec);
+	    fprintf(f,
+		"%*s" "Online time limit: %us%s / Range for LEX: %us%s .. %us%s\n"
+		,indent,""
+			,def, PrintHMS(0,0,def,LE_VIEW_ONLINE_HMS," (",")")
+			,min, PrintHMS(0,0,min,LE_VIEW_ONLINE_HMS," (",")")
+			,max, PrintHMS(0,0,max,LE_VIEW_ONLINE_HMS," (",")")
 		);
 	}
 
@@ -3959,6 +4032,10 @@ static enumError ScanTextLPAR_PARAM
 	{ "VS-TEXTURES",	SPM_U8,  &lpar->vs_textures },
 	{ "BLOCK-TEXTURES",	SPM_U8,  &lpar->block_textures },
 	{ "STATICR-POINTS",	SPM_U8,  &lpar->staticr_points },
+// [[time-limit]]
+	{ "DEF-ONLINE-SEC",	SPM_U16, &lpar->default_online_sec },
+	{ "MIN-ONLINE-SEC",	SPM_U16, &lpar->min_online_sec },
+	{ "MAX-ONLINE-SEC",	SPM_U16, &lpar->max_online_sec },
 
 	// [[new-lpar]]
 	{0}

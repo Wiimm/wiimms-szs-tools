@@ -4298,6 +4298,137 @@ static enumError test_key_list ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_random()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// test random generator for MKWFUN patcher (LE-CODE)
+
+unsigned sim_select_id	= 0;  // simulated select_id
+unsigned dwc_gamedata	= 1;  // simulate always onlne
+
+///////////////////////////////////////////////////////////////////////////////
+
+static unsigned GetSelectId(void)
+{
+    return sim_select_id;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// Algorithm based on ideas by Donald E. Knuth
+
+static unsigned GetSyncRandom1 ( int max )
+{
+    unsigned num;
+
+    if (dwc_gamedata) // if online
+    {
+	// static vars
+	static unsigned last_select_id = 0;
+	static unsigned val_a = 0, val_c = 0, val_x = 0;
+
+	const unsigned select_id = GetSelectId();
+	if ( last_select_id != select_id || !val_a )
+	{
+	    // new select_id => calculate new seed
+	    last_select_id = select_id;
+
+	    // rotate, because lower 16 may be 0
+	    const int n_shift = 21;
+	    unsigned base = select_id >> n_shift | select_id << (32-n_shift);
+	    base = base ^ ( select_id * 101 );
+
+	    static unsigned val_a_tab[7] =
+	    {
+		0xbb40e62d, 0x3dc8f2f5, 0xdc024635, 0x7a5b6c8d,
+		0x583feb95, 0x91e06dbd, 0xa7ec03f5,
+	    };
+	    
+	    val_a = val_a_tab[base%7];
+	    const u32 VAL_C_ADD = 2 * 197731421; // 2 * prime
+	    val_c = ( (base & 15) + 1 ) * VAL_C_ADD + 1; // always odd
+	    val_x = base;
+	}
+
+	num = val_x = val_a * val_x + val_c;
+    }
+    else
+    {
+	// if offline => use standard random function
+	num = rand();
+    }
+
+    // If max>0 return a random (0..max( otherwise return a 32 bit random
+    return max <= 0 ? num : num % max;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_random ( int argc, char ** argv )
+{
+    if ( argc != 3 )
+    {
+	fputs(	"\n"
+		"Test random generator for MKWFUN patcher (LE-CODE)\n"
+		"\n"
+		"Syntax: 'wtest' 'random' SEED N\n"
+		"\n"
+		,stdout);
+	return ERR_WARNING;
+    }
+
+    sim_select_id = str2ul(argv[1],0,10);
+    uint n = str2ul(argv[2],0,10);
+    printf("\nselect_id = %u = 0x%08x\n\n",sim_select_id,sim_select_id);
+
+    for ( uint i = 0; i < n; i++ )
+    {
+	uint r = GetSyncRandom1(0);
+	printf("%6u. %11u = %08x\n",i,r,r);
+    }
+
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_hms()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_hms ( int argc, char ** argv )
+{
+    if ( argc < 2 )
+    {
+	fputs(	"\n"
+		"Test output of PrintHMS()\n"
+		"\n"
+		"Syntax: 'wtest' 'hms' [+min] value...\n"
+		"\n"
+		,stdout);
+	return ERR_WARNING;
+    }
+
+    int min = 30;
+    printf(">> min = %d%s\n",min,PrintHMS(0,0,min,60," (",")"));
+
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	if ( *arg == '+' )
+	{
+	    min = str2ul(arg,0,10);
+	    printf(">> min = %d%s\n",min,PrintHMS(0,0,min,60," (",")"));
+	}
+	else
+	{
+	    int val = str2ul(arg,0,10);
+	    printf("val %s: %d%s\n",arg,val,PrintHMS(0,0,val,min," (",")"));
+	}
+    }
+
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4604,6 +4735,8 @@ enum
     CMD_PF_EXPAND,		// test_pf_expand(argc,argv)
     CMD_CODED_VERSION,		// test_coded_version(argc,argv)
     CMD_KEY_LIST,		// test_key_list(argc,argv)
+    CMD_RANDOM,			// test_random(argc,argv)
+    CMD_HMS,			// test_hms(argc,argv)
 
  #ifdef HAVE_WIIMM_EXT
     CMD_WIIMM,			// test_wiimm(argc,argv)
@@ -4683,6 +4816,8 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_PF_EXPAND,	"PF-EXPAND",	"PFE",		0 },
 	{ CMD_CODED_VERSION,	"CVERSION",	"CV",		0 },
 	{ CMD_KEY_LIST,		"KEY-LIST",	"KL",		0 },
+	{ CMD_RANDOM,		"RANDOM",	"RND",		0 },
+	{ CMD_HMS,		"HMS",		0,		0 },
 
  #ifdef HAVE_WIIMM_EXT
 	{ CMD_WIIMM,		"WIIMM",	"W",		0 },
@@ -4751,6 +4886,34 @@ int main ( int argc, char ** argv )
 		ADDRT_MEMORY_BEGIN, ADDRT_MEMORY_END,
 		ADDRT_MIRROR_BEGIN, ADDRT_MIRROR_END,
 		ADDRT__N, ADDRT__NN );
+
+    if (0) // test MINMAX() and MINMAX0()
+    {
+	const int list[] = { -3, -1, 0, 5, 9 };
+	const int n = sizeof(list)/sizeof(*list);
+	for ( int i = 0; i < n; i++ )
+	{
+	    putchar('\n');
+	    const int x = list[i];
+	    for ( int j = 0; j < n; j++ )
+	    {
+		const int y = list[j];
+		for ( int k = 0; k < n; k++ )
+		{
+		    const int z = list[k];
+		    printf("%2d %2d %2d => %2d %2d\n",x,y,z,MINMAX(x,y,z),MINMAX0(x,y,z));
+		}
+	    }
+	}
+	
+	double3 d3;
+	double *d = d3.v;
+	printf("%zu/%zu=%zu\n",sizeof(d3.v),sizeof(*d),sizeof(d3.v)/sizeof(*d));
+
+	float3 f3;
+	float *f = f3.v;
+	printf("%zu/%zu=%zu\n",sizeof(f3.v),sizeof(*f),sizeof(f3.v)/sizeof(*f));
+    }
 
     if (0)
     {
@@ -4862,6 +5025,8 @@ int main ( int argc, char ** argv )
 	case CMD_PF_EXPAND:		test_pf_expand(argc,argv); break;
 	case CMD_CODED_VERSION:		test_coded_version(argc,argv); break;
 	case CMD_KEY_LIST:		test_key_list(argc,argv); break;
+	case CMD_RANDOM:		test_random(argc,argv); break;
+	case CMD_HMS:			test_hms(argc,argv); break;
 
  #ifdef HAVE_WIIMM_EXT
 	case CMD_WIIMM:			test_wiimm(argc,argv); break;

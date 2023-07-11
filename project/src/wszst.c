@@ -509,6 +509,8 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(lex_element_t)
 	SIZEOF_INFO_ENTRY(lex_set1_t)
 	SIZEOF_INFO_ENTRY(lex_hipt_rule_t)
+	SIZEOF_INFO_ENTRY(lex_ritp_rule_t)
+	// [[new-lex-sect]]
 	SIZEOF_INFO_ENTRY(lex_test_t)
 	SIZEOF_INFO_ENTRY(lex_item_t)
 	SIZEOF_INFO_ENTRY(lex_t)

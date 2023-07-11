@@ -62,6 +62,13 @@
 #define LE_RESERVED_SLOTS	(LE_FIRST_CT_SLOT - 32)
 #define LE_MAX_BLOCK_TRACK	50
 
+// [[time-limit]]
+#define LE_DEF_ONLINE_SEC	340	//     5:40 : default online time limit
+#define LE_MIN_ONLINE_SEC	 30	//     0:30 : min accepted online time limit
+#define LE_MAX_WD_ONLINE_SEC	525	//     8:45 : max online time limit for enabled watchdog
+#define LE_MAX_ONLINE_SEC	0xffff	// 18:12:15 : max possible online time limit
+#define LE_VIEW_ONLINE_HMS	 61	//     1:01 : min value when time is printed as additonal HMS
+
 //-----------------------------------------------------------------------------
 // [[le_valid_t]]
 
@@ -284,7 +291,6 @@ ccp PatchNameLEREG ( char *buf, uint bufsize, ccp name, le_region_t lereg );
 
 const mem_t GetLecodeLEREG ( le_region_t reg );
 
-
 //-----------------------------------------------------------------------------
 // some more global functions, used as helpers for *LEREG functions
 
@@ -313,6 +319,10 @@ typedef struct le_lpar_t
     lpar_mode_t limit_mode;	// limit of other params
 
     u16 thcloud_frames;		// number of frames a player is small after thundercloud hit
+// [[time-limit]]
+    u16 default_online_sec;	// default time limit in seconds
+    u16 min_online_sec;		// minimal time limit in seconds, that can be set by LEX:SET1
+    u16 max_online_sec;		// maximal time limit in seconds, that can be set by LEX:SET1
 
     u8  cheat_mode;		// 0:off, 1:debug only, 2:allow all
     u8	engine[3];		// 100cc, 150cc, mirror (sum always 100)
@@ -933,12 +943,68 @@ typedef struct le_binpar_v1_26a_t
 }
 __attribute__ ((packed)) le_binpar_v1_26a_t;
 
-_Static_assert(sizeof(le_binpar_v1_26a_t)==0x26a,"le_binpar_v1_26a_t");
+//-----------------------------------------------------------------------------
+// [[le_binpar_v1_270_t]]
+
+typedef struct le_binpar_v1_270_t
+{
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*008*/ u32  version;			// always 1 for v1
+ /*00c*/ u32  size;			// size (and minor version)
+ /*010*/ u32  off_eod;			// offset of end-of-data
+
+ /*014*/ u32  off_cup_par;		// offset to cup param
+ /*018*/ u32  off_cup_track;		// offset of cup-track list
+ /*01c*/ u32  off_cup_arena;		// offset of cup-arena list
+ /*020*/ u32  off_course_par;		// offset of course param
+ /*024*/ u32  off_property;		// offset of property list
+ /*028*/ u32  off_music;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of flags
+
+ /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
+ /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
+ /*034*/ u8   enable_perfmon;		// >0: performance monitor enabled; >1: for dolphin too
+ /*035*/ u8   enable_custom_tt;		// TRUE: time trial for cusotm tracks enabled
+ /*036*/ u8   enable_xpflags;		// TRUE: extended presence flags enabled
+ /*037*/ u8   block_track;		// block used track for 0.. tracks
+ /*038*/ u16  chat_mode_1[BMG_N_CHAT];	// mode for each chat message
+ /*0f8*/ u16  chat_mode_2[BMG_N_CHAT];	// mode for each chat message
+ /*1b8*/ u8   enable_speedo;		// speedometer selection (0..2), see SPEEDO_*
+ /*1b9*/ u8   no_speedo_if_debug;	// if bit is set: suppress speedometer
+ /*1ba*/ u8   debug_mode;		// debug mode (0..), see DEBUGMD_*
+ /*1bb*/ u8   item_cheat;		// 0:disabled, 1:enabled
+
+ /*1bc*/ u8   debug_predef[LEDEB__N_CONFIG];
+					// information about used predefined mode
+ /*1c0*/ u32  debug[LEDEB__N_CONFIG][LEDEB__N_LINE];
+					// debug line settings, see LEDEB_*
+
+ /*260*/ u8   cheat_mode;		// 0:off, 1:debug only, 2:allow all
+ /*261*/ u8   drag_blue_shell;		// >0: allow dragging of blue shell
+ /*262*/ u16  thcloud_frames;		// number of frames a player is small after thundercloud hit
+
+ /*264*/ u8   bt_worldwide;		// >0: enable worldwide battles
+ /*265*/ u8   vs_worldwide;		// >0: enable worldwide versus races
+ /*266*/ u8   bt_textures;		// &1: enable texture hacks for battles, &2:alternable
+ /*267*/ u8   vs_textures;		// &1: enable texture hacks for versus, &2:alternable
+ /*268*/ u8   block_textures;		// >0: enable blocking of recent texture hacks
+ /*269*/ u8   staticr_points;		// >0: use points definied by StaticR.rel
+
+// [[time-limit]]
+ /*26a*/ u16  default_online_sec;	// default time limit in seconds
+ /*26c*/ u16  min_online_sec;		// minimal time limit in seconds, that can be set by LEX:SET1
+ /*26e*/ u16  max_online_sec;		// maximal time limit in seconds, that can be set by LEX:SET1
+
+ /*270*/
+}
+__attribute__ ((packed)) le_binpar_v1_270_t;
+
+_Static_assert(sizeof(le_binpar_v1_270_t)==0x270,"le_binpar_v1_270_t");
 
 //-----------------------------------------------------------------------------
 // [[le_binpar_v1_t]] [[new-lpar]]
 
-typedef struct le_binpar_v1_26a_t le_binpar_v1_t;
+typedef struct le_binpar_v1_270_t le_binpar_v1_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////

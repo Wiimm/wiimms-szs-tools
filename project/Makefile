@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.34a
+VERSION_NUM		= 2.35a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -147,7 +147,7 @@ DEFINES1	+= -DUIOPT_INDEX_SIZE=320	# define max number of options (default 0x100
 CFLAGS		+= $(DCLIB_CFLAGS)
 CFLAGS		+= -std=gnu99 -fomit-frame-pointer -fno-strict-aliasing -funroll-loops
 CFLAGS		+= -Wall -Wno-parentheses -Wno-unused-function
-CFLAGS		+= -Wno-deprecated-declarations -Wno-gnu-variable-sized-type-not-at-end
+CFLAGS		+= -Wno-deprecated-declarations 
 CFLAGS		+= -O3 -Isrc -I$(UI) -I.
 
 DEPFLAGS	+= -MMD
@@ -155,11 +155,11 @@ DEPFLAGS	+= -MMD
 #--- system depedent flags & libs
 
 ifeq ($(SYSTEM),mac)
- CFLAGS		+= -I/usr/local/include -Wno-typedef-redefinition
+ CFLAGS		+= -I/usr/local/include -Wno-typedef-redefinition -Wno-gnu-variable-sized-type-not-at-end
 endif
 
 ifeq ($(SYSTEM_LINUX),1)
- CFLAGS		+= -ffunction-sections -fdata-sections
+ CFLAGS		+= -ffunction-sections -fdata-sections -Wno-gnu-variable-sized-type-not-at-end
  LDFLAGS	+= -Xlinker --gc-sections
  #LDFLAGS	+= -Xlinker --print-gc-sections
  LIBS		+= -ltinfo
@@ -168,6 +168,14 @@ endif
 
 ifeq ($(SYSTEM),cygwin)
  LDFLAGS	+= -static-libgcc
+endif
+
+ifeq ($(SYSTEM2),cygwin32)
+ CFLAGS		+= -Wno-gnu-variable-sized-type-not-at-end
+endif
+
+ifeq ($(SYSTEM2),cygwin64)
+ CFLAGS		+= -Wno-char-subscripts
 endif
 
 ifeq ($(shell expr $(GCC_VERSION) '>=' 7.0 ),1)

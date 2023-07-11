@@ -6418,7 +6418,7 @@ enumError SaveTextKMP
 	fprintf(F.f,
 		"%s[SETUP]\r\n\r\n"
 		"TOOL     = %s\r\n"
-		"SYSTEM2  = %s\r\n"
+		"SYSTEM   = %s\r\n"
 		"VERSION  = %s\r\n"
 		"REVISION = %u\r\n"
 		"DATE     = %s\r\n"

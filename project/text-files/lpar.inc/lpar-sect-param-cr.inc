@@ -130,3 +130,17 @@ BLOCK-TEXTURES	= %u
 
 STATICR-POINTS	= %u
 
+# If playing online, the racing time is limited. The original MKW uses 5:00
+# and LE-CODE & CTGP use 5:40. With the next parameter this time can be
+# changed between %us%s and %us%s. If the time is >%u%s, then
+# the related watchdog (countdown + race_time + scoreboards) is disabled.
+
+DEF-ONLINE-SEC	= %3u%s
+
+# A racing track can request a different online limit by LEX setting
+# SET1:APPLY-ONLINE-SEC. The following 2 parameters limit the actually used
+# value. If either of them is zero, then SET1:APPLY-ONLINE-SEC is ignored.
+
+MIN-ONLINE-SEC	= %3u%s
+MAX-ONLINE-SEC	= %3u%s
+

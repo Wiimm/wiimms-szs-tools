@@ -109,6 +109,14 @@ typedef struct features_szs_t
     u8 lex_hide_pos;		// HAVELEXF_HIDE_POS
     u8 lex_start_item;		// HAVELEXF_START_ITEM
 
+    //--- since v2.35a
+
+    u8 lex_apply_otl;		// HAVELEXF_APPLY_OTL
+    u8 lex_sect_ritp;		// HAVELEXS_RIPT
+    u8 lex_rnd_itph;		// HAVELEXF_RND_ITPH
+
+    // [[new-lex-sect]]
+
     //--- new files and features will be appended here
 }
 __attribute__ ((packed)) features_szs_t;
@@ -241,6 +249,8 @@ typedef enum have_lex_sect_t
     HAVELEXS_TEST,
     HAVELEXS_HIPT,
     HAVELEXS_FEAT,
+    HAVELEXS_RITP,
+    // [[new-lex-sect]]
     //--- add new elements here (order is important)
     HAVELEXS__N
 }
@@ -257,6 +267,9 @@ typedef enum have_lex_feat_t
     HAVELEXF_CANNON,
     HAVELEXF_HIDE_POS,
     HAVELEXF_START_ITEM,
+    HAVELEXF_APPLY_OTL,
+    HAVELEXF_RND_ITPH,
+    // [[new-lex-sect]]
     //--- add new elements here (order is important)
     HAVELEXF__N
 }
@@ -274,7 +287,10 @@ typedef enum lex_stream_id
     LEXS_SET1		= 0x53455431,	// "SET1" primary settings
     LEXS_CANN		= 0x43414e4e,	// "CANN" cannon settings
     LEXS_HIPT		= 0x48495054,	// "HIPT" hide position tracker
+    LEXS_RITP		= 0x52495450,	// "RITP" random next links @KMP:ITPH
     LEXS_TEST		= 0x54455354,	// "TEST" settings for tests
+
+    // [[new-lex-sect]]
 }
 lex_stream_id;
 
@@ -323,9 +339,9 @@ typedef struct lex_set1_t
 {
  /*00*/ float3	item_factor;		// factor for item positions, always >=1.0
  /*0c*/ u8	start_item;		// 1: player can get an item before start (hint only)
- /*0d*/ u8	test_0d;		// reserved
- /*0e*/ u8	test_0e;		// reserved
- /*0f*/ u8	test_0f;		// reserved
+ /*0d*/ u8	  padding_0d;		// padding_0d
+ /*0e*/ u16	apply_online_sec;	// >0: wanted time limit if playing online
+ // [[new-lex-set1]]
 }
 __attribute__ ((packed,aligned(4))) lex_set1_t;
 
@@ -342,6 +358,31 @@ typedef struct lex_hipt_rule_t
 }
 __attribute__ ((packed)) lex_hipt_rule_t;
 
+//-----------------------------------------------------------------------------
+// [[lex_hipt_rule_t]]
+
+typedef enum lex_ritp_mode_t
+{
+    RITP_MODE_OFF,	// ignore this element
+    RITP_MODE_START,	// shuffle once after reading KMP
+    // [[new-ritp-mode]] >>> keep order!
+    RITP_MODE__N
+}
+__attribute__((packed)) lex_ritp_mode_t;
+
+//---------------
+
+typedef struct lex_ritp_rule_t
+{
+    u8			index;	// index into section KMP/ITPH
+    u8			n_next;	// number of next elements to shuffle (2..6)
+    lex_ritp_mode_t	mode;	// shuffle mode
+    u8			param;	// additional parameter for some modes
+}
+__attribute__((packed)) lex_ritp_rule_t;
+
+//-----------------------------------------------------------------------------
+// [[new-lex-sect]]
 //-----------------------------------------------------------------------------
 // [[lex_test_t]]
 
@@ -408,6 +449,7 @@ typedef struct lex_t
     lex_item_t		**item;		// NULL or item list (alloced)
     uint		have_sect;	// bit field for found lex sections
     uint		have_feat;	// bit field for found lex features
+    uint		apply_otl;	// >0: applied online time limit
 
 
     //--- parser helpers
@@ -436,6 +478,7 @@ lex_item_t * AppendFeatLEX ( lex_t * lex, bool overwrite, const features_szs_t *
 lex_item_t * AppendSet1LEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendCannLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendHiptLEX ( lex_t * lex, bool overwrite );
+lex_item_t * AppendRitpLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendTestLEX ( lex_t * lex, bool overwrite );
 
 const VarMap_t * SetupVarsLEX();
@@ -447,7 +490,8 @@ ccp CreateSectionInfoLEX
 ccp CreateFeatureInfoLEX
 	( have_lex_feat_t special, bool add_value, ccp return_if_empty );
 
-uint GetLexFeatures ( const lex_element_t *elem );
+// if 'lex' not NULL: store additional data 
+uint GetLexFeatures ( const lex_element_t *elem, lex_t *lex );
 
 static inline bool IsLexFF ( file_format_t fform )
 	{ return fform == FF_LEX || fform == FF_LEX_TXT; }
@@ -552,6 +596,8 @@ typedef struct lex_info_t
 
     // data
     float3	item_factor;	// 1.0 or copy of set1.item_factor
+
+    // [[new-lex-sect]] [[new-lex-set1]]
 }
 lex_info_t;
 

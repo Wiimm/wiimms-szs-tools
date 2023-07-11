@@ -2191,8 +2191,8 @@ __attribute__ ((packed)) mkw_prefix_flags_t;
 
 typedef struct mkw_prefix_t
 {
-    char		prefix[8];
     ccp			info;		// if NULL: list terminator
+    char		prefix[12];
     mkw_prefix_flags_t	flags;
     u8			order;
     u8			color;

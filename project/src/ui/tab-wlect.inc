@@ -422,7 +422,7 @@
 
   { T_OPT_GP,	"LT_RANDOM",	"lt-random|ltrandom",
 		"index",
-		"Force a random scenario, if between 1 and 8."
+		"Force a random scenario, if INDEX is between 1 and 8."
 		" Value 0 enables auto selection and -1 disables this option."
 		" If needed, LEX section TEST is created or removed if empty." },
 

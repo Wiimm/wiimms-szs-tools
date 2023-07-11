@@ -4190,6 +4190,20 @@ char * PrintSize1024
     sizeform_mode_t	sform_mode	// output format, bit field
 );
 
+//-----------------------------------------------------------------------------
+
+char * PrintHMS
+(
+    char		*buf,		// result buffer
+					// NULL: use a local circulary static buffer
+    size_t		buf_size,	// size of 'buf', ignored if buf==NULL
+
+    int			seconds,	// seconds to print
+    int			min_seconds,	// print only if 'seconds >= min_seconds'
+    ccp			pre_text,	// not NULL: Print text before H:M:S
+    ccp			post_text	// not NULL: Print text behind H:M:S
+);
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    scan size			///////////////

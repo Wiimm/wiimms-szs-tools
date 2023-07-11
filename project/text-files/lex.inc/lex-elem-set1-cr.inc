@@ -25,3 +25,12 @@
 # tracks that must be marked with value 1 as an exception to avoid banning.
 
 @START-ITEM = %u
+
+# If playing online, the racing time is limited. The original MKW uses 5:00
+# and LE-CODE 5:40 by default. A racing track can apply another online limit
+# if the following setting is >0. Values between %us%s and %us%s
+# are accepted. LPAR settings MIN-ONLINE-SEC and MAX-ONLINE-SEC limit the
+# actually used value.
+
+@APPLY-ONLINE-SEC = %u%s
+

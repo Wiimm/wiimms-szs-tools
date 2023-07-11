@@ -234,6 +234,10 @@ void DefineMkwVars ( VarMap_t * vm )
 	{ "LEX$EN_150M",	LEX_ENGINE_150M },
 	{ "LEX$EN_200M",	LEX_ENGINE_200M },
 
+	{ "RITP$OFF",		RITP_MODE_OFF },
+	{ "RITP$START",		RITP_MODE_START },
+	// [[new-ritp-mode]]
+
 	{ "VEH$SMALL",		CHATVEH_SMALL },
 	{ "VEH$MEDIUM",		CHATVEH_MEDIUM },
 	{ "VEH$LARGE",		CHATVEH_LARGE },

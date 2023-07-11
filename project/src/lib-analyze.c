@@ -202,8 +202,9 @@ void AnalyzeSZS
 	InitializeLEX(&lex);
 	lex.check_only = true;
 	ScanLEX(&lex,false,szs->course_lex_data,szs->course_lex_size);
-	szs->have.lex_sect = lex.have_sect;
-	szs->have.lex_feat = lex.have_feat;
+	szs->have.lex_sect	= lex.have_sect;
+	szs->have.lex_feat	= lex.have_feat;
+	szs->have.lex_apply_otl	= lex.apply_otl;
 	SetupLexInfo(&as->lexinfo,&lex);
 	ResetLEX(&lex);
     }
@@ -445,7 +446,24 @@ void AnalyzeSZS
     //--- finalize ct_attrib by "lex" and "warn"
 
     if (szs->course_lex_data)
+    {
 	ct_dest = StringCopyE(ct_dest,ct_end,",lex");
+	if ( szs->have.lex_apply_otl )
+	{
+	    if ( szs->have.lex_apply_otl < 100 )
+		ct_dest = snprintfE(ct_dest,ct_end,",otl=%us",szs->have.lex_apply_otl);
+	    else
+	    {
+		uint sec = szs->have.lex_apply_otl % 60;
+		if (sec)
+		    ct_dest = snprintfE(ct_dest,ct_end,",otl=%um%02u",
+			szs->have.lex_apply_otl / 60, sec );
+		else
+		    ct_dest = snprintfE(ct_dest,ct_end,",otl=%um",
+			szs->have.lex_apply_otl / 60 );
+	    }
+	}
+    }
 
     if (szs->warn_bits)
 	ct_dest = StringCat2E(ct_dest,ct_end,",warn=",GetWarnSZSNames(szs->warn_bits,'+'));

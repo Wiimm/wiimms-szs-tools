@@ -344,6 +344,7 @@ typedef struct szs_have_t
     kmp_special_t	kmp;		// u8-list: elem>0: number of special KMP objects found
     uint		lex_sect;	// bit field for found lex sections
     uint		lex_feat;	// bit field for found lex features
+    uint		lex_apply_otl;	// >0: applied online time limit
     have_attrib_t	attrib;		// bit field for special attributes
 }
 szs_have_t;

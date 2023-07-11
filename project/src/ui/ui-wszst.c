@@ -1622,8 +1622,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_LT_RANDOM, false, false, false, false, false, 0, "lt-random",
 	"index",
-	"Force a random scenario, if between 1 and 8. Value 0 enables auto"
-	" selection and -1 disables this option. Only track.szs files are"
+	"Force a random scenario, if INDEX is between 1 and 8. Value 0 enables"
+	" auto selection and -1 disables this option. Only track.szs files are"
 	" modified. If needed, file course.lex and section TEST are created or"
 	" removed if empty."
     },
