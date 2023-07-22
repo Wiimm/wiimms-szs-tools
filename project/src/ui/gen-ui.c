@@ -172,15 +172,26 @@ bool DefineIntVar ( VarMap_t * vm, ccp varname, int value ) { return false; }
 	" instead of a real file." \
 	"\1 See https://szs.wiimm.de/doc/genericimg for details."
 
-#define WILDCARDS \
-	"\1Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for details." \
-	"\2$Wildcards$ are accepted.\3"
+#define WILDCARDS_PIPE \
+	"\1Wildcards and pipe characters are parsed," \
+	" see https://szs.wiimm.de/doc/wildcards for details." \
+	"\2$Wildcards$ and pipe characters are parsed.\3"
 
-#define WILDCARDS_SORT \
-	"\1Wildcards are accepted, see https://szs.wiimm.de/doc/wildcards for details." \
-	"\2$Wildcards$ are accepted.\3" \
-	" After evaluating the wildcards, all input files are sorted according" \
-	" to their path and duplicates are deleted."
+#define WILDCARDS_SUBFILE \
+	"\1Wildcards, pipe characters and sub-files are parsed," \
+	" see https://szs.wiimm.de/doc/wildcards for details." \
+	"\2$Wildcards$, pipe characters and sub-files are parsed.\3"
+
+#define WILDCARDS_STEP \
+	"The parameters are evaluated step by step." \
+	" \1Wildcards and pipe characters are parsed," \
+	" see https://szs.wiimm.de/doc/wildcards for details." \
+	"\2$Wildcards$ and pipe characters are parsed.\3"
+
+#define WILDCARDS_OPTION(PARNAME,EXAMPLE) \
+		"If parameter " PARNAME " contains at least one wildcard (e.g. \"" EXAMPLE "\")," \
+		" then " PARNAME " is used as search pattern and all found files are added." \
+		" Quote " PARNAME " for this purpose. "
 
 //
 ///////////////////////////////////////////////////////////////////////////////

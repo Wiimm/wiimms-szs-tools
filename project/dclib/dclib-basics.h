@@ -660,6 +660,29 @@ extern const endian_func_t le_func;
 const endian_func_t * GetEndianFunc ( const void * byte_order_mark );
 uint GetTextBOMLen ( const void * data, uint data_size );
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////			misc constants			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[wildcard_mode_t]]
+
+typedef enum wildcard_mode_t
+{
+    WM_HIDDEN		= 0x01,  // allow hidden files
+    WM_SWITCH		= 0x02,  // allow "|+" and "|-" to enable/disable WM_HIDDEN
+				 //   => ignored by SearchPaths(), caller must handle it
+    WM_IGNORE		= 0x04,  // disable wildcard parsing if file begins with '|'
+    WM_SUBFILE		= 0x08,  // detect '|' as sub-file separator
+
+    WM__ALL		= 0x0f,
+    WM__DEFAULT		= WM_SWITCH | WM_IGNORE,
+    WM__DEFAULT_SUB	= WM__DEFAULT | WM_SUBFILE,
+}
+wildcard_mode_t;
+
+#define WM_CONTROL_CHAR		'|'
+#define WM_ENABLE_HIDDEN	"|+"
+#define WM_DISABLE_HIDDEN	"|-"
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    CopyMode_t			///////////////
@@ -864,6 +887,7 @@ static mem_t RightMem8 ( const mem_t src, int count )
 
 // Alloc dest buffer and terminate with 0.
 // If m*.len < 0, then use strlen().
+// Free with  FreeMem(&m)  or  FreeString(m.ptr)
 
 mem_t MemCat2A ( const mem_t m1, const mem_t m2 );
 mem_t MemCat3A ( const mem_t m1, const mem_t m2, const mem_t m3 );
@@ -6278,8 +6302,8 @@ void AppendStringField ( StringField_t * sf, ccp key, bool move_key );
 void AppendUniqueStringField ( StringField_t * sf, ccp key, bool move_key );
 
 // insert or append a path (path1+path2) with optional wildcards by SearchPaths()
-uint InsertStringFieldExpand ( StringField_t * sf, ccp path1, ccp path2, bool allow_hidden );
-uint AppendStringFieldExpand ( StringField_t * sf, ccp path1, ccp path2, bool allow_hidden );
+uint InsertStringFieldExpand ( StringField_t * sf, ccp path1, ccp path2, wildcard_mode_t wc_mode );
+uint AppendStringFieldExpand ( StringField_t * sf, ccp path1, ccp path2, wildcard_mode_t wc_mode );
 
 // re-sort field using sf->func_cmp()
 void SortStringField ( StringField_t * sf );
@@ -6394,9 +6418,9 @@ ParamFieldItem_t * AppendParamField
 
 // insert or append a path (path1+path2) with optional wildcards by SearchPaths()
 uint InsertParamFieldExpand
-	( ParamField_t * pf, ccp path1, ccp path2, bool allow_hidden, uint num, cvp data );
+	( ParamField_t * pf, ccp path1, ccp path2, wildcard_mode_t wc_mode, uint num, cvp data );
 uint AppendParamFieldExpand
-	( ParamField_t * pf, ccp path1, ccp path2, bool allow_hidden, uint num, cvp data );
+	( ParamField_t * pf, ccp path1, ccp path2, wildcard_mode_t wc_mode, uint num, cvp data );
 
 // return the index of the (next) item
 uint FindParamFieldHelper ( const ParamField_t * pf, bool * found, ccp key );

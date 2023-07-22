@@ -115,9 +115,10 @@ typedef struct features_szs_t
     u8 lex_sect_ritp;		// HAVELEXS_RIPT
     u8 lex_rnd_itph;		// HAVELEXF_RND_ITPH
 
-    // [[new-lex-sect]]
-
+    // [[new-lex-sect+]]
     //--- new files and features will be appended here
+
+    u8 lex_sect_dev1;		// HAVELEXS_DEV1
 }
 __attribute__ ((packed)) features_szs_t;
 
@@ -250,6 +251,7 @@ typedef enum have_lex_sect_t
     HAVELEXS_HIPT,
     HAVELEXS_FEAT,
     HAVELEXS_RITP,
+    HAVELEXS_DEV1,
     // [[new-lex-sect]]
     //--- add new elements here (order is important)
     HAVELEXS__N
@@ -284,6 +286,7 @@ typedef enum lex_stream_id
     LEXS_IGNORE		= 0x2d2d2d2d,	// "----" ignore and remove
 
     LEXS_FEAT		= 0x46454154,	// "FEAT" features
+    LEXS_DEV1		= 0x44455631,	// "DEV1" primary developer settings
     LEXS_SET1		= 0x53455431,	// "SET1" primary settings
     LEXS_CANN		= 0x43414e4e,	// "CANN" cannon settings
     LEXS_HIPT		= 0x48495054,	// "HIPT" hide position tracker
@@ -331,6 +334,19 @@ typedef struct lex_element_t
     u8		data[];		// section data, 32-bit aligned
 }
 __attribute__ ((packed)) lex_element_t;
+
+//-----------------------------------------------------------------------------
+// [[lex_dev1_t]]
+
+typedef struct lex_dev1_t
+{
+ /*00*/ u8	enabled;		// >0: section DEV1 is enabled
+ /*01*/ u8	mode1;			// test modus 1 (usage changes frequently)
+ /*02*/ u8	mode2;			// test modus 2 (usage changes frequently)
+ /*03*/ u8	mode3;			// test modus 3 (usage changes frequently)
+ // [[new-lex-dev1]]
+}
+__attribute__ ((packed,aligned(4))) lex_dev1_t;
 
 //-----------------------------------------------------------------------------
 // [[lex_set1_t]]
@@ -475,11 +491,13 @@ void ResetLEX ( lex_t * lex );
 void UpdateLEX ( lex_t * lex, bool add_missing, bool add_test );
 
 lex_item_t * AppendFeatLEX ( lex_t * lex, bool overwrite, const features_szs_t *src_fs );
+lex_item_t * AppendDev1LEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendSet1LEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendCannLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendHiptLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendRitpLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendTestLEX ( lex_t * lex, bool overwrite );
+// [[new-lex-sect]]
 
 const VarMap_t * SetupVarsLEX();
 

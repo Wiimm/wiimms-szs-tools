@@ -60,6 +60,8 @@ typedef enum enumOptions
 	OPT_LONG,
 	OPT_NO_HEADER,
 	OPT_BRIEF,
+	OPT_NO_WILDCARDS,
+	OPT_IN_ORDER,
 	OPT_RAW,
 	OPT_BMG_ENDIAN,
 	OPT_BMG_ENCODING,
@@ -103,7 +105,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 47
+	OPT__N_SPECIFIC, // == 49
 
 	//----- global options -----
 
@@ -148,7 +150,7 @@ typedef enum enumOptions
 	OPT_CT_LOG,
 	OPT_ALLOW_SLOTS,
 
-	OPT__N_TOTAL // == 87
+	OPT__N_TOTAL // == 89
 
 } enumOptions;
 
@@ -167,6 +169,8 @@ typedef enum enumOptions
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
 //	OB_BRIEF		= 1llu << OPT_BRIEF,
+//	OB_NO_WILDCARDS		= 1llu << OPT_NO_WILDCARDS,
+//	OB_IN_ORDER		= 1llu << OPT_IN_ORDER,
 //	OB_RAW			= 1llu << OPT_RAW,
 //	OB_BMG_ENDIAN		= 1llu << OPT_BMG_ENDIAN,
 //	OB_BMG_ENCODING		= 1llu << OPT_BMG_ENCODING,
@@ -264,8 +268,10 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_BRIEF,
 //
-//	OB_CMD_FILETYPE		= OB_LONG
-//				| OB_IGNORE,
+//	OB_CMD_FILETYPE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG,
 //
 //	OB_CMD_FILEATTRIB	= OB_NO_HEADER,
 //
@@ -284,7 +290,10 @@ typedef enum enumOptions
 //	OB_CMD_RAWDUMP		= OB_DEST
 //				| OB_DEST2,
 //
-//	OB_CMD_DUMP		= OB_LONG
+//	OB_CMD_DUMP		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG
 //				| OB_GRP_PATCH,
 //
 //	OB_CMD_BMG		= OB_BRIEF
@@ -320,22 +329,28 @@ typedef enum enumOptions
 //				| OB_IGNORE
 //				| OB_GRP_PATCH,
 //
-//	OB_CMD_CAT		= OB_GRP_TEXTOUT
+//	OB_CMD_CAT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_TEXTOUT
 //				| OB_WRITE_TRACKS
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
-//				| OB_IGNORE
 //				| OB_GRP_PATCH,
 //
-//	OB_CMD_DECODE		= OB_GRP_DEST
+//	OB_CMD_DECODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_GRP_TEXTOUT
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
-//				| OB_IGNORE
 //				| OB_GRP_PATCH,
 //
-//	OB_CMD_CREATE		= OB_GRP_DEST
+//	OB_CMD_CREATE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_GRP_TEXTOPT
 //				| OB_BMG_ENDIAN
 //				| OB_BMG_ENCODING
@@ -359,8 +374,10 @@ typedef enum enumOptions
 //				| OB_GRP_PATCH
 //				| OB_DYNAMIC,
 //
-//	OB_CMD_PATCH		= OB_GRP_DEST
+//	OB_CMD_PATCH		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_NO_CHECK
 //				| OB_IGNORE
 //				| OB_GRP_PATCH,
@@ -462,6 +479,8 @@ typedef enum enumGetOpt
 	GO_CRS1,
 	GO_CHDIR,
 	GO_ROUND,
+	GO_NO_WILDCARDS,
+	GO_IN_ORDER,
 	GO_RAW,
 	GO_BMG_ENDIAN,
 	GO_BMG_ENCODING,

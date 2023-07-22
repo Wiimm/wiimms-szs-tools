@@ -75,6 +75,8 @@ typedef enum enumOptions
 	OPT_LONG,
 	OPT_NO_HEADER,
 	OPT_BRIEF,
+	OPT_NO_WILDCARDS,
+	OPT_IN_ORDER,
 	OPT_NO_PARAM,
 	OPT_NO_ECHO,
 	OPT_NO_CHECK,
@@ -89,7 +91,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 33
+	OPT__N_SPECIFIC, // == 35
 
 	//----- global options -----
 
@@ -130,7 +132,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 69
+	OPT__N_TOTAL // == 71
 
 } enumOptions;
 
@@ -164,6 +166,8 @@ typedef enum enumOptions
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
 //	OB_BRIEF		= 1llu << OPT_BRIEF,
+//	OB_NO_WILDCARDS		= 1llu << OPT_NO_WILDCARDS,
+//	OB_IN_ORDER		= 1llu << OPT_IN_ORDER,
 //	OB_NO_PARAM		= 1llu << OPT_NO_PARAM,
 //	OB_NO_ECHO		= 1llu << OPT_NO_ECHO,
 //	OB_NO_CHECK		= 1llu << OPT_NO_CHECK,
@@ -232,8 +236,10 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_BRIEF,
 //
-//	OB_CMD_FILETYPE		= OB_LONG
-//				| OB_IGNORE,
+//	OB_CMD_FILETYPE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG,
 //
 //	OB_CMD_FILEATTRIB	= OB_NO_HEADER,
 //
@@ -253,41 +259,53 @@ typedef enum enumOptions
 //
 //	OB_CMD_EXPORT		= 0,
 //
-//	OB_CMD_CAT		= OB_GRP_TEXTOUT
-//				| OB_NO_ECHO
-//				| OB_NO_CHECK
+//	OB_CMD_CAT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
-//				| OB_GRP_TRANSFORM,
-//
-//	OB_CMD_DECODE		= OB_GRP_DEST
 //				| OB_GRP_TEXTOUT
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
-//				| OB_IGNORE
 //				| OB_GRP_TRANSFORM,
 //
-//	OB_CMD_ENCODE		= OB_GRP_DEST
+//	OB_CMD_DECODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
+//				| OB_GRP_TEXTOUT
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
-//				| OB_IGNORE
 //				| OB_GRP_TRANSFORM,
 //
-//	OB_CMD_STRINGS		= OB_GRP_TEXTOUT
+//	OB_CMD_ENCODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
-//				| OB_IGNORE
 //				| OB_GRP_TRANSFORM,
 //
-//	OB_CMD_GEOMETRY		= OB_GRP_TEXTOUT
+//	OB_CMD_STRINGS		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_TEXTOUT
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
-//				| OB_IGNORE
 //				| OB_GRP_TRANSFORM,
 //
-//	OB_CMD_XTEST		= OB_GRP_TEXTOUT
+//	OB_CMD_GEOMETRY		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_TEXTOUT
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
+//				| OB_GRP_TRANSFORM,
+//
+//	OB_CMD_XTEST		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_GRP_TEXTOUT
+//				| OB_NO_ECHO
+//				| OB_NO_CHECK
 //				| OB_GRP_TRANSFORM,
 //
 //} enumOptionsBit;
@@ -397,6 +415,8 @@ typedef enum enumGetOpt
 	GO_AROT,
 	GO_TFORM_SCRIPT,
 	GO_ROUND,
+	GO_NO_WILDCARDS,
+	GO_IN_ORDER,
 	GO_NO_ECHO,
 	GO_UTF_8,
 	GO_NO_UTF_8,

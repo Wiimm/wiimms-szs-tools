@@ -144,3 +144,17 @@ DEF-ONLINE-SEC	= %3u%s
 MIN-ONLINE-SEC	= %3u%s
 MAX-ONLINE-SEC	= %3u%s
 
+#------------------------------------------------------------------------------
+
+# The following setting is for LE-CODE developers only.
+# If >0, then experimental settings in other sections are accepted.
+
+DEVELOPER-MODES	= %d
+
+# Three developer modes. The meaning changes regularly. The modes are
+# recognized only if setting DEVELOPER-MODES is set to a value >0.
+
+DEV-MODE1	= %u
+DEV-MODE2	= %u
+DEV-MODE3	= %u
+

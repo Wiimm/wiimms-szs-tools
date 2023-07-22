@@ -37,8 +37,8 @@
 
 #:def_cmd( "INSTALL", "INSTALL", \
 	"wszst INSTALL [file]...", \
-	"Install files to the shared directory. Use {wszst CONFIG} to list" \
-	" related pathes." )
+	"Install files to the shared directory. $Wildcards$ and pipe" \
+	" characters are parsed. Use {wszst CONFIG} to list related pathes." )
 
 #:def_cmd( "ARGTEST", "ARGTEST", \
 	"wszst ARGTEST ...", \
@@ -50,20 +50,15 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "WILDCARDS", "WILDCARDS", \
 	"wszst WILDCARDS pattern...", \
-	" Each parameter is treated as a filename. $Wildcards$ are accepted." \
-	" After evaluating the wildcards, all input files are sorted according" \
-	" to their path and duplicates are deleted. The special parameters" \
-	" '+h' and '_h' enable or disable the search for hidden directories" \
-	" and files (files beginning with a point) for the following" \
-	" parameters. Finally, one line is printed for each file name of the" \
-	" list." )
+	" Each parameter is treated as a filename. $Wildcards$ and pipe" \
+	" characters are parsed. The special parameters '|+' and '|-' enable" \
+	" or disable the search for hidden directories and files (files" \
+	" beginning with a point) for the following parameters. Finally, one" \
+	" line is printed for each file name of the list." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wszst TEST [options]... [ignored]...", \
@@ -85,14 +80,14 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wszst FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "UI_CHECK", "UI-CHECK|UC|UICHECK", \
 	"wszst UI-CHECK file...", \
 	"Classify SZS files from directory .../Scene/UI/. For the analysis," \
-	" the filename is ignored and only the content is examined.$Wildcards$" \
-	" are accepted. After evaluating the wildcards, all input files are" \
-	" sorted according to their path and duplicates are deleted." )
+	" the filename is ignored and only the content is examined." \
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wszst FILEATTRIB [keyword]...", \
@@ -103,11 +98,12 @@
 	" FILEATTRIB command." )
 
 #:def_cmd( "BRSUB", "BRSUB", \
-	"wszst BRSUB [file]...", \
+	"wszst BRSUB [source]...", \
 	" If no file is defined, print a table with known BRRES sub files" \
 	" consisting of file format, version, number of sections and warn" \
 	" level. Otherwise analyse the version numbers of each BRRES sub file" \
-	" of each source and print warnings about invalid versions." )
+	" of each source and print warnings about invalid versions." \
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "SYMBOLS", "SYMBOLS", \
 	"wszst SYMBOLS", \
@@ -171,8 +167,10 @@
 	"Manage the auto-add library. Primarily add files to the main auto-add" \
 	" archive for future use of option {--auto-add} or to convert WU8" \
 	" files. If @SOURCE@ is a directory, all standard track and arena file" \
-	" names are searched for the missed auto-add files. Without source" \
-	" files, the status of the auto-add archive is printed.\n" \
+	" names are searched for the missed auto-add files. $Wildcards$ and" \
+	" pipe characters are parsed.\n" \
+	"  Without source files, the status of the auto-add archive is" \
+	" printed.\n" \
 	"  Try {wszst AUTOADD ./path_to/Race/Course/} to add all supported" \
 	" files." )
 
@@ -197,58 +195,51 @@
 	"wszst LIST [source]...", \
 	"List all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
 	" archives. If listing a directory, then a virtual SZS file is created" \
-	" (like CREATE does it) and listed. $Wildcards$ are accepted. After" \
-	" evaluating the wildcards, all input files are sorted according to" \
-	" their path and duplicates are deleted." )
+	" (like CREATE does it) and listed. $Wildcards$ and pipe characters" \
+	" are parsed." )
 
 #:def_cmd( "LIST_L", "LIST-L|LL|LISTL", \
 	"wszst LIST-L [source]...", \
 	"List all sub files with size. 'LIST-L' and 'LL' are short cuts for" \
-	" {LIST --long}. $Wildcards$ are accepted. After evaluating the" \
-	" wildcards, all input files are sorted according to their path and" \
-	" duplicates are deleted." )
+	" {LIST --long}. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "LIST_LL", "LIST-LL|LLL|LISTLL", \
 	"wszst LIST-LL [source]...", \
 	"List all sub files with offset and size. 'LIST-LL' and 'LLL' are" \
-	" short cuts for {LIST --long --long}. $Wildcards$ are accepted. After" \
-	" evaluating the wildcards, all input files are sorted according to" \
-	" their path and duplicates are deleted." )
+	" short cuts for {LIST --long --long}. $Wildcards$ and pipe characters" \
+	" are parsed." )
 
 #:def_cmd( "LIST_LLL", "LIST-LLL|LLLL|LISTLLL", \
 	"wszst LIST-LLL [source]...", \
 	"List all sub files with offset and size in debugging mode. 'LIST-LLL'" \
 	" and 'LLLL' are short cuts for {LIST --long --long --long}." \
-	" $Wildcards$ are accepted. After evaluating the wildcards, all input" \
-	" files are sorted according to their path and duplicates are deleted." )
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "LIST_A", "LIST-A|LA|LISTA", \
 	"wszst LIST-A [source]...", \
 	"List recursive all sub files with size. 'LIST-A' and 'LA' are short" \
-	" cuts for {LIST --long --all --all}. $Wildcards$ are accepted. After" \
-	" evaluating the wildcards, all input files are sorted according to" \
-	" their path and duplicates are deleted." )
+	" cuts for {LIST --long --all --all}. $Wildcards$ and pipe characters" \
+	" are parsed." )
 
 #:def_cmd( "LIST_LA", "LIST-LA|LLA|LISTLA", \
 	"wszst LIST-LA [source]...", \
 	"List recursive all sub files with offset and size. 'LIST-LA' and" \
 	" 'LLA' are short cuts for {LIST --long --long --all --all}." \
-	" $Wildcards$ are accepted. After evaluating the wildcards, all input" \
-	" files are sorted according to their path and duplicates are deleted." )
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "NAME_REF", "NAME-REF|NAMEREF", \
 	"wszst NAME-REF [source]...", \
 	"For each BRRES file or subfile, create a name based cross reference" \
 	" and print the result as list ordered by names in BRRES order. For U8" \
 	" archives (e.g. track SZS files), sub file @course_model.brres@ is" \
-	" analysed." )
+	" analysed. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "ILIST", "ILIST|IL", \
 	"wszst ILIST [source]...", \
 	"List the images files of all sub files of SZS, U8, PACK, BRRES," \
 	" BREFF, BREFT and RARC archives; non image files are ignored. If" \
 	" listing a directory, then a virtual SZS file is created (like CREATE" \
-	" does it) and listed." )
+	" does it) and listed. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "ILIST_L", "ILIST-L|ILL|ILISTL", \
 	"wit ILIST-L [source]...", \
@@ -273,7 +264,8 @@
 #:def_cmd( "MEMORY", "MEMORY|MEM", \
 	"wszst MEMORY [source]...", \
 	"Dump a memory map of each source file. Virtual images (extracted" \
-	" directories) are also supported." )
+	" directories) are also supported. $Wildcards$ and pipe characters are" \
+	" parsed." )
 
 #:def_cmd( "MEMORY_A", "MEMORY-A|MEMA", \
 	"wszst MEMORY-A [source]...", \
@@ -285,29 +277,33 @@
 	"Dump the internal structure of a BRRES files, compressed or not." \
 	" Other archives are ignored. The main goal is to verify string" \
 	" relocation. Virtual images (extracted directories) are also" \
-	" supported." )
+	" supported. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "SHA1", "SHA1", \
 	"wszst SHA1 [source]...", \
 	"Print a SHA1 checksum for each source. The checksum is calculated by" \
-	" using the uncompressed data and after patching." )
+	" using the uncompressed data and after patching. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "ANALYZE", "ANALYZE|ANA|ANALYSE", \
 	"wszst ANALYZE [source]...", \
 	"Analyse track files and LE-CODE binaries. Print the results in" \
-	" machine-readable form. The output format is selected by options." )
+	" machine-readable form. The output format is selected by options." \
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "SPLIT", "SPLIT", \
 	"wszst SPLIT [source]...", \
 	"Analyse (file) names and split them into the different parts. Print" \
-	" the results in machine readable format." )
+	" the results in machine readable format. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "IS_TEXTURE", "IS-TEXTURE|ISTEXTURE", \
 	"wszst IS-TEXTURE --reference reference [source]...", \
 	"Test each source to see if it's a texture hack versus a reference" \
 	" file. For each source, one human and machine readable status line is" \
 	" printed. It is either »-1=err« on error, »1=yes« for a texture" \
-	" hack, or »0=no LIST« with a comma separated list of reasons.\n" \
+	" hack, or »0=no LIST« with a comma separated list of reasons." \
+	" $Wildcards$ and pipe characters are parsed.\n" \
 	"  At the moment KCL, KMP (see notes) and LEX are checked. KMP section" \
 	" CAME has been intentionally left out. Section ENPT is only checked" \
 	" if KCL contains a least one face of type force-recalculation." )
@@ -316,7 +312,8 @@
 	"wszst FEATURES [source]...", \
 	"Analyse track files and create a feature list for each source in" \
 	" machine readable format. CTGP uses the feature lists to manage" \
-	" ghosts. See option {--lex-features} for details." )
+	" ghosts. See option {--lex-features} for details. $Wildcards$ and" \
+	" pipe characters are parsed." )
 
 #:def_cmd( "DISTRIBUTION", "DISTRIBUTION|DIS|DISTRIB", \
 	"wszst DISTRIBUTION result source...\n" \
@@ -325,7 +322,8 @@
 	" the uncompressed data. If @SOURCE@ is a directory, scan it for SZS," \
 	" WBZ, U8 and WU8 files. If a source directory starts with \"arena\"," \
 	" all tracks of the directory are assumed to be battle arenas. Finally" \
-	" print the results into file @RESULT@.\n" \
+	" print the results into file @RESULT@. $Wildcards$ and pipe" \
+	" characters are parsed.\n" \
 	"  The default name for @RESULT@ is \"distribution.txt\". Extension" \
 	" .txt is appended to the filename if not defined. If @RESULT@ is a" \
 	" directory, it is used as first source too.\n" \
@@ -349,7 +347,8 @@
 	" check both) and find unknown, modified, needed and unneeded files." \
 	" Also analyse cannons and make slot proposals. This command uses an" \
 	" internal object and file database. The source can be a SZS, U8, WU8" \
-	" or WBZ file, or an U8 like directory." )
+	" or WBZ file, or an U8 like directory. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "SLOTS", "SLOTS", \
 	"wszst SLOTS [source]...", \
@@ -357,23 +356,25 @@
 	" a SZS, U8, WU8 or WBZ file, or an U8 like directory. For each source" \
 	" one status line is printed. The status line contains either a" \
 	" positive or a negative slot list, whatever is shorter. For battle" \
-	" arenas, the keyword @ARENA@ is printed." )
+	" arenas, the keyword @ARENA@ is printed. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "STGI", "STGI", \
 	"wszst STGI [source]...", \
 	"Find the first KMP:STGI of each file and print an analysis of it as" \
 	" single line statistic. Additional the number of lap counter check" \
 	" points ('LC') is printed. Track and KMP (binary and text) files are" \
-	" accepted as input." )
+	" accepted as input. $Wildcards$ and pipe characters are parsed." )
 
-#:def_cmd( "ISARENA", "ISARENA", \
-	"wszst ISARENA [source]...", \
+#:def_cmd( "IS_ARENA", "IS-ARENA|ISARENA", \
+	"wszst IS_ARENA [source]...", \
 	"Analyse each track for its arena status and print a line with a" \
-	" status code and the track name. The status code is: »-RACE« for a" \
-	" racing track, »?MAYBE« for likely an arena, »+ARENA« for an" \
-	" arena, »+DISPATCH« for an arena with dispatch points or any error" \
-	" hint beginning with an »!«. So the very first character (one of" \
-	" »!-?+«) can be used to distinguish the status class.\n" \
+	" status code and the track name. $Wildcards$ and pipe characters are" \
+	" parsed. The status code is: »-RACE« for a racing track, »?MAYBE«" \
+	" for likely an arena, »+ARENA« for an arena, »+DISPATCH« for an" \
+	" arena with dispatch points or any error hint beginning with an" \
+	" »!«. So the very first character (one of »!-?+«) can be used to" \
+	" distinguish the status class.\n" \
 	"  The exit status is >2 on error, 2 (DIFFER), if at least one file is" \
 	" a racing track, or 0 (OK), if all sources are arenas." )
 
@@ -384,7 +385,7 @@
 	" directory '.' is available it becomes the root directory for all" \
 	" others. Compressed sources are compressed again with maximum" \
 	" compression (level 9). The destination is only written if any data" \
-	" changed.\n" \
+	" changed. $Wildcards$ and pipe characters are parsed.\n" \
 	"  {wszst NORMALIZE} is the same as {wszst PATCH --norm}." )
 
 #:def_cmd( "PATCH", "PATCH", \
@@ -393,7 +394,7 @@
 	" patching and transforming options and store the file again." \
 	" Compressed sources are compressed again. The destination is only" \
 	" written if any data changed or if stored in another file." \
-	" $Wildcards$ are accepted." )
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "COPY", "COPY|CP", \
 	"wszst COPY source dest\n" \
@@ -401,10 +402,12 @@
 	"COPY is an alternative command for copying and patching files. It" \
 	" uses the same internal procedure as command PATCH, but has another" \
 	" command line syntax.\n" \
-	" The command copies all source files to the destination. If more than" \
-	" 1 source is defined, the destination must be either a directory or a" \
-	" destination filename with escapes. Patching is also possible and" \
-	" option --overwrite is set implicitly." )
+	" The command copies all source files to the destination. If no" \
+	" destination is defined by options {--dest} or {--DEST}, then the" \
+	" last parameter is used as destination. If more than 1 source is" \
+	" defined, the destination must be either a directory or a destination" \
+	" filename with escapes. $Wildcards$ and pipe characters are parsed." \
+	" Patching is also possible and option --overwrite is set implicitly." )
 
 #:def_cmd( "DUPLICATE", "DUPLICATE|DUP", \
 	"wszst DUPLICATE source [-d|-D] dest", \
@@ -427,28 +430,32 @@
 	" SZS, U8, BRRES or MDL file. If patching options are used, modify the" \
 	" data and write back the file using its original file format. Only" \
 	" the translation vector is modified and new translation and inverse" \
-	" matrices are calculated." )
+	" matrices are calculated. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "COMPRESS", "COMPRESS|COM", \
 	"wszst COMPRESS [source]...", \
 	"Compress and create a SZS archives. If the source is already" \
 	" compressed, then decompress and compress it again. The default" \
-	" destination is @'%P/%N.szs'@." )
+	" destination is @'%P/%N.szs'@. $Wildcards$ and pipe characters are" \
+	" parsed." )
 
 #:def_cmd( "DECOMPRESS", "DECOMPRESS|DEC", \
 	"wszst DECOMPRESS [szs]...", \
-	"Decompress SZS files. The default destination is @'%P/%N.u8'@." )
+	"Decompress SZS files. The default destination is @'%P/%N.u8'@." \
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "ENCODE", "ENCODE|E", \
 	"wszst ENCODE [source_dir]...", \
 	" Create and/or encode sub files if necessary. It works like command" \
-	" CREATE, but without creating a new first level archive file." )
+	" CREATE, but without creating a new first level archive file." \
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "CREATE", "CREATE|C", \
 	"wszst CREATE [source_dir]...", \
 	"Create SZS, U8, PACK, BRRES, BREFF or BREFT archives by adding all" \
 	" not hidden files of the directory structure. Create and/or encode" \
-	" sub files if necessary. The default destination is @'%P/%N%T'@." )
+	" sub files if necessary. The default destination is @'%P/%N%T'@." \
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "UPDATE", "UPDATE|U", \
 	"wszst UPDATE [source]... [--source=] [--dest=]", \
@@ -457,95 +464,109 @@
 	" but instead of extracting, source files are searched in a prior" \
 	" extracted archive. Only files with the same size are updated. The" \
 	" secondary source is used to find the source sub files. The default" \
-	" secondary source is @'%P/%N.d/'@." )
+	" secondary source is @'%P/%N.d/'@. $Wildcards$ and pipe characters" \
+	" are parsed." )
 
 #:def_cmd( "EXTRACT", "EXTRACT|X", \
 	"wszst EXTRACT [source]...", \
 	"Extract all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
-	" archives. The default destination is @'%P/%N.d/'@." )
+	" archives. The default destination is @'%P/%N.d/'@. $Wildcards$ and" \
+	" pipe characters are parsed." )
 
 #:def_cmd( "XDECODE", "XDECODE|XD", \
 	"wszst XDECODE [source]...", \
 	"Command @XDECODE@ is a short cut for {EXTRACT --decode}. It extract" \
 	" all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
 	" archives and decodes all supported files. The default destination is" \
-	" @'%P/%N.d/'@." )
+	" @'%P/%N.d/'@. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "XEXPORT", "XEXPORT|XX", \
 	"wszst XEXPORT [source]...", \
 	"Command @XEXPORT@ is a short cut for {EXTRACT --decode --export}. It" \
 	" extract all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
 	" archives and decodes all supported files with enabled export mode." \
-	" The default destination is @'%P/%N.d/'@." )
+	" The default destination is @'%P/%N.d/'@. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "XALL", "XALL|XA", \
 	"wszst XALL [source]...", \
 	"Command @XALL@ is a short cut for {EXTRACT --all}. It extract all sub" \
 	" files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC archives" \
 	" recursively and decodes all supported files. The default destination" \
-	" is @'%P/%N.d/'@." )
+	" is @'%P/%N.d/'@. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "XCOMMON", "XCOMMON", \
 	"wszst XCOMMON [source]...", \
 	"Command @XCOMMON@ is a short cut for {EXTRACT --basedir=common}. Scan" \
 	" archives and extract files from archives, that are below directory" \
-	" @'common'@. The default destination is @'%P/%N.d/'@." )
+	" @'common'@. The default destination is @'%P/%N.d/'@. $Wildcards$ and" \
+	" pipe characters are parsed." )
 
 #:def_cmd( "BINARY", "BINARY|BIN", \
 	"wszst BINARY [source]...", \
 	"Read each source file (binary or text, but never archives) and write" \
-	" the content as binary file. The file extension of the new file" \
-	" depends on the file type, but is usually @.bin@. Currently supported" \
-	" file formats are @BMG@, @GEOHIT@, @ITEMSLOT@, @KCL@, @KMG@, @KMP@," \
-	" @LEX@, @OBJFLOW@, @PAT@ and the related text formats." )
+	" the content as binary file. $Wildcards$ and pipe characters are" \
+	" parsed.\n" \
+	"  The file extension of the new file depends on the file type, but is" \
+	" usually @.bin@. Currently supported file formats are @BMG@," \
+	" @GEOHIT@, @ITEMSLOT@, @KCL@, @KMG@, @KMP@, @LEX@, @OBJFLOW@, @PAT@" \
+	" and the related text formats." )
 
 #:def_cmd( "TEXT", "TEXT|TXT", \
 	"wszst TEXT [source]...", \
 	"Read each source file (binary or text, but never archives) and write" \
-	" the content as text file. The file extension of the new file is" \
-	" usually @.txt@. Currently supported file formats are @BMG@," \
-	" @GEOHIT@, @ITEMSLOT@, @KCL@, @KMG@, @KMP@, @LEX@, @OBJFLOW@, @PAT@" \
-	" and the related text formats." )
+	" the content as text file. $Wildcards$ and pipe characters are" \
+	" parsed.\n" \
+	"  The file extension of the new file is usually @.txt@. Currently" \
+	" supported file formats are @BMG@, @GEOHIT@, @ITEMSLOT@, @KCL@," \
+	" @KMG@, @KMP@, @LEX@, @OBJFLOW@, @PAT@ and the related text formats." )
 
 #:def_cmd( "CAT", "CAT", \
 	"wszst CAT [source/subfile]...", \
 	"Extract one or more sub files of SZS, U8, PACK, BRRES, BREFF, BREFT" \
-	" and RARC archives. The output of all source files is concatenated" \
-	" and written to stdout." )
+	" and RARC archives. $Wildcards$, pipe characters and sub-files are" \
+	" parsed. The output of all source files is concatenated and written" \
+	" to stdout." )
 
 #:def_cmd( "BMG", "BMG", \
 	"wszst BMG [source]...", \
 	"For each archive all BMG sub files are searched and, if found," \
 	" decoded and printed as combined BMG text file. The command works" \
-	" exactly like {wbmgt MIX}." )
+	" exactly like {wbmgt MIX}. $Wildcards$ and pipe characters are" \
+	" parsed." )
 
 #:def_cmd( "KCL", "KCL", \
 	"wszst KCL [source]...", \
 	"For each archive the KCL sub file @course.kcl@ is searched and, if" \
-	" found, decoded and printed (copied to stdout).\n" \
+	" found, decoded and printed (copied to stdout). $Wildcards$, pipe" \
+	" characters and sub-files are parsed.\n" \
 	"  Automated dropping of bad KCL triangles is enabled if no other drop" \
-	" option is specified by option {--kcl}." )
+	" option is specified by option {--kcl}. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "KMP", "KMP", \
 	"wszst KMP [source]...", \
 	"For each archive the KMP sub file @course.kmp@ is searched and, if" \
-	" found, decoded and printed (copied to stdout)." )
+	" found, decoded and printed (copied to stdout). $Wildcards$, pipe" \
+	" characters and sub-files are parsed." )
 
 #:def_cmd( "LEX", "LEX", \
 	"wszst LEX [source]...", \
 	"For each archive the LEX sub file @course.lex@ is searched and, if" \
-	" found, decoded and printed (copied to stdout)." )
+	" found, decoded and printed (copied to stdout). $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "INFO", "INFO", \
 	"wszst INFO [source]...", \
 	"For each archive a file named @info.txt@ and, if not found," \
 	" @credits.txt@ is searched, ignoring case. The first found file of" \
-	" each archive is printed (copied to stdout)." )
+	" each archive is printed (copied to stdout). $Wildcards$, pipe" \
+	" characters and sub-files are parsed." )
 
 #:def_cmd( "YAZDUMP", "YAZDUMP|YD", \
 	"wszst YAZDUMP [szs]...", \
 	"Analyze YAZ compression and print a dump to stdout. Ignore files" \
-	" without YAZ compression." )
+	" without YAZ compression. $Wildcards$ and pipe characters are parsed." )
 
 #:def_opt( "VERSION", "V|version", "G", \
 	"", \
@@ -1088,8 +1109,8 @@
 	" all. The other allowed keywords are: @FORCE, NEW, RM-SPCITEM, LEFT," \
 	" RIGHT, WIDE, NARROW, FIX-CKPH, FIX-ENPH, FIX-ITPH, FIX-PH," \
 	" FIX-CKNEXT, FIX-CKJGPT, FIX-CK, FIX-ALL, MASK-PFLAGS, RM-LECODE," \
-	" PURGE-GOBJ, FULL-DEFOBJ, DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL, 1LAP ..." \
-	" 9LAPS, MAX-LAPS, RM-EMPTY, TINY-0 ... TINY-7, INPLACE, SILENT@ and" \
+	" PURGE-GOBJ, FULL-DEFOBJ, DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL, 1LAP .." \
+	" 9LAPS, MAX-LAPS, RM-EMPTY, TINY-0 .. TINY-7, INPLACE, SILENT@ and" \
 	" @LOG@." )
 
 #:def_opt( "SPEED_MOD", "speed-mod|speedmod", "GP", \
@@ -1213,39 +1234,40 @@
 
 #:def_opt( "LT_CLEAR", "lt-clear|ltclear", "G", \
 	"", \
-	"Clear the LEX/TEST section and remove the section and course.lex if" \
-	" empty. This option is executed before all other --lt-* options." )
+	"Clear LEX sections TEST and DEV1 and remove the section and" \
+	" course.lex if empty. This option is executed before all other --lt-*" \
+	" options." )
 
 #:def_opt( "LT_ONLINE", "lt-online|ltonline", "GP", \
 	"mode", \
-	"Set LEX/TEST parameter OFFLINE-ONLINE to this MODE. MODE is one of" \
+	"Set LEX:TEST parameter OFFLINE-ONLINE to this MODE. MODE is one of" \
 	" @AUTO@ (default), @NEVER@ or @ALWAYS@. Only track.szs files are" \
 	" modified. If needed, file course.lex and section TEST are created or" \
 	" removed if empty." )
 
 #:def_opt( "LT_N_PLAYERS", "lt-n-players|lt-nplayers|ltnplayers", "GP", \
 	"offline,online", \
-	"Set LEX/TEST parameters N-OFFLINE and N-ONLINE to these integer" \
+	"Set LEX:TEST parameters N-OFFLINE and N-ONLINE to these integer" \
 	" values. Only track.szs files are modified. If needed, file" \
 	" course.lex and section TEST are created or removed if empty." )
 
 #:def_opt( "LT_COND_BIT", "lt-cond-bit|lt-condbit|ltcondbit", "GP", \
 	"bitnum", \
-	"Set LEX/TEST parameter COND-BIT to this integer value. Use -1 to" \
+	"Set LEX:TEST parameter COND-BIT to this integer value. Use -1 to" \
 	" deactivate this COND-BIT. Only track.szs files are modified. If" \
 	" needed, file course.lex and section TEST are created or removed if" \
 	" empty." )
 
 #:def_opt( "LT_GAME_MODE", "lt-game-mode|lt-gamemode|ltgamemode", "GP", \
 	"mode", \
-	"Set LEX/TEST parameter GAME-MODE to this MODE. MODE is one of @AUTO@" \
+	"Set LEX:TEST parameter GAME-MODE to this MODE. MODE is one of @AUTO@" \
 	" (default), @BALLOON, COIN, VERSUS@ or @ITEMRAIN@. Only track.szs" \
 	" files are modified. If needed, file course.lex and section TEST are" \
 	" created or removed if empty." )
 
 #:def_opt( "LT_ENGINE", "lt-engine|ltengine", "GP", \
 	"mode", \
-	"Set LEX/TEST parameter ENGINE to this MODE. MODE is one of @AUTO@" \
+	"Set LEX:TEST parameter ENGINE to this MODE. MODE is one of @AUTO@" \
 	" (default), @BATTLE, 50CC, 100CC, 150CC, 200CC, 150M@ or @200M@. Only" \
 	" track.szs files are modified. If needed, file course.lex and section" \
 	" TEST are created or removed if empty." )
@@ -1332,6 +1354,11 @@
 	"Patch language independent SZS files from directory .../Scene/UI/ to" \
 	" change the menu as required by LE-CODE to be able to select tracks" \
 	" from more than 8 cups." )
+
+#:def_opt( "9LAPS", "9laps", "C", \
+	"", \
+	"Patch RACE*.szs files from directory .../Scene/UI/ to support 9 laps." \
+	" See https://wiki.tockdom.com/wiki/Lap_Texture_Fix for details." )
 
 #:def_opt( "TITLE_SCREEN", "title-screen|titlescreen", "CP", \
 	"dir", \
@@ -1434,7 +1461,11 @@
 	" syntax information ({--no-header}). If set twice, the output of" \
 	" unneeded sections is also suppressed." )
 
-#:def_opt( "IN_ORDER", "in-order|inorder", "CM", \
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
 	"", \
 	"Process the input files in order of the command line and don't delete" \
 	" duplicates." )
@@ -2160,11 +2191,27 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "WILDCARDS", "IGNORE", \
+#:def_cmd_opt( "INSTALL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "INSTALL", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "INSTALL", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "WILDCARDS", "NO_WILDCARDS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "WILDCARDS", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "WILDCARDS", "IGNORE", \
 	"", \
 	"" )
 
@@ -2206,6 +2253,18 @@
 	"", \
 	"Print message number instead of message name." )
 
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "FILETYPE", "LONG", \
 	"", \
 	"Print an additional column with the decompressed file type and" \
@@ -2215,15 +2274,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "FILETYPE", "IGNORE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "UI_CHECK", "LONG", \
-	"", \
-	"Print the result as technical list." )
-
-#:def_cmd_opt( "UI_CHECK", "NO_HEADER", \
+#:def_cmd_opt( "UI_CHECK", "NO_WILDCARDS", \
 	"", \
 	"" )
 
@@ -2232,6 +2283,14 @@
 	"" )
 
 #:def_cmd_opt( "UI_CHECK", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UI_CHECK", "LONG", \
+	"", \
+	"Print the result as technical list." )
+
+#:def_cmd_opt( "UI_CHECK", "NO_HEADER", \
 	"", \
 	"" )
 
@@ -2376,6 +2435,14 @@
 	"", \
 	"Print full matrix of delta values." )
 
+#:def_cmd_opt( "AUTOADD", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "AUTOADD", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "AUTOADD", "IGNORE", \
 	"", \
 	"" )
@@ -2474,6 +2541,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SUBFILE", "DEST", \
 	"", \
 	"" )
@@ -2506,7 +2585,19 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "IGNORE", \
 	"", \
 	"" )
 
@@ -2532,10 +2623,6 @@
 	"" )
 
 #:def_cmd_opt( "LIST", "NO_HEADER", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "LIST", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -2699,10 +2786,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "LIST", "NORM", \
 	"", \
 	"" )
@@ -2711,7 +2794,19 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_L", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_L", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "IGNORE", \
 	"", \
 	"" )
 
@@ -2737,10 +2832,6 @@
 	"" )
 
 #:def_cmd_opt( "LIST_L", "NO_HEADER", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "LIST_L", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -2904,10 +2995,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST_L", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "LIST_L", "NORM", \
 	"", \
 	"" )
@@ -2916,7 +3003,19 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LL", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "IGNORE", \
 	"", \
 	"" )
 
@@ -2942,10 +3041,6 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LL", "NO_HEADER", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "LIST_LL", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -3109,10 +3204,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST_LL", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "LIST_LL", "NORM", \
 	"", \
 	"" )
@@ -3121,7 +3212,19 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LLL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LLL", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "IGNORE", \
 	"", \
 	"" )
 
@@ -3147,10 +3250,6 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LLL", "NO_HEADER", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "LIST_LLL", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -3314,10 +3413,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST_LLL", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "LIST_LLL", "NORM", \
 	"", \
 	"" )
@@ -3326,7 +3421,19 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_A", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_A", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "IGNORE", \
 	"", \
 	"" )
 
@@ -3352,10 +3459,6 @@
 	"" )
 
 #:def_cmd_opt( "LIST_A", "NO_HEADER", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "LIST_A", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -3519,10 +3622,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST_A", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "LIST_A", "NORM", \
 	"", \
 	"" )
@@ -3531,7 +3630,19 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LA", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LA", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "IGNORE", \
 	"", \
 	"" )
 
@@ -3557,10 +3668,6 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LA", "NO_HEADER", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "LIST_LA", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -3724,10 +3831,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST_LA", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "LIST_LA", "NORM", \
 	"", \
 	"" )
@@ -3755,7 +3858,19 @@
 	" list ordered by @OFFSET@ is printed. If set twice, a third list with" \
 	" order @NONE@ is appended." )
 
+#:def_cmd_opt( "ILIST", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "IGNORE", \
 	"", \
 	"" )
 
@@ -3936,15 +4051,23 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "ILIST", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "ILIST", "NORM", \
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_L", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_L", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "IGNORE", \
 	"", \
 	"" )
 
@@ -4125,15 +4248,23 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "ILIST_L", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "ILIST_L", "NORM", \
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LL", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "IGNORE", \
 	"", \
 	"" )
 
@@ -4314,15 +4445,23 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "ILIST_LL", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "ILIST_LL", "NORM", \
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_A", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_A", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "IGNORE", \
 	"", \
 	"" )
 
@@ -4503,15 +4642,23 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "ILIST_A", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "ILIST_A", "NORM", \
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LA", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LA", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "IGNORE", \
 	"", \
 	"" )
 
@@ -4692,15 +4839,23 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "ILIST_LA", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "ILIST_LA", "NORM", \
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "IGNORE", \
 	"", \
 	"" )
 
@@ -4885,10 +5040,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "MEMORY", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "MEMORY", "NORM", \
 	"", \
 	"" )
@@ -4897,7 +5048,19 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY_A", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY_A", "RECURSE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "IGNORE", \
 	"", \
 	"" )
 
@@ -5082,15 +5245,23 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "MEMORY_A", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "MEMORY_A", "NORM", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "MEMORY_A", "SLOT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IGNORE", \
 	"", \
 	"" )
 
@@ -5259,11 +5430,19 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "DUMP", "IGNORE", \
+#:def_cmd_opt( "DUMP", "NORM", \
 	"", \
 	"" )
 
-#:def_cmd_opt( "DUMP", "NORM", \
+#:def_cmd_opt( "SHA1", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "RECURSE", \
 	"", \
 	"" )
 
@@ -5474,13 +5653,21 @@
 	" counter, speed factor and slot info are inserted beteen checksum and" \
 	" filename. All columns are separated by one or two spaces." )
 
-#:def_cmd_opt( "ANALYZE", "LONG", \
+#:def_cmd_opt( "ANALYZE", "NO_WILDCARDS", \
 	"", \
-	"Append a list of special files with size, SHA1 and file name." )
+	"" )
+
+#:def_cmd_opt( "ANALYZE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "ANALYZE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "ANALYZE", "LONG", \
+	"", \
+	"Append a list of special files with size, SHA1 and file name." )
 
 #:def_cmd_opt( "ANALYZE", "QUIET", \
 	"", \
@@ -5539,6 +5726,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SPLIT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SPLIT", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SPLIT", "LOAD_PREFIX", \
 	"", \
 	"" )
@@ -5556,10 +5755,6 @@
 	"" )
 
 #:def_cmd_opt( "SPLIT", "PRINTF", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "SPLIT", "IGNORE", \
 	"", \
 	"" )
 
@@ -5612,6 +5807,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "IS_TEXTURE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "IS_TEXTURE", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "IS_TEXTURE", "IGNORE", \
 	"", \
 	"" )
@@ -5628,6 +5831,18 @@
 	"", \
 	"Append a colon and the filename after each status." )
 
+#:def_cmd_opt( "FEATURES", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FEATURES", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "FEATURES", "BRIEF", \
 	"", \
 	"Suppres comments at all. If set twice, suppress empty lines (for" \
@@ -5641,10 +5856,6 @@
 	" to get an aligned string. The letters used are: @S@ (section), @V@" \
 	" (visual impact), @B@ (battle impact), @R@ (racing impact), @T@ (time" \
 	" trial impact), @L@ (local=offline impact) and @O@ (online impact)." )
-
-#:def_cmd_opt( "FEATURES", "IGNORE", \
-	"", \
-	"" )
 
 #:def_cmd_opt( "FEATURES", "QUIET", \
 	"", \
@@ -5700,6 +5911,14 @@
 	"" )
 
 #:def_cmd_opt( "FEATURES", "DEST2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -5923,13 +6142,21 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "CHECK", "NO_CHECK", \
+#:def_cmd_opt( "CHECK", "NO_WILDCARDS", \
 	"", \
-	"Don't check the KCL and KMP files." )
+	"" )
+
+#:def_cmd_opt( "CHECK", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "CHECK", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "CHECK", "NO_CHECK", \
+	"", \
+	"Don't check the KCL and KMP files." )
 
 #:def_cmd_opt( "CHECK", "COLORS", \
 	"", \
@@ -6304,11 +6531,23 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CHECK", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "CHECK", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -6677,6 +6916,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SLOTS", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SLOTS", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -6684,6 +6927,20 @@
 #:def_cmd_opt( "SLOTS", "CUP_ICONS", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "STGI", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "STGI", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "STGI", "IGNORE", \
+	"", \
+	"If set, ignore non existing source files and files without KMP" \
+	" without warning. If set twice, ignore files with standard settings" \
+	" too." )
 
 #:def_cmd_opt( "STGI", "COLORS", \
 	"", \
@@ -6697,36 +6954,50 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "STGI", "IGNORE", \
-	"", \
-	"If set, ignore non existing source files and files without KMP" \
-	" without warning. If set twice, ignore files with standard settings" \
-	" too." )
-
-#:def_cmd_opt( "ISARENA", "COLORS", \
+#:def_cmd_opt( "IS_ARENA", "NO_WILDCARDS", \
 	"", \
 	"" )
 
-#:def_cmd_opt( "ISARENA", "NO_COLORS", \
+#:def_cmd_opt( "IS_ARENA", "IN_ORDER", \
 	"", \
 	"" )
 
-#:def_cmd_opt( "ISARENA", "NO_HEADER", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "ISARENA", "BRIEF", \
-	"", \
-	"If set, suppress the output of header and filenames." )
-
-#:def_cmd_opt( "ISARENA", "QUIET", \
-	"", \
-	"If set, print nothing and set only the exit status." )
-
-#:def_cmd_opt( "ISARENA", "IGNORE", \
+#:def_cmd_opt( "IS_ARENA", "IGNORE", \
 	"", \
 	"If set, ignore non existing source files and files without KMP" \
 	" without warning." )
+
+#:def_cmd_opt( "IS_ARENA", "COLORS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "IS_ARENA", "NO_COLORS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "IS_ARENA", "NO_HEADER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "IS_ARENA", "BRIEF", \
+	"", \
+	"If set, suppress the output of header and filenames." )
+
+#:def_cmd_opt( "IS_ARENA", "QUIET", \
+	"", \
+	"If set, print nothing and set only the exit status." )
+
+#:def_cmd_opt( "NORMALIZE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "IGNORE", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "NORMALIZE", "DEST", \
 	"", \
@@ -6789,10 +7060,6 @@
 	"" )
 
 #:def_cmd_opt( "NORMALIZE", "WBZ", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "NORMALIZE", "IGNORE", \
 	"", \
 	"" )
 
@@ -7036,11 +7303,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "NORMALIZE", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "NORMALIZE", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "NORMALIZE", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IGNORE", \
 	"", \
 	"" )
 
@@ -7109,10 +7392,6 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "WBZ", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "PATCH", "IGNORE", \
 	"", \
 	"" )
 
@@ -7360,11 +7639,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PATCH", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "PATCH", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "IGNORE", \
 	"", \
 	"" )
 
@@ -7433,10 +7728,6 @@
 	"" )
 
 #:def_cmd_opt( "COPY", "WBZ", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "COPY", "IGNORE", \
 	"", \
 	"" )
 
@@ -7684,6 +7975,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COPY", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COPY", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -7693,6 +7988,18 @@
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "GAMEMODES", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "IGNORE", \
 	"", \
 	"" )
 
@@ -7761,10 +8068,6 @@
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "WBZ", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "DUPLICATE", "IGNORE", \
 	"", \
 	"" )
 
@@ -8012,11 +8315,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUPLICATE", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUPLICATE", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MINIMAP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MINIMAP", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MINIMAP", "IGNORE", \
 	"", \
 	"" )
 
@@ -8030,10 +8349,6 @@
 	"" )
 
 #:def_cmd_opt( "MINIMAP", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "MINIMAP", "IGNORE", \
 	"", \
 	"" )
 
@@ -8205,6 +8520,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COMPRESS", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COMPRESS", "DEST", \
 	"", \
 	"" )
@@ -8266,10 +8593,6 @@
 	"" )
 
 #:def_cmd_opt( "COMPRESS", "WBZ", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "COMPRESS", "IGNORE", \
 	"", \
 	"" )
 
@@ -8517,11 +8840,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COMPRESS", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COMPRESS", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "COMPRESS", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECOMPRESS", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECOMPRESS", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECOMPRESS", "IGNORE", \
 	"", \
 	"" )
 
@@ -8566,10 +8905,6 @@
 	"" )
 
 #:def_cmd_opt( "DECOMPRESS", "WU8", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "DECOMPRESS", "IGNORE", \
 	"", \
 	"" )
 
@@ -8809,11 +9144,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DECOMPRESS", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DECOMPRESS", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "DECOMPRESS", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -9114,11 +9465,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ENCODE", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "IGNORE", \
 	"", \
 	"" )
 
@@ -9523,6 +9890,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CREATE", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -9531,11 +9902,19 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "UPDATE", "SOURCE", \
+#:def_cmd_opt( "UPDATE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UPDATE", "IN_ORDER", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "UPDATE", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UPDATE", "SOURCE", \
 	"", \
 	"" )
 
@@ -9815,11 +10194,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "UPDATE", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "UPDATE", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "UPDATE", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "EXTRACT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "EXTRACT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "EXTRACT", "IGNORE", \
 	"", \
 	"" )
 
@@ -9896,10 +10291,6 @@
 	"" )
 
 #:def_cmd_opt( "EXTRACT", "ALL", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "EXTRACT", "IGNORE", \
 	"", \
 	"" )
 
@@ -10127,11 +10518,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "EXTRACT", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "EXTRACT", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "EXTRACT", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -10208,10 +10615,6 @@
 	"" )
 
 #:def_cmd_opt( "XDECODE", "ALL", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "XDECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -10439,11 +10842,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "XDECODE", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "XDECODE", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "XDECODE", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XEXPORT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XEXPORT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XEXPORT", "IGNORE", \
 	"", \
 	"" )
 
@@ -10520,10 +10939,6 @@
 	"" )
 
 #:def_cmd_opt( "XEXPORT", "ALL", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "XEXPORT", "IGNORE", \
 	"", \
 	"" )
 
@@ -10751,11 +11166,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "XEXPORT", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "XEXPORT", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "XEXPORT", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "IGNORE", \
 	"", \
 	"" )
 
@@ -10832,10 +11263,6 @@
 	"" )
 
 #:def_cmd_opt( "XALL", "ALL", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "XALL", "IGNORE", \
 	"", \
 	"" )
 
@@ -11063,11 +11490,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "XALL", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "XALL", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "XALL", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XCOMMON", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XCOMMON", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XCOMMON", "IGNORE", \
 	"", \
 	"" )
 
@@ -11103,7 +11546,15 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "XCOMMON", "IGNORE", \
+#:def_cmd_opt( "BINARY", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "BINARY", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "BINARY", "IGNORE", \
 	"", \
 	"" )
 
@@ -11112,10 +11563,6 @@
 	"" )
 
 #:def_cmd_opt( "BINARY", "KMG_COPY", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "BINARY", "IGNORE", \
 	"", \
 	"" )
 
@@ -11148,6 +11595,14 @@
 	"" )
 
 #:def_cmd_opt( "BINARY", "REMOVE_DEST", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TEXT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TEXT", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -11280,6 +11735,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CAT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CAT", "IGNORE", \
 	"", \
 	"" )
@@ -11369,6 +11832,14 @@
 	"Print long numeric message IDs instead of alternative message names" \
 	" like Txx, Uxx or Mxx." )
 
+#:def_cmd_opt( "BMG", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "BMG", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "BMG", "IGNORE", \
 	"", \
 	"" )
@@ -11439,6 +11910,14 @@
 	" like Txx, Uxx or Mxx." )
 
 #:def_cmd_opt( "BMG", "EXPORT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KCL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KCL", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -11654,11 +12133,23 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "KCL", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "KCL", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "KCL", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KMP", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -11878,11 +12369,23 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "KMP", "9LAPS", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "KMP", "TITLE_SCREEN", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "KMP", "CUP_ICONS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LEX", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LEX", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -11902,6 +12405,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "INFO", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "INFO", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "INFO", "IGNORE", \
 	"", \
 	"" )
@@ -11909,6 +12420,14 @@
 #:def_cmd_opt( "INFO", "NO_HEADER", \
 	"", \
 	"Suppress output of the printed filename." )
+
+#:def_cmd_opt( "GHOST", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "GHOST", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "GHOST", "IGNORE", \
 	"", \
@@ -11964,6 +12483,18 @@
 	"" )
 
 #:def_cmd_opt( "GHOST", "DEST2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "YAZDUMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "YAZDUMP", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "YAZDUMP", "IGNORE", \
 	"", \
 	"" )
 
@@ -12076,10 +12607,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wbmgt TEST [options]... [ignored]...", \
@@ -12101,7 +12629,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wbmgt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wbmgt FILEATTRIB [keyword]...", \
@@ -12131,17 +12660,20 @@
 #:def_cmd( "SECTIONS", "SECTIONS", \
 	"wbmgt SECTIONS [source]...", \
 	"List all sections of each binary BMG file. Print offset, size, magic" \
-	" and a short info. If known, print number and size of elements too." )
+	" and a short info. If known, print number and size of elements too." \
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "LIST", "LIST|LS|LL", \
 	"wbmgt LIST [source]...", \
 	"List messages to proof the content. Patches are applied before" \
-	" listing. The lines are cut to fit the terminal width." )
+	" listing. The lines are cut to fit the terminal width. $Wildcards$" \
+	" and pipe characters are parsed." )
 
 #:def_cmd( "SLOTS", "SLOTS", \
 	"wbmgt SLOTS [source]...", \
 	"Print a slot ordered list with slot number, message id, delta and" \
-	" attributes. Patches are applied before listing." )
+	" attributes. Patches are applied before listing. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "DIFF", "DIFF|CMP", \
 	"wbmgt DIFF source1 source2\n" \
@@ -12156,7 +12688,8 @@
 	"Read the entered BMG files (text, binary or szs sub file) and print" \
 	" them as decoded text files to standard output. All BMG files of a" \
 	" single archive (SZS,...) are combined to 1 source. The output of all" \
-	" source files is concatenated." )
+	" source files is concatenated. $Wildcards$ and pipe characters are" \
+	" parsed." )
 
 #:def_cmd( "MIX", "MIX", \
 	"wbmgt MIX [source]...", \
@@ -12164,7 +12697,7 @@
 	" them as decoded text files to standard output. All BMG files of all" \
 	" archives (SZS,...) are read. The output of all source files is" \
 	" combined and strings of later source files override prior defined" \
-	" strings." )
+	" strings. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "IDENTIFIER", "IDENTIFIER|ID|IDENTIFY", \
 	"wbmgt IDENTIFIER", \
@@ -12177,20 +12710,23 @@
 	"Read the entered message files and decode them to text files. All BMG" \
 	" files of a single archive (SZS,...) are concatenated to 1 source." \
 	" This command is similar to {PATCH}, but the result is always" \
-	" decoded. The default destination is @'%P/%N.txt'@." )
+	" decoded. The default destination is @'%P/%N.txt'@. $Wildcards$ and" \
+	" pipe characters are parsed." )
 
 #:def_cmd( "ENCODE", "ENCODE|ENC", \
 	"wbmgt ENCODE [source]...", \
 	"Read the entered message files and encode them to BMG files. All BMG" \
 	" files of a single archive (SZS,...) are concatenated to 1 source." \
 	" This command is similar to {PATCH}, but the result is always" \
-	" encoded. The default destination is @'%P/%N.bmg'@." )
+	" encoded. The default destination is @'%P/%N.bmg'@. $Wildcards$ and" \
+	" pipe characters are parsed." )
 
 #:def_cmd( "PATCH", "PATCH|PAT", \
 	"wbmgt PATCH [source]...", \
 	"Patch the entered files by using the patch list specified by option" \
 	" {--patch-bmg}. The coding of the source files is not changed. The" \
-	" default destination is @'%P/%F'@.\n" \
+	" default destination is @'%P/%F'@. $Wildcards$ and pipe characters" \
+	" are parsed.\n" \
 	"  Use {wszst patch --patch-bmg ...} to patch BMG files within a SZS" \
 	" file." )
 
@@ -12348,6 +12884,15 @@
 	" twice, all comments are suppressed and the output is packed without" \
 	" empty lines. If set 3 times, the @#BMG@ file indentification is also" \
 	" suppressed." )
+
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
 
 #:def_opt( "MAX_FILE_SIZE", "M|max-file-size|maxfilesize", "GP", \
 	"size", \
@@ -12668,14 +13213,22 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
 
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
@@ -12698,7 +13251,23 @@
 	"", \
 	"Exclude the section header from output." )
 
+#:def_cmd_opt( "SECTIONS", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SECTIONS", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SECTIONS", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -12723,6 +13292,14 @@
 	"" )
 
 #:def_cmd_opt( "LIST", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -12775,6 +13352,18 @@
 	"" )
 
 #:def_cmd_opt( "DIFF", "ESC", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IGNORE", \
 	"", \
 	"" )
 
@@ -12846,10 +13435,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "CAT", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "CAT", "PATCH_BMG", \
 	"", \
 	"" )
@@ -12859,6 +13444,18 @@
 	"" )
 
 #:def_cmd_opt( "CAT", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MIX", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MIX", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MIX", "IGNORE", \
 	"", \
 	"" )
 
@@ -12927,10 +13524,6 @@
 	"" )
 
 #:def_cmd_opt( "MIX", "EXPORT", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "MIX", "IGNORE", \
 	"", \
 	"" )
 
@@ -13019,6 +13612,18 @@
 	"" )
 
 #:def_cmd_opt( "IDENTIFIER", "EXPORT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -13122,10 +13727,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "DECODE", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "DECODE", "PATCH_BMG", \
 	"", \
 	"" )
@@ -13135,6 +13736,18 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "FILTER_BMG", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -13190,10 +13803,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "ENCODE", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "ENCODE", "PATCH_BMG", \
 	"", \
 	"" )
@@ -13207,6 +13816,18 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "ALIGN", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IGNORE", \
 	"", \
 	"" )
 
@@ -13310,10 +13931,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "PATCH", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "PATCH", "PATCH_BMG", \
 	"", \
 	"" )
@@ -13375,10 +13992,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wctct TEST [options]... [ignored]...", \
@@ -13400,7 +14014,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wctct FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wctct FILEATTRIB [keyword]...", \
@@ -13441,14 +14056,15 @@
 #:def_cmd( "DUMP", "D|DUMP", \
 	"wctct DUMP [source]...", \
 	"Print an information dump for the CT-CODE of each source file. BRRES," \
-	" TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted as input." )
+	" TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted as input. $Wildcards$" \
+	" and pipe characters are parsed." )
 
 #:def_cmd( "CAT", "CAT", \
 	"wctct CAT [source]...", \
 	"Read the source files and print the CT-CODE part them as decoded text" \
-	" files to standard output. The output of all source files is" \
-	" concatenated. BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted" \
-	" as input." )
+	" files to standard output. $Wildcards$ and pipe characters are" \
+	" parsed. The output of all source files is concatenated. BRRES, TEX0," \
+	" CT-CODE, CT-TEXT and LE-BIN are accepted as input." )
 
 #:def_cmd( "BMG", "BMG", \
 	"wctct BMG [source]...", \
@@ -13463,26 +14079,28 @@
 
 #:def_cmd( "DECODE", "DECODE|DEC", \
 	"wctct DECODE [source]...", \
-	"Read the source files and decode them to CT-TEXT files. The default" \
-	" destination is @'%P/%N.txt'@. BRRES, TEX0, CT-CODE, CT-TEXT and" \
-	" LE-BIN are accepted as input." )
+	"Read the source files and decode them to CT-TEXT files. $Wildcards$" \
+	" and pipe characters are parsed. The default destination is" \
+	" @'%P/%N.txt'@. BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted" \
+	" as input." )
 
 #:def_cmd( "CREATE", "CREATE|C", \
 	"wctct CREATE keyword [source]...", \
 	"Read the source files, scan the CT-CODE part and create an output" \
-	" file controlled by the keyword. BRRES, TEX0, CT-CODE, CT-TEXT and" \
-	" LE-BIN files are accepted as input. Possible keywords are: @CUP1," \
-	" CRS1, r-MOD1, r-MOD2, r-OVR1, r-BAD1CODE, r-BAD1DATA (=r-CODE)," \
-	" r-TEX0, r-BRRES, r-SZS, BMG, TRACKS, LIST, REF@ and @FULL@. 'r'" \
-	" defines the region and is one of @EU, RMCP, US, RMCE, JP, RMCJ, KO@" \
-	" or @RMCK@.\n" \
+	" file controlled by the keyword. $Wildcards$ and pipe characters are" \
+	" parsed. BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN files are accepted" \
+	" as input. Possible keywords are: @CUP1, CRS1, r-MOD1, r-MOD2," \
+	" r-OVR1, r-BAD1CODE, r-BAD1DATA (=r-CODE), r-TEX0, r-BRRES, r-SZS," \
+	" BMG, TRACKS, LIST, REF@ and @FULL@. 'r' defines the region and is" \
+	" one of @EU, RMCP, US, RMCE, JP, RMCJ, KO@ or @RMCK@.\n" \
 	"  The Korean support needs external CT-CODE files. Use option" \
 	" {--ct-dir} to define at least one search path." )
 
 #:def_cmd( "PATCH", "PATCH|P", \
 	"wctct PATCH [source]...", \
 	"Read each source file, find and scan the CT-CODE part and patch it." \
-	" BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted as input." )
+	" $Wildcards$ and pipe characters are parsed. BRRES, TEX0, CT-CODE," \
+	" CT-TEXT and LE-BIN are accepted as input." )
 
 #:def_opt( "VERSION", "V|version", "G", \
 	"", \
@@ -13648,6 +14266,15 @@
 #:def_opt( "BRIEF", "B|brief", "C", \
 	"", \
 	"Suppress cross reference comments." )
+
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
 
 #:def_opt( "RAW", "raw", "C", \
 	"", \
@@ -14048,14 +14675,22 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
 
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
@@ -14095,6 +14730,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUMP", "LONG", \
 	"", \
 	"Print headers as hexdump." )
@@ -14124,6 +14771,14 @@
 	"" )
 
 #:def_cmd_opt( "DUMP", "ORDER_ALL", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -14414,6 +15069,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DECODE", "WRITE_TRACKS", \
 	"", \
 	"" )
@@ -14447,10 +15114,6 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -14518,6 +15181,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CREATE", "WRITE_TRACKS", \
 	"", \
 	"" )
@@ -14551,10 +15226,6 @@
 	"" )
 
 #:def_cmd_opt( "CREATE", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "CREATE", "IGNORE", \
 	"", \
 	"" )
 
@@ -14685,6 +15356,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PATCH", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "WRITE_TRACKS", \
 	"", \
 	"" )
@@ -14718,10 +15401,6 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "PATCH", "IGNORE", \
 	"", \
 	"" )
 
@@ -14802,10 +15481,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wimgt TEST [options]... [ignored]...", \
@@ -14827,7 +15503,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wimgt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wimgt FILEATTRIB [keyword]...", \
@@ -14839,44 +15516,50 @@
 
 #:def_cmd( "LIST", "LIST|LS", \
 	"wimgt LIST [source]...", \
-	"List images files and print file and image type." )
+	"List images files and print file and image type. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "LIST_L", "LIST-L|LL|LISTL", \
 	"wit LIST-L [source]...", \
 	"List images files and print file and image type and geometry data." \
-	" 'LIST-L' is a short cut for {LIST --long}." )
+	" $Wildcards$ and pipe characters are parsed. 'LIST-L' is a short cut" \
+	" for {LIST --long}." )
 
 #:def_cmd( "LIST_LL", "LIST-LL|LLL|LISTLL", \
 	"wit LIST-LL [source]...", \
 	"List images files and print file and image type and advanced geometry" \
-	" data. 'LIST-LL' is a short cut for {LIST --long --long}." )
+	" data. $Wildcards$ and pipe characters are parsed. 'LIST-LL' is a" \
+	" short cut for {LIST --long --long}." )
 
 #:def_cmd( "DECODE", "DECODE|DEC", \
 	"wimgt DECODE [source]...", \
-	"Decode (export) the entered image files into PNG files. The default" \
-	" destination is @'%P/%F.png'@. If SOURCE starts with colon (@:@)," \
-	" then it may be a generic image instead of a real file." )
+	"Decode (export) the entered image files into PNG files. $Wildcards$" \
+	" and pipe characters are parsed. The default destination is" \
+	" @'%P/%F.png'@. If SOURCE starts with colon (@:@), then it may be a" \
+	" generic image instead of a real file." )
 
 #:def_cmd( "ENCODE", "ENCODE|ENC", \
 	"wimgt ENCODE [source]...", \
 	"Encode (import) the entered PNG files and convert them to to an" \
-	" internal image format (TPL, TEX, BREFT). The default destination is" \
-	" @'%P/%N'@ (removed extension). If SOURCE starts with colon (@:@)," \
-	" then it may be a generic image instead of a real file." )
+	" internal image format (TPL, TEX, BREFT, ...). $Wildcards$ and pipe" \
+	" characters are parsed. The default destination is @'%P/%N'@ (removed" \
+	" extension). If SOURCE starts with colon (@:@), then it may be a" \
+	" generic image instead of a real file." )
 
 #:def_cmd( "CONVERT", "CONVERT|CV", \
 	"wimgt CONVERT [source]...", \
-	"Convert the entered image files into new file and image formats. The" \
-	" old file is replaced by the new one. The difference to {ENCODE} is" \
-	" only the default file name handling. If SOURCE starts with colon" \
-	" (@:@), then it may be a generic image instead of a real file." )
+	"Convert the entered image files into new file and image formats." \
+	" $Wildcards$ and pipe characters are parsed. The old file is replaced" \
+	" by the new one. The difference to {ENCODE} is only the default file" \
+	" name handling. If SOURCE starts with colon (@:@), then it may be a" \
+	" generic image instead of a real file." )
 
 #:def_cmd( "COPY", "COPY|CP", \
 	"wimgt COPY source dest\n" \
 	"wimgt COPY source... [-d|-D] dest", \
 	"Copy and convert an image from 'source' to 'dest'. Multiple sources" \
 	" can be used, if 'dest' is a directory or contains at least one" \
-	" %-pattern.\n" \
+	" %-pattern. $Wildcards$ and pipe characters are parsed.\n" \
 	"  This is an alternative for the ENCODE and DECODE commands. The" \
 	" default destination file format is selected by scanning the file" \
 	" extension of the destination. Option --transform may override this." \
@@ -15034,6 +15717,15 @@
 #:def_opt( "BRIEF", "B|brief", "C", \
 	"", \
 	"Create smaller output." )
+
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
 
 #:def_opt( "MAX_FILE_SIZE", "M|max-file-size|maxfilesize", "GP", \
 	"size", \
@@ -15303,16 +15995,36 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
 
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
+
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "IGNORE", \
 	"", \
 	"" )
 
@@ -15325,7 +16037,15 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST", "IGNORE", \
+#:def_cmd_opt( "LIST_L", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "IGNORE", \
 	"", \
 	"" )
 
@@ -15338,7 +16058,15 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST_L", "IGNORE", \
+#:def_cmd_opt( "LIST_LL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "IGNORE", \
 	"", \
 	"" )
 
@@ -15351,7 +16079,15 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "LIST_LL", "IGNORE", \
+#:def_cmd_opt( "DECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -15384,10 +16120,6 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -15435,6 +16167,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "DEST", \
 	"", \
 	"" )
@@ -15464,10 +16208,6 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -15521,6 +16261,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CONVERT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONVERT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CONVERT", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CONVERT", "DEST", \
 	"", \
 	"" )
@@ -15550,10 +16302,6 @@
 	"" )
 
 #:def_cmd_opt( "CONVERT", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "CONVERT", "IGNORE", \
 	"", \
 	"" )
 
@@ -15607,6 +16355,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COPY", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COPY", "DEST", \
 	"", \
 	"" )
@@ -15636,10 +16396,6 @@
 	"" )
 
 #:def_cmd_opt( "COPY", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "COPY", "IGNORE", \
 	"", \
 	"" )
 
@@ -15738,10 +16494,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wkclt TEST [options]... [ignored]...", \
@@ -15763,7 +16516,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wkclt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wkclt FILEATTRIB [keyword]...", \
@@ -15820,21 +16574,24 @@
 #:def_cmd( "CAT", "CAT", \
 	"wkclt CAT source...", \
 	"Read the entered KCL and OBJ files and print them as OBJ files to" \
-	" standard output. The output of all source files is concatenated.\n" \
+	" standard output. $Wildcards$ and pipe characters are parsed. The" \
+	" output of all source files is concatenated.\n" \
 	"  Automated dropping of bad KCL triangles is enabled if no other drop" \
 	" option is specified by option {--kcl}." )
 
 #:def_cmd( "DECODE", "DECODE|DEC", \
 	"wkclt DECODE source...", \
-	"Read the entered KCL and OBJ files and export them to OBJ files. The" \
-	" default destination is @'%P/%N.txt'@.\n" \
+	"Read the entered KCL and OBJ files and export them to OBJ files." \
+	" $Wildcards$ and pipe characters are parsed. The default destination" \
+	" is @'%P/%N.txt'@.\n" \
 	"  Automated dropping of bad KCL triangles is enabled if no other drop" \
 	" option is specified by option {--kcl}." )
 
 #:def_cmd( "ENCODE", "ENCODE|ENC", \
 	"wkclt ENCODE source...", \
 	"Read the entered KCL and OBJ files and encode (compile) them to" \
-	" binary KCL files. The default destination is @'%P/%N.kcl'@.\n" \
+	" binary KCL files. $Wildcards$ and pipe characters are parsed. The" \
+	" default destination is @'%P/%N.kcl'@.\n" \
 	"  See https://szs.wiimm.de/doc/kcl for encoding details." )
 
 #:def_cmd( "COPY", "COPY|CP", \
@@ -15842,7 +16599,8 @@
 	"wkclt COPY source... [-d|-D] dest", \
 	"Copy and convert a collision file from 'source' to 'dest'. Multiple" \
 	" KCL and OBJ sources can be used, if 'dest' is a directory or" \
-	" contains at least one %-pattern.\n" \
+	" contains at least one %-pattern. $Wildcards$ and pipe characters are" \
+	" parsed.\n" \
 	"  This is an alternative for the DECODE and ENCODE commands. The" \
 	" default destination file format is selected by scanning the file" \
 	" extension of the destination. Is it '.kcl', a binary KCL file is" \
@@ -15854,20 +16612,21 @@
 #:def_cmd( "CFF", "CFF", \
 	"wkclt CFF source...", \
 	"CFF is an abbreviation of 'create flag file' and will create a flag" \
-	" file template for each entered source file. If the flag file already" \
-	" exists, only missing group names are added at the end of file." )
+	" file template for each entered source file. $Wildcards$ and pipe" \
+	" characters are parsed. If the flag file already exists, only missing" \
+	" group names are added at the end of file." )
 
 #:def_cmd( "FLAGS", "FLAGS|F", \
 	"wkclt FLAGS source...", \
 	"Print a KCL type and flag usage statistic for each source to standard" \
-	" output." )
+	" output. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "DUMP", "DUMP|D", \
 	"wkclt DUMP source...", \
 	"This debugging command prints an information dump about the internal" \
 	" triangle data base and the octree in human and machine readable text" \
-	" format. The output of all source files is concatenated and printed" \
-	" to standard output." )
+	" format. $Wildcards$ and pipe characters are parsed. The output of" \
+	" all source files is concatenated and printed to standard output." )
 
 #:def_cmd( "DBRIEF", "DBRIEF|DB", \
 	"wkclt DBRIEF source...", \
@@ -15879,14 +16638,16 @@
 	"wkclt LIST source...", \
 	"This debugging command prints a list of all triangles with metrics in" \
 	" human and machine readable text format. It is like DUMP, but reduced" \
-	" to the list of triangles. The output of all source files is" \
-	" concatenated and printed to standard output." )
+	" to the list of triangles. $Wildcards$ and pipe characters are" \
+	" parsed. The output of all source files is concatenated and printed" \
+	" to standard output." )
 
 #:def_cmd( "TRIANGLES", "TRIANGLES", \
 	"wkclt TRIANGLES source...", \
 	"This debugging commands prints one data line for each triangle. The" \
 	" goal is to compare data. Therefor and to create smaller lines the" \
-	" precision of the floating points numbers is reduced.\n" \
+	" precision of the floating points numbers is reduced. $Wildcards$ and" \
+	" pipe characters are parsed.\n" \
 	"  The print order is: flag used length | 3 points | 4 normals. For" \
 	" each point and normal 3 coordinates are printed." )
 
@@ -15906,19 +16667,20 @@
 #:def_cmd( "CHECK", "CHECK|CHK", \
 	"wkclt CHECK source...", \
 	"Read the entered KCL files (text or binary) and and make a" \
-	" plausibility check. Hints and warnings are written to standard" \
-	" output. The exit status is @'DIFFER'@ if at least one KMP warning" \
-	" found." )
+	" plausibility check. $Wildcards$ and pipe characters are parsed." \
+	" Hints and warnings are written to standard output. The exit status" \
+	" is @'DIFFER'@ if at least one KMP warning found." )
 
 #:def_cmd( "SHA1", "SHA1", \
 	"wszst SHA1 [source]...", \
-	"Print a SHA1 checksum of the KCL for each source. The checksum is" \
-	" calculated after patching." )
+	"Print a SHA1 checksum of the KCL for each source. $Wildcards$ and" \
+	" pipe characters are parsed. The checksum is calculated after" \
+	" patching." )
 
 #:def_cmd( "BLOW", "BLOW", \
 	"wkclt BLOW source...", \
-	"Try to calculate the used blow size (KCL_BLOW) of a KCL. Print one" \
-	" line for each source file." )
+	"Try to calculate the used blow size (KCL_BLOW) of a KCL. $Wildcards$" \
+	" and pipe characters are parsed. Print one line for each source file." )
 
 #:def_opt( "VERSION", "V|version", "G", \
 	"", \
@@ -16325,6 +17087,15 @@
 	"", \
 	"Create smaller output." )
 
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
+
 #:def_opt( "NO_PARAM", "P|no-param|noparam", "C", \
 	"", \
 	"Disable parameter support in decoded KMP text files." )
@@ -16500,14 +17271,22 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
 
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
@@ -16649,15 +17428,23 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CAT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CAT", "NO_ECHO", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "CAT", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "CAT", "IGNORE", \
 	"", \
 	"" )
 
@@ -16753,6 +17540,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DECODE", "DEST", \
 	"", \
 	"" )
@@ -16790,10 +17589,6 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -16889,6 +17684,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "DEST", \
 	"", \
 	"" )
@@ -16926,10 +17733,6 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -17025,6 +17828,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COPY", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COPY", "DEST", \
 	"", \
 	"" )
@@ -17062,10 +17877,6 @@
 	"" )
 
 #:def_cmd_opt( "COPY", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "COPY", "IGNORE", \
 	"", \
 	"" )
 
@@ -17161,6 +17972,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CFF", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CFF", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CFF", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CFF", "LONG", \
 	"", \
 	"Force usage of @'f(typ,variant)'@. If set twice, force usage of" \
@@ -17210,10 +18033,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "CFF", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "CFF", "CONST", \
 	"", \
 	"" )
@@ -17230,15 +18049,23 @@
 	"", \
 	"Print only the resulting flag." )
 
+#:def_cmd_opt( "FLAGS", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FLAGS", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "FLAGS", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "FLAGS", "NO_HEADER", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "FLAGS", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "FLAGS", "IGNORE", \
 	"", \
 	"" )
 
@@ -17336,6 +18163,14 @@
 	"" )
 
 #:def_cmd_opt( "FLAGS", "SLOT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -17449,6 +18284,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DBRIEF", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DBRIEF", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DBRIEF", "IGNORE", \
 	"", \
 	"" )
@@ -17559,6 +18402,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST", "IGNORE", \
 	"", \
 	"" )
@@ -17656,6 +18507,14 @@
 	"" )
 
 #:def_cmd_opt( "LIST", "SLOT", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TRIANGLES", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TRIANGLES", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -17986,6 +18845,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CHECK", "COLORS", \
 	"", \
 	"" )
@@ -18014,7 +18885,11 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "CHECK", "IGNORE", \
+#:def_cmd_opt( "SHA1", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -18134,6 +19009,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ANALYZE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ANALYZE", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ANALYZE", "IGNORE", \
 	"", \
 	"" )
@@ -18230,6 +19113,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "BLOW", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "BLOW", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "BLOW", "IGNORE", \
 	"", \
 	"" )
@@ -18279,10 +19170,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wkmpt TEST [options]... [ignored]...", \
@@ -18304,7 +19192,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wkmpt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wkmpt FILEATTRIB [keyword]...", \
@@ -18382,18 +19271,21 @@
 #:def_cmd( "CAT", "CAT", \
 	"wkmpt CAT [source]...", \
 	"Read the entered KMP files (text, binary or szs) and print them as" \
-	" decoded text files to standard output. The output of all source" \
-	" files is concatenated." )
+	" decoded text files to standard output. $Wildcards$ and pipe" \
+	" characters are parsed. The output of all source files is" \
+	" concatenated." )
 
 #:def_cmd( "DECODE", "DECODE|DEC", \
 	"wkmpt DECODE [source]...", \
 	"Read the entered KMP files (text or binary) and decode them to text" \
-	" files. The default destination is @'%P/%N.txt'@." )
+	" files. $Wildcards$ and pipe characters are parsed. The default" \
+	" destination is @'%P/%N.txt'@." )
 
 #:def_cmd( "ENCODE", "ENCODE|ENC", \
 	"wkmpt ENCODE source...", \
 	"Read the entered KMP files (text or binary) and encode (compile) them" \
-	" to binary files. The default destination is @'%P/%N.kmp'@." )
+	" to binary files. $Wildcards$ and pipe characters are parsed. The" \
+	" default destination is @'%P/%N.kmp'@." )
 
 #:def_cmd( "DIFF", "DIFF|CMP", \
 	"wkmpt DIFF source1 source2\n" \
@@ -18411,24 +19303,25 @@
 #:def_cmd( "DRAW", "DRAW|D|COBJECT|COB", \
 	"wkmpt DRAW source...", \
 	"Read the entered KMP files (text or binary), of needed load the" \
-	" related KCL file, draw KMP objects and create an OBJ file. The" \
-	" default destination is @'%P/%N.kmp.obj'@.\n" \
+	" related KCL file, draw KMP objects and create an OBJ file." \
+	" $Wildcards$ and pipe characters are parsed. The default destination" \
+	" is @'%P/%N.kmp.obj'@.\n" \
 	"  Automated dropping of bad KCL triangles is enabled if no drop" \
 	" option is specified by option {--kcl}." )
 
 #:def_cmd( "CHECK", "CHECK|CHK", \
 	"wkmpt CHECK source...", \
 	"Read the entered KMP files (text or binary) and and make a" \
-	" plausibility check. Hints and warnings are written to standard" \
-	" output. The exit status is @'DIFFER'@ if at least one KMP warning" \
-	" found." )
+	" plausibility check. $Wildcards$ and pipe characters are parsed." \
+	" Hints and warnings are written to standard output. The exit status" \
+	" is @'DIFFER'@ if at least one KMP warning found." )
 
 #:def_cmd( "STGI", "STGI", \
 	"wkmpt STGI file...", \
 	"Find the first KMP:STGI of each file and print an analysis of it as" \
 	" single line statistic. Additional the number of lap counter check" \
 	" points ('LC') is printed. Track and KMP (binary and text) files are" \
-	" accepted as input." )
+	" accepted as input. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "KTPT", "KTPT", \
 	"wkmpt KTPT [source]...", \
@@ -18441,7 +19334,8 @@
 #:def_cmd( "ROUTES", "ROUTES", \
 	"wkmpt ROUTES file...", \
 	"Print the internal cross references for routes of KMP sections CKPH," \
-	" CKPT, ENPH, ENPT, ITPH and ITPT." )
+	" CKPT, ENPH, ENPT, ITPH and ITPT. $Wildcards$ and pipe characters are" \
+	" parsed." )
 
 #:def_cmd( "GAMEMODES", "GAMEMODES|GMODES", \
 	"wkmpt GAMEMODES [source]...", \
@@ -18449,7 +19343,8 @@
 	" support and print a list. The lists consists of index, scenario" \
 	" version and scenario name. Scenario versions are only equal, if the" \
 	" scenarios are duplicates. Duplicates happens only, if {--gamemodes}" \
-	" option TT or FULL is set." )
+	" option TT or FULL is set. $Wildcards$ and pipe characters are" \
+	" parsed." )
 
 #:def_cmd( "WIM0", "WIM0|W0", \
 	"wkmpt WIM0 [source]...", \
@@ -18932,8 +19827,8 @@
 	" all. The other allowed keywords are: @FORCE, NEW, RM-SPCITEM, LEFT," \
 	" RIGHT, WIDE, NARROW, FIX-CKPH, FIX-ENPH, FIX-ITPH, FIX-PH," \
 	" FIX-CKNEXT, FIX-CKJGPT, FIX-CK, FIX-ALL, MASK-PFLAGS, RM-LECODE," \
-	" PURGE-GOBJ, FULL-DEFOBJ, DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL, 1LAP ..." \
-	" 9LAPS, MAX-LAPS, RM-EMPTY, TINY-0 ... TINY-7, INPLACE, SILENT@ and" \
+	" PURGE-GOBJ, FULL-DEFOBJ, DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL, 1LAP .." \
+	" 9LAPS, MAX-LAPS, RM-EMPTY, TINY-0 .. TINY-7, INPLACE, SILENT@ and" \
 	" @LOG@." )
 
 #:def_opt( "SPEED_MOD", "speed-mod|speedmod", "GP", \
@@ -19020,6 +19915,15 @@
 	"Suppress information lines in decoded KMP text files. This includes" \
 	" syntax information ({--no-header}). If set twice, the output of" \
 	" unneeded sections is also suppressed." )
+
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
 
 #:def_opt( "EXPORT", "X|export", "C", \
 	"", \
@@ -19220,14 +20124,22 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
 
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
@@ -19531,6 +20443,18 @@
 	"Print each setting starting on a new line. --long and {--brief} can" \
 	" be used together." )
 
+#:def_cmd_opt( "CAT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CAT", "NO_HEADER", \
 	"", \
 	"Suppress the syntax information section in KMP text files." )
@@ -19572,10 +20496,6 @@
 	"" )
 
 #:def_cmd_opt( "CAT", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "CAT", "IGNORE", \
 	"", \
 	"" )
 
@@ -19679,6 +20599,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DECODE", "DEST", \
 	"", \
 	"" )
@@ -19752,10 +20684,6 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -19859,6 +20787,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "DEST", \
 	"", \
 	"" )
@@ -19896,10 +20836,6 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -20040,6 +20976,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DRAW", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DRAW", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DRAW", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DRAW", "DRAW", \
 	"", \
 	"" )
@@ -20129,10 +21077,6 @@
 	"" )
 
 #:def_cmd_opt( "DRAW", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "DRAW", "IGNORE", \
 	"", \
 	"" )
 
@@ -20240,6 +21184,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CHECK", "COLORS", \
 	"", \
 	"" )
@@ -20272,9 +21228,19 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "CHECK", "IGNORE", \
+#:def_cmd_opt( "STGI", "NO_WILDCARDS", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "STGI", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "STGI", "IGNORE", \
+	"", \
+	"If set, ignore non existing source files and files without KMP" \
+	" without warning. If set twice, ignore files with standard settings" \
+	" too." )
 
 #:def_cmd_opt( "STGI", "COLORS", \
 	"", \
@@ -20288,11 +21254,18 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "STGI", "IGNORE", \
+#:def_cmd_opt( "KTPT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KTPT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KTPT", "IGNORE", \
 	"", \
 	"If set, ignore non existing source files and files without KMP" \
-	" without warning. If set twice, ignore files with standard settings" \
-	" too." )
+	" without warning." )
 
 #:def_cmd_opt( "KTPT", "COLORS", \
 	"", \
@@ -20306,15 +21279,23 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "KTPT", "IGNORE", \
-	"", \
-	"If set, ignore non existing source files and files without KMP" \
-	" without warning." )
-
 #:def_cmd_opt( "KTPT", "LONG", \
 	"", \
 	"If set, compare each KTPT with each lap counter (some CKPT) and print" \
 	" positions, directions, distances and recommendations as wide table." )
+
+#:def_cmd_opt( "ROUTES", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ROUTES", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ROUTES", "IGNORE", \
+	"", \
+	"If set, ignore non existing source files and files without KMP" \
+	" without warning." )
 
 #:def_cmd_opt( "ROUTES", "COLORS", \
 	"", \
@@ -20328,10 +21309,13 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "ROUTES", "IGNORE", \
+#:def_cmd_opt( "GOBJ", "NO_WILDCARDS", \
 	"", \
-	"If set, ignore non existing source files and files without KMP" \
-	" without warning." )
+	"" )
+
+#:def_cmd_opt( "GOBJ", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "GOBJ", "IGNORE", \
 	"", \
@@ -20349,6 +21333,14 @@
 #:def_cmd_opt( "GOBJ", "LONG", \
 	"", \
 	"?" )
+
+#:def_cmd_opt( "GAMEMODES", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "GAMEMODES", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "GAMEMODES", "IGNORE", \
 	"", \
@@ -20428,10 +21420,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wlect TEST [options]... [ignored]...", \
@@ -20453,7 +21442,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wlect FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wlect FILEATTRIB [keyword]...", \
@@ -20493,8 +21483,9 @@
 
 #:def_cmd( "DUMP", "DUMP|D", \
 	"wlect DUMP [source]...", \
-	"Print an information dump for each source file. LE-CODE binaries and" \
-	" LEX binaries are accepted as input." )
+	"Print an information dump for each source file. $Wildcards$ and pipe" \
+	" characters are parsed. LE-CODE binaries and LEX binaries are" \
+	" accepted as input." )
 
 #:def_cmd( "DB", "DBwlect DL [source]...", \
 	"Short cut for {DUMP --brief}.", \
@@ -20526,14 +21517,15 @@
 
 #:def_cmd( "PATCH", "PATCH|P", \
 	"wlect PATCH [lecode_bin]...", \
-	"Read each LE-CODE binary file and patch it. Use {--le-define} to" \
-	" setup cups and tracks." )
+	"Read each LE-CODE binary file and patch it. $Wildcards$ and pipe" \
+	" characters are parsed. Use {--le-define} to setup cups and tracks." )
 
 #:def_cmd( "LPAR", "LPAR", \
 	"wlect LPAR [le_bin]...", \
-	"Read each LE-BIN file and patch it. Then extract the LE-CODE" \
-	" parameters and store them as LPAR text file. Print the result to" \
-	" standard output if no other destination is defined." )
+	"Read each LE-BIN file and patch it. $Wildcards$ and pipe characters" \
+	" are parsed. Then extract the LE-CODE parameters and store them as" \
+	" LPAR text file. Print the result to standard output if no other" \
+	" destination is defined." )
 
 #:def_cmd( "CREATE", "CREATE|CR", \
 	"wlect CREATE [keyword] ...", \
@@ -20547,25 +21539,29 @@
 	"wlect DISTRIBUTION [argument]...", \
 	"This command manages data for LE-CODE track distributions. It reads" \
 	" any number of source files with different file types, collects the" \
-	" data and creates any number of files with different file types." \
-	" $Wildcards$ are accepted.\n" \
+	" data and creates any number of files with different file types. The" \
+	" parameters are evaluated step by step. $Wildcards$ and pipe" \
+	" characters are parsed.\n" \
 	"  Use the command without keyword to get an extended description." )
 
 #:def_cmd( "CAT", "CAT", \
 	"wlect CAT [source]...", \
 	"Read the entered LEX and LE-CODE files (text, binary or szs) and" \
-	" print them as decoded text files to standard output. The output of" \
-	" all source files is concatenated." )
+	" print them as decoded text files to standard output. $Wildcards$ and" \
+	" pipe characters are parsed. The output of all source files is" \
+	" concatenated." )
 
 #:def_cmd( "DECODE", "DECODE|DEC", \
 	"wlect DECODE [source]...", \
 	"Read the entered LEX files (text or binary) and decode them to text" \
-	" files. The default destination is @'%P/%N.txt'@." )
+	" files. $Wildcards$ and pipe characters are parsed. The default" \
+	" destination is @'%P/%N.txt'@." )
 
 #:def_cmd( "ENCODE", "ENCODE|ENC", \
 	"wlect ENCODE source...", \
 	"Read the entered LEX files (text or binary) and encode (compile) them" \
-	" to binary files. The default destination is @'%P/%N.lex'@." )
+	" to binary files. $Wildcards$ and pipe characters are parsed. The" \
+	" default destination is @'%P/%N.lex'@." )
 
 #:def_opt( "VERSION", "V|version", "G", \
 	"", \
@@ -20747,6 +21743,15 @@
 #:def_opt( "BRIEF", "B|brief", "C", \
 	"", \
 	"Suppress cross reference comments." )
+
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
 
 #:def_opt( "EXPORT", "X|export", "C", \
 	"", \
@@ -21135,14 +22140,22 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
 
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
@@ -21171,6 +22184,18 @@
 	"" )
 
 #:def_cmd_opt( "FLOAT", "ROUND", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IGNORE", \
 	"", \
 	"" )
 
@@ -21236,6 +22261,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DB", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DB", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DB", "LE_DEFINE", \
 	"", \
 	"" )
@@ -21295,6 +22332,18 @@
 	"For LE-CODE binaries: If set, print a track slot usage map." )
 
 #:def_cmd_opt( "DB", "CREATE_DISTRIB", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DL", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DL", "IGNORE", \
 	"", \
 	"" )
 
@@ -21360,6 +22409,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DLL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLL", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLL", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DLL", "LE_DEFINE", \
 	"", \
 	"" )
@@ -21419,6 +22480,18 @@
 	"For LE-CODE binaries: If set, print a track slot usage map." )
 
 #:def_cmd_opt( "DLL", "CREATE_DISTRIB", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DLLL", "IGNORE", \
 	"", \
 	"" )
 
@@ -21491,6 +22564,18 @@
 #:def_cmd_opt( "BIN_DIFF", "VERBOSE", \
 	"", \
 	"Be more verbose and tell, what tests are planned." )
+
+#:def_cmd_opt( "PATCH", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IGNORE", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "PATCH", "LE_DEFINE", \
 	"", \
@@ -21584,11 +22669,19 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "PATCH", "IGNORE", \
+#:def_cmd_opt( "PATCH", "CREATE_DISTRIB", \
 	"", \
 	"" )
 
-#:def_cmd_opt( "PATCH", "CREATE_DISTRIB", \
+#:def_cmd_opt( "TIMESTAMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "TIMESTAMP", "IGNORE", \
 	"", \
 	"" )
 
@@ -21624,7 +22717,15 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "TIMESTAMP", "IGNORE", \
+#:def_cmd_opt( "LPAR", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LPAR", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LPAR", "IGNORE", \
 	"", \
 	"" )
 
@@ -21697,10 +22798,6 @@
 	"" )
 
 #:def_cmd_opt( "LPAR", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "LPAR", "IGNORE", \
 	"", \
 	"" )
 
@@ -21928,11 +23025,19 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "CAT", "COMPLETE", \
+#:def_cmd_opt( "CAT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IN_ORDER", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "CAT", "IGNORE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "COMPLETE", \
 	"", \
 	"" )
 
@@ -21949,6 +23054,18 @@
 	"" )
 
 #:def_cmd_opt( "CAT", "NO_ECHO", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -21988,10 +23105,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "DECODE", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "DECODE", "NO_HEADER", \
 	"", \
 	"Suppress the syntax information section in LE text files." )
@@ -22005,6 +23118,18 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "NO_ECHO", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -22045,10 +23170,6 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "NO_ECHO", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -22096,10 +23217,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wmdlt TEST [options]... [ignored]...", \
@@ -22121,7 +23239,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wmdlt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wmdlt FILEATTRIB [keyword]...", \
@@ -22178,22 +23297,24 @@
 #:def_cmd( "CAT", "CAT", \
 	"wmdlt CAT [source]...", \
 	"Read the entered MDL files (text or binary) and print them as decoded" \
-	" text files to standard output (stdout). The output of all source" \
-	" files is concatenated.\n" \
+	" text files to standard output (stdout). $Wildcards$ and pipe" \
+	" characters are parsed. The output of all source files is" \
+	" concatenated.\n" \
 	"  A decoded MDL0 file can only be used for analysis. Encoding or" \
 	" creating a new MDL0 file is not supported." )
 
 #:def_cmd( "DECODE", "DECODE|DEC", \
 	"wmdlt DECODE [source]...", \
 	"Read the entered MDL files (text or binary) and decode them to text" \
-	" files. The default destination is @'%P/%N.txt'@.\n" \
+	" files. $Wildcards$ and pipe characters are parsed. The default" \
+	" destination is @'%P/%N.txt'@.\n" \
 	"  A decoded MDL0 file can only be used for analysis. Encoding or" \
 	" creating a new MDL0 file is not supported." )
 
 #:def_cmd( "STRINGS", "STRINGS", \
 	"wmdlt STRINGS [source]...", \
 	"Read the entered MDL files (text or binary) and print all strings of" \
-	" all sections.\n" \
+	" all sections. $Wildcards$ and pipe characters are parsed.\n" \
 	"  For archives like SZS or BREES, the strings of each containing MDL" \
 	" are printed. It is also possible to address an internal sub-file" \
 	" like @track.szs/course_model.brres@." )
@@ -22513,6 +23634,15 @@
 	"", \
 	"Suppress cross reference comments." )
 
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
+
 #:def_opt( "NO_PARAM", "P|no-param|noparam", "C", \
 	"", \
 	"Disable parameter support in decoded KMP text files." )
@@ -22688,14 +23818,22 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
 
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
@@ -22809,6 +23947,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CAT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CAT", "IGNORE", \
 	"", \
 	"" )
@@ -22893,6 +24039,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DECODE", "DEST", \
 	"", \
 	"" )
@@ -22922,10 +24080,6 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -23009,6 +24163,18 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "DEST", \
 	"", \
 	"" )
@@ -23046,10 +24212,6 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -23114,6 +24276,14 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "MDL", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "STRINGS", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "STRINGS", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -23201,6 +24371,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "GEOMETRY", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "GEOMETRY", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "GEOMETRY", "IGNORE", \
 	"", \
 	"" )
@@ -23282,6 +24460,14 @@
 	"" )
 
 #:def_cmd_opt( "GEOMETRY", "MDL", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XTEST", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XTEST", "IN_ORDER", \
 	"", \
 	"" )
 
@@ -23413,10 +24599,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wpatt TEST [options]... [ignored]...", \
@@ -23438,7 +24621,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wpatt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wpatt FILEATTRIB [keyword]...", \
@@ -23479,18 +24663,21 @@
 #:def_cmd( "CAT", "CAT", \
 	"wpatt CAT [source]...", \
 	"Read the entered PAT files (text or binary) and print them as decoded" \
-	" text files to standard output (stdout). The output of all source" \
-	" files is concatenated." )
+	" text files to standard output (stdout). $Wildcards$ and pipe" \
+	" characters are parsed. The output of all source files is" \
+	" concatenated." )
 
 #:def_cmd( "DECODE", "DECODE|DEC", \
 	"wpatt DECODE [source]...", \
 	"Read the entered PAT files (text or binary) and decode them to text" \
-	" files. The default destination is @'%P/%N.txt'@." )
+	" files. $Wildcards$ and pipe characters are parsed. The default" \
+	" destination is @'%P/%N.txt'@." )
 
 #:def_cmd( "ENCODE", "ENCODE|ENC", \
 	"wpatt ENCODE [source]...", \
 	"Read the entered PAT files (text or binary) and encode (compile) them" \
-	" to binary files. The default destination is @'%P/%N.pat'@." )
+	" to binary files. $Wildcards$ and pipe characters are parsed. The" \
+	" default destination is @'%P/%N.pat'@." )
 
 #:def_opt( "VERSION", "V|version", "G", \
 	"", \
@@ -23647,6 +24834,15 @@
 #:def_opt( "BRIEF", "B|brief", "C", \
 	"", \
 	"Suppress cross reference comments." )
+
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
 
 #:def_opt( "NO_PARAM", "P|no-param|noparam", "C", \
 	"", \
@@ -23825,14 +25021,22 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
 
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
@@ -23864,6 +25068,14 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CAT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CAT", "IN_ORDER", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CAT", "IGNORE", \
 	"", \
 	"" )
@@ -23881,6 +25093,18 @@
 	"" )
 
 #:def_cmd_opt( "CAT", "NO_CHECK", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -23920,10 +25144,6 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "DECODE", "IGNORE", \
-	"", \
-	"" )
-
 #:def_cmd_opt( "DECODE", "NO_HEADER", \
 	"", \
 	"Suppress the syntax information section in PAT text files." )
@@ -23937,6 +25157,18 @@
 	"" )
 
 #:def_cmd_opt( "DECODE", "NO_CHECK", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -23981,10 +25213,6 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "NO_CHECK", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "ENCODE", "IGNORE", \
 	"", \
 	"" )
 
@@ -24033,10 +25261,7 @@
 	"This debug command accepts (like ARGTEST) all kinds of parameters and" \
 	" prints one line for each parameter. After that, the parameter is" \
 	" treated as a filename with wildcards and all matching files are" \
-	" searched. The special parameters '+h' and '_h' enable or disable the" \
-	" search for hidden directories and files (files beginning with a" \
-	" point) for the following parameters. All tools know the EXPAND" \
-	" command." )
+	" searched. All tools know the EXPAND command." )
 
 #:def_cmd( "TEST", "TEST", \
 	"wstrt TEST [options]... [ignored]...", \
@@ -24058,7 +25283,8 @@
 #:def_cmd( "FILETYPE", "FILETYPE|FT", \
 	"wstrt FILETYPE file...", \
 	"Scan the header of the entered files and print file type and path for" \
-	" each file as list. All tools know the FILETYPE command." )
+	" each file as list. $Wildcards$ and pipe characters are parsed. All" \
+	" tools know the FILETYPE command." )
 
 #:def_cmd( "FILEATTRIB", "FILEATTRIB|FA", \
 	"wstrt FILEATTRIB [keyword]...", \
@@ -24071,13 +25297,14 @@
 #:def_cmd( "DUMP", "DUMP", \
 	"wstrt DUMP file...", \
 	"Dump the structure of REL files (e.g. @StaticR.rel@) and of DOL files" \
-	" (e.g. @main.dol@) as text." )
+	" (e.g. @main.dol@) as text. $Wildcards$ and pipe characters are" \
+	" parsed." )
 
 #:def_cmd( "HEXDUMP", "HEXDUMP|XDUMP", \
 	"wstrt HEXDUMP file...", \
 	"Dump the content of DOL files as hex dump and use virtual addresses." \
-	" Select parts by --vaddr, --faddr and --sname. Without selectors, the" \
-	" whole file is dumped." )
+	" $Wildcards$ and pipe characters are parsed. Select parts by --vaddr," \
+	" --faddr and --sname. Without selectors, the whole file is dumped." )
 
 #:def_cmd( "PORT", "PORT", \
 	"wstrt PORT param...", \
@@ -24103,7 +25330,8 @@
 
 #:def_cmd( "EXTRACT", "EXTRACT|X", \
 	"wstrt EXTRACT dol...", \
-	"Extract the sections of a DOL or a REL file into a directory." )
+	"Extract the sections of DOL and REL file into a directory." \
+	" $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "TRACKS", "TRACKS", \
 	"wstrt TRACKS [file]...", \
@@ -24140,13 +25368,14 @@
 
 #:def_cmd( "ANALYZE", "ANALYZE|ANA|ANALYSE", \
 	"wstrt ANALYZE [file]...", \
-	"Open 'StaticR.rel' and DOL files and analyze them. The files will be" \
-	" classified using SHA1 checksums." )
+	"Open 'StaticR.rel' and DOL files and analyze them. $Wildcards$ and" \
+	" pipe characters are parsed. The files will be classified using SHA1" \
+	" checksums." )
 
 #:def_cmd( "PATCH", "PATCH", \
 	"wstrt PATCH [file]...", \
-	"Patch 'main.dol and 'StaticR.rel' files of Mario Kart Wii. No backup" \
-	" is made." )
+	"Patch 'main.dol and 'StaticR.rel' files of Mario Kart Wii." \
+	" $Wildcards$ and pipe characters are parsed. No backup is made." )
 
 #:def_opt( "VERSION", "V|version", "G", \
 	"", \
@@ -24294,6 +25523,15 @@
 #:def_opt( "BRIEF", "B|brief", "C", \
 	"", \
 	"List only the track file names and suppress table header and footer." )
+
+#:def_opt( "NO_WILDCARDS", "no-wildcards|nowildcards", "C", \
+	"", \
+	"Disable wildcard parsing and use each filename exactly as specified." )
+
+#:def_opt( "IN_ORDER", "in-order|inorder", "C", \
+	"", \
+	"Process the input files in order of the command line and don't delete" \
+	" duplicates." )
 
 #:def_opt( "NO_HEADER", "H|no-header|noheader", "C", \
 	"", \
@@ -24538,11 +25776,9 @@
 	" and VBI hooks are optionally initialized. Use option {--force} to" \
 	" allow overlapped sections. Use option {--verbose} up to 2 times for" \
 	" a log.\n" \
-	"  If parameter FILE contains at least one wildcard (e.g. '*.gct')," \
+	" If parameter FILE contains at least one wildcard (e.g. \"*.GCT\")," \
 	" then FILE is used as search pattern and all found files are added." \
-	" In order to use this variant, the calling shell must not interpret" \
-	" the wildcards. Therefore, the parameter must usually be enclosed in" \
-	" single or double quotes.\n" \
+	" Quote FILE for this purpose. \n" \
 	"  If a single file is not found and the filename (not path) contains" \
 	" at least 1 '@@' character, then all '@@' characters of it are" \
 	" replaced by the region code (one of P,E,J,K) for a second try.\n" \
@@ -24818,14 +26054,22 @@
 	"", \
 	"Print message number instead of message name." )
 
-#:def_cmd_opt( "FILETYPE", "LONG", \
+#:def_cmd_opt( "FILETYPE", "NO_WILDCARDS", \
 	"", \
-	"Print an additional column with the decompressed file type and" \
-	" version. If entered twice, a validation status column is added." )
+	"" )
+
+#:def_cmd_opt( "FILETYPE", "IN_ORDER", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "FILETYPE", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "FILETYPE", "LONG", \
+	"", \
+	"Print an additional column with the decompressed file type and" \
+	" version. If entered twice, a validation status column is added." )
 
 #:def_cmd_opt( "FILEATTRIB", "NO_HEADER", \
 	"", \
@@ -24839,10 +26083,34 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUMP", "LONG", \
 	"", \
 	"For DOL files: If set, a second table with the image map is printed." \
 	" If set twice, a third table with delta values is printed too." )
+
+#:def_cmd_opt( "HEXDUMP", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HEXDUMP", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HEXDUMP", "IGNORE", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "HEXDUMP", "VADDR", \
 	"", \
@@ -25034,6 +26302,18 @@
 	"", \
 	"Print file offsets too." )
 
+#:def_cmd_opt( "HTTPS", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HTTPS", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "HTTPS", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "HTTPS", "LONG", \
 	"", \
 	" Print output a C source" )
@@ -25041,6 +26321,18 @@
 #:def_cmd_opt( "HTTPS", "VERBOSE", \
 	"", \
 	" Print hex dump if an entry differs." )
+
+#:def_cmd_opt( "EXTRACT", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "EXTRACT", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "EXTRACT", "IGNORE", \
+	"", \
+	"" )
 
 #:def_cmd_opt( "EXTRACT", "DEST", \
 	"", \
@@ -25350,6 +26642,18 @@
 	"Append a string in {--points} format that defines the table. If set" \
 	" twice, append up to 3 strings in different modes." )
 
+#:def_cmd_opt( "ANALYZE", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ANALYZE", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ANALYZE", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ANALYZE", "CLEAN_DOL", \
 	"", \
 	"" )
@@ -25419,6 +26723,18 @@
 	"Print different lists if bugs found. If set twice, print the lists" \
 	" always." )
 
+#:def_cmd_opt( "PATCH", "NO_WILDCARDS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IN_ORDER", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "IGNORE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "DEST", \
 	"", \
 	"" )
@@ -25448,10 +26764,6 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "PRESERVE", \
-	"", \
-	"" )
-
-#:def_cmd_opt( "PATCH", "IGNORE", \
 	"", \
 	"" )
 

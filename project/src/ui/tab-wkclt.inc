@@ -126,6 +126,7 @@
 		    "wkclt CAT source...",
 		"Read the entered KCL and OBJ files and print"
 		" them as OBJ files to standard output."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated."
 		"\n "
 		" Automated dropping of bad KCL triangles is enabled"
@@ -135,6 +136,7 @@
 		    "wkclt DECODE source...",
 		"Read the entered KCL and OBJ files"
 		" and export them to OBJ files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.txt'@."
 		"\n "
 		" Automated dropping of bad KCL triangles is enabled"
@@ -144,6 +146,7 @@
 		    "wkclt ENCODE source...",
 		"Read the entered KCL and OBJ files"
 		" and encode (compile) them to binary KCL files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.kcl'@."
 		"\n "
 		" See https://szs.wiimm.de/doc/kcl for encoding details." },
@@ -154,6 +157,7 @@
 		"Copy and convert a collision file from 'source' to 'dest'."
 		" Multiple KCL and OBJ sources can be used,"
 		" if 'dest' is a directory or contains at least one %-pattern."
+		" " WILDCARDS_PIPE
 		"\n "
 		" This is an alternative for the DECODE and ENCODE commands."
 		" The default destination file format is selected by scanning the"
@@ -170,6 +174,7 @@
 		    "wkclt CFF source...",
 		"CFF is an abbreviation of 'create flag file' and"
 		" will create a flag file template for each entered source file."
+		" " WILDCARDS_PIPE
 		" If the flag file already exists, only missing group names"
 		" are added at the end of file." },
 
@@ -187,13 +192,15 @@
   { T_DEF_CMD,	"FLAGS",	"FLAGS|F",
 		    "wkclt FLAGS source...",
 		"Print a KCL type and flag usage statistic for each source"
-		" to standard output." },
+		" to standard output."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"DUMP",		"DUMP|D",
 		    "wkclt DUMP source...",
 		"This debugging command prints an information dump about"
 		" the internal triangle data base and the octree"
 		" in human and machine readable text format."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated"
 		" and printed to standard output." },
 
@@ -208,6 +215,7 @@
 		"This debugging command prints a list of all triangles"
 		" with metrics in human and machine readable text format."
 		" It is like DUMP, but reduced to the list of triangles."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated"
 		" and printed to standard output." },
 
@@ -216,6 +224,7 @@
 		"This debugging commands prints one data line for each triangle."
 		" The goal is to compare data. Therefor and to create smaller lines"
 		" the precision of the floating points numbers is reduced."
+		" " WILDCARDS_PIPE
 		"\n "
 		" The print order is: flag used length | 3 points | 4 normals."
 		" For each point and normal 3 coordinates are printed." },
@@ -238,21 +247,25 @@
 		    "wkclt CHECK source...",
 		"Read the entered KCL files (text or binary) and"
 		" and make a plausibility check."
+		" " WILDCARDS_PIPE
 		" Hints and warnings are written to standard output."
 		" The exit status is @'DIFFER'@ if at least one KMP warning found." },
 
   { T_DEF_CMD,	"SHA1",		"SHA1",
 		    "wszst SHA1 [source]...",
 		"Print a SHA1 checksum of the KCL for each source."
+		" " WILDCARDS_PIPE
 		" The checksum is calculated after patching." },
 
   { H_DEF_CMD,	"ANALYZE",	"ANALYZE",
 		    "wkclt ANALYZE source...",
-		"Analyze some KCL data." },
+		"Analyze some KCL data."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"BLOW",		"BLOW",
 		    "wkclt BLOW source...",
 		"Try to calculate the used blow size (KCL_BLOW) of a KCL."
+		" " WILDCARDS_PIPE
 		" Print one line for each source file." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
@@ -422,6 +435,12 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"BRIEF",	"B|brief",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"NO_PARAM",	"P|no-param|noparam",
@@ -645,10 +664,12 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wkclt FILEATTRIB ----------
 
@@ -708,19 +729,27 @@
   //---------- COMMAND wkclt CAT ----------
 
   { T_CMD_BEG,	"CAT",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wkclt DECODE ----------
 
   { T_CMD_BEG,	"DECODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
@@ -737,6 +766,11 @@
   //---------- COMMAND wkclt CFF ----------
 
   { T_CMD_BEG,	"CFF",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LONG",		0,0,
 		"Force usage of @'f(typ,variant)'@."
 		" If set twice, force usage of @'a(typ,w,x,y,z)'@." },
@@ -745,7 +779,6 @@
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"CONST",	0,0,0 },
   { T_COPT,	"FLAG_FILE",	0,0,0 },
@@ -753,6 +786,7 @@
   //---------- COMMAND wkclt TYPES ----------
 
   { T_CMD_BEG,	"TYPES",	0,0,0 },
+
   { T_COPT,	"NO_HEADER",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
 		"Print only the resulting flag." },
@@ -760,9 +794,13 @@
   //---------- COMMAND wkclt FLAGS ----------
 
   { T_CMD_BEG,	"FLAGS",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
 		"Suppress the output of detailed flag list"
 		" and print only the type summary." },
@@ -772,7 +810,11 @@
   //---------- COMMAND wkclt DUMP ----------
 
   { T_CMD_BEG,	"DUMP",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
 		"Suppress the output of the triangle list"
@@ -791,7 +833,11 @@
   //---------- COMMAND wkclt LIST ----------
 
   { T_CMD_BEG,	"LIST",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
@@ -799,7 +845,11 @@
   //---------- COMMAND wkclt TRIANGLES ----------
 
   { T_CMD_BEG,	"TRIANGLES",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
 		"Suppress the output of the 'normals' data." },
@@ -813,6 +863,7 @@
   //---------- COMMAND wkclt TRAVERSE ----------
 
   { T_CMD_BEG,	"TRAVERSE",	0,0,0 },
+
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
@@ -826,6 +877,7 @@
   //---------- COMMAND wkclt FALL ----------
 
   { T_CMD_BEG,	"FALL",	0,0,0 },
+
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
@@ -839,6 +891,11 @@
   //---------- COMMAND wkclt CHECK ----------
 
   { T_CMD_BEG,	"CHECK",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"COLORS",	0,0,0 },
   { T_COPT,	"NO_COLORS",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
@@ -849,12 +906,15 @@
 	"Be quiet until the first warning or hint is found." },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wkclt SHA1 ----------
 
   { T_CMD_BEG,	"SHA1",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"ID",		0,0,0 },
   { T_COPT,	"BASE64",	0,0,0 },
   { T_COPT,	"DB64",		0,0,0 },
@@ -867,6 +927,9 @@
   //---------- COMMAND wkclt ANALYZE ----------
 
   { T_CMD_BEG,	"ANALYZE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
@@ -874,6 +937,9 @@
   //---------- COMMAND wkclt BLOW ----------
 
   { T_CMD_BEG,	"BLOW",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
 
 //

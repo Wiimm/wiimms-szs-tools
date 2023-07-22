@@ -2873,7 +2873,7 @@ enumError ScanBrresCTCODE
 
     szs_file_t szs;
     AssignSZS(&szs,true,(void*)data,data_size,false,FF_BRRES,0);
-    IterateFilesParSZS(&szs,iter_brres_ctcode,ctcode,false,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(&szs,iter_brres_ctcode,ctcode,false,false,false,0,-1,SORT_NONE);
     ResetSZS(&szs);
 
     return ERR_OK;

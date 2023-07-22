@@ -911,15 +911,23 @@ typedef enum kmp_mode_t
     KMPMD_REVERSE	= 0x00000040,	// reverse the track order
     KMPMD_MAX_LAPS	= 0x00000080,	// set LAPS only if larger
 
-    KMPMD_1_LAP		= 0x00000100,	// set lap count to #1
-    KMPMD_2_LAPS	= 0x00000200,	// set lap count to #2
-    KMPMD_3_LAPS	= 0x00000300,	// set lap count to #3
-    KMPMD_4_LAPS	= 0x00000400,	// set lap count to #4
-    KMPMD_5_LAPS	= 0x00000500,	// set lap count to #5
-    KMPMD_6_LAPS	= 0x00000600,	// set lap count to #6
-    KMPMD_7_LAPS	= 0x00000700,	// set lap count to #7
-    KMPMD_8_LAPS	= 0x00000800,	// set lap count to #8
-    KMPMD_9_LAPS	= 0x00000900,	// set lap count to #9
+    KMPMD_01_LAP	= 0x00000100,	// set lap count to #1
+    KMPMD_02_LAPS	= 0x00000200,	// set lap count to #2
+    KMPMD_03_LAPS	= 0x00000300,	// set lap count to #3
+    KMPMD_04_LAPS	= 0x00000400,	// set lap count to #4
+    KMPMD_05_LAPS	= 0x00000500,	// set lap count to #5
+    KMPMD_06_LAPS	= 0x00000600,	// set lap count to #6
+    KMPMD_07_LAPS	= 0x00000700,	// set lap count to #7
+    KMPMD_08_LAPS	= 0x00000800,	// set lap count to #8
+    KMPMD_09_LAPS	= 0x00000900,	// set lap count to #9
+ #if MAX_STGI_LAPS > 9
+    KMPMD_10_LAPS	= 0x00000a00,	// set lap count to #10
+    KMPMD_11_LAPS	= 0x00000b00,	// set lap count to #11
+    KMPMD_12_LAPS	= 0x00000c00,	// set lap count to #12
+    KMPMD_13_LAPS	= 0x00000d00,	// set lap count to #13
+    KMPMD_14_LAPS	= 0x00000e00,	// set lap count to #14
+    KMPMD_15_LAPS	= 0x00000f00,	// set lap count to #15
+ #endif
      KMPMD_M_LAPS	= 0x00000f00,
      KMPMD_SHIFT_LAPS	= 8,
 
@@ -1189,6 +1197,8 @@ extern kmp_mode_t	KMP_MODE;
 extern kmp_diff_mode_t	KMP_DIFF_MODE;
 extern kmp_tform_t	KMP_TFORM;
 
+extern int		opt_n_laps;
+
 extern bool		speed_mod_active;
 extern float		speed_mod_factor;
 extern u16		speed_mod_val;
@@ -1204,6 +1214,7 @@ int  ScanOptTformKmp ( ccp arg );
 uint PrintKmpTform( char *buf, uint bufsize, kmp_tform_t mode );
 ccp  GetKmpTform();
 
+int   ScanOptNLaps ( ccp arg );
 int   ScanOptSpeedMod ( ccp arg );
 int   ScanOptKtpt2 ( ccp arg );
 u16   SpeedMod2u16 ( float speed );

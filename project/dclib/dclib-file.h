@@ -1038,6 +1038,7 @@ typedef struct search_paths_stat_t
 search_paths_stat_t;
 
 //-----------------------------------------------------------------------------
+// [[SearchPathsFunc]]
 
 // error codes < 0 mean: abort.
 // return ERR_JOB_IGNORED if path finally not match
@@ -1055,7 +1056,7 @@ search_paths_stat_t SearchPaths
 (
     ccp			path1,		// not NULL: part #1 of base path
     ccp			path2,		// not NULL: part #2 of base path
-    bool		allow_hidden,	// allow hiddent directories and files
+    wildcard_mode_t	wc_mode,	// bit field: modes for wildcard handling
     SearchPathsFunc	func,		// callback function, never NULL
     void		*param		// last param for func()
 );

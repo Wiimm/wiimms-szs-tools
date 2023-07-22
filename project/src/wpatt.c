@@ -224,11 +224,13 @@ static enumError cmd_cat()
     InitializeRawData(&raw);
 
     enumError cmd_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -256,6 +258,7 @@ static enumError cmd_cat()
 	ResetPAT(&pat);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return cmd_err;
 }
@@ -272,11 +275,13 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -285,7 +290,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 	char dest[PATH_MAX];
 	const file_format_t dest_ff = cmd_id == CMD_ENCODE ? FF_PAT : FF_PAT_TXT;
 
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(dest_ff,0),false);
 
 	if ( verbose >= 0 || testmode )
@@ -314,6 +319,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 	ResetPAT(&pat);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -399,6 +405,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_LONG:		long_count++; break;
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_BRIEF:		brief_count++; break;
+	case GO_NO_WILDCARDS:	no_wildcards_count++; break;
+	case GO_IN_ORDER:	inorder_count++; break;
 	case GO_NO_PARAM:	print_param = false; break;
 	case GO_NO_ECHO:	opt_no_echo = true; break;
 	case GO_NO_CHECK:	opt_no_check = true; break;

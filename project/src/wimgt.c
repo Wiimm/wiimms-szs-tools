@@ -281,25 +281,28 @@ static enumError cmd_list ( int long_level )
     if (print_header)
 	PrintImageHead(0,long_count);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	char buf[CHECK_FILE_SIZE];
-	enumError err = LoadFILE(param->arg,0,0,buf,sizeof(buf),1,0,false);
+	enumError err = LoadFILE(arg,0,0,buf,sizeof(buf),1,0,false);
 	if ( err > ERR_WARNING )
 	{
 	    if (opt_ignore)
 		continue;
 	    memset(buf,0,sizeof(buf));
 	}
-	PrintImage(buf,CHECK_FILE_SIZE,param->arg,0,0,long_count,false);
+	PrintImage(buf,CHECK_FILE_SIZE,arg,0,0,long_count,false);
     }
 
     if (print_header)
 	putchar('\n');
 
+    ResetStringField(&plist);
     return ERR_OK;
 }
 
@@ -315,21 +318,23 @@ static enumError cmd_decode()
 
     enumError max_err = ERR_OK;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	Image_t img;
-	enumError err = LoadIMG(&img, true, param->arg,
+	enumError err = LoadIMG(&img, true, arg,
 				0, opt_mipmaps >= 0, true, opt_ignore>0 );
-	if ( err > ERR_WARNING )
-	    return err;
+	if ( max_err < err )
+	    max_err = err;
 	if (err)
 	    continue;
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,0,false);
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,0,false);
 
 	if ( verbose >= 0 || testmode )
 	    fprintf(stdlog,"%s%sDECODE %s:%s -> PNG:%s\n",
@@ -354,6 +359,8 @@ static enumError cmd_decode()
 	}
 	ResetIMG(&img);
     }
+
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -366,13 +373,15 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 {
     CheckOptDest(def_path,false);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	Image_t img;
-	enumError err = LoadIMG( &img, true, param->arg, 0,
+	enumError err = LoadIMG( &img, true, arg, 0,
 					opt_mipmaps >= 0, false, opt_ignore );
 	if ( err == ERR_NOT_EXISTS || err == ERR_WARNING )
 	    continue;
@@ -385,7 +394,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 	TransformIMG(&img,-1);
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,0,false);
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,0,false);
 	const file_format_t fform
 		= GetImageFF( img.tform_valid ? img.tform_fform : FF_INVALID,
 				FF_INVALID,
@@ -399,7 +408,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 	else
 	    Transform2InternIMG(&img);
 
-	const bool samefile = !strcmp(param->arg,dest);
+	const bool samefile = !strcmp(arg,dest);
 	if ( !all_count
 		&& !img.conv_count
 		&& !img.tform_exec
@@ -421,7 +430,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 			verbose > 0 ? "\n" : "",
 			testmode ? "WOULD " : "", cmd_name,
 			PrintFormat3(src_f,src_i,src_p),
-			param->arg,
+			arg,
 			PrintFormat3(fform,iform,pform),
 			dest );
 	}
@@ -437,6 +446,8 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 	}
 	ResetIMG(&img);
     }
+
+    ResetStringField(&plist);
     return ERR_OK;
 }
 
@@ -471,16 +482,16 @@ static enumError cmd_copy()
     PRINT("fform(dest) = %s\n",GetNameFF(0,fform_dest));
 
     int done_count = 0;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	if (!param->arg)
-	    continue;
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 	done_count++;
 
 	Image_t img;
-	enumError err = LoadIMG( &img, true, param->arg, 0,
+	enumError err = LoadIMG( &img, true, arg, 0,
 					opt_mipmaps >= 0, false, opt_ignore );
 	if ( err == ERR_NOT_EXISTS || err == ERR_WARNING )
 	    continue;
@@ -500,14 +511,14 @@ static enumError cmd_copy()
 	PRINT("FFORM = %s\n",GetNameFF(0,fform));
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,0,0,false);
+	SubstDest(dest,sizeof(dest),arg,opt_dest,0,0,false);
 
 	if ( fform == FF_PNG )
 	    Transform2XIMG(&img);
 	else
 	    Transform2InternIMG(&img);
 
-	const bool samefile = !strcmp(param->arg,dest);
+	const bool samefile = !strcmp(arg,dest);
 	if ( !all_count
 		&& !img.conv_count
 		&& !img.tform_exec
@@ -529,7 +540,7 @@ static enumError cmd_copy()
 			verbose > 0 ? "\n" : "",
 			testmode ? "WOULD " : "",
 			PrintFormat3(src_f,src_i,src_p),
-			param->arg,
+			arg,
 			PrintFormat3(fform,iform,pform),
 			dest );
 	}
@@ -549,6 +560,7 @@ static enumError cmd_copy()
     if (!done_count)
 	SYNTAX_ERROR;
 
+    ResetStringField(&plist);
     return ERR_OK;
 }
 
@@ -631,6 +643,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_LONG:		long_count++; break;
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_BRIEF:		brief_count++; break;
+	case GO_NO_WILDCARDS:	no_wildcards_count++; break;
+	case GO_IN_ORDER:	inorder_count++; break;
 	case GO_SECTIONS:	print_sections++; break;
 
 	case GO_ALL:		all_count++; break;

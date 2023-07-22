@@ -155,18 +155,21 @@
 		    "wkmpt CAT [source]...",
 		"Read the entered KMP files (text, binary or szs) and print"
 		" them as decoded text files to standard output."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated." },
 
   { T_DEF_CMD,	"DECODE",	"DECODE|DEC",
 		    "wkmpt DECODE [source]...",
 		"Read the entered KMP files (text or binary)"
 		" and decode them to text files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.txt'@." },
 
   { T_DEF_CMD,	"ENCODE",	"ENCODE|ENC",
 		    "wkmpt ENCODE source...",
 		"Read the entered KMP files (text or binary)"
 		" and encode (compile) them to binary files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.kmp'@." },
 
   { T_DEF_CMD,	"DIFF",		"DIFF|CMP",
@@ -190,6 +193,7 @@
 		"Read the entered KMP files (text or binary),"
 		" of needed load the related KCL file,"
 		" draw KMP objects and create an OBJ file."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.kmp.obj'@."
 		"\n "
 		" Automated dropping of bad KCL triangles is enabled"
@@ -199,6 +203,7 @@
 		    "wkmpt CHECK source...",
 		"Read the entered KMP files (text or binary) and"
 		" and make a plausibility check."
+		" " WILDCARDS_PIPE
 		" Hints and warnings are written to standard output."
 		" The exit status is @'DIFFER'@ if at least one KMP warning found." },
 
@@ -218,12 +223,14 @@
   { T_DEF_CMD,	"ROUTES",	"ROUTES",
 		    "wkmpt ROUTES file...",
 		"Print the internal cross references for routes of KMP sections"
-		" CKPH, CKPT, ENPH, ENPT, ITPH and ITPT." },
+		" CKPH, CKPT, ENPH, ENPT, ITPH and ITPT."
+		" " WILDCARDS_PIPE },
 
   { H_DEF_CMD,	"GOBJ",		"GOBJ",
 		    "wkmpt GOBJ [source]...",
 		"Analyze the objects of KMP section GOBJ"
-		" and print a status line for each object. ..." },
+		" and print a status line for each object."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"GAMEMODES",	"GAMEMODES|GMODES",
 		    "wkmpt GAMEMODES [source]...",
@@ -231,7 +238,8 @@
 		" with and without extension support and print a list."
 		" The lists consists of index, scenario version and scenario name."
 		" Scenario versions are only equal, if the scenarios are duplicates."
-		" Duplicates happens only, if {--gamemodes} option TT or FULL is set." },
+		" Duplicates happens only, if {--gamemodes} option TT or FULL is set."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"WIM0",		"WIM0|W0",
 		    "wkmpt WIM0 [source]...",
@@ -456,6 +464,14 @@
   { T_OPT_GP,	"KMP",		"kmp",
 		0, 0 /* copy of wszst */ },
 
+ #if MAX_STGI_LAPS > 9
+  { T_OPT_GP,	"N_LAPS",	"n-laps|nlaps",
+		0, 0 /* copy of wszst */ },
+ #else
+  { H_OPT_GP,	"N_LAPS",	"n-laps|nlaps",
+		0, 0 /* copy of wszst */ },
+ #endif
+
   { T_OPT_GP,	"SPEED_MOD",	"speed-mod|speedmod",
 		0, 0 /* copy of wszst */ },
 
@@ -488,6 +504,12 @@
 		"Suppress information lines in decoded KMP text files."
 		" This includes syntax information ({--no-header})."
 		" If set twice, the output of unneeded sections is also suppressed." },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
+		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"EXPORT",	"X|export",
 		0,
@@ -626,6 +648,11 @@
   { T_COPT,	"AROT",		0,0,0 },
   { T_COPT,	"TFORM_SCRIPT",	0,0,0 },
   { T_COPT,	"KMP",		0,0,0 },
+ #if MAX_STGI_LAPS > 9
+  { T_COPT,	"N_LAPS",	0,0,0 },
+ #else
+  { H_COPT,	"N_LAPS",	0,0,0 },
+ #endif
   { T_COPT,	"SPEED_MOD",	0,0,0 },
   { T_COPT,	"KTPT2",	0,0,0 },
   { T_COPT,	"TFORM_KMP",	0,0,0 },
@@ -741,10 +768,12 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wkmpt FILEATTRIB ----------
 
@@ -828,37 +857,50 @@
   //---------- COMMAND wkmpt CAT ----------
 
   { T_CMD_BEG,	"CAT",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wkmpt DECODE ----------
 
   { T_CMD_BEG,	"DECODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wkmpt ENCODE ----------
 
   { T_CMD_BEG,	"ENCODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wkmpt DIFF ----------
 
   { T_CMD_BEG,	"DIFF",		0,0,0 },
+
   { T_COPT,	"QUIET",	0,0,
 	"If set once, only a summary status is printed."
 	" If set twice, the status is only reported as exit status." },
@@ -870,6 +912,11 @@
   //---------- COMMAND wkmpt DRAW ----------
 
   { T_CMD_BEG,	"DRAW",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"DRAW",		0,0,0 },
   { T_COPT,	"POS_MODE",	0,0,0 },
   { T_COPT,	"POS_FILE",	0,0,0 },
@@ -880,6 +927,11 @@
   //---------- COMMAND wkmpt CHECK ----------
 
   { T_CMD_BEG,	"CHECK",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"COLORS",	0,0,0 },
   { T_COPT,	"NO_COLORS",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
@@ -891,28 +943,38 @@
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"GENERIC",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wkmpt STGI ----------
 
   { T_CMD_BEG,	"STGI",		0,0,0 },
-  { T_COPT,	"COLORS",	0,0,0 },
-  { T_COPT,	"NO_COLORS",	0,0,0 },
-  { T_COPT,	"NO_HEADER",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,
 	"If set, ignore non existing source files"
 	" and files without KMP without warning."
 	" If set twice, ignore files with standard settings too." },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"COLORS",	0,0,0 },
+  { T_COPT,	"NO_COLORS",	0,0,0 },
+  { T_COPT,	"NO_HEADER",	0,0,0 },
 
   //---------- COMMAND wszst KTPT ----------
 
   { T_CMD_BEG,	"KTPT",		0,0,0 },
-  { T_COPT,	"COLORS",	0,0,0 },
-  { T_COPT,	"NO_COLORS",	0,0,0 },
-  { T_COPT,	"KTPT2",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,
 	"If set, ignore non existing source files"
 	" and files without KMP without warning." },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"COLORS",	0,0,0 },
+  { T_COPT,	"NO_COLORS",	0,0,0 },
+  { T_COPT,	"KTPT2",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"If set, compare each KTPT with each lap counter (some CKPT) and print"
 	" positions, directions, distances and recommendations as wide table." },
@@ -920,17 +982,25 @@
   //---------- COMMAND wkmpt ROUTES ----------
 
   { T_CMD_BEG,	"ROUTES",	0,0,0 },
-  { T_COPT,	"COLORS",	0,0,0 },
-  { T_COPT,	"NO_COLORS",	0,0,0 },
-  { T_COPT,	"NO_HEADER",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,
 	"If set, ignore non existing source files"
 	" and files without KMP without warning." },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"COLORS",	0,0,0 },
+  { T_COPT,	"NO_COLORS",	0,0,0 },
+  { T_COPT,	"NO_HEADER",	0,0,0 },
 
-  //---------- COMMAND wkmpt GAMEMODES ----------
+  //---------- COMMAND wkmpt GOBJ ----------
 
   { T_CMD_BEG,	"GOBJ",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,
 	"Suppress head and foot lines." },
   { T_COPT,	"BRIEF",	0,0,
@@ -942,7 +1012,11 @@
   //---------- COMMAND wkmpt GAMEMODES ----------
 
   { T_CMD_BEG,	"GAMEMODES",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"GAMEMODES",	0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,
 	"Suppress head and foot lines." },

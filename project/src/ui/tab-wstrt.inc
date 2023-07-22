@@ -102,7 +102,8 @@
   { T_DEF_CMD,	"DUMP",		"DUMP",
 		    "wstrt DUMP file...",
 		"Dump the structure of REL files (e.g. @StaticR.rel@)"
-		" and of DOL files (e.g. @main.dol@) as text." },
+		" and of DOL files (e.g. @main.dol@) as text."
+		" " WILDCARDS_PIPE },
 
   { H_DEF_CMD,	"CDUMP",	"_CDUMP",
 		    "wstrt _CDUMP file...",
@@ -111,6 +112,7 @@
   { T_DEF_CMD,	"HEXDUMP",	"HEXDUMP|XDUMP",
 		    "wstrt HEXDUMP file...",
 		"Dump the content of DOL files as hex dump and use virtual addresses."
+		" " WILDCARDS_PIPE
 		" Select parts by --vaddr, --faddr and --sname."
 		" Without selectors, the whole file is dumped." },
 
@@ -143,11 +145,13 @@
   { H_DEF_CMD,	"HTTPS",	"_HTTPS",
 		    "wstrt _HTTPS file...",
 		"Collect data about https-requests and print a total summary"
-		" for all accepted files." },
+		" for all accepted files."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"EXTRACT",	"EXTRACT|X",
 		    "wstrt EXTRACT dol...",
-		"Extract the sections of a DOL or a REL file into a directory." },
+		"Extract the sections of DOL and REL file into a directory."
+		" " WILDCARDS_PIPE },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -192,11 +196,13 @@
   { T_DEF_CMD,	"ANALYZE",	"ANALYZE|ANA|ANALYSE",
 		    "wstrt ANALYZE [file]...",
 		"Open 'StaticR.rel' and DOL files and analyze them."
+		" " WILDCARDS_PIPE
 		" The files will be classified using SHA1 checksums." },
 
   { T_DEF_CMD,	"PATCH",	"PATCH",
 		    "wstrt PATCH [file]...",
 		"Patch 'main.dol and 'StaticR.rel' files of Mario Kart Wii."
+		" " WILDCARDS_PIPE
 		" No backup is made." },
 
   //
@@ -281,6 +287,12 @@
   { T_OPT_C,	"BRIEF",	"B|brief",
 		0,
 		"List only the track file names and suppress table header and footer." },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
+		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"NO_HEADER",	"H|no-header|noheader",
 		0, 0 /* copy of wszst */ },
@@ -387,11 +399,7 @@
 		"Each option call adds the filename to an internal list."
 		" Each file must be of type GCT and is added to the internal wcode stock."
 		"\n "
-		" If parameter FILE contains at least one wildcard (e.g. '*.gct'),"
-		" then FILE is used as search pattern and all found files are added."
-		" In order to use this variant, the calling shell must not interpret"
-		" the wildcards. Therefore, the parameter must usually be enclosed"
-		" in single or double quotes."
+		WILDCARDS_OPTION("FILE","*.gct")
 		"\n "
 		" If a single file is not found and the filename (not path)"
 		" contains at least 1 '@@' character, then all '@@' characters of"
@@ -562,11 +570,7 @@
 		" Use option {--force} to allow overlapped sections."
 		" Use option {--verbose} up to 2 times for a log."
 		"\n "
-		" If parameter FILE contains at least one wildcard (e.g. '*.gct'),"
-		" then FILE is used as search pattern and all found files are added."
-		" In order to use this variant, the calling shell must not interpret"
-		" the wildcards. Therefore, the parameter must usually be enclosed"
-		" in single or double quotes."
+		WILDCARDS_OPTION("FILE","*.GCT")
 		"\n "
 		" If a single file is not found and the filename (not path)"
 		" contains at least 1 '@@' character, then all '@@' characters of"
@@ -675,11 +679,7 @@
 		" Each file must be of type WPF (Wiimms Patch File) and defines"
 		" a list of conditionals and patches for staticr.rel and main.dol."
 		"\n "
-		" If parameter FILE contains at least one wildcard (e.g. '*.wpf'),"
-		" then FILE is used as search pattern and all found files are added."
-		" In order to use this variant, the calling shell must not interpret"
-		" the wildcards. Therefore, the parameter must usually be enclosed"
-		" in single or double quotes." },
+		WILDCARDS_OPTION("FILE","*.wpf") },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -998,10 +998,12 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
-  { T_COPT,	"LONG",		0,0,
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wstrt FILEATTRIB ----------
 
@@ -1019,6 +1021,11 @@
   //---------- COMMAND wstrt DUMP ----------
 
   { T_CMD_BEG,	"DUMP",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LONG",		0,0,
 		"For DOL files:"
 		" If set, a second table with the image map is printed."
@@ -1031,6 +1038,11 @@
   //---------- COMMAND wstrt HEXDUMP ----------
 
   { T_CMD_BEG,	"HEXDUMP",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"VADDR",	0,0,0 },
   { T_COPT,	"FADDR",	0,0,0 },
   { T_COPT,	"SNAME",	0,0,0 },
@@ -1043,6 +1055,7 @@
   //---------- COMMAND wstrt PORT ----------
 
   { T_CMD_BEG,	"PORT",		0,0,0 },
+
   { T_COPT,	"PORT_DB",	0,0,0 },
   { T_COPT,	"ORDER",	0,0,0 },
   { T_COPT,	"NO_0X",	0,0,0 },
@@ -1058,6 +1071,7 @@
   //---------- COMMAND wstrt WHERE ----------
 
   { T_CMD_BEG,	"WHERE",	0,0,0 },
+
   { T_COPT,	"ORDER",	0,0,0 },
   { T_COPT,	"NO_0X",	0,0,0 },
   { T_COPT,	"UPPER",	0,0,0 },
@@ -1072,6 +1086,11 @@
   //---------- COMMAND wstrt HTTPS ----------
 
   { T_CMD_BEG,	"HTTPS",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LONG",		0,0,
 		" Print output a C source" },
   { T_COPT,	"VERBOSE",	0,0,
@@ -1081,6 +1100,10 @@
 
   { T_CMD_BEG,	"EXTRACT",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"DEST",		0,0,0 },
   { T_COPT,	"DEST2",	0,0,0 },
   { T_COPT,	"OVERWRITE",	0,0,0 },
@@ -1088,6 +1111,7 @@
   //---------- COMMAND wstrt TRACKS ----------
 
   { T_CMD_BEG,	"TRACKS",	0,0,0 },
+
   { T_COPT,	"NO_HEADER",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
@@ -1108,6 +1132,7 @@
   //---------- COMMAND wstrt FIND ----------
 
   { T_CMD_BEG,	"FIND",		0,0,0 },
+
   { T_COPY_GRP,	"PATCH",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Add a user friendly track or arena name at the end of each line."
@@ -1120,6 +1145,7 @@
   //---------- COMMAND wstrt POINTS ----------
 
   { T_CMD_BEG,	"POINTS",	0,0,0 },
+
   { T_COPT,	"POINTS",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
 	"Print the table as comma separated lists in C notation." },
@@ -1131,6 +1157,11 @@
   //---------- COMMAND wstrt ANALYZE ----------
 
   { T_CMD_BEG,	"ANALYZE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"CLEAN_DOL",	0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
@@ -1141,8 +1172,11 @@
 
   { T_CMD_BEG,	"PATCH",	0,0,0 },
 
-  { T_COPY_GRP,	"DEST",		0,0,0 },
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"CLEAN_DOL",	0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },

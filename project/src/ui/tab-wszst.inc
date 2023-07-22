@@ -84,6 +84,7 @@
   { T_DEF_CMD,	"INSTALL",	"INSTALL",
 		    "wszst INSTALL [file]...",
 		"Install files to the shared directory."
+		" " WILDCARDS_PIPE
 		" Use {wszst CONFIG} to list related pathes." },
 
   { T_DEF_CMD,	"ARGTEST",	"ARGTEST",
@@ -98,16 +99,13 @@
 		" and prints one line for each parameter."
 		" After that, the parameter is treated as a filename with wildcards"
 		" and all matching files are searched."
-		" The special parameters '+h' and '_h' enable or disable the search"
-		" for hidden directories and files (files beginning with a point)"
-		" for the following parameters."
 		" All tools know the EXPAND command." },
 
   { T_DEF_CMD,	"WILDCARDS",	"WILDCARDS",
 		    "wszst WILDCARDS pattern...",
-		" Each parameter is treated as a filename. "
-		WILDCARDS_SORT
-		" The special parameters '+h' and '_h' enable or disable the search"
+		" Each parameter is treated as a filename. " WILDCARDS_PIPE
+		" The special parameters '" WM_ENABLE_HIDDEN "' and '"
+		WM_DISABLE_HIDDEN "' enable or disable the search"
 		" for hidden directories and files (files beginning with a point)"
 		" for the following parameters."
 		" Finally, one line is printed for each file name of the list." },
@@ -133,13 +131,14 @@
 		    "wszst FILETYPE file...",
 		"Scan the header of the entered files and print file type"
 		" and path for each file as list."
+		" " WILDCARDS_PIPE
 		" All tools know the FILETYPE command." },
 
   { T_DEF_CMD,	"UI_CHECK",	"UI-CHECK|UC|UICHECK",
 		    "wszst UI-CHECK file...",
 		"Classify SZS files from directory .../Scene/UI/."
 		" For the analysis, the filename is ignored and only the content is examined."
-		"" WILDCARDS_SORT },
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"FILEATTRIB",	"FILEATTRIB|FA",
 		    "wszst FILEATTRIB [keyword]...",
@@ -151,12 +150,13 @@
 		" All tools know the FILEATTRIB command." },
 
   { T_DEF_CMD,	"BRSUB",	"BRSUB",
-		    "wszst BRSUB [file]...",
+		    "wszst BRSUB [source]...",
 		" If no file is defined, print a table with known BRRES"
 		" sub files consisting of"
 		" file format, version, number of sections and warn level."
 		" Otherwise analyse the version numbers of each BRRES sub file"
-		" of each source and print warnings about invalid versions." },
+		" of each source and print warnings about invalid versions."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"SYMBOLS",	"SYMBOLS",
 		    "wszst SYMBOLS",
@@ -231,6 +231,8 @@
 		" use of option {--auto-add} or to convert WU8 files."
 		" If @SOURCE@ is a directory, all standard track and arena"
 		" file names are searched for the missed auto-add files."
+		" " WILDCARDS_PIPE
+		"\n "
 		" Without source files, the status of the auto-add archive is printed."
 		"\n "
 		" Try {wszst AUTOADD ./path_to/Race/Course/}"
@@ -267,7 +269,8 @@
   { H_DEF_CMD,	"CODE",		"_CODE",
 		    "wszst _CODE [files]",
 		"All bytes of all input files are xor'ed with 0xDC and copied to stdout."
-		" If no source file is given, standard input is read." },
+		" If no source file is given, standard input is read."
+		" " WILDCARDS_PIPE },
 
   { H_DEF_CMD,	"RECODE",	"_RECODE",
 		    "wszst _RECODE mode [files]",
@@ -290,45 +293,46 @@
 		"List all sub files of " ARCHIVES_AND " archives."
 		" If listing a directory, then a virtual SZS file"
 		" is created (like CREATE does it) and listed."
-		" " WILDCARDS_SORT },
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LIST_L",	"LIST-L|LL|LISTL",
 		    "wszst LIST-L [source]...",
 		"List all sub files with size."
 		" 'LIST-L' and 'LL' are short cuts for {LIST --long}."
-		" " WILDCARDS_SORT },
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LIST_LL",	"LIST-LL|LLL|LISTLL",
 		    "wszst LIST-LL [source]...",
 		"List all sub files with offset and size."
 		" 'LIST-LL' and 'LLL' are short cuts for {LIST --long --long}."
-		" " WILDCARDS_SORT },
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LIST_LLL",	"LIST-LLL|LLLL|LISTLLL",
 		    "wszst LIST-LLL [source]...",
 		"List all sub files with offset and size in debugging mode."
 		" 'LIST-LLL' and 'LLLL' are short cuts"
 		" for {LIST --long --long --long}."
-		" " WILDCARDS_SORT },
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LIST_A",	"LIST-A|LA|LISTA",
 		    "wszst LIST-A [source]...",
 		"List recursive all sub files with size."
 		" 'LIST-A' and 'LA' are short cuts for {LIST --long --all --all}."
-		" " WILDCARDS_SORT },
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LIST_LA",	"LIST-LA|LLA|LISTLA",
 		    "wszst LIST-LA [source]...",
 		"List recursive all sub files with offset and size."
 		" 'LIST-LA' and 'LLA' are short cuts for {LIST --long --long --all --all}."
-		" " WILDCARDS_SORT },
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"NAME_REF",	"NAME-REF|NAMEREF",
 		    "wszst NAME-REF [source]...",
 		"For each BRRES file or subfile, create a name based cross reference"
 		" and print the result as list ordered by names in BRRES order."
 		" For U8 archives (e.g. track SZS files),"
-		" sub file @course_model.brres@ is analysed." },
+		" sub file @course_model.brres@ is analysed."
+		" " WILDCARDS_PIPE },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -337,7 +341,8 @@
 		"List the images files of all sub files of " ARCHIVES_AND
 		" archives; non image files are ignored."
 		" If listing a directory, then a virtual SZS file"
-		" is created (like CREATE does it) and listed." },
+		" is created (like CREATE does it) and listed."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"ILIST_L",	"ILIST-L|ILL|ILISTL",
 		    "wit ILIST-L [source]...",
@@ -364,7 +369,8 @@
   { T_DEF_CMD,	"MEMORY",	"MEMORY|MEM",
 		    "wszst MEMORY [source]...",
 		"Dump a memory map of each source file."
-		" Virtual images (extracted directories) are also supported." },
+		" Virtual images (extracted directories) are also supported."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"MEMORY_A",	"MEMORY-A|MEMA",
 		    "wszst MEMORY-A [source]...",
@@ -376,7 +382,8 @@
 		"Dump the internal structure of a BRRES files, compressed or not."
 		" Other archives are ignored."
 		" The main goal is to verify string relocation."
-		" Virtual images (extracted directories) are also supported." },
+		" Virtual images (extracted directories) are also supported."
+		" " WILDCARDS_PIPE },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -384,18 +391,21 @@
 		    "wszst SHA1 [source]...",
 		"Print a SHA1 checksum for each source."
 		" The checksum is calculated by using the uncompressed data"
-		" and after patching." },
+		" and after patching."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"ANALYZE",	"ANALYZE|ANA|ANALYSE",
 		    "wszst ANALYZE [source]...",
 		"Analyse track files and LE-CODE binaries."
 		" Print the results in machine-readable form."
-		" The output format is selected by options." },
+		" The output format is selected by options."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"SPLIT",	"SPLIT",
 		    "wszst SPLIT [source]...",
 		"Analyse (file) names and split them into the different parts."
-		" Print the results in machine readable format." },
+		" Print the results in machine readable format."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"IS_TEXTURE",	"IS-TEXTURE|ISTEXTURE",
 		    "wszst IS-TEXTURE --reference reference [source]...",
@@ -403,6 +413,7 @@
 		" For each source, one human and machine readable status line is printed."
 		" It is either »-1=err« on error, »1=yes« for a texture hack,"
 		" or »0=no LIST« with a comma separated list of reasons."
+		" " WILDCARDS_PIPE
 		"\n "
 		" At the moment KCL, KMP (see notes) and LEX are checked."
 		" KMP section CAME has been intentionally left out."
@@ -414,7 +425,8 @@
 		"Analyse track files and create a feature list for each source"
 		" in machine readable format."
 		" CTGP uses the feature lists to manage ghosts."
-		" See option {--lex-features} for details." },
+		" See option {--lex-features} for details."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"DISTRIBUTION",	"DISTRIBUTION|DIS|DISTRIB",
 		    "wszst DISTRIBUTION result source...\n"
@@ -425,6 +437,7 @@
 		" If a source directory starts with \"arena\","
 		" all tracks of the directory are assumed to be battle arenas."
 		" Finally print the results into file @RESULT@."
+		" " WILDCARDS_PIPE
 		"\n "
 		" The default name for @RESULT@ is \"distribution.txt\"."
 		" Extension .txt is appended to the filename if not defined."
@@ -455,7 +468,8 @@
 		" needed and unneeded files."
 		" Also analyse cannons and make slot proposals."
 		" This command uses an internal object and file database."
-		" The source can be a SZS, U8, WU8 or WBZ file, or an U8 like directory." },
+		" The source can be a SZS, U8, WU8 or WBZ file, or an U8 like directory."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"SLOTS",	"SLOTS",
 		    "wszst SLOTS [source]...",
@@ -464,19 +478,22 @@
 		" For each source one status line is printed."
 		" The status line contains either a positive or a negative"
 		" slot list, whatever is shorter."
-		" For battle arenas, the keyword @ARENA@ is printed." },
+		" For battle arenas, the keyword @ARENA@ is printed."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"STGI",		"STGI",
 		    "wszst STGI [source]...",
 		"Find the first KMP:STGI of each file"
 		" and print an analysis of it as single line statistic."
 		" Additional the number of lap counter check points ('LC') is printed."
-		" Track and KMP (binary and text) files are accepted as input." },
+		" Track and KMP (binary and text) files are accepted as input."
+		" " WILDCARDS_PIPE },
 
-  { T_DEF_CMD,	"ISARENA",	"ISARENA",
-		    "wszst ISARENA [source]...",
+  { T_DEF_CMD,	"IS_ARENA",	"IS-ARENA|ISARENA",
+		    "wszst IS_ARENA [source]...",
 		"Analyse each track for its arena status and print a line with"
 		" a status code and the track name."
+		" " WILDCARDS_PIPE
 		" The status code is: »-RACE« for a racing track,"
 		" »?MAYBE« for likely an arena, »+ARENA« for an arena,"
 		" »+DISPATCH« for an arena with dispatch points"
@@ -497,6 +514,7 @@
 		" for all others. Compressed sources are compressed again with"
 		" maximum compression (level 9)."
 		" The destination is only written if any data changed."
+		" " WILDCARDS_PIPE
 		"\n "
 		" {wszst NORMALIZE} is the same as {wszst PATCH --norm}." },
 
@@ -507,7 +525,7 @@
 		" and store the file again."
 		" Compressed sources are compressed again."
 		" The destination is only written if any data changed or if stored in another file."
-		" " WILDCARDS },
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"COPY",		"COPY|CP",
 		    "wszst COPY source dest\n"
@@ -517,8 +535,11 @@
 		" but has another command line syntax."
 		"\n "
 		"The command copies all source files to the destination."
+		" If no destination is defined by options {--dest} or {--DEST},"
+		" then the last parameter is used as destination."
 		" If more than 1 source is defined, the destination must be"
 		" either a directory or a destination filename with escapes."
+		" " WILDCARDS_PIPE
 		" Patching is also possible and option --overwrite is set implicitly." },
 
   { T_DEF_CMD,	"DUPLICATE",	"DUPLICATE|DUP",
@@ -547,32 +568,37 @@
 		" If patching options are used, modify the data and write back"
 		" the file using its original file format."
 		" Only the translation vector is modified and"
-		" new translation and inverse matrices are calculated." },
+		" new translation and inverse matrices are calculated."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"COMPRESS",	"COMPRESS|COM",
 		    "wszst COMPRESS [source]...",
 		"Compress and create a SZS archives."
 		" If the source is already compressed,"
 		" then decompress and compress it again."
-		" The default destination is @'%P/%N.szs'@." },
+		" The default destination is @'%P/%N.szs'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"DECOMPRESS",	"DECOMPRESS|DEC",
 		    "wszst DECOMPRESS [szs]...",
 		"Decompress SZS files."
-		" The default destination is @'%P/%N.u8'@." },
+		" The default destination is @'%P/%N.u8'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"ENCODE",	"ENCODE|E",
 		    "wszst ENCODE [source_dir]...",
 		" Create and/or encode sub files if necessary."
 		" It works like command CREATE,"
-		" but without creating a new first level archive file." },
+		" but without creating a new first level archive file."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"CREATE",	"CREATE|C",
 		    "wszst CREATE [source_dir]...",
 		"Create " CARCHIVES_OR " archives by adding all not hidden files"
 		" of the directory structure."
 		" Create and/or encode sub files if necessary."
-		" The default destination is @'%P/%N%T'@." },
+		" The default destination is @'%P/%N%T'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"UPDATE",	"UPDATE|U",
 		    "wszst UPDATE [source]... [--source=] [--dest=]",
@@ -582,40 +608,46 @@
 		" in a prior extracted archive."
 		" Only files with the same size are updated."
 		" The secondary source is used to find the source sub files."
-		" The default secondary source is @'%P/%N.d/'@." },
+		" The default secondary source is @'%P/%N.d/'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"EXTRACT",	"EXTRACT|X",
 		    "wszst EXTRACT [source]...",
 		"Extract all sub files of " ARCHIVES_AND " archives."
-		" The default destination is @'%P/%N.d/'@." },
+		" The default destination is @'%P/%N.d/'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"XDECODE",	"XDECODE|XD",
 		    "wszst XDECODE [source]...",
 		"Command @XDECODE@ is a short cut for {EXTRACT --decode}."
 		" It extract all sub files of " ARCHIVES_AND " archives"
 		" and decodes all supported files."
-		" The default destination is @'%P/%N.d/'@." },
+		" The default destination is @'%P/%N.d/'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"XEXPORT",	"XEXPORT|XX",
 		    "wszst XEXPORT [source]...",
 		"Command @XEXPORT@ is a short cut for {EXTRACT --decode --export}."
 		" It extract all sub files of " ARCHIVES_AND " archives"
 		" and decodes all supported files with enabled export mode."
-		" The default destination is @'%P/%N.d/'@." },
+		" The default destination is @'%P/%N.d/'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"XALL",		"XALL|XA",
 		    "wszst XALL [source]...",
 		"Command @XALL@ is a short cut for {EXTRACT --all}."
 		" It extract all sub files of " ARCHIVES_AND " archives"
 		" recursively and decodes all supported files."
-		" The default destination is @'%P/%N.d/'@." },
+		" The default destination is @'%P/%N.d/'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"XCOMMON",	"XCOMMON",
 		    "wszst XCOMMON [source]...",
 		"Command @XCOMMON@ is a short cut for {EXTRACT --basedir=common}."
 		" Scan archives and extract files from archives, that are below"
 		" directory @'common'@."
-		" The default destination is @'%P/%N.d/'@." },
+		" The default destination is @'%P/%N.d/'@."
+		" " WILDCARDS_PIPE },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -623,6 +655,8 @@
 		    "wszst BINARY [source]...",
 		"Read each source file (binary or text, but never archives)"
 		" and write the content as binary file."
+		" " WILDCARDS_PIPE
+		"\n "
 		" The file extension of the new file depends on the file type,"
 		" but is usually @.bin@."
 		" Currently supported file formats are @BMG@, @GEOHIT@, @ITEMSLOT@,"
@@ -633,6 +667,8 @@
 		    "wszst TEXT [source]...",
 		"Read each source file (binary or text, but never archives)"
 		" and write the content as text file."
+		" " WILDCARDS_PIPE
+		"\n "
 		" The file extension of the new file is usually @.txt@."
 		" Currently supported file formats are @BMG@, @GEOHIT@, @ITEMSLOT@,"
 		" @KCL@, @KMG@, @KMP@, @LEX@, @OBJFLOW@, @PAT@"
@@ -641,46 +677,55 @@
   { T_DEF_CMD,	"CAT",		"CAT",
 		    "wszst CAT [source/subfile]...",
 		"Extract one or more sub files of " ARCHIVES_AND " archives."
+		" " WILDCARDS_SUBFILE
 		" The output of all source files is concatenated and written to stdout." },
 
   { T_DEF_CMD,	"BMG",		"BMG",
 		    "wszst BMG [source]...",
 		"For each archive all BMG sub files are searched"
 		" and, if found, decoded and printed as combined BMG text file."
-		" The command works exactly like {wbmgt MIX}." },
+		" The command works exactly like {wbmgt MIX}."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"KCL",		"KCL",
 		    "wszst KCL [source]...",
 		"For each archive the KCL sub file @course.kcl@ is searched"
 		" and, if found, decoded and printed (copied to stdout)."
+		" " WILDCARDS_SUBFILE
 		"\n "
 		" Automated dropping of bad KCL triangles is enabled"
-		" if no other drop option is specified by option {--kcl}." },
+		" if no other drop option is specified by option {--kcl}."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"KMP",		"KMP",
 		    "wszst KMP [source]...",
 		"For each archive the KMP sub file @course.kmp@ is searched"
-		" and, if found, decoded and printed (copied to stdout)." },
+		" and, if found, decoded and printed (copied to stdout)."
+		" " WILDCARDS_SUBFILE },
 
   { T_DEF_CMD,	"LEX",		"LEX",
 		    "wszst LEX [source]...",
 		"For each archive the LEX sub file @course.lex@ is searched"
-		" and, if found, decoded and printed (copied to stdout)." },
+		" and, if found, decoded and printed (copied to stdout)."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"INFO",		"INFO",
 		    "wszst INFO [source]...",
 		"For each archive a file named @info.txt@ and, if not found,"
 		" @credits.txt@ is searched, ignoring case."
-		" The first found file of each archive is printed (copied to stdout)." },
+		" The first found file of each archive is printed (copied to stdout)."
+		" " WILDCARDS_SUBFILE },
 
   { H_DEF_CMD,	"GHOST",	"GHOSTS",
 		    "wszst GHOST [source]...",
-		"Analyse each file and print a summary about the ghost data." },
+		"Analyse each file and print a summary about the ghost data."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"YAZDUMP",	"YAZDUMP|YD",
 		    "wszst YAZDUMP [szs]...",
 		"Analyze YAZ compression and print a dump to stdout."
-		" Ignore files without YAZ compression." },
+		" Ignore files without YAZ compression."
+		" " WILDCARDS_PIPE },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -1326,9 +1371,27 @@
 		" FIX-CKNEXT, FIX-CKJGPT, FIX-CK, FIX-ALL,"
 		" MASK-PFLAGS, RM-LECODE, PURGE-GOBJ, FULL-DEFOBJ,"
 		" DUMP-CLASS, DUMP-ONEWAY, DUMP-ALL,"
-		" 1LAP ... 9LAPS, MAX-LAPS, RM-EMPTY,"
-		" TINY-0 ... TINY-7, INPLACE, SILENT@ and @LOG@."
+	#if MAX_STGI_LAPS > 9
+		" 1LAP .. 15LAPS, MAX-LAPS, RM-EMPTY,"
+	#else
+		" 1LAP .. 9LAPS, MAX-LAPS, RM-EMPTY,"
+	#endif
+		" TINY-0 .. TINY-7, INPLACE, SILENT@ and @LOG@."
 		"\1 See https://szs.wiimm.de/opt/kmp for details." },
+
+ #if MAX_STGI_LAPS > 9
+  { T_OPT_GP,	"N_LAPS",	"n-laps|nlaps",
+		"laps",
+		"If LAPS is a number between 1 and " CONVERT_TO_STRING(MAX_STGI_LAPS) ","
+		" then ignore laps settings of option {--kmp} (@1LAP@..@15LAPS@)"
+		" and patch KMP:STGI to this number of laps." },
+ #else
+  { H_OPT_GP,	"N_LAPS",	"n-laps|nlaps",
+		"laps",
+		"If LAPS is a number between 1 and " CONVERT_TO_STRING(MAX_STGI_LAPS) ","
+		" then ignore laps settings of option {--kmp} (@1LAP@..@9LAPS@)"
+		" and patch KMP:STGI to this number of laps." },
+ #endif
 
   { T_OPT_GP,	"SPEED_MOD",	"speed-mod|speedmod",
 		"factor",
@@ -1494,12 +1557,12 @@
 
   { T_OPT_G,	"LT_CLEAR",	"lt-clear|ltclear",
 		0,
-		"Clear the LEX/TEST section and remove the section and course.lex if empty."
+		"Clear LEX sections TEST and DEV1 and remove the section and course.lex if empty."
 		" This option is executed before all other --lt-* options." },
 
   { T_OPT_GP,	"LT_ONLINE",	"lt-online|ltonline",
 		"mode",
-		"Set LEX/TEST parameter OFFLINE-ONLINE to this MODE."
+		"Set LEX:TEST parameter OFFLINE-ONLINE to this MODE."
 		" MODE is one of @AUTO@ (default), @NEVER@ or @ALWAYS@."
 		" Only track.szs files are modified."
 		" If needed, file course.lex and section TEST"
@@ -1507,14 +1570,14 @@
 
   { T_OPT_GP,	"LT_N_PLAYERS",	"lt-n-players|lt-nplayers|ltnplayers",
 		"offline,online",
-		"Set LEX/TEST parameters N-OFFLINE and N-ONLINE to these integer values."
+		"Set LEX:TEST parameters N-OFFLINE and N-ONLINE to these integer values."
 		" Only track.szs files are modified."
 		" If needed, file course.lex and section TEST"
 		" are created or removed if empty." },
 
   { T_OPT_GP,	"LT_COND_BIT",	"lt-cond-bit|lt-condbit|ltcondbit",
 		"bitnum",
-		"Set LEX/TEST parameter COND-BIT to this integer value."
+		"Set LEX:TEST parameter COND-BIT to this integer value."
 		" Use -1 to deactivate this COND-BIT."
 		" Only track.szs files are modified."
 		" If needed, file course.lex and section TEST"
@@ -1522,7 +1585,7 @@
 
   { T_OPT_GP,	"LT_GAME_MODE",	"lt-game-mode|lt-gamemode|ltgamemode",
 		"mode",
-		"Set LEX/TEST parameter GAME-MODE to this MODE."
+		"Set LEX:TEST parameter GAME-MODE to this MODE."
 		" MODE is one of @AUTO@ (default), @BALLOON, COIN, VERSUS@ or @ITEMRAIN@."
 		" Only track.szs files are modified."
 		" If needed, file course.lex and section TEST"
@@ -1530,7 +1593,7 @@
 
   { T_OPT_GP,	"LT_ENGINE",	"lt-engine|ltengine",
 		"mode",
-		"Set LEX/TEST parameter ENGINE to this MODE."
+		"Set LEX:TEST parameter ENGINE to this MODE."
 		" MODE is one of @AUTO@ (default), @BATTLE, 50CC, 100CC, 150CC, 200CC,"
 		" 150M@ or @200M@. Only track.szs files are modified."
 		" If needed, file course.lex and section TEST"
@@ -1616,6 +1679,11 @@
 		"Patch language independent SZS files from directory .../Scene/UI/"
 		" to change the menu as required by LE-CODE"
 		" to be able to select tracks from more than 8 cups." },
+
+  { T_OPT_C,	"9LAPS",	"9laps",
+		0,
+		"Patch RACE*.szs files from directory .../Scene/UI/ to support 9 laps."
+		" See https://wiki.tockdom.com/wiki/Lap_Texture_Fix for details." },
 
   { T_OPT_CP,	"TITLE_SCREEN",	"title-screen|titlescreen",
 		"dir",
@@ -1724,7 +1792,11 @@
 		" This includes syntax information ({--no-header})."
 		" If set twice, the output of unneeded sections is also suppressed." },
 
-  { T_OPT_CM,	"IN_ORDER",	"in-order|inorder",
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0,
+		"Disable wildcard parsing and use each filename exactly as specified." },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
 		0,
 		"Process the input files in order of the command line"
 		" and don't delete duplicates." },
@@ -2558,6 +2630,11 @@
   { T_COPT,	"TRI_AREA",	0,0,0 },
   { T_COPT,	"TRI_HEIGHT",	0,0,0 },
   { T_COPT,	"KMP",		0,0,0 },
+ #if MAX_STGI_LAPS > 9
+  { T_COPT,	"N_LAPS",	0,0,0 },
+ #else
+  { H_COPT,	"N_LAPS",	0,0,0 },
+ #endif
   { T_COPT,	"SPEED_MOD",	0,0,0 },
   { T_COPT,	"KTPT2",	0,0,0 },
   { T_COPT,	"TFORM_KMP",	0,0,0 },
@@ -2580,6 +2657,7 @@
   { T_COPT,	"MACRO_BMG",	0,0,0 },
   { T_COPT,	"FILTER_BMG",	0,0,0 },
   { T_COPT,	"LE_MENU",	0,0,0 },
+  { T_COPT,	"9LAPS",	0,0,0 },
   { T_COPT,	"TITLE_SCREEN",	0,0,0 },
   { T_COPT,	"CUP_ICONS",	0,0,0 },
 
@@ -2713,6 +2791,8 @@
 
   { T_GRP_BEG,	"CREATE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE_SETUP",	0,0,0 },
   { T_COPY_GRP,	"FFORMAT2",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
@@ -2805,6 +2885,10 @@
 
   { T_CMD_BEG,	"INSTALL",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+
   //---------- COMMAND wszst ARGTEST ----------
 
   { T_CMD_BEG,	"ARGTEST",	0,0,0 },
@@ -2818,8 +2902,9 @@
   //---------- COMMAND wszst WILDCARDS ----------
 
   { T_CMD_BEG,	"WILDCARDS",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
   { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wszst TEST ----------
 
@@ -2857,21 +2942,24 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
   { T_COPT,	"NO_HEADER",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wszst UI_CHECK ----------
 
   { T_CMD_BEG,	"UI_CHECK",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print the result as technical list." },
   { T_COPT,	"NO_HEADER",	0,0,0 },
-  { T_COPT,	"IN_ORDER",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wszst FILEATTRIB ----------
 
@@ -2951,7 +3039,10 @@
 
   { T_CMD_BEG,	"AUTOADD",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"QUIET",	0,0,
 	" If set, suppress logging." },
   { T_COPT,	"VERBOSE",	0,0,
@@ -2989,6 +3080,7 @@
   //---------- COMMAND wszst SCANCACHE ----------
 
   { T_CMD_BEG,	"SCANCACHE",	0,0,0 },
+
   { T_COPT,	"CACHE",	0,0,0 },
   { T_COPT,	"LOG_CACHE",	0,0,0 },
   { T_COPT,	"PURGE",	0,0,0 },
@@ -3003,6 +3095,7 @@
   //---------- COMMAND wszst _SIZEOF ----------
 
   { T_CMD_BEG,	"SIZEOF",	0,0,0 },
+
   { T_COPT,	"SORT",		0,0,
 		"Define a sort mode. Keywords are:"
 		" @NONE@ (default), @NAME@ end @SIZE@." },
@@ -3015,6 +3108,9 @@
   //---------- COMMAND wszst _CODE ----------
 
   { T_CMD_BEG,	"CODE",	0,0,0 },
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wszst _RECODE ----------
 
@@ -3028,7 +3124,12 @@
   //---------- COMMAND wszst LIST ----------
 
   { T_CMD_BEG,	"LIST",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"RECURSE",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"EXT",		0,0,0 },
   { T_COPT,	"CUT",		0,0,0 },
   { T_COPT,	"ALL",		0,0,0 },
@@ -3038,9 +3139,7 @@
 	" If set three times, debugging mode is enabled." },
   { T_COPT,	"SORT",		0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,0 },
-  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPY_GRP,	"CREATE",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"NORM",		0,0,0 },
   { T_COPT,	"LINKS",	0,0,0 },
   { T_COPT,	"RM_AIPARAM",	0,0,0 },
@@ -3093,7 +3192,12 @@
   //---------- COMMAND wszst ILIST ----------
 
   { T_CMD_BEG,	"ILIST",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"RECURSE",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"ALL",		0,0,0 },
   { T_COPT_M,	"LONG",		0,0,
 	"If set, image width, height and size are printed."
@@ -3101,7 +3205,6 @@
   { T_COPT,	"SORT",		0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,0 },
   { T_COPY_GRP,	"CREATE",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"NORM",		0,0,0 },
   { T_COPT,	"LINKS",	0,0,0 },
 
@@ -3128,7 +3231,12 @@
   //---------- COMMAND wszst MEMORY ----------
 
   { T_CMD_BEG,	"MEMORY",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"RECURSE",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"EXT",		0,0,0 },
   { T_COPT,	"DECODE",	0,0,
 	"Decode binary files to find memory addresses of sections." },
@@ -3142,7 +3250,6 @@
 	"If set, print absolute offsets too." },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"CREATE",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"NORM",		0,0,0 },
   { T_COPT,	"LINKS",	0,0,0 },
   { T_COPT,	"RM_AIPARAM",	0,0,0 },
@@ -3156,15 +3263,24 @@
   //---------- COMMAND wszst DUMP ----------
 
   { T_CMD_BEG,	"DUMP",		0,0,0 },
-  { T_COPY_GRP,	"CREATE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"CREATE",	0,0,0 },
   { T_COPT,	"NORM",		0,0,0 },
   { T_COPT,	"LINKS",	0,0,0 },
 
   //---------- COMMAND wszst SHA1 ----------
 
   { T_CMD_BEG,	"SHA1",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"RECURSE",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NORM",		0,0,0 },
   { T_COPT,	"LINKS",	0,0,0 },
   { T_COPY_GRP,	"CREATE",	0,0,0 },
@@ -3190,9 +3306,13 @@
   //---------- COMMAND wszst ANALYZE ----------
 
   { T_CMD_BEG,	"ANALYZE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Append a list of special files with size, SHA1 and file name." },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"QUIET",	0,0,
 	"Suppress logging of input and output files." },
   { T_SEP_OPT,	0,0,0,0 },
@@ -3205,13 +3325,17 @@
   //---------- COMMAND wszst SPLIT ----------
 
   { T_CMD_BEG,	"SPLIT",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LOAD_PREFIX",	0,0,0 },
   { T_COPT,	"LOAD_CATEGORY",0,0,0 },
   { T_COPT,	"PLUS",		0,0,0 },
   { T_COPT,	"SPLIT",	0,0,0 },
   { T_COPT,	"PRINTF",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"SCRIPT",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
@@ -3221,7 +3345,11 @@
   //---------- COMMAND wszst IS_TEXTURE ----------
 
   { T_CMD_BEG,	"IS_TEXTURE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"REFERENCE",	0,0,0 },
   { T_COPT,	"BATTLE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
@@ -3230,6 +3358,11 @@
   //---------- COMMAND wszst FEATURES ----------
 
   { T_CMD_BEG,	"FEATURES",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
 	"Suppres comments at all."
 	" If set twice, suppress empty lines (for grouping) too."
@@ -3240,7 +3373,6 @@
 	" The letters used are:"
 	" @S@ (section), @V@ (visual impact), @B@ (battle impact), @R@ (racing impact),"
 	" @T@ (time trial impact), @L@ (local=offline impact) and @O@ (online impact)." },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"QUIET",	0,0,
 	"Suppress logging of input and output files." },
   { T_SEP_OPT,	0,0,0,0 },
@@ -3253,7 +3385,11 @@
   //---------- COMMAND wszst DISTRIBUTION ----------
 
   { T_CMD_BEG,	"DISTRIBUTION",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NORM",		0,0,0 },
   { T_COPT,	"LINKS",	0,0,0 },
   { T_COPY_GRP,	"CREATE",	0,0,0 },
@@ -3273,6 +3409,7 @@
   //---------- COMMAND wszst DIFF ----------
 
   { T_CMD_BEG,	"DIFF",		0,0,0 },
+
   { T_COPT,	"QUIET",	0,0,
 	"If set once, only a summary status for each section is printed."
 	" If set twice, only a total summary status is printed."
@@ -3286,9 +3423,13 @@
   //---------- COMMAND wszst CHECK ----------
 
   { T_CMD_BEG,	"CHECK",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,
 	"Don't check the KCL and KMP files." },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"COLORS",	0,0,0 },
   { T_COPT,	"NO_COLORS",	0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
@@ -3304,7 +3445,11 @@
   //---------- COMMAND wszst SLOTS ----------
 
   { T_CMD_BEG,	"SLOTS",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"BRIEF",	0,0,
 	"Print the slot list in a compressed form without spaces." },
   { T_COPY_GRP,	"CREATE",	0,0,0 },
@@ -3314,17 +3459,28 @@
   //---------- COMMAND wszst STGI ----------
 
   { T_CMD_BEG,	"STGI",		0,0,0 },
-  { T_COPT,	"COLORS",	0,0,0 },
-  { T_COPT,	"NO_COLORS",	0,0,0 },
-  { T_COPT,	"NO_HEADER",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,
 	"If set, ignore non existing source files"
 	" and files without KMP without warning."
 	" If set twice, ignore files with standard settings too." },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"COLORS",	0,0,0 },
+  { T_COPT,	"NO_COLORS",	0,0,0 },
+  { T_COPT,	"NO_HEADER",	0,0,0 },
 
-  //---------- COMMAND wszst ISARENA ----------
+  //---------- COMMAND wszst IS_ARENA ----------
 
-  { T_CMD_BEG,	"ISARENA",	0,0,0 },
+  { T_CMD_BEG,	"IS_ARENA",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,
+	"If set, ignore non existing source files"
+	" and files without KMP without warning." },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"COLORS",	0,0,0 },
   { T_COPT,	"NO_COLORS",	0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,0 },
@@ -3332,19 +3488,20 @@
 	"If set, suppress the output of header and filenames." },
   { T_COPT,	"QUIET",	0,0,
 	"If set, print nothing and set only the exit status." },
-  { T_COPT,	"IGNORE",	0,0,
-	"If set, ignore non existing source files"
-	" and files without KMP without warning." },
 
   //---------- COMMAND wszst NORMALIZE ----------
 
   { T_CMD_BEG,	"NORMALIZE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"REMOVE_SRC",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"FFORMAT1",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPY_GRP,	"NORM",		0,0,0 },
   { T_COPT,	"FAST",		0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
@@ -3353,13 +3510,17 @@
   //---------- COMMAND wszst PATCH ----------
 
   { T_CMD_BEG,	"PATCH",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"REMOVE_SRC",	0,0,0 },
   { T_COPT,	"NO_COPY",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"FFORMAT1",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"COMPRESS",	0,0,0 },
   { T_COPY_GRP,	"NORM",		0,0,0 },
   { T_COPT,	"FAST",		0,0,0 },
@@ -3380,12 +3541,16 @@
   //---------- COMMAND wszst MINIMAP ----------
 
   { T_CMD_BEG,	"MINIMAP",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LONG",		0,0,
 		"If set, print the matrices too."
 		" If set twice, print minimum and maximum values too." },
   { T_COPT,	"REMOVE_DEST",	0,0,0 },
   { T_COPT,	"PRESERVE",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"COMPRESS",	0,0,0 },
   { T_COPY_GRP,	"NORM",		0,0,0 },
   { T_COPT,	"FAST",		0,0,0 },
@@ -3408,12 +3573,16 @@
   //---------- COMMAND wszst COMPRESS ----------
 
   { T_CMD_BEG,	"COMPRESS",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"REMOVE_SRC",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"FFORMAT1",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"COMPRESS",	0,0,0 },
   { T_COPY_GRP,	"NORM",		0,0,0 },
   { T_COPT,	"FAST",		0,0,0 },
@@ -3423,12 +3592,16 @@
   //---------- COMMAND wszst DECOMPRESS ----------
 
   { T_CMD_BEG,	"DECOMPRESS",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"REMOVE_SRC",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"U8",		0,0,0 },
   { T_COPT,	"WU8",		0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPY_GRP,	"NORM",		0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM2",	0,0,0 },
@@ -3436,6 +3609,11 @@
   //---------- COMMAND wszst ENCODE ----------
 
   { T_CMD_BEG,	"ENCODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"IGNORE_SETUP",	0,0,0 },
   { T_COPY_GRP,	"ALIGN",	0,0,0 },
   { T_COPT,	"LOGGING",	0,0,0 },
@@ -3455,6 +3633,11 @@
   //---------- COMMAND wszst CREATE ----------
 
   { T_CMD_BEG,	"CREATE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"CREATE",	0,0,0 },
   { T_COPT,	"NO_COMPRESS",	0,0,0 },
@@ -3466,8 +3649,12 @@
   //---------- COMMAND wszst UPDATE ----------
 
   { T_CMD_BEG,	"UPDATE",	0,0,0 },
-  { T_COPT,	"SOURCE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"SOURCE",	0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"ESC",		0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
@@ -3483,9 +3670,13 @@
   //---------- COMMAND wszst EXTRACT ----------
 
   { T_CMD_BEG,	"EXTRACT",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"EXTRACT",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { H_COPT,	"ANALYZE",	0,0,0 },
   { H_COPT,	"ANALYZE_MODE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
@@ -3509,21 +3700,33 @@
   //---------- COMMAND wszst XCOMMON ----------
 
   { T_CMD_BEG,	"XCOMMON",	0,0,0 },
-  { T_COPY_GRP,	"DEST",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"DEST",		0,0,0 },
 
   //---------- COMMAND wszst BINARY ----------
 
   { T_CMD_BEG,	"BINARY",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"KMG_LIMIT",	0,0,0 },
   { T_COPT,	"KMG_COPY",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
 
   //---------- COMMAND wszst TEXT ----------
 
   { T_CMD_BEG,	"TEXT",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"DECODE",	0,0,0 },
   { T_COPT,	"KMG_LIMIT",	0,0,0 },
   { T_COPT,	"KMG_COPY",	0,0,0 },
@@ -3535,7 +3738,11 @@
   //---------- COMMAND wszst CAT ----------
 
   { T_CMD_BEG,	"CAT",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"DECODE",	0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPY_GRP,	"BMG",		0,0,0 },
@@ -3543,7 +3750,11 @@
   //---------- COMMAND wszst BMG ----------
 
   { T_CMD_BEG,	"BMG",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0, NO_HEAD_SYNTAX },
   { T_COPT,	"BRIEF",	0,0,0 },
   { T_COPY_GRP,	"BMG",		0,0,0 },
@@ -3551,7 +3762,11 @@
   //---------- COMMAND wszst KCL ----------
 
   { T_CMD_BEG,	"KCL",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0, NO_HEAD_SYNTAX },
   { T_COPT,	"BRIEF",	0,0,0 },
   { T_COPT,	"NO_PARAM",	0,0,0 },
@@ -3562,7 +3777,11 @@
   //---------- COMMAND wszst KMP ----------
 
   { T_CMD_BEG,	"KMP",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0, NO_HEAD_SYNTAX },
   { T_COPT,	"BRIEF",	0,0,0 },
   { T_COPT,	"EXPORT",	0,0,0 },
@@ -3574,7 +3793,11 @@
   //---------- COMMAND wszst LEX ----------
 
   { T_CMD_BEG,	"LEX",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0, NO_HEAD_SYNTAX },
   { T_COPT,	"BRIEF",	0,0,0 },
   { T_COPT,	"EXPORT",	0,0,0 },
@@ -3582,6 +3805,9 @@
   //---------- COMMAND wszst INFO ----------
 
   { T_CMD_BEG,	"INFO",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,
 	"Suppress output of the printed filename." },
@@ -3589,7 +3815,11 @@
   //---------- COMMAND wszst GHOST ----------
 
   { T_CMD_BEG,	"GHOST",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"NO_HEADER",	0,0,
 	"Suppress output of the printed filename." },
   { T_SEP_OPT,	0,0,0,0 },
@@ -3601,11 +3831,17 @@
   //---------- COMMAND wszst YAZDUMP ----------
 
   { T_CMD_BEG,	"YAZDUMP",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
 
   //---------- COMMAND wszst VEHICLE ----------
 
   { T_CMD_BEG,	"VEHICLE",	0,0,0 },
+
   { T_COPT,	"SOURCE",	0,0,
 		"Load the file instead of using the internal base." },
   { T_COPT,	"DEST",		0,0,

@@ -96,18 +96,21 @@
 
   { T_DEF_CMD,	"LIST",		"LIST|LS",
 		    "wimgt LIST [source]...",
-		"List images files and print file and image type." },
+		"List images files and print file and image type."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LIST_L",	"LIST-L|LL|LISTL",
 		    "wit LIST-L [source]...",
 		"List images files and print file and image type"
 		" and geometry data."
+		" " WILDCARDS_PIPE
 		" 'LIST-L' is a short cut for {LIST --long}." },
 
   { T_DEF_CMD,	"LIST_LL",	"LIST-LL|LLL|LISTLL",
 		    "wit LIST-LL [source]...",
 		"List images files and print file and image type"
 		" and advanced geometry data."
+		" " WILDCARDS_PIPE
 		" 'LIST-LL' is a short cut for {LIST --long --long}." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
@@ -115,19 +118,22 @@
   { T_DEF_CMD,	"DECODE",	"DECODE|DEC",
 		    "wimgt DECODE [source]...",
 		"Decode (export) the entered image files into PNG files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%F.png'@."
 		" " GENERIC_IMAGE("SOURCE") },
 
   { T_DEF_CMD,	"ENCODE",	"ENCODE|ENC",
 		    "wimgt ENCODE [source]...",
 		"Encode (import) the entered PNG files and convert them to"
-		" to an internal image format (TPL, TEX, BREFT)."
+		" to an internal image format (TPL, TEX, BREFT, ...)."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N'@ (removed extension)."
 		" " GENERIC_IMAGE("SOURCE") },
 
   { T_DEF_CMD,	"CONVERT",	"CONVERT|CV",
 		    "wimgt CONVERT [source]...",
 		"Convert the entered image files into new file and image formats."
+		" " WILDCARDS_PIPE
 		" The old file is replaced by the new one."
 		" The difference to {ENCODE} is only the default file name handling."
 		" " GENERIC_IMAGE("SOURCE") },
@@ -138,6 +144,7 @@
 		"Copy and convert an image from 'source' to 'dest'."
 		" Multiple sources can be used, if 'dest' is a directory"
 		" or contains at least one %-pattern."
+		" " WILDCARDS_PIPE
 		"\n "
 		" This is an alternative for the ENCODE and DECODE commands."
 		" The default destination file format is selected by scanning the"
@@ -231,6 +238,12 @@
   { T_OPT_C,	"BRIEF",	"B|brief",
 		0,
 		"Create smaller output." },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
+		0, 0 /* copy of wszst */ },
 
   { T_OPT_GP,	"MAX_FILE_SIZE","M|max-file-size|maxfilesize",
 		0,
@@ -478,10 +491,12 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wimgt FILEATTRIB ----------
 
@@ -492,11 +507,15 @@
   //---------- COMMAND wimgt LIST ----------
 
   { T_CMD_BEG,	"LIST",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT_M,	"LONG",		0,0,
 	"If set, geometry data of the image is printed."
 	" If set twice, advanced geometry data is printed." },
   { T_COPT,	"NO_HEADER",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wszst LIST-L ----------
 
@@ -511,15 +530,23 @@
   //---------- COMMAND wimgt DECODE ----------
 
   { T_CMD_BEG,	"DECODE",	0,0,0 },
-  { T_COPY_GRP,	"DEST",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wimgt ENCODE ----------
 
   { T_CMD_BEG,	"ENCODE",	0,0,0 },
-  { T_COPY_GRP,	"DEST",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"ALL",		0,0,
 	"If source and destination file are the same,"
 	" the file is only written on modifications (transform, patch, ...)."

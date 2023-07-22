@@ -530,15 +530,23 @@ static const KeywordTab_t opt_kmp_tab[] =
   { KMPMD_SP_WIDE,	"WIDE",		0,		KMPMD_M_STARTPOS },
   { KMPMD_SP_NARROW,	"NARROW",	0,		KMPMD_M_STARTPOS },
 
-  { KMPMD_1_LAP,	"1LAPS",	"L1",		KMPMD_M_LAPS },
-  { KMPMD_2_LAPS,	"2LAPS",	"L2",		KMPMD_M_LAPS },
-  { KMPMD_3_LAPS,	"3LAPS",	"L3",		KMPMD_M_LAPS },
-  { KMPMD_4_LAPS,	"4LAPS",	"L4",		KMPMD_M_LAPS },
-  { KMPMD_5_LAPS,	"5LAPS",	"L5",		KMPMD_M_LAPS },
-  { KMPMD_6_LAPS,	"6LAPS",	"L6",		KMPMD_M_LAPS },
-  { KMPMD_7_LAPS,	"7LAPS",	"L7",		KMPMD_M_LAPS },
-  { KMPMD_8_LAPS,	"8LAPS",	"L8",		KMPMD_M_LAPS },
-  { KMPMD_9_LAPS,	"9LAPS",	"L9",		KMPMD_M_LAPS },
+  { KMPMD_01_LAP,	"1LAPS",	"L1",		KMPMD_M_LAPS },
+  { KMPMD_02_LAPS,	"2LAPS",	"L2",		KMPMD_M_LAPS },
+  { KMPMD_03_LAPS,	"3LAPS",	"L3",		KMPMD_M_LAPS },
+  { KMPMD_04_LAPS,	"4LAPS",	"L4",		KMPMD_M_LAPS },
+  { KMPMD_05_LAPS,	"5LAPS",	"L5",		KMPMD_M_LAPS },
+  { KMPMD_06_LAPS,	"6LAPS",	"L6",		KMPMD_M_LAPS },
+  { KMPMD_07_LAPS,	"7LAPS",	"L7",		KMPMD_M_LAPS },
+  { KMPMD_08_LAPS,	"8LAPS",	"L8",		KMPMD_M_LAPS },
+  { KMPMD_09_LAPS,	"9LAPS",	"L9",		KMPMD_M_LAPS },
+ #if MAX_STGI_LAPS > 9
+  { KMPMD_10_LAPS,	"10LAPS",	"L10",		KMPMD_M_LAPS },
+  { KMPMD_11_LAPS,	"11LAPS",	"L11",		KMPMD_M_LAPS },
+  { KMPMD_12_LAPS,	"12LAPS",	"L12",		KMPMD_M_LAPS },
+  { KMPMD_13_LAPS,	"13LAPS",	"L13",		KMPMD_M_LAPS },
+  { KMPMD_14_LAPS,	"14LAPS",	"L14",		KMPMD_M_LAPS },
+  { KMPMD_15_LAPS,	"15LAPS",	"L15",		KMPMD_M_LAPS },
+ #endif
   { KMPMD_MAX_LAPS,	"MAX-LAPS",	"MAXLAPS",	0 },
 
   { KMPMD_FIX_CKPH,	"FIX-CKPH",	"FIXCKPH",	0 },
@@ -624,6 +632,43 @@ int ScanOptKmp ( ccp arg )
 	return 0;
     }
     return 1;
+}
+
+//-----------------------------------------------------------------------------
+
+int opt_n_laps = 0;
+
+int ScanOptNLaps ( ccp arg )
+{
+    if (!arg)
+	return 0;
+
+    ScanInfo_t si;
+    InitializeSI(&si,arg,strlen(arg),"Option --n-laps",0);
+    si.float_div++;
+
+    DEFINE_VAR(temp);
+    enumError err = ScanExprSI(&si,&temp);
+    const int n_laps = GetIntV(&temp);
+    CheckEolSI(&si);
+    ResetSI(&si);
+
+    if ( n_laps <= MAX_STGI_LAPS )
+    {
+	if (opt_n_laps)
+	    have_patch_count--, have_kmp_patch_count--;
+
+	if ( n_laps <= 0 )
+	    opt_n_laps = 0;
+	else
+	{
+	    opt_n_laps = n_laps;
+	    have_patch_count++;
+	    have_kmp_patch_count++;
+	}
+    }
+
+    return err != ERR_OK;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4781,12 +4826,13 @@ bool PatchKMP
 
     //--- KMPMD_POLE_LEFT, KMPMD_POLE_RIGHT, KMPMD_SP_WIDE, KMPMD_SP_NARROW, KMPMD_*_LAPS
 
-    if ( KMP_MODE & KMPMD_M_STGI || speed_mod_active )
+    if ( KMP_MODE & KMPMD_M_STGI || speed_mod_active || opt_n_laps )
     {
 	int n = kmp->dlist[KMP_STGI].used;
 	kmp_stgi_entry_t * stgi = (kmp_stgi_entry_t*)kmp->dlist[KMP_STGI].list;
 
-	const uint new_lap_count = ( KMP_MODE & KMPMD_M_LAPS ) >> KMPMD_SHIFT_LAPS;
+	const uint new_lap_count = opt_n_laps
+			? opt_n_laps : ( KMP_MODE & KMPMD_M_LAPS ) >> KMPMD_SHIFT_LAPS;
 	const uint max_lap_count = KMP_MODE & KMPMD_MAX_LAPS ? new_lap_count : 0;
 	bool laps_modified   = false;
 	ccp  pole_modified   = 0;
@@ -7709,11 +7755,13 @@ enumError cmd_stgi()
 		79, Minus300 );
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,"/course.kmp",opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,"/course.kmp",opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -7796,12 +7844,13 @@ enumError cmd_stgi()
 	printf(" %s%3u%s : %s\n",
 		    lap_count == 1 ? "" : colout->hint,
 		    lap_count, colout->reset,
-		    param->arg );
+		    arg );
 	ResetKMP(&kmp);
     }
     if (print_header)
 	printf( "%.*s\n\n", 79, Minus300 );
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return max_err;
 }
@@ -7826,11 +7875,13 @@ enumError cmd_ktpt()
     InitializeKMP(&kmp);
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,"/course.kmp",opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,"/course.kmp",opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -7860,10 +7911,10 @@ enumError cmd_ktpt()
 	    {
 		if (kf.ckpt<0)
 		    ERROR0(ERR_WARNING,
-			"No relevant lap counter (CKPT) found: %s\n",param->arg);
+			"No relevant lap counter (CKPT) found: %s\n",arg);
 		else if (kf.ktpt<0)
 		    ERROR0(ERR_WARNING,
-			"No relevant start points (KTPT) found: %s\n",param->arg);
+			"No relevant start points (KTPT) found: %s\n",arg);
 	    }
 	    continue;
 	}
@@ -7873,7 +7924,7 @@ enumError cmd_ktpt()
 		"Number of lap counters (CKPT):  %3u, relevant #%u\n"
 		"Relevant start point (pos/dir):%13.3f %11.3f %11.3f /%8.2f°\n"
 		,colout->caption
-		,param->arg
+		,arg
 		,colout->reset
 		,kf.n_ktpt_m, kf.ktpt
 		,kf.n_ckpt_0, kf.ckpt
@@ -7995,6 +8046,7 @@ enumError cmd_ktpt()
 	putchar('\n');
     }
 
+    ResetStringField(&plist);
     ResetKMP(&kmp);
     ResetRawData(&raw);
     return max_err;

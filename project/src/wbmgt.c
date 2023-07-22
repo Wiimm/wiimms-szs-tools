@@ -359,12 +359,14 @@ static enumError cmd_sections()
 
     enumError max_err = ERR_OK;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
-    {
-	NORMALIZE_FILENAME_PARAM(param);
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
 
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+    for ( int argi = 0; argi < plist.used; argi++ )
+    {
+	ccp arg = plist.field[argi];
+
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if (err)
 	    return err;
 
@@ -406,7 +408,7 @@ static enumError cmd_sections()
 		"%s     hex     hex    size size magic size   *size  cut  info\n"
 		"%s%.*s%s\n"
 		,
-		colout->heading, param->arg,
+		colout->heading, arg,
 		colout->heading, sl->source_size, sl->source_size,
 			sl->endian->is_be ? " BE" : sl->endian->is_le ? " LE" : "",
 			sl->n_sections, sl->header->encoding,
@@ -453,6 +455,7 @@ static enumError cmd_sections()
 	FREE((void*)sl);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     putchar('\n');
     return max_err;
@@ -470,13 +473,15 @@ static enumError cmd_list()
     if ( err > ERR_WARNING )
 	return err;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	bmg_t bmg;
-	enumError err = LoadXBMG(&bmg,true,param->arg,true,opt_ignore>0);
+	enumError err = LoadXBMG(&bmg,true,arg,true,opt_ignore>0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -514,6 +519,7 @@ static enumError cmd_list()
 	ResetBMG(&bmg);
     }
 
+    ResetStringField(&plist);
     ResetPatchingListBMG();
     return ERR_OK;
 }
@@ -529,13 +535,15 @@ static enumError cmd_slots()
     if ( err > ERR_WARNING )
 	return err;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	bmg_t bmg;
-	enumError err = LoadXBMG(&bmg,true,param->arg,true,opt_ignore>0);
+	enumError err = LoadXBMG(&bmg,true,arg,true,opt_ignore>0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -558,7 +566,7 @@ static enumError cmd_slots()
 		"%sslot/hex  mid/hex   delta  attributes\n"
 		"%s%.*s%s\n"
 		,
-		colout->heading, GetNameFF_BMG(&bmg), param->arg,
+		colout->heading, GetNameFF_BMG(&bmg), arg,
 		colout->heading, seplen, ThinLine300_3,
 		colout->heading,
 		colout->heading, seplen, ThinLine300_3,
@@ -588,6 +596,7 @@ static enumError cmd_slots()
     }
 
     putchar('\n');
+    ResetStringField(&plist);
     ResetPatchingListBMG();
     return ERR_OK;
 }
@@ -691,13 +700,15 @@ static enumError cmd_patch ( int cmd_id, ccp cmd_name, ccp def_path )
     if ( err > ERR_WARNING )
 	return err;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	bmg_t bmg;
-	enumError err = LoadXBMG(&bmg,true,param->arg,cmd_id!=CMD_PATCH,opt_ignore>0);
+	enumError err = LoadXBMG(&bmg,true,arg,cmd_id!=CMD_PATCH,opt_ignore>0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -709,7 +720,7 @@ static enumError cmd_patch ( int cmd_id, ccp cmd_name, ccp def_path )
 			? FF_BMG
 			: FF_BMG_TXT;
 
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(dest_ff,0),false);
 
 	if ( verbose >= 0 || testmode )
@@ -734,6 +745,7 @@ static enumError cmd_patch ( int cmd_id, ccp cmd_name, ccp def_path )
 	ResetBMG(&bmg);
     }
 
+    ResetStringField(&plist);
     ResetPatchingListBMG();
     return ERR_OK;
 }
@@ -823,6 +835,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_LONG:		long_count++; break;
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_BRIEF:		brief_count++; break;
+	case GO_NO_WILDCARDS:	no_wildcards_count++; break;
+	case GO_IN_ORDER:	inorder_count++; break;
 
 	case GO_BMG_ENDIAN:	err += ScanOptBmgEndian(optarg); break;
 	case GO_BMG_ENCODING:	err += ScanOptBmgEncoding(optarg); break;

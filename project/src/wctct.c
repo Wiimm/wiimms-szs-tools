@@ -252,11 +252,13 @@ static enumError cmd_dump()
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -274,6 +276,7 @@ static enumError cmd_dump()
 	ResetCTCODE(&ctcode);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -289,12 +292,13 @@ static enumError cmd_cat ( uint cmd ) // cmd_bmg() cmd_tracks()
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    enumError cmd_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -335,8 +339,9 @@ static enumError cmd_cat ( uint cmd ) // cmd_bmg() cmd_tracks()
 	ResetCTCODE(&ctcode);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
-    return cmd_err;
+    return ERR_OK;
 }
 
 //
@@ -352,18 +357,20 @@ static enumError cmd_decode()
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
 	    return err;
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(FF_CTDEF,0),false);
 
 	if ( verbose >= 0 || testmode )
@@ -390,6 +397,7 @@ static enumError cmd_decode()
 	ResetCTCODE(&ctcode);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -600,17 +608,20 @@ static enumError cmd_create()
 
     //--- file loop
 
-    for ( ; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,FF_CTDEF);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,FF_CTDEF);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
 	    return err;
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(dest_ff1,dest_ff2),false);
 
 	if ( verbose >= 0 || testmode )
@@ -637,6 +648,7 @@ static enumError cmd_create()
 	ResetCTCODE(&ctcode);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -654,11 +666,13 @@ static enumError cmd_patch()
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -666,9 +680,9 @@ static enumError cmd_patch()
 
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(raw.fform_file,raw.fform),false);
-	const bool dest_is_source = !strcmp(dest,param->arg);
+	const bool dest_is_source = !strcmp(dest,arg);
 
 	if ( verbose >= 0 || testmode )
 	{
@@ -711,6 +725,7 @@ static enumError cmd_patch()
 	ResetCTCODE(&ctcode);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -820,6 +835,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_LONG:		long_count++; break;
 	case GO_NO_HEADER:	print_header = output_mode.syntax = false; break;
 	case GO_BRIEF:		brief_count++; output_mode.cross_ref = false; break;
+	case GO_NO_WILDCARDS:	no_wildcards_count++; break;
+	case GO_IN_ORDER:	inorder_count++; break;
 	case GO_RAW:		raw_mode = true; break;
 	case GO_EXPORT:
 		export_count++;

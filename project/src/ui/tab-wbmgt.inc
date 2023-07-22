@@ -115,18 +115,21 @@
 		    "wbmgt SECTIONS [source]...",
 		"List all sections of each binary BMG file."
 		" Print offset, size, magic and a short info."
-		" If known, print number and size of elements too." },
+		" If known, print number and size of elements too."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LIST",		"LIST|LS|LL",
 		    "wbmgt LIST [source]...",
 		"List messages to proof the content."
 		" Patches are applied before listing."
-		" The lines are cut to fit the terminal width." },
+		" The lines are cut to fit the terminal width."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"SLOTS",	"SLOTS",
 		    "wbmgt SLOTS [source]...",
 		"Print a slot ordered list with slot number, message id,"
-		" delta and attributes. Patches are applied before listing." },
+		" delta and attributes. Patches are applied before listing."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"DIFF",		"DIFF|CMP",
 		    "wbmgt DIFF source1 source2\n"
@@ -144,7 +147,8 @@
 		"Read the entered BMG files (text, binary or szs sub file) and print"
 		" them as decoded text files to standard output."
 		" All BMG files of a single archive (SZS,...) are combined to 1 source."
-		" The output of all source files is concatenated." },
+		" The output of all source files is concatenated."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"MIX",		"MIX",
 		    "wbmgt MIX [source]...",
@@ -152,7 +156,8 @@
 		" them as decoded text files to standard output."
 		" All BMG files of all archives (SZS,...) are read."
 		" The output of all source files is combined"
-		" and strings of later source files override prior defined strings." },
+		" and strings of later source files override prior defined strings."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"IDENTIFIER",	"IDENTIFIER|ID|IDENTIFY",
 		    "wbmgt IDENTIFIER",
@@ -166,7 +171,8 @@
 		" All BMG files of a single archive (SZS,...) are concatenated to 1 source."
 		" This command is similar to {PATCH},"
 		" but the result is always decoded."
-		" The default destination is @'%P/%N.txt'@." },
+		" The default destination is @'%P/%N.txt'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"ENCODE",	"ENCODE|ENC",
 		    "wbmgt ENCODE [source]...",
@@ -174,7 +180,8 @@
 		" All BMG files of a single archive (SZS,...) are concatenated to 1 source."
 		" This command is similar to {PATCH},"
 		" but the result is always encoded."
-		" The default destination is @'%P/%N.bmg'@." },
+		" The default destination is @'%P/%N.bmg'@."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"PATCH",	"PATCH|PAT",
 		    "wbmgt PATCH [source]...",
@@ -182,8 +189,9 @@
 		" specified by option {--patch-bmg}."
 		" The coding of the source files is not changed."
 		" The default destination is @'%P/%F'@."
+		" " WILDCARDS_PIPE
 		"\n "
-		" Use {wszst patch --patch-bmg ...} to patch BMG files within a SZS file."},
+		" Use {wszst patch --patch-bmg ...} to patch BMG files within a SZS file." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
 
@@ -269,6 +277,12 @@
 
   { T_OPT_C,	"BRIEF",	"B|brief",
 		0, BMG_BRIEF_TEXT },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
+		0, 0 /* copy of wszst */ },
 
   { T_OPT_GP,	"MAX_FILE_SIZE","M|max-file-size|maxfilesize",
 		0,
@@ -524,10 +538,13 @@
   //---------- COMMAND wbmgt FILETYPE ----------
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wbmgt FILEATTRIB ----------
 
@@ -557,12 +574,19 @@
   //---------- COMMAND wbmgt SECTIONS ----------
 
   { T_CMD_BEG,	"SECTIONS",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wbmgt LIST ----------
 
   { T_CMD_BEG,	"LIST",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"WIDTH",	0,0,0 },
   { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_COPT,	"PATCH_BMG",	0,0,0 },
@@ -572,7 +596,11 @@
   //---------- COMMAND wbmgt SLOTS ----------
 
   { T_CMD_BEG,	"SLOTS",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"WIDTH",	0,0,0 },
   { T_COPT,	"MAX_WIDTH",	0,0,0 },
   { T_COPT,	"PATCH_BMG",	0,0,0 },
@@ -593,8 +621,12 @@
   //---------- COMMAND wbmgt CAT ----------
 
   { T_CMD_BEG,	"CAT",		0,0,0 },
-  { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"PATCH_BMG",	0,0,0 },
   { T_COPT,	"MACRO_BMG",	0,0,0 },
   { T_COPT,	"FILTER_BMG",	0,0,0 },
@@ -602,11 +634,13 @@
   //---------- COMMAND wbmgt MIX ----------
 
   { T_CMD_BEG,	"MIX",		0,0,0 },
+
   { T_COPY_CMD,	"CAT",		0,0,0 },
 
   //---------- COMMAND wbmgt IDENTIFIER ----------
 
   { T_CMD_BEG,	"IDENTIFIER",	0,0,0 },
+
   { T_COPT,	"LE_CODE",	0,0,0 },
   { T_COPT,	"CT_CODE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
@@ -615,9 +649,13 @@
   //---------- COMMAND wbmgt DECODE ----------
 
   { T_CMD_BEG,	"DECODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"PATCH_BMG",	0,0,0 },
   { T_COPT,	"MACRO_BMG",	0,0,0 },
   { T_COPT,	"FILTER_BMG",	0,0,0 },
@@ -625,6 +663,11 @@
   //---------- COMMAND wbmgt ENCODE ----------
 
   { T_CMD_BEG,	"ENCODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"BMG_ENDIAN",	0,0,0 },
@@ -632,7 +675,6 @@
   { T_COPT,	"BMG_INF_SIZE",	0,0,0 },
   { T_COPT,	"BMG_MID",	0,0,0 },
   { T_COPT,	"FORCE_ATTRIB",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"PATCH_BMG",	0,0,0 },
   { T_COPT,	"MACRO_BMG",	0,0,0 },
   { T_COPT,	"FILTER_BMG",	0,0,0 },
@@ -641,9 +683,13 @@
   //---------- COMMAND wbmgt PATCH ----------
 
   { T_CMD_BEG,	"PATCH",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"PATCH_BMG",	0,0,0 },
   { T_COPT,	"MACRO_BMG",	0,0,0 },
   { T_COPT,	"FILTER_BMG",	0,0,0 },

@@ -507,6 +507,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(have_lex_info_t)
 	SIZEOF_INFO_ENTRY(lex_header_t)
 	SIZEOF_INFO_ENTRY(lex_element_t)
+	SIZEOF_INFO_ENTRY(lex_dev1_t)
 	SIZEOF_INFO_ENTRY(lex_set1_t)
 	SIZEOF_INFO_ENTRY(lex_hipt_rule_t)
 	SIZEOF_INFO_ENTRY(lex_ritp_rule_t)
@@ -673,6 +674,8 @@ static enumError cmd_test_options()
     if (speed_mod_active)
 	printf("  kmp speed modifier:      %04x ~ %5.3f\n",
 		speed_mod_val, speed_mod_factor );
+    if (opt_n_laps)
+	printf("  kmp:stgi laps:%15x = %12d\n",opt_n_laps,opt_n_laps);
     printf("  mdl modes:   %16x = \"%s\"\n",MDL_MODE,GetMdlMode());
     printf("  pat modes:   %16x = \"%s\"\n",PAT_MODE,GetPatMode());
 
@@ -808,7 +811,7 @@ enumError cmd_ui_check()
     SetupPager();
 
     StringField_t plist = {0};
-    CollectExpandParam(&plist,first_param,-1,0);
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
 
     const bool have_dump = long_count >= 1;
     const bool have_header = !have_dump && !brief_count && print_header;
@@ -824,8 +827,8 @@ enumError cmd_ui_check()
 	    if ( fw_file < fw )
 		 fw_file = fw;
 	}
-	sep_len = ( fw_file + 21 ) * 3;
-	printf("\n%s Type       Korean  File\n%s%.*s%s\n",
+	sep_len = ( fw_file + 23 ) * 3;
+	printf("\n%s Type       L Korean  File\n%s%.*s%s\n",
 		colset->heading, colset->heading, sep_len, ThinLine300_3, colset->reset );
     }
 
@@ -859,7 +862,7 @@ enumError cmd_ui_check()
 		putchar( uc.possible & mask ? ui_type_char[t] : '-');
 	    }
 
-	    printf(" %c %6lluµs  %s\n",ui_type_char[uc.type],dur,arg);
+	    printf(" %c%c %6lluµs  %s\n",ui_type_char[uc.ui_type],uc.ui_lang,dur,arg);
 	}
 	else
 	{
@@ -867,9 +870,9 @@ enumError cmd_ui_check()
 	    UiCheck(&uc,&szs);
 
 	    ccp col = GetUiTypeColor(colout,uc.type);
-	    printf("%s %-10s %-6s  %s%s\n",
+	    printf("%s %-10s %c %-6s  %s%s\n",
 		col,
-		ui_type_name[uc.type],
+		ui_type_name[uc.ui_type], uc.ui_lang,
 		uc.is_korean > OFFON_AUTO ? "Korean" : "-",
 		arg, *col ? colout->reset : "" );
 	}
@@ -1126,13 +1129,15 @@ static enumError cmd_autoadd()
     //--- iterate parameters
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	if (!ExistDirectory(param->arg,0))
+	ccp arg = plist.field[argi];
+	if (!ExistDirectory(arg,0))
 	{
-	    enumError err = exec_autoadd(&used,param->arg);
+	    enumError err = exec_autoadd(&used,arg);
 	    if ( max_err < err )
 		max_err = err;
 	}
@@ -1141,10 +1146,12 @@ static enumError cmd_autoadd()
 	    const DbFileSZS_t *db;
 	    for ( db = DbFileSZS; db->szs_name; db++ )
 		if ( (db->type & (FLT_OLD|FLT_STD)) == FLT_STD )
-		    find_autoadd( &used, param->arg, db->szs_name,
+		    find_autoadd( &used, arg, db->szs_name,
 					db->idx < 0 ? 0 : db->id+1 );
 	}
     }
+
+    ResetStringField(&plist);
 
 
     //--- print missing list
@@ -1378,14 +1385,17 @@ static enumError cmd_code()
     if (!n_param)
 	AddParam("-");
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
+
 	if (verbose)
-	    fprintf(stderr,"CODE %s\n",param->arg);
+	    fprintf(stderr,"CODE %s\n",arg);
 	File_t F;
-	if (!OpenFILE(&F,true,param->arg,false,true))
+	if (!OpenFILE(&F,true,arg,false,true))
 	{
 	    while ( !feof(F.f) && !ferror(F.f) )
 	    {
@@ -1398,6 +1408,8 @@ static enumError cmd_code()
 	}
 	ResetFile(&F,false);
     }
+
+    ResetStringField(&plist);
     return ERR_OK;
 }
 
@@ -1743,15 +1755,17 @@ enumError cmd_brsub()
     szs_file_t szs;
     InitializeSZS(&szs);
     uint line_count = 0;
-
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	ResetSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
@@ -1765,7 +1779,7 @@ enumError cmd_brsub()
 	cb.szs    = &szs;
 	cb.mode   = long_count;
 	cb.sep_fw = 3*99;
-	IterateFilesParSZS(&szs,check_brsub,&cb,false,false,-1,-1,SORT_NONE);
+	IterateFilesParSZS(&szs,check_brsub,&cb,false,false,false,-1,-1,SORT_NONE);
 	line_count += cb.line_count;
 
 	if ( print_header && cb.header_printed )
@@ -1778,6 +1792,8 @@ enumError cmd_brsub()
 
     if (line_count)
 	putchar('\n');
+
+    ResetStringField(&plist);
     ResetSZS(&szs);
     return max_err;
 }
@@ -1867,7 +1883,7 @@ static enumError cmd_list ( int long_level )
     }
 
     StringField_t plist = {0};
-    CollectExpandParam(&plist,first_param,-1,0);
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
 
     for ( int argi = 0; argi < plist.used; argi++ )
     {
@@ -1924,9 +1940,9 @@ static enumError cmd_list ( int long_level )
 	}
 
 	if ( long_count > 2 )
-	    IterateFilesParSZS(&szs,PrintFileSZS,0,false,true,opt_recurse,opt_cut,opt_sort);
+	    IterateFilesParSZS(&szs,PrintFileSZS,0,false,true,false,opt_recurse,opt_cut,opt_sort);
 	else
-	    IterateFilesParSZS(&szs,list_func,0,false,false,opt_recurse,opt_cut,opt_sort);
+	    IterateFilesParSZS(&szs,list_func,0,false,false,false,opt_recurse,opt_cut,opt_sort);
 
 	if (print_header)
 	{
@@ -1938,6 +1954,7 @@ static enumError cmd_list ( int long_level )
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return ERR_OK;
 }
 
@@ -1955,11 +1972,13 @@ static enumError cmd_name_ref()
     InitializeRawData(&raw);
 
     enumError cmd_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,
 					"course_model.brres",opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
@@ -1998,6 +2017,7 @@ static enumError cmd_name_ref()
 	ResetNameRef(&nr);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return cmd_err;
 }
@@ -2045,14 +2065,16 @@ static enumError cmd_ilist ( int long_level )
 	long_count += long_level;
     }
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2064,15 +2086,16 @@ static enumError cmd_ilist ( int long_level )
 	if (print_header)
 	    PrintImageHead(0,long_count);
 	else if ( n_param > 1 )
-	    printf("\n* Files of %s\n",param->arg);
+	    printf("\n* Files of %s\n",arg);
 
-	IterateFilesParSZS(&szs,ilist_func,0,false,false,-1,0,opt_sort);
+	IterateFilesParSZS(&szs,ilist_func,0,false,false,false,-1,0,opt_sort);
 	ResetSZS(&szs);
     }
 
     if (print_header)
 	putchar('\n');
 
+    ResetStringField(&plist);
     return ERR_OK;
 }
 
@@ -2198,14 +2221,16 @@ static enumError cmd_memory()
     if ( opt_recurse < 0 )
 	 opt_recurse = 0;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2223,7 +2248,7 @@ static enumError cmd_memory()
 	if (print_header)
 	{
 	    printf("\n* memory dump of %s:%s\n",
-			GetNameFF_SZS(&szs), param->arg );
+			GetNameFF_SZS(&szs), arg );
 
 	    fputs( dm.print_abs_off ? "\nabs off " : "\n", stdout);
 	    printf( "type    unused  begin ..    end   size  file name\n"
@@ -2231,13 +2256,14 @@ static enumError cmd_memory()
 		    Minus300 );
 	}
 
-	IterateFilesParSZS(&szs,memory_func,&dm,false,false,opt_recurse,opt_cut,SORT_OFFSET);
+	IterateFilesParSZS(&szs,memory_func,&dm,false,false,false,opt_recurse,opt_cut,SORT_OFFSET);
 	ResetSZS(&szs);
     }
 
     if (print_header)
 	putchar('\n');
 
+    ResetStringField(&plist);
     return ERR_OK;
 }
 
@@ -2250,14 +2276,16 @@ static enumError cmd_dump()
 {
     SetPatchFileModeReadonly();
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2269,15 +2297,17 @@ static enumError cmd_dump()
 	if ( szs.fform_arch == FF_BRRES || IsBRSUB(szs.fform_arch) )
 	{
 	    printf("\n* Dump structure of %s:%s\n",
-			GetNameFF_SZS(&szs), param->arg );
+			GetNameFF_SZS(&szs), arg );
 	    DumpStructureBRRES(stdout,&szs);
 	}
 	else if (!opt_ignore)
-	    ERROR0(ERR_WARNING,"No BRRES file -> ignored: %s\n",param->arg);
+	    ERROR0(ERR_WARNING,"No BRRES file -> ignored: %s\n",arg);
 	ResetSZS(&szs);
     }
     putchar('\n');
 
+
+    ResetStringField(&plist);
     return ERR_OK;
 }
 
@@ -2293,14 +2323,16 @@ static enumError cmd_sha1()
     SetPatchFileModeReadonly();
     SetupCoding64( opt_coding64, opt_db64 ? ENCODE_BASE64URL : ENCODE_BASE64 );
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 	if ( max_err < err )
 	    max_err = err;
 	if ( err > ERR_WARNING || err == ERR_NOT_EXISTS )
@@ -2314,7 +2346,7 @@ static enumError cmd_sha1()
 		if (brief_count)
 		    putchar('\n');
 		else
-		    printf("  %s\n",param->arg);
+		    printf("  %s\n",arg);
 	    }
 
 	    if ( err == ERR_NOT_EXISTS || opt_ignore )
@@ -2331,8 +2363,8 @@ static enumError cmd_sha1()
 	if (opt_verify)
 	{
 	    const uint clen = strlen(checksum);
-	    ccp fname = strrchr(param->arg,'/');
-	    fname = fname ? fname+1 : param->arg;
+	    ccp fname = strrchr(arg,'/');
+	    fname = fname ? fname+1 : arg;
 	    bool found = false;
 	    for(;;)
 	    {
@@ -2340,7 +2372,7 @@ static enumError cmd_sha1()
 		if (!pos)
 		    break;
 
-		if ( pos == param->arg || pos[-1] == '.' || pos[-1] == '-' )
+		if ( pos == arg || pos[-1] == '.' || pos[-1] == '-' )
 		{
 		    char ch = pos[clen];
 		    if ( !ch || ch == '.' || ch == '-' )
@@ -2358,10 +2390,10 @@ static enumError cmd_sha1()
 		if ( max_err < ERR_DIFFER )
 		    max_err = ERR_DIFFER;
 		if ( verbose >= 0 )
-		    printf("Checksum differ: %s\n",param->arg);
+		    printf("Checksum differ: %s\n",arg);
 	    }
 	    else if ( verbose > 0 )
-		printf("Checksum ok:     %s\n",param->arg);
+		printf("Checksum ok:     %s\n",arg);
 	}
 	else
 	{
@@ -2425,11 +2457,12 @@ static enumError cmd_sha1()
 	    if (brief_count)
 		putchar('\n');
 	    else
-		printf("  %s\n", param->arg );
+		printf("  %s\n", arg );
 	}
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -2457,13 +2490,15 @@ static enumError cmd_analyze()
     patch_action_log_disabled++;
     CheckTextureRefSZS(&ap.szs,0);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	ResetSZS(&ap.szs);
-	enumError err = LoadCreateSZS(&ap.szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&ap.szs,arg,true,opt_ignore>0,true);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2474,7 +2509,7 @@ static enumError cmd_analyze()
 	}
 
 	if (!ap.fo.f)
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(script_fform,0),false);
 
 	if ( verbose > 0 )
@@ -2505,7 +2540,7 @@ static enumError cmd_analyze()
 	    PrintScriptHeader(&ap.ps);
 	}
 
-	ap.fname	= param->arg;
+	ap.fname	= arg;
 
 
 	//--- analyze by file format
@@ -2531,6 +2566,8 @@ static enumError cmd_analyze()
     }
 
     PrintScriptFooter(&ap.ps);
+
+    ResetStringField(&plist);
     ResetPrintScript(&ap.ps);
     ResetFile(&ap.fo,0);
     ResetSZS(&ap.szs);
@@ -2580,13 +2617,15 @@ static enumError cmd_split()
     PrintScript_t ps;
     SetupPrintScriptByOptions(&ps);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	if (!fo.f)
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(script_fform,0),false);
 
 	if (!fo.f)
@@ -2602,7 +2641,7 @@ static enumError cmd_split()
 	}
 
 	const u_nsec_t start_nsec = GetTimerNSec();
-	AnalyseSPF(&spf,false,param->arg,0,CPM_LINK,opt_plus);
+	AnalyseSPF(&spf,false,arg,0,CPM_LINK,opt_plus);
 	const u_nsec_t duration_nsec = GetTimerNSec() - start_nsec;
 
 	if ( opt_split > 0 )
@@ -2612,7 +2651,7 @@ static enumError cmd_split()
 	    FreeExMem(&res);
 	    continue;
 	}
-	
+
 	PutScriptVars(&ps,1,0);
 
 	print_split_val(&ps,"directory",spf.directory);
@@ -2640,7 +2679,7 @@ static enumError cmd_split()
 	print_split_val(&ps,"editors",spf.editors);
 	print_split_val(&ps,"attribs",spf.attribs);
 	PrintScriptVars(&ps,0,"attrib_order=%d\n",spf.attrib_order);
-	
+
 	PrintScriptVars(&ps,0,"distrib_flags=\"%u %s\"\n",spf.distrib_flags,PrintDTA(spf.distrib_flags,false));
 	PrintScriptVars(&ps,0,"le_flags=\"%u %s\"\n",spf.le_flags,PrintLEFL8(spf.le_flags,false));
 	print_split_val(&ps,"le_group",spf.le_group);
@@ -2676,6 +2715,8 @@ static enumError cmd_split()
     }
 
     PrintScriptFooter(&ps);
+
+    ResetStringField(&plist);
     ResetPrintScript(&ps);
     ResetFile(&fo,0);
     ResetPSP(&psp);
@@ -2702,12 +2743,15 @@ static enumError cmd_is_texture()
     if (long_count)
 	InitializeFastBuf(&fbuf,sizeof(fbuf));
 
-    for ( ParamList_t *param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	ResetSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 	if ( err > ERR_WARNING )
 	{
 	    if (long_count)
@@ -2740,14 +2784,15 @@ static enumError cmd_is_texture()
     if (long_count)
     {
 	ccp par = fbuf.b.buf;
-	for ( ParamList_t *param = first_param; param; param = param->next )
+	for ( int argi = 0; argi < plist.used; argi++ )
 	{
-	    printf("%-*s : %s\n",max_fw,par,param->arg);
+	    printf("%-*s : %s\n",max_fw,par,plist.field[argi]);
 	    par += strlen(par) + 1;
 	}
 	ResetFastBuf(&fbuf.b);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -2787,13 +2832,15 @@ static enumError cmd_features()
     if ( ps.fform == PSFF_UNKNOWN && comments >= 0 )
 	ps.fform = PSFF_ASSIGN;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	ResetSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2804,7 +2851,7 @@ static enumError cmd_features()
 	}
 
 	if (!fo.f)
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(script_fform,0),false);
 
 	if ( verbose > 0 )
@@ -2819,7 +2866,7 @@ static enumError cmd_features()
 
 	//--- analyse szs
 
-	AnalyzeSZS(&as,false,&szs,param->arg);
+	AnalyzeSZS(&as,false,&szs,arg);
 	SetupFeaturesSZS(&fs,&as.have,false);
 
 
@@ -2847,7 +2894,7 @@ static enumError cmd_features()
 
 	//--- name attributes ('dest' can be used now)
 
-	PrintEscapedString(dest,sizeof(dest),param->arg,-1,CHMD_UTF8,'"',0);
+	PrintEscapedString(dest,sizeof(dest),arg,-1,CHMD_UTF8,'"',0);
 
 
 	//--- print result
@@ -2866,6 +2913,8 @@ static enumError cmd_features()
     }
 
     PrintScriptFooter(&ps);
+
+    ResetStringField(&plist);
     ResetPrintScript(&ps);
     ResetFile(&fo,0);
     ResetFeaturesSZS(&fs);
@@ -3113,12 +3162,15 @@ static enumError cmd_distribution()
     if ( verbose == 0 )
 	printf("Scan SZS files\n");
 
-    for ( ; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	bool assume_arena = false;
-	ccp ptr = param->arg;
+	ccp ptr = arg;
 	for(;;)
 	{
 	    ptr = strchr(ptr,'/');
@@ -3128,14 +3180,14 @@ static enumError cmd_distribution()
 	    if (!strncasecmp(ptr,"arena",5))
 	    {
 		assume_arena = true;
-		PRINT("ASSUME ARENA: %s\n",param->arg);
+		PRINT("ASSUME ARENA: %s\n",arg);
 		break;
 	    }
 	}
 
-	if (IsDirectory(param->arg,false))
+	if (IsDirectory(arg,false))
 	{
-	    DIR * dir = opendir(param->arg);
+	    DIR * dir = opendir(arg);
 	    if (dir)
 	    {
 		for(;;)
@@ -3146,7 +3198,7 @@ static enumError cmd_distribution()
 
 		    if ( *dent->d_name != '.' )
 		    {
-			PathCatPP(path,sizeof(path),param->arg,dent->d_name);
+			PathCatPP(path,sizeof(path),arg,dent->d_name);
  #if HAVE_WIIMM_EXT // [[2do]] by option
 			if ( !strstr(path,",clan]") && !strstr(path,",head=") )
  #endif
@@ -3162,7 +3214,7 @@ static enumError cmd_distribution()
 	}
 	else
 	{
-	    enumError err = ScanDistribFile(&dinf,param->arg,opt_ignore,assume_arena);
+	    enumError err = ScanDistribFile(&dinf,arg,opt_ignore,assume_arena);
 	    if (err)
 		return err;
 	}
@@ -3248,6 +3300,7 @@ static enumError cmd_distribution()
 	fputs("\r\n",f);
     fclose(f);
 
+    ResetStringField(&plist);
     ResetDistributionInfo(&dinf);
     return ERR_OK;
 }
@@ -3337,14 +3390,16 @@ static enumError cmd_check()
 	SetKclMode(KCL_MODE|KCLMD_DROP_UNUSED);
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 
 	const bool check_verbose = verbose > 0 || long_count > 0;
 	CheckMode_t mode = GetCheckMode(false,brief_count>0,verbose<0,check_verbose);
@@ -3396,7 +3451,7 @@ static enumError cmd_check()
 		default:
 		    ERROR0(ERR_INVALID_FFORM,
 			"CHECK doesn't support file format '%s': %s\n",
-			GetNameFF_SZS(&szs), param->arg );
+			GetNameFF_SZS(&szs), arg );
 		break;
 	    }
 	    fflush(stdout);
@@ -3407,6 +3462,7 @@ static enumError cmd_check()
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -3430,14 +3486,16 @@ static enumError cmd_slots()
     ccp col_reset = GetTextMode(colmode,TTM_RESET);
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 	if (err)
 	{
 	    if ( max_err < err )
@@ -3457,9 +3515,9 @@ static enumError cmd_slots()
 	if ( szs.is_arena >= ARENA_FOUND )
 	{
 	    if (brief_count)
-		printf("%sARENA%s     : %s\n",col_misc,col_reset,param->arg);
+		printf("%sARENA%s     : %s\n",col_misc,col_reset,arg);
 	    else
-		printf("    %s ARENA %s     : %s\n",col_misc,col_reset,param->arg);
+		printf("    %s ARENA %s     : %s\n",col_misc,col_reset,arg);
 	}
 	else
 	{
@@ -3502,11 +3560,12 @@ static enumError cmd_slots()
 		while ( count++ < 3 )
 		    fputs("     ",stdout);
 	    }
-	    printf("%s : %s\n",col_reset,param->arg);
+	    printf("%s : %s\n",col_reset,arg);
 	}
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -3515,7 +3574,7 @@ static enumError cmd_slots()
 ///////////////			command isarena			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static enumError cmd_isarena()
+static enumError cmd_is_arena()
 {
     SetPatchFileModeReadonly();
 
@@ -3529,14 +3588,17 @@ static enumError cmd_isarena()
 
     int count = 0;
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,true);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,true);
 
 	ccp status = 0, color  = 0;
 
@@ -3623,7 +3685,7 @@ static enumError cmd_isarena()
 		if (brief_count)
 		    printf("%s%s%s\n", color, status, colout->reset );
 		else
-		    printf("%s%-9s%s %s\n", color, status, colout->reset, param->arg );
+		    printf("%s%-9s%s %s\n", color, status, colout->reset, arg );
 	    }
 	}
 
@@ -3635,6 +3697,7 @@ static enumError cmd_isarena()
     if (print_header)
 	putchar('\n');
 
+    ResetStringField(&plist);
     return count ? max_err : ERR_NOTHING_TO_DO;
 }
 
@@ -3712,50 +3775,10 @@ struct cmd_patch_search_t
 
 static enumError patch_file_helper
 (
-    ccp		fname,			// file name of source
-    bool	use_wildcard		// true & file not exist: search files
-);
-
-//-----------------------------------------------------------------------------
-
-static enumError patch_file_search
-(
-    mem_t	path,		// full path of existing file, never NULL
-    uint	st_mode,	// copy of struct stat.st_mode, see "man 2 stat"
-    void	*param		// user defined parameter
+    ccp		fname			// file name of source
 )
 {
-    enumError err = S_ISREG(st_mode) ? patch_file_helper(path.ptr,false) : ERR_JOB_IGNORED;
-
-    struct cmd_patch_search_t *s = (struct cmd_patch_search_t*)param;
-    ASSERT(s);
-
-    s->count++;
-    if ( s->max_err < err )
-	 s->max_err = err;
-    return err;
-}
-
-//-----------------------------------------------------------------------------
-
-static enumError patch_file_helper
-(
-    ccp		fname,			// file name of source
-    bool	use_wildcard		// true & file not exist: search files
-)
-{
-    struct stat st;
-    if ( use_wildcard && HaveWildcards(MemByString(fname)) && stat(fname,&st) )
-    {
-	PRINT0(" > SEARCH %s\n",fname);
-	struct cmd_patch_search_t param = {0};
-	SearchPaths(fname,0,false,patch_file_search,&param);
-	return param.count
-	    ? param.max_err
-	    : opt_ignore > 0
-	    ? ERR_NOTHING_TO_DO
-	    : ERROR0(ERR_CANT_OPEN,"File not found: %s\n",fname);
-    }
+    PRINT0("patch_file_helper(%s)\n",fname);
 
     exmem_t orig = {0}, data = {0};
 
@@ -3845,7 +3868,7 @@ static enumError patch_file_helper
 
 	if ( !dirty && ( !src_dest_diff || opt_no_copy ) )
 	    goto abort;
-	
+
 
 	//--- compression and SZS cache
 
@@ -3929,17 +3952,18 @@ static enumError cmd_patch()
  #endif
 
     enumError max_err = ERR_OK;
-    for ( ParamList_t *param = first_param; param; param = param->next )
-    {
-	if (!param->arg)
-	    continue;
-	NORMALIZE_FILENAME_PARAM(param);
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
 
-	const enumError err = patch_file_helper(param->arg,true);
+    for ( int argi = 0; argi < plist.used; argi++ )
+    {
+	ccp arg = plist.field[argi];
+	const enumError err = patch_file_helper(arg);
 	if ( max_err < err )
 	     max_err = err;
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -4234,20 +4258,22 @@ static void center_mmap ( uint idx, float3 *a, float3 *b )
 static enumError cmd_minimap()
 {
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadSZS(&szs,param->arg,false,opt_ignore>0,false);
+	enumError err = LoadSZS(&szs,arg,false,opt_ignore>0,false);
 
 	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 	{
 	    if ( verbose >= 0 )
 		fprintf(stdlog,"\nMinimap data of %s:%s\n",
-			GetNameFF_SZS(&szs), param->arg );
+			GetNameFF_SZS(&szs), arg );
 
 	    const bool was_compressed = szs.cdata != 0;
 	    if (was_compressed)
@@ -4411,7 +4437,7 @@ static enumError cmd_minimap()
 		{
 		    fprintf(stdlog,"%sPATCH MINIMAP %s:%s\n",
 			testmode ? "WOULD " : "",
-			GetNameFF_SZS(&szs), param->arg );
+			GetNameFF_SZS(&szs), arg );
 		    fflush(stdlog);
 		}
 
@@ -4426,6 +4452,7 @@ static enumError cmd_minimap()
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -4440,14 +4467,16 @@ static enumError cmd_compress()
     CheckOptDest(dest_fname,false);
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadSZS(&szs,param->arg,true,opt_ignore>0,false);
+	enumError err = LoadSZS(&szs,arg,true,opt_ignore>0,false);
 
 	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 	{
@@ -4463,14 +4492,14 @@ static enumError cmd_compress()
 		    GetNameFF(0,ff_dest) );
 
 	    char dest[PATH_MAX];
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,dest_fname,
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,dest_fname,
 			    GetExtFF(fform_compr,ff_dest),false);
 	    if ( verbose >= 0 || testmode )
 	    {
 		fprintf(stdlog,"%s%sCOMPRESS %s:%s -> %s:%s\n",
 			    verbose > 0 ? "\n" : "",
 			    testmode ? "WOULD " : "",
-			    GetNameFF_SZS(&szs), param->arg,
+			    GetNameFF_SZS(&szs), arg,
 			    GetNameFF(fform_compr,ff_dest), dest );
 		fflush(stdlog);
 	    }
@@ -4494,7 +4523,7 @@ static enumError cmd_compress()
 			max_err = ERR_CACHE_USED;
 
 		    File_t F;
-		    err = CreateFileOpt(&F,true,dest,testmode,param->arg);
+		    err = CreateFileOpt(&F,true,dest,testmode,arg);
 		    if (F.f)
 		    {
 			SetFileAttrib(&F.fatt,&szs.fatt,0);
@@ -4508,7 +4537,7 @@ static enumError cmd_compress()
 		    LinkCacheRAW(szs.cache_fname,dest,szs.cdata,szs.csize);
 
 		    if ( !err && opt_remove_src )
-			RemoveSource(param->arg,dest,verbose>=0,testmode);
+			RemoveSource(arg,dest,verbose>=0,testmode);
 		}
 	    }
 	}
@@ -4518,6 +4547,7 @@ static enumError cmd_compress()
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -4532,14 +4562,16 @@ static enumError cmd_decompress()
     CheckOptDest(dest_fname,false);
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadSZS(&szs,param->arg,true,opt_ignore>0,false);
+	enumError err = LoadSZS(&szs,arg,true,opt_ignore>0,false);
 
 	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 	{
@@ -4556,14 +4588,14 @@ static enumError cmd_decompress()
 
 	    char dest[PATH_MAX];
 	    ccp ext = GetExtFF(ff_dest,0);
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,ext,ext,false);
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,ext,ext,false);
 
 	    if ( verbose >= 0 || testmode )
 	    {
 		fprintf(stdlog,"%s%sDECOMPRESS %s:%s -> %s:%s\n",
 			    verbose > 0 ? "\n" : "",
 			    testmode ? "WOULD " : "",
-			    GetNameFF_SZS(&szs), param->arg,
+			    GetNameFF_SZS(&szs), arg,
 			    GetNameFF(0,ff_dest), dest );
 		fflush(stdlog);
 	    }
@@ -4580,7 +4612,7 @@ static enumError cmd_decompress()
 		if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 		{
 		    File_t F;
-		    err = CreateFileOpt(&F,true,dest,testmode,param->arg);
+		    err = CreateFileOpt(&F,true,dest,testmode,arg);
 		    if (F.f)
 		    {
 			SetFileAttrib(&F.fatt,&szs.fatt,0);
@@ -4592,7 +4624,7 @@ static enumError cmd_decompress()
 		    }
 		    ResetFile(&F,opt_preserve);
 		    if ( !err && opt_remove_src )
-			RemoveSource(param->arg,dest,verbose>=0,testmode);
+			RemoveSource(arg,dest,verbose>=0,testmode);
 		}
 	    }
 	}
@@ -4602,6 +4634,7 @@ static enumError cmd_decompress()
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -4615,30 +4648,32 @@ static enumError cmd_create ( bool create )
     static const char dest_fname[] = "\1P/\1N\1?T";
     CheckOptDest(dest_fname,false);
     const bool save_auto_add = opt_auto_add;
-
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
 	opt_auto_add = save_auto_add; // restore auto-add settings
 
-	int src_len = strlen(param->arg);
-	while ( src_len > 0 && param->arg[src_len-1] == '/' )
+	ccp arg = plist.field[argi];
+	int src_len = strlen(arg);
+	while ( src_len > 0 && arg[src_len-1] == '/' )
 	    src_len--;
-	param->arg[src_len] = 0;
+	((char*)arg)[src_len] = 0;
 
 	SetupParam_t sp;
 	InitializeSetupParam(&sp);
-	ScanSetupParam(&sp,true,param->arg,SZS_SETUP_FILE,0,true);
+	ScanSetupParam(&sp,true,arg,SZS_SETUP_FILE,0,true);
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,dest_fname,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,dest_fname,
 			GetExtFF(sp.fform_file,sp.fform_arch),false);
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = CreateSZS(&szs,dest,param->arg,0,&sp,0,
+	enumError err = CreateSZS(&szs,dest,arg,0,&sp,0,
 			verbose > 0 ? UINT_MAX : 0, false );
 
 	//--- create file
@@ -4649,14 +4684,14 @@ static enumError cmd_create ( bool create )
 		fprintf(stdlog,"%s%sCREATE %s/ -> %s:%s\n",
 			verbose > 0 ? "\n" : "",
 			testmode ? "WOULD " : "",
-			param->arg,
+			arg,
 			GetNameFF_SZS(&szs),
 			dest );
 	    else
 		fprintf(stdlog,"%s%sENCODE %s/\n",
 			verbose > 0 ? "\n" : "",
 			testmode ? "WOULD " : "",
-			param->arg );
+			arg );
 	    fflush(stdlog);
 	}
 
@@ -4684,8 +4719,9 @@ static enumError cmd_create ( bool create )
 	ResetSZS(&szs);
 	ResetSetupParam(&sp);
     }
-    opt_auto_add = save_auto_add; // restore auto-add settings
 
+    ResetStringField(&plist);
+    opt_auto_add = save_auto_add; // restore auto-add settings
     return max_err;
 }
 
@@ -4701,8 +4737,8 @@ typedef struct update_param_t
     bool		encode;		// true: encode files if possible
     int			recurse_level;	// current recurse level
     int			indent;		// indention of log messages
-
-} update_param_t;
+}
+update_param_t;
 
 //-----------------------------------------------------------------------------
 
@@ -4853,7 +4889,7 @@ static enumError job_update
     up.update_sub	= recurse_level < opt_recurse;
     up.indent		= indent + 2;
 
-    IterateFilesParSZS(szs,update_func,&up,false,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(szs,update_func,&up,false,false,false,0,-1,SORT_NONE);
     return ERR_OK;
 }
 
@@ -4868,14 +4904,16 @@ static enumError cmd_update()
     opt_mkdir = true;
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,false);
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,false);
 	if (!err)
 	    err = job_update(&szs,0);
 	if ( max_err < err )
@@ -4884,7 +4922,7 @@ static enumError cmd_update()
 	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 	{
 	    char dest[PATH_MAX];
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,0,0,false);
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,0,0,false);
 
 	    if ( verbose >= 0 || testmode )
 	    {
@@ -4897,7 +4935,7 @@ static enumError cmd_update()
 	    }
 
 	    File_t F;
-	    CreateFileOpt(&F,true,dest,testmode,param->arg);
+	    CreateFileOpt(&F,true,dest,testmode,arg);
 	    if (F.f)
 	    {
 		if (IsCompressedFF(szs.fform_file))
@@ -4917,6 +4955,7 @@ static enumError cmd_update()
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -4958,22 +4997,23 @@ static enumError cmd_extract ( enumCommands mode )
 	opt_dest = 0;
     opt_mkdir = true;
 
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadCreateSZS(&szs,param->arg,true,opt_ignore>0,false);
-
+	enumError err = LoadCreateSZS(&szs,arg,true,opt_ignore>0,false);
 	if (!err)
 	{
 	    DASSERT( !szs.file_size || szs.file_size >= szs.size );
 
 	    if ( analyze_fname && IsBRSUB(szs.fform_arch) )
-		AnalyzeBRSUB(&szs,szs.data,szs.size,param->arg);
+		AnalyzeBRSUB(&szs,szs.data,szs.size,arg);
 
 	    have_patch_count -= 1000000;
 	    PRINT("EXTRACT/%s[%s]: %s\n",__FUNCTION__,GetNameFF_SZS(&szs),szs.fname);
@@ -4985,6 +5025,7 @@ static enumError cmd_extract ( enumCommands mode )
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -5247,12 +5288,14 @@ static enumError cmd_convert ( bool binary ) // cmd_binary() cmd_text()
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
-    {
-	NORMALIZE_FILENAME_PARAM(param);
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
 
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+    for ( int argi = 0; argi < plist.used; argi++ )
+    {
+	ccp arg = plist.field[argi];
+
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -5266,13 +5309,13 @@ static enumError cmd_convert ( bool binary ) // cmd_binary() cmd_text()
 	if (!ff_dest)
 	{
 	    ERROR0(ERR_WARNING,"File format %s not supported: %s\n",
-			GetNameFF(raw.fform,0), param->arg );
+			GetNameFF(raw.fform,0), arg );
 	    if ( max_err < ERR_WARNING )
 		 max_err = ERR_WARNING;
 	    continue;
 	}
 
-	SubstDest( dest, sizeof(dest), param->arg, opt_dest,
+	SubstDest( dest, sizeof(dest), arg, opt_dest,
 			def_path, GetExtFF(0,ff_dest), false );
 
 	if ( verbose >= 0 )
@@ -5280,7 +5323,7 @@ static enumError cmd_convert ( bool binary ) // cmd_binary() cmd_text()
 	    fprintf(stdlog,"%sCREATE/%s %s:%s => %s:%s\n",
 			verbose > 0 ? "\n" : "",
 			binary ? "BINARY" : "TEXT",
-			GetNameFF(raw.fform,0), param->arg,
+			GetNameFF(raw.fform,0), arg,
 			GetNameFF(ff_dest,0), dest );
 	    fflush(stdlog);
 	}
@@ -5288,7 +5331,7 @@ static enumError cmd_convert ( bool binary ) // cmd_binary() cmd_text()
 	SetupContainerRawData(&raw);
 	ConvertHelper(	raw.data, raw.data_size,
 			LinkContainerData(&raw.container),
-			param->arg, dest, binary, &err );
+			arg, dest, binary, &err );
 	if (err)
 	{
 	    ERROR0(err,0);
@@ -5297,6 +5340,7 @@ static enumError cmd_convert ( bool binary ) // cmd_binary() cmd_text()
 	}
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return max_err;
 }
@@ -5311,13 +5355,14 @@ static enumError cmd_cat()
     stdlog = stderr;
     enumError max_err = ERR_OK;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
-    {
-	NORMALIZE_FILENAME_PARAM(param);
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT_SUB);
 
+    for ( int argi = 0; argi < plist.used; argi++ )
+    {
+	ccp arg = plist.field[argi];
 	szs_extract_t eszs;
-	enumError err = ExtractSZS(&eszs,true,param->arg,0,opt_ignore>0);
+	enumError err = ExtractSZS(&eszs,true,arg,0,opt_ignore>0);
 	PRINT("stat=%u, data=%p, found=%d,%d, path=%s\n",
 		err, eszs.data, !eszs.subfile_found, eszs.szs_found, eszs.subpath );
 
@@ -5350,7 +5395,7 @@ static enumError cmd_cat()
 	    }
 	}
 	else if ( !err && !opt_ignore )
-	    err = PrintErrorExtractSZS(&eszs,param->arg);
+	    err = PrintErrorExtractSZS(&eszs,arg);
 	fflush(stdout);
 
 	if ( max_err < err )
@@ -5358,6 +5403,7 @@ static enumError cmd_cat()
 	ResetExtractSZS(&eszs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -5366,23 +5412,22 @@ static enumError cmd_cat()
 ///////////////			command <FFORM>			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static enumError cmd_FFORM ( file_format_t fform, ccp filename )
+static enumError cmd_FFORM ( file_format_t fform, ccp autoname )
 {
     stdlog = stderr;
-    char pathbuf[PATH_MAX];
+    //char pathbuf[PATH_MAX];
     enable_kcl_drop_auto++;
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT_SUB);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	ccp path = PathCatPP(pathbuf,sizeof(pathbuf),param->arg,filename);
+	ccp arg = plist.field[argi];
 
 	szs_extract_t eszs;
-	enumError err = ExtractSZS(&eszs,true,path,0,opt_ignore>0);
-	PRINT("stat=%u, data=%p, found=%d,%d, path=%s\n",
-		err, eszs.data, !eszs.subfile_found, eszs.szs_found, eszs.subpath );
+	enumError err = ExtractSZS(&eszs,true,arg,autoname,opt_ignore>0);
 
 // [[analyse-magic]]
 	if ( eszs.data && GetByMagicFF(eszs.data,eszs.data_size,eszs.data_size) == fform )
@@ -5400,13 +5445,14 @@ static enumError cmd_FFORM ( file_format_t fform, ccp filename )
 				eszs.fname, "-", false, &err );
 	}
 	else if ( !err && !opt_ignore )
-	    err = PrintErrorExtractSZS(&eszs,param->arg);
+	    err = PrintErrorExtractSZS(&eszs,arg);
 
 	if ( max_err < err )
 	     max_err = err;
 	ResetExtractSZS(&eszs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -5426,10 +5472,12 @@ static enumError cmd_info()
     InitializeExtractSZS(&eszs);
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	ccp * search;
 	for ( search = search_tab; ; search++ )
@@ -5437,12 +5485,12 @@ static enumError cmd_info()
 	    if (!*search)
 	    {
 		if (!opt_ignore)
-		    printf("\n* NO INFO FOUND: %s\n\n",param->arg);
+		    printf("\n* NO INFO FOUND: %s\n\n",arg);
 		max_err = ERR_WARNING;
 		break;
 	    }
 
-	    ccp path = PathCatPP(pathbuf,sizeof(pathbuf),param->arg,*search);
+	    ccp path = PathCatPP(pathbuf,sizeof(pathbuf),arg,*search);
 	    ResetExtractSZS(&eszs);
 	    enumError err = ExtractSZS(&eszs,false,path,0,true);
 	    if ( !err && eszs.data )
@@ -5458,8 +5506,9 @@ static enumError cmd_info()
 	    }
 	}
     }
-    ResetExtractSZS(&eszs);
 
+    ResetStringField(&plist);
+    ResetExtractSZS(&eszs);
     return max_err;
 }
 
@@ -5487,18 +5536,20 @@ static enumError cmd_ghost()
     PrintScript_t ps;
     SetupPrintScriptByOptions(&ps);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
 	    return err;
 
 	if (!fo.f)
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(script_fform,0),false);
 
 	if ( verbose >= 0 )
@@ -5562,6 +5613,8 @@ static enumError cmd_ghost()
     }
 
     PrintScriptFooter(&ps);
+
+    ResetStringField(&plist);
     ResetPrintScript(&ps);
     ResetFile(&fo,0);
     ResetRKGInfo(&ri);
@@ -5579,20 +5632,22 @@ static enumError cmd_yazdump()
     CheckOptDest("-",false);
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
-	enumError err = LoadSZS(&szs,param->arg,false,opt_ignore>0,false);
+	enumError err = LoadSZS(&szs,arg,false,opt_ignore>0,false);
 
 	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS
 		&& ( szs.fform_file == FF_YAZ0 || szs.fform_file == FF_YAZ1 ))
 	{
 	    char dest[PATH_MAX];
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,".txt",".txt",false);
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,".txt",".txt",false);
 
 	    File_t F;
 	    CreateFileOpt(&F,true,dest,testmode,0);
@@ -5601,7 +5656,7 @@ static enumError cmd_yazdump()
 		if ( verbose >= 0 || testmode )
 		    fprintf(F.f,"%sYAZ DUMP of %s:%s\n",
 				verbose > 0 ? "\n" : "",
-				GetNameFF_SZS(&szs), param->arg );
+				GetNameFF_SZS(&szs), arg );
 		err = DecompressSZS(&szs,true,F.f);
 	    }
 	}
@@ -5611,6 +5666,7 @@ static enumError cmd_yazdump()
 	ResetSZS(&szs);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -5726,6 +5782,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_FLAG_FILE:	opt_flag_file = optarg; break;
 	case GO_XTRIDATA:	opt_xtridata = optarg ? str2ul(optarg,0,10) : 1; break;
 	case GO_KMP:		err += ScanOptKmp(optarg); break;
+	case GO_N_LAPS:		err += ScanOptNLaps(optarg); break;
 	case GO_SPEED_MOD:	err += ScanOptSpeedMod(optarg); break;
 	case GO_KTPT2:		err += ScanOptKtpt2(optarg); break;
 	case GO_TFORM_KMP:	err += ScanOptTformKmp(optarg); break;
@@ -5837,6 +5894,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_MACRO_BMG:	err += ScanOptMacroBMG(optarg); break;
 	case GO_FILTER_BMG:	filter_bmg = optarg; break;
 	case GO_LE_MENU:	opt_le_menu = true; break;
+	case GO_9LAPS:		opt_9laps = true; break;
 	case GO_CUP_ICONS:	opt_cup_icons = optarg; break;
 	case GO_TITLE_SCREEN:	opt_title_screen = optarg; break;
 	case GO_AUTOADD_PATH:	DefineAutoAddPath(optarg); break;
@@ -5869,8 +5927,9 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_SORT:		err += ScanOptSort(optarg); break;
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_BRIEF:		brief_count++; break;
-	case GO_PIPE:		pipe_count++; break;
+	case GO_NO_WILDCARDS:	no_wildcards_count++; break;
 	case GO_IN_ORDER:	inorder_count++; break;
+	case GO_PIPE:		pipe_count++; break;
 	case GO_DELTA:		delta_count++; break;
 	case GO_DIFF:		diff_count++; break;
 	case GO_NO_PARAM:	print_param = false; break;
@@ -6037,7 +6096,7 @@ static enumError CheckCommand ( int argc, char ** argv )
 	case CMD_CHECK:		err = cmd_check(); break;
 	case CMD_SLOTS:		err = cmd_slots(); break;
 	case CMD_STGI:		err = cmd_stgi(); break;
-	case CMD_ISARENA:	err = cmd_isarena(); break;
+	case CMD_IS_ARENA:	err = cmd_is_arena(); break;
 	case CMD_PATCH:		err = cmd_patch(); break;
 	case CMD_COPY:		err = cmd_copy(); break;
 	case CMD_DUPLICATE:	err = cmd_duplicate(); break;

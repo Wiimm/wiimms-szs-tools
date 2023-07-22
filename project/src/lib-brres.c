@@ -1733,7 +1733,7 @@ int DumpStructureBRRES
     if ( szs->fform_arch != FF_BRRES )
 	return -1;
 
-    return IterateFilesParSZS(szs,dump_func,f,false,false,0,-1,SORT_NONE);
+    return IterateFilesParSZS(szs,dump_func,f,false,false,false,0,-1,SORT_NONE);
 }
 
 //
@@ -1994,7 +1994,7 @@ enumError CreateNameRef
     nr->brief		= brief;
 
     if ( szs->fform_arch == FF_BRRES )
-	IterateFilesParSZS( szs, iterate_nr_brres,nr, false,true,0,-1, SORT_NONE );
+	IterateFilesParSZS( szs, iterate_nr_brres,nr, false, true, false, 0, -1, SORT_NONE );
     else
 	iterate_nr_brsub(nr,szs,szs->data,szs->file_size,FF_UNKNOWN);
 #if 0

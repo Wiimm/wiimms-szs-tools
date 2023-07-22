@@ -61,6 +61,8 @@ typedef enum enumOptions
 	OPT_LONG,
 	OPT_NO_HEADER,
 	OPT_BRIEF,
+	OPT_NO_WILDCARDS,
+	OPT_IN_ORDER,
 	OPT_EXPORT,
 	OPT_NO_PARAM,
 	OPT_NO_ECHO,
@@ -103,7 +105,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 47
+	OPT__N_SPECIFIC, // == 49
 
 	//----- global options -----
 
@@ -148,7 +150,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 87
+	OPT__N_TOTAL // == 89
 
 } enumOptions;
 
@@ -168,6 +170,8 @@ typedef enum enumOptions
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
 //	OB_BRIEF		= 1llu << OPT_BRIEF,
+//	OB_NO_WILDCARDS		= 1llu << OPT_NO_WILDCARDS,
+//	OB_IN_ORDER		= 1llu << OPT_IN_ORDER,
 //	OB_EXPORT		= 1llu << OPT_EXPORT,
 //	OB_NO_PARAM		= 1llu << OPT_NO_PARAM,
 //	OB_NO_ECHO		= 1llu << OPT_NO_ECHO,
@@ -271,8 +275,10 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_BRIEF,
 //
-//	OB_CMD_FILETYPE		= OB_LONG
-//				| OB_IGNORE,
+//	OB_CMD_FILETYPE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG,
 //
 //	OB_CMD_FILEATTRIB	= OB_NO_HEADER,
 //
@@ -290,7 +296,10 @@ typedef enum enumOptions
 //
 //	OB_CMD_DPAD		= 0,
 //
-//	OB_CMD_DUMP		= OB_GRP_PATCH
+//	OB_CMD_DUMP		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_PATCH
 //				| OB_BRIEF
 //				| OB_LONG
 //				| OB_GRP_PATCH
@@ -306,16 +315,24 @@ typedef enum enumOptions
 //
 //	OB_CMD_BIN_DIFF		= 0,
 //
-//	OB_CMD_PATCH		= OB_GRP_PATCH
+//	OB_CMD_PATCH		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_PATCH
 //				| OB_GRP_TRACK_COPY
 //				| OB_GRP_DEST
-//				| OB_IGNORE
 //				| OB_CREATE_DISTRIB,
 //
-//	OB_CMD_TIMESTAMP	= OB_GRP_DEST
+//	OB_CMD_TIMESTAMP	= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_IGNORE,
 //
-//	OB_CMD_LPAR		= OB_GRP_PATCH
+//	OB_CMD_LPAR		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_PATCH
 //				| OB_GRP_DEST
 //				| OB_GRP_TEXTOUT,
 //
@@ -336,21 +353,27 @@ typedef enum enumOptions
 //				| OB_GRP_TEXTOUT
 //				| OB_GRP_DEST,
 //
-//	OB_CMD_CAT		= OB_COMPLETE
+//	OB_CMD_CAT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_COMPLETE
 //				| OB_GRP_TEXTOUT
-//				| OB_NO_ECHO
-//				| OB_IGNORE,
+//				| OB_NO_ECHO,
 //
-//	OB_CMD_DECODE		= OB_COMPLETE
+//	OB_CMD_DECODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_COMPLETE
 //				| OB_GRP_DEST
 //				| OB_GRP_TEXTOUT
-//				| OB_NO_ECHO
-//				| OB_IGNORE,
+//				| OB_NO_ECHO,
 //
-//	OB_CMD_ENCODE		= OB_COMPLETE
+//	OB_CMD_ENCODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_COMPLETE
 //				| OB_GRP_DEST
-//				| OB_NO_ECHO
-//				| OB_IGNORE,
+//				| OB_NO_ECHO,
 //
 //} enumOptionsBit;
 
@@ -454,6 +477,8 @@ typedef enum enumGetOpt
 	GO_PLUS,
 	GO_CHDIR,
 	GO_ROUND,
+	GO_NO_WILDCARDS,
+	GO_IN_ORDER,
 	GO_NO_ECHO,
 	GO_UTF_8,
 	GO_NO_UTF_8,

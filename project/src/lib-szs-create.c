@@ -63,6 +63,7 @@
 
 #include "setup.inc"
 #include "le-menu.inc"
+#include "9laps.inc"
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1678,7 +1679,7 @@ bool NormalizeExSZS
 
 // [[norm]]
     szs_norm_t norm = { .rm_aiparam = rm_aiparam, .clean_lex = clean_lex };
-    IterateFilesParSZS(szs,norm_collect_func,&norm,false,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(szs,norm_collect_func,&norm,false,false,false,0,-1,SORT_NONE);
 
     if (norm.add_cup_icons)
     {
@@ -1695,6 +1696,7 @@ bool NormalizeExSZS
 	    if (!raw.valid)
 		opt_cup_icons = 0;
 	}
+
 	if (raw.valid)
 	{
 	    add_missing_t am = { .szs = szs, .norm = &norm,
@@ -1803,7 +1805,7 @@ static int add_missing_file
     }
 
     if ( am->log_indent >= 0 )
-	fprintf(stdlog,"%*s>> %s%s [%llu] %s\n",
+	fprintf(stdlog,"%*s>> %s%s [%llu] %sxx\n",
 			am->log_indent, "",
 			testmode ? "would " : "",
 			am->link ? "link" : am->data ? "add" : "auto-add",
@@ -2601,6 +2603,7 @@ typedef struct patch_szs_par_t
 {
     uint	modified;	// >0: any data modified
     ccp		path;		// path without leading "./"
+    bool	job_norm;	// true: normalize SZS as first step
 }
 patch_szs_par_t;
 
@@ -2624,7 +2627,7 @@ static void patch_file
     if ( it->size == new_size )
     {
 	if ( verbose >= 2 )
-	    fprintf(stdlog,"  >> overwrite [%u] %s \n",new_size,it->path);
+	    fprintf(stdlog,"  >> update [%u] %s \n",new_size,it->path);
 
 	memcpy(data,new_data,new_size);
 	if (move_data)
@@ -2633,7 +2636,7 @@ static void patch_file
     else
     {
 	if ( verbose >= 2 )
-	    fprintf(stdlog,"  >> replace [%u] %s \n",new_size,it->path);
+	    fprintf(stdlog,"  >> update [%u->%u] %s \n",it->size,new_size,it->path);
 
 	szs_subfile_t *file = AppendSubFileList(&szs->ext_data,it->path,false);
 	DASSERT(file);
@@ -2679,6 +2682,172 @@ static void patch_le_menu ( struct szs_iterator_t *it )
 	    BZ2Manager_t *bm = ptr->bz2mgr;
 	    DecodeBZIP2Manager(bm);
 	    patch_file(it,bm->data,bm->size,false);
+	    break;
+	}
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void patch_9laps ( struct szs_iterator_t *it )
+{
+    DASSERT(it);
+
+    if ( it->ui_check.ui_type != UIT_RACE )
+	return;
+
+    enum { M_ALL = -9, M_BASE, M_KOREA, M_COND, M_ADD,
+		ME = 0x001,
+		MF = 0x002,
+		MG = 0x004,
+		MI = 0x008,
+		MJ = 0x010,
+		MK = 0x020,
+		MM = 0x040,
+		MQ = 0x080,
+		MS = 0x100,
+		MU = 0x200,
+	};
+
+    struct tab_t
+    {
+	uint		mode;
+	ccp		fname;
+	BZ2Manager_t	*bz2mgr;
+    };
+
+    static const struct tab_t tab[] =
+    {
+	{ M_ALL,       "game_image/anim/game_image_lap_texture_pattern_0_9.brlan",
+									&x_game_image_lap_texture_pattern_0_9_brlan_mgr },
+	{ M_BASE,      "game_image/ctrl/time_number.brctr",		&b_time_number_brctr_mgr },
+	{ M_KOREA,     "game_image/ctrl/time_number.brctr",		&k_time_number_brctr_mgr },
+	{ MI,          "game_image/blyt/time_number_texture.brlyt",	&i_time_number_texture_brlyt_mgr },
+	{ MJ|MK|ME|MU, "game_image/blyt/time_number_texture.brlyt",	&j_time_number_texture_brlyt_mgr },
+	{ MM,          "game_image/blyt/time_number_texture.brlyt",	&m_time_number_texture_brlyt_mgr },
+	{ MS,          "game_image/blyt/time_number_texture.brlyt",	&s_time_number_texture_brlyt_mgr },
+	{ MQ,          "game_image/blyt/time_number_texture.brlyt",	&q_time_number_texture_brlyt_mgr },
+	{ MG,          "game_image/blyt/time_number_texture.brlyt",	&g_time_number_texture_brlyt_mgr },
+	{ MF,          "game_image/blyt/time_number_texture.brlyt",	&f_time_number_texture_brlyt_mgr },
+
+	{ M_COND,      "game_image/timg/tt_lap_E_lap3.tpl",		0 },
+	{ M_ADD,       "game_image/timg/tt_lap_E_lap4.tpl",		&j_tt_lap_e_lap4_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_E_lap5.tpl",		&j_tt_lap_e_lap5_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_E_lap6.tpl",		&j_tt_lap_e_lap6_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_E_lap7.tpl",		&j_tt_lap_e_lap7_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_E_lap8.tpl",		&j_tt_lap_e_lap8_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_E_lap9.tpl",		&j_tt_lap_e_lap9_tpl_mgr },
+
+	{ M_COND,      "game_image/timg/tt_lap_F_lap3.tpl",		0 },
+	{ M_ADD,       "game_image/timg/tt_lap_F_lap4.tpl",		&f_tt_lap_f_lap4_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_F_lap5.tpl",		&f_tt_lap_f_lap5_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_F_lap6.tpl",		&f_tt_lap_f_lap6_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_F_lap7.tpl",		&f_tt_lap_f_lap7_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_F_lap8.tpl",		&f_tt_lap_f_lap8_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_F_lap9.tpl",		&f_tt_lap_f_lap9_tpl_mgr },
+
+	{ M_COND,      "game_image/timg/tt_lap_G_lap3.tpl",		0 },
+	{ M_ADD,       "game_image/timg/tt_lap_G_lap4.tpl",		&g_tt_lap_g_lap4_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_G_lap5.tpl",		&g_tt_lap_g_lap5_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_G_lap6.tpl",		&g_tt_lap_g_lap6_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_G_lap7.tpl",		&g_tt_lap_g_lap7_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_G_lap8.tpl",		&g_tt_lap_g_lap8_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_G_lap9.tpl",		&g_tt_lap_g_lap9_tpl_mgr },
+
+	{ M_COND,      "game_image/timg/tt_lap_I_lap3.tpl",		0 },
+	{ M_ADD,       "game_image/timg/tt_lap_I_lap4.tpl",		&i_tt_lap_i_lap4_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_I_lap5.tpl",		&i_tt_lap_i_lap5_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_I_lap6.tpl",		&i_tt_lap_i_lap6_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_I_lap7.tpl",		&i_tt_lap_i_lap7_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_I_lap8.tpl",		&i_tt_lap_i_lap8_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_I_lap9.tpl",		&i_tt_lap_i_lap9_tpl_mgr },
+
+	{ M_COND,      "game_image/timg/tt_lap_S_lap3.tpl",		0 },
+	{ M_ADD,       "game_image/timg/tt_lap_S_lap4.tpl",		&s_tt_lap_s_lap4_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_S_lap5.tpl",		&s_tt_lap_s_lap5_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_S_lap6.tpl",		&s_tt_lap_s_lap6_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_S_lap7.tpl",		&s_tt_lap_s_lap7_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_S_lap8.tpl",		&s_tt_lap_s_lap8_tpl_mgr },
+	{ M_ADD,       "game_image/timg/tt_lap_S_lap9.tpl",		&s_tt_lap_s_lap9_tpl_mgr },
+	
+	{0,0,0}
+    };
+
+    patch_szs_par_t *ppar = it->param;
+    DASSERT(ppar);
+
+    for ( const struct tab_t *ptr = tab; ptr->fname; ptr++ )
+    {
+	PRINT0("%4x  %-35s %p  %s\n",ptr->mode,ptr->fname,ptr->bz2mgr,ppar->path);
+	if ( ptr->mode != M_ADD && !strcasecmp(ppar->path,ptr->fname) )
+	{
+	    BZ2Manager_t *bm = ptr->bz2mgr;
+	    bool patch = false;
+	    switch (ptr->mode)
+	    {
+	     case M_ALL:
+		PRINT0("9laps/all  %s\n",ptr->fname);
+		patch = true;
+		break;
+
+	     case M_BASE:
+		if (!it->ui_check.is_korean)
+		{
+		    PRINT0("9laps/base %s\n",ptr->fname);
+		    patch = true;
+		}
+		break;
+
+	     case M_KOREA:
+		if (it->ui_check.is_korean)
+		{
+		    PRINT0("9laps/kor  %s\n",ptr->fname);
+		    patch = true;
+		}
+		break;
+
+	     case M_COND:
+		PRINT0("9laps/cond %s\n",ptr->fname);
+		while ( ptr[1].mode == M_ADD )
+		{
+		    ptr++;
+		    bm = ptr->bz2mgr;
+		    if (bm)
+		    {
+			PRINT0("9laps/add  %s\n",ptr->fname);
+			DecodeBZIP2Manager(bm);
+			add_missing_t am = { .szs = it->szs, .norm = &it->norm_create,
+					.data = (u8*)bm->data, .size = bm->size, .print_err = true };
+			am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
+			add_missing_file(ptr->fname,FF_TPL,&am);
+			it->job_create = true;
+		    }
+		}
+		break;
+
+	     default:
+		PRINT0("9laps/lang mode=%x, %s\n",ptr->mode,ptr->fname);
+		switch (it->ui_check.ui_lang)
+		{
+		 case 'E': if ( ptr->mode & ME ) patch = true; break;
+		 case 'F': if ( ptr->mode & MF ) patch = true; break;
+		 case 'G': if ( ptr->mode & MG ) patch = true; break;
+		 case 'I': if ( ptr->mode & MI ) patch = true; break;
+		 case 'J': if ( ptr->mode & MJ ) patch = true; break;
+		 case 'K': if ( ptr->mode & MK ) patch = true; break;
+		 case 'M': if ( ptr->mode & MM ) patch = true; break;
+		 case 'Q': if ( ptr->mode & MQ ) patch = true; break;
+		 case 'S': if ( ptr->mode & MS ) patch = true; break;
+		 case 'U': if ( ptr->mode & MU ) patch = true; break;
+		}
+	    }
+
+	    if ( patch && bm )
+	    {
+		DecodeBZIP2Manager(bm);
+		patch_file(it,bm->data,bm->size,false);
+		break;
+	    }
 	}
     }
 }
@@ -2763,6 +2932,7 @@ static int transform_collect_func
 	DASSERT(szs);
 	u8 * data = szs->data + it->off;
 // [[analyse-magic]]
+
 	switch (GetByMagicFF(data,it->size,it->size))
 	{
 	    case FF_BMG:
@@ -3009,6 +3179,8 @@ static int transform_collect_func
 	    default:
 		if (opt_le_menu)
 		    patch_le_menu(it);
+		if (opt_9laps)
+		    patch_9laps(it);
 		if ( opt_title_screen && !memcmp(ppar->path,"title/timg/",11) )
 		    patch_title_screen(it);
 		break;
@@ -3039,7 +3211,7 @@ bool PatchSZS ( szs_file_t * szs )
     }
  #endif
 
-    patch_szs_par_t ppar = {0};
+    patch_szs_par_t ppar = { .job_norm = opt_9laps };
     if ( szs->data && szs->size )
     {
 	if (patch_lex)
@@ -3051,13 +3223,21 @@ bool PatchSZS ( szs_file_t * szs )
 	if (  have_patch_count > 0
 	   || opt_lex_purge
 	   || opt_le_menu
-//DEL	   || opt_cup_icons
+	   || opt_9laps
 	   || opt_title_screen
 	   )
 	{
 	    PRINT("** PatchSZS() **\n");
 	    ScanTformBegin();
-	    IterateFilesParSZS(szs,transform_collect_func,&ppar,false,false,-1,-1,SORT_NONE);
+
+	    iterator_param_t itpar =
+	    {
+		.sort_mode		= SORT_NONE,
+		.job_ui_check		= opt_9laps,
+		.job_norm_create	= opt_9laps
+	    };
+	    IterateFilesSZS( szs, transform_collect_func, &ppar, &itpar, -1 );
+
 	    TformScriptEnd();
 	    ClearSpecialFilesSZS(szs);
 	}
@@ -3388,7 +3568,7 @@ static int check_file_func
 	    szs_file_t subszs;
 	    InitializeSubSZS(&subszs,it->szs,it->off,it->size,fform,it->path,false);
 	    subszs.fname = it->path;
-	    IterateFilesParSZS(&subszs,check_mdl_func,chk,false,true,0,1,SORT_NONE);
+	    IterateFilesParSZS(&subszs,check_mdl_func,chk,false,true,false,0,1,SORT_NONE);
 	    subszs.fname = 0;
 	    ResetSZS(&subszs);
 	}
@@ -3530,7 +3710,7 @@ int CheckSZS
 
     //--- check BRRES + BRSUB
 
-    IterateFilesParSZS(szs,check_brres_func,&chk,false,false,-1,0,SORT_AUTO);
+    IterateFilesParSZS(szs,check_brres_func,&chk,false,false,false,-1,0,SORT_AUTO);
 
 
     //--- find KCL
@@ -3728,7 +3908,7 @@ int CheckSZS
 
     //--- check images
 
-    IterateFilesParSZS(szs,check_file_func,&chk,false,false,-1,0,SORT_AUTO);
+    IterateFilesParSZS(szs,check_file_func,&chk,false,false,false,-1,0,SORT_AUTO);
     if (chk.img_count)
 	print_check_error( &chk, CMOD_INFO,
 		"Geometry of %u images checked.\n",chk.img_count);
@@ -4017,7 +4197,7 @@ int CheckBRRES
     SetupColorSet(&chk.col,stdlog);
     chk.szs  = szs;
     chk.mode = check_mode;
-    IterateFilesParSZS(szs,check_brres,&chk,false,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(szs,check_brres,&chk,false,false,false,0,-1,SORT_NONE);
 
     if (parent_chk)
     {
@@ -4950,7 +5130,7 @@ enumError ExtractFilesSZS
 	? 1
 	: recurse_level || IsArchiveFF(szs->fform_arch) ? -1 : 0;
     PRINT("cut_files=%d\n",cut_files);
-    IterateFilesParSZS(szs,extract_func,&ep,true,false,0,cut_files,SORT_NONE);
+    IterateFilesParSZS(szs,extract_func,&ep,true,false,false,0,cut_files,SORT_NONE);
 
 
     //----- write setup file

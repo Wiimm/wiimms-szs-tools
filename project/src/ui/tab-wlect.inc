@@ -125,6 +125,7 @@
   { T_DEF_CMD,	"DUMP",		"DUMP|D",
 		    "wlect DUMP [source]...",
 		"Print an information dump for each source file."
+		" " WILDCARDS_PIPE
 		" LE-CODE binaries and LEX binaries are accepted as input." },
 
   { T_DEF_CMD,	"DB",		"DB"
@@ -161,16 +162,19 @@
   { T_DEF_CMD,	"PATCH",	"PATCH|P",
 		    "wlect PATCH [lecode_bin]...",
 		"Read each LE-CODE binary file and patch it."
+		" " WILDCARDS_PIPE
 		" Use {--le-define} to setup cups and tracks." },
 
   { H_DEF_CMD,	"TIMESTAMP",	"TIMESTAMP",
 		    "wlect TIMESTAMP [lecode_bin]...",
 		"Read each LE-CODE binary file and set creation time if exists and is null"
-		" with respect to others existing timestamps." },
+		" with respect to others existing timestamps."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LPAR",		"LPAR",
 		    "wlect LPAR [le_bin]...",
 		"Read each LE-BIN file and patch it."
+		" " WILDCARDS_PIPE
 		" Then extract the LE-CODE parameters and store them as LPAR"
 		" text file. Print the result to standard output if no other"
 		" destination is defined." },
@@ -191,7 +195,7 @@
 		"This command manages data for LE-CODE track distributions."
 		" It reads any number of source files with different file types,"
 		" collects the data and creates any number of files with different file types."
-		" " WILDCARDS
+		" " WILDCARDS_STEP
 		"\n "
 		" Use the command without keyword to get an extended description." },
 
@@ -199,18 +203,21 @@
 		    "wlect CAT [source]...",
 		"Read the entered LEX and LE-CODE files (text, binary or szs)"
 		" and print them as decoded text files to standard output."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated." },
 
   { T_DEF_CMD,	"DECODE",	"DECODE|DEC",
 		    "wlect DECODE [source]...",
 		"Read the entered LEX files (text or binary)"
 		" and decode them to text files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.txt'@." },
 
   { T_DEF_CMD,	"ENCODE",	"ENCODE|ENC",
 		    "wlect ENCODE source...",
 		"Read the entered LEX files (text or binary)"
 		" and encode (compile) them to binary files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.lex'@." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
@@ -312,6 +319,12 @@
   { T_OPT_C,	"BRIEF",	"B|brief",
 		0,
 		"Suppress cross reference comments." },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
+		0, 0 /* copy of wszst */ },
 
  #if 0 // BMG disabled for wlect
 
@@ -816,10 +829,12 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wlect FILEATTRIB ----------
 
@@ -864,9 +879,13 @@
 
   { T_CMD_BEG,	"DUMP",		0,0,0 },
 
-  { T_COPY_GRP,	"PATCH",		0,0,0 },
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
-  { T_COPT,	"BRIEF",		0,0,
+  { T_COPY_GRP,	"PATCH",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"BRIEF",	0,0,
 		"For LE-CODE binaries:"
 		" If set, print infos about file header only." },
   { T_COPT,	"LONG",		0,0,
@@ -918,18 +937,25 @@
 
   { T_CMD_BEG,	"PATCH",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
   { T_COPY_GRP,	"TRACK_COPY",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
 //  { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"CREATE_DISTRIB",0,0,0 },
 
   //---------- COMMAND wlect TIMESTAMP ----------
 
   { T_CMD_BEG,	"TIMESTAMP",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
 //  { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
@@ -937,6 +963,11 @@
   //---------- COMMAND wlect LPAR ----------
 
   { T_CMD_BEG,	"LPAR",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
@@ -945,6 +976,7 @@
   //---------- COMMAND wlect CREATE ----------
 
   { T_CMD_BEG,	"CREATE",	0,0,0 },
+
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
@@ -968,6 +1000,7 @@
   //---------- COMMAND wlect DISTRIBUTION ----------
 
   { T_CMD_BEG,	"DISTRIBUTION",	0,0,0 },
+
   { T_COPT,	"LOAD_PREFIX",	0,0,0 },
   { T_COPT,	"LOAD_CATEGORY",0,0,0 },
   { T_COPT,	"PLUS",		0,0,0 },
@@ -980,27 +1013,39 @@
   //---------- COMMAND wlect CAT ----------
 
   { T_CMD_BEG,	"CAT",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"COMPLETE",	0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wlect DECODE ----------
 
   { T_CMD_BEG,	"DECODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"COMPLETE",	0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wlect ENCODE ----------
 
   { T_CMD_BEG,	"ENCODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"COMPLETE",	0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
 //
 ///////////////////////////////////////////////////////////////////////////////

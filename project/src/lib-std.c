@@ -154,6 +154,7 @@ bool		opt_round		= false;
 int		brief_count		= 0;
 int		long_count		= 0;
 //int		full_count		= 0;
+int		no_wildcards_count	= 0;
 int		inorder_count		= 0;
 int		pipe_count		= 0;
 int		delta_count		= 0;
@@ -164,6 +165,7 @@ int		all_count		= 0;
 bool		raw_mode		= false;
 SortMode_t	opt_sort		= SORT_NONE;
 bool		opt_le_menu		= false;
+bool		opt_9laps		= false;
 ccp		opt_cup_icons		= 0;
 ccp		opt_title_screen	= 0;
 u32		opt_max_file_size	= 100*MiB;
@@ -2512,40 +2514,57 @@ void AtExpandAllParam ( ParamList_t ** p_param )
 
 void CollectExpandParam
 (
-    StringField_t   *plist,	// insert or append (inorder_count>0) to this list
-    ParamList_t	    *param,	// first param to add
-    int		    max,	// max num of param to add; -1: add all param
-    uint	    hidden	// bit field:
-				//  1 : allow hidden files
-				//  2 : '+h' and '/h' enables or disables hidden files
+    StringField_t	*plist,		// insert or append (inorder_count>0) to this list
+    ParamList_t		*param,		// first param to add
+    int			max,		// max num of param to add; -1: add all param
+    wildcard_mode_t	wc_mode		// bit field: modes for wildcard handling
 )
 {
     if ( plist && param && max )
     {
-	bool allow_hidden = hidden & 1;
 	for ( ; param; param = param->next )
 	{
-	    if (*param->arg)
+	    if ( param->arg && *param->arg )
 	    {
-		if ( hidden & 2 )
+		if ( wc_mode & WM_SWITCH )
 		{
-		    if (!strcmp(param->arg,"+h"))
+		    if (!strcmp(param->arg,WM_ENABLE_HIDDEN))
 		    {
-			allow_hidden = true;
+			wc_mode |= WM_HIDDEN;
 			continue;
 		    }
-		    if (!strcmp(param->arg,"_h"))
+
+		    if (!strcmp(param->arg,WM_DISABLE_HIDDEN))
 		    {
-			allow_hidden = false;
+			wc_mode &= ~WM_HIDDEN;
 			continue;
 		    }
 		}
 
 		NORMALIZE_FILENAME_PARAM(param);
-		if ( inorder_count > 0 )
-		    AppendStringFieldExpand(plist,param->arg,0,allow_hidden);
+
+		bool no_wildcards = no_wildcards_count > 0;
+		ccp arg = param->arg;
+		if ( wc_mode & WM_IGNORE && arg[0] == WM_CONTROL_CHAR )
+		{
+		    arg++;
+		    no_wildcards = true;
+		}
+
+		if ( no_wildcards )
+		{
+		    if ( inorder_count > 0 )
+			AppendStringField(plist,arg,false);
+		    else
+			InsertStringField(plist,arg,false);
+		}
 		else
-		    InsertStringFieldExpand(plist,param->arg,0,allow_hidden);
+		{
+		    if ( inorder_count > 0 )
+			AppendStringFieldExpand(plist,arg,0,wc_mode);
+		    else
+			InsertStringFieldExpand(plist,arg,0,wc_mode);
+		}
 	    }
 	    if (!--max)
 		break;
@@ -2559,7 +2578,7 @@ enumError cmd_wildcards ( int argc, char ** argv )
 {
     SetupPager();
     StringField_t plist = {0};
-    CollectExpandParam(&plist,first_param,-1,2);
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
 
     for ( int argi = 0; argi < plist.used; argi++ )
 	printf("%s\n",plist.field[argi]);
@@ -3903,18 +3922,21 @@ enumError cmd_install()
     char destbuf[PATH_MAX];
     enumError max_err = ERR_OK;
 
-    for ( ParamList_t *param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 	mode_t mode;
-	const inode_type_t itype =  GetInodeTypeByPath(param->arg,&mode);
+	const inode_type_t itype = GetInodeTypeByPath(arg,&mode);
 	if ( itype == INTY_NOTFOUND )
-	    max_err = ERROR0(ERR_WARNING,"File not found: %s\n",param->arg);
+	    max_err = ERROR0(ERR_WARNING,"File not found: %s\n",arg);
 	else
 	{
-	    ccp dest = PathCatPP(destbuf,sizeof(destbuf),share_path,param->arg);
+	    ccp dest = PathCatPP(destbuf,sizeof(destbuf),share_path,arg);
 	    printf("> Install %s\n",dest);
-	    enumError err = CopyFileTemp(param->arg,dest,0);
+	    enumError err = CopyFileTemp(arg,dest,0);
 	    if (err)
 	    {
 		if ( max_err < err )
@@ -3923,7 +3945,9 @@ enumError cmd_install()
 	    }
 	}
     }
+
     putchar('\n');
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -3962,24 +3986,24 @@ enumError cmd_expand ( int argc, char ** argv )
 	n_param, n_param == 1 ? "" : "s",
 	colout->reset );
 
-    bool allow_hidden = false;
+    wildcard_mode_t wc_mode = WM__DEFAULT_SUB;
     for ( ParamList_t *param = first_param; param; param = param->next )
     {
-	if (!strcmp(param->arg,"_h"))
+	if (!strcmp(param->arg,WM_ENABLE_HIDDEN))
 	{
-	    allow_hidden = false;
-	    printf("%sIgnore hidden files.%s\n", colout->info, colout->reset );
-	}
-	else if (!strcmp(param->arg,"+h"))
-	{
-	    allow_hidden = true;
+	    wc_mode |= WM_HIDDEN;
 	    printf("%sSearch hidden files too.%s\n", colout->info, colout->reset );
+	}
+	else if (!strcmp(param->arg,WM_DISABLE_HIDDEN))
+	{
+	    wc_mode &= ~WM_HIDDEN;
+	    printf("%sIgnore hidden files.%s\n", colout->info, colout->reset );
 	}
 	else
 	{
 	    NORMALIZE_FILENAME_PARAM(param);
 	    printf("%s%s%s\n", colout->hint, param->arg, colout->reset );
-	    SearchPaths(param->arg,0,allow_hidden,path_found,0);
+	    SearchPaths(param->arg,0,wc_mode,path_found,0);
 	}
     }
     return ERR_OK;
@@ -4078,15 +4102,16 @@ enumError cmd_error()
 
 enumError cmd_filetype()
 {
-    NORMALIZE_FILENAME_PARAM_LIST(first_param);
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
 
     if (print_header)
     {
 	uint max_len = 0;
-	ParamList_t *param;
-	for ( param = first_param; param; param = param->next )
+	for ( int argi = 0; argi < plist.used; argi++ )
 	{
-	    uint len = strlen(param->arg);
+	    ccp arg = plist.field[argi];
+	    uint len = strlen(arg);
 	    if ( max_len < len )
 		 max_len = len;
 	}
@@ -4105,12 +4130,13 @@ enumError cmd_filetype()
 		   "%.*s\n", max_len + 9, Minus300 );
     }
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
+	ccp arg = plist.field[argi];
+
 	char buf1[CHECK_FILE_SIZE], buf2[CHECK_FILE_SIZE], bufstat[10];
 	FileAttrib_t fatt;
-	enumError err = LoadFILE(param->arg,0,0,buf1,sizeof(buf1),1,&fatt,false);
+	enumError err = LoadFILE(arg,0,0,buf1,sizeof(buf1),1,&fatt,false);
 	if ( err <= ERR_WARNING || !opt_ignore )
 	{
 	    file_format_t fform1;
@@ -4145,7 +4171,7 @@ enumError cmd_filetype()
 		    DecompressYAZ( buf1 + sizeof(yaz0_header_t),
 					sizeof(buf1) - sizeof(yaz0_header_t),
 					buf2, sizeof(buf2),
-					&written, param->arg,
+					&written, arg,
 					GetYazVersionFF(fform1), true, 0 );
 		    DASSERT( written <= sizeof(buf2) );
 // [[analyse-magic]]
@@ -4204,27 +4230,28 @@ enumError cmd_filetype()
 			{
 			    szs_file_t szs;
 			    InitializeSZS(&szs);
-			    if (!LoadSZS(&szs,param->arg,true,true,true))
+			    if (!LoadSZS(&szs,arg,true,true,true))
 				valid = IsValidSZS(&szs,false);
 			    ResetSZS(&szs);
 			}
 			else
-			    valid = IsValid(buf,written,fatt.size,0,fform2,param->arg);
+			    valid = IsValid(buf,written,fatt.size,0,fform2,arg);
 		    }
 		    printf("%-7s %-7s %7s %-5s %s\n",
-				stat1, stat2, vbuf, valid_text[valid], param->arg );
+				stat1, stat2, vbuf, valid_text[valid], arg );
 		}
 		else
-		    printf("%-7s %-7s %7s %s\n",stat1,stat2,vbuf,param->arg);
+		    printf("%-7s %-7s %7s %s\n",stat1,stat2,vbuf,arg);
 	    }
 	    else
-		printf("%-7s %s\n",stat1,param->arg);
+		printf("%-7s %s\n",stat1,arg);
 	}
     }
 
     if (print_header)
 	putchar('\n');
 
+    ResetStringField(&plist);
     return ERR_OK;
 }
 

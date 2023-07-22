@@ -75,6 +75,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Suppress cross reference comments."
     },
 
+    {	OPT_NO_WILDCARDS, false, false, false, false, false, 0, "no-wildcards",
+	0,
+	"Disable wildcard parsing and use each filename exactly as specified."
+    },
+
+    {	OPT_IN_ORDER, false, false, false, false, false, 0, "in-order",
+	0,
+	"Process the input files in order of the command line and don't delete"
+	" duplicates."
+    },
+
     {	OPT_RAW, false, false, false, false, false, 0, "raw",
 	0,
 	"Print BMG messages as UTF-8 text without escape sequences."
@@ -393,7 +404,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Print in machine readable sections and parameter lines."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 47
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 49
 
     //----- global options -----
 
@@ -696,7 +707,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" 0x3b:0x41 and 0x44:0xfe."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 87
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 89
 
 };
 
@@ -928,6 +939,10 @@ static const struct option OptionLong[] =
 	{ "no-header",		0, 0, 'H' },
 	 { "noheader",		0, 0, 'H' },
 	{ "brief",		0, 0, 'B' },
+	{ "no-wildcards",	0, 0, GO_NO_WILDCARDS },
+	 { "nowildcards",	0, 0, GO_NO_WILDCARDS },
+	{ "in-order",		0, 0, GO_IN_ORDER },
+	 { "inorder",		0, 0, GO_IN_ORDER },
 	{ "raw",		0, 0, GO_RAW },
 	{ "bmg-endian",		1, 0, GO_BMG_ENDIAN },
 	 { "bmgendian",		1, 0, GO_BMG_ENDIAN },
@@ -1103,49 +1118,51 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x08e   */	OPT_CRS1,
 	/* 0x08f   */	OPT_CHDIR,
 	/* 0x090   */	OPT_ROUND,
-	/* 0x091   */	OPT_RAW,
-	/* 0x092   */	OPT_BMG_ENDIAN,
-	/* 0x093   */	OPT_BMG_ENCODING,
-	/* 0x094   */	OPT_BMG_INF_SIZE,
-	/* 0x095   */	OPT_BMG_MID,
-	/* 0x096   */	OPT_FORCE_ATTRIB,
-	/* 0x097   */	OPT_DEF_ATTRIB,
-	/* 0x098   */	OPT_NO_ATTRIB,
-	/* 0x099   */	OPT_X_ESCAPES,
-	/* 0x09a   */	OPT_OLD_ESCAPES,
-	/* 0x09b   */	OPT_NO_BMG_COLORS,
-	/* 0x09c   */	OPT_BMG_COLORS,
-	/* 0x09d   */	OPT_NO_BMG_INLINE,
-	/* 0x09e   */	OPT_NO_ECHO,
-	/* 0x09f   */	OPT_UTF_8,
-	/* 0x0a0   */	OPT_NO_UTF_8,
-	/* 0x0a1   */	OPT_FORCE,
-	/* 0x0a2   */	OPT_REPAIR_MAGICS,
-	/* 0x0a3   */	OPT_CREATE_DISTRIB,
-	/* 0x0a4   */	OPT_OLD,
-	/* 0x0a5   */	OPT_STD,
-	/* 0x0a6   */	OPT_NEW,
-	/* 0x0a7   */	OPT_EXTRACT,
-	/* 0x0a8   */	OPT_LIST,
-	/* 0x0a9   */	OPT_REF,
-	/* 0x0aa   */	OPT_FULL,
-	/* 0x0ab   */	OPT_HEX,
-	/* 0x0ac   */	OPT_CT_DIR,
-	/* 0x0ad   */	OPT_CT_LOG,
-	/* 0x0ae   */	OPT_ALLOW_SLOTS,
-	/* 0x0af   */	OPT_IMAGES,
-	/* 0x0b0   */	OPT_LOAD_BMG,
-	/* 0x0b1   */	OPT_PATCH_BMG,
-	/* 0x0b2   */	OPT_MACRO_BMG,
-	/* 0x0b3   */	OPT_FILTER_BMG,
-	/* 0x0b4   */	OPT_PATCH_NAMES,
-	/* 0x0b5   */	OPT_ORDER_BY,
-	/* 0x0b6   */	OPT_ORDER_ALL,
-	/* 0x0b7   */	OPT_DYNAMIC,
-	/* 0x0b8   */	OPT_WRITE_TRACKS,
-	/* 0x0b9   */	OPT_NUMBER,
-	/* 0x0ba   */	OPT_SECTIONS,
-	/* 0x0bb   */	 0,0,0,0, 0,
+	/* 0x091   */	OPT_NO_WILDCARDS,
+	/* 0x092   */	OPT_IN_ORDER,
+	/* 0x093   */	OPT_RAW,
+	/* 0x094   */	OPT_BMG_ENDIAN,
+	/* 0x095   */	OPT_BMG_ENCODING,
+	/* 0x096   */	OPT_BMG_INF_SIZE,
+	/* 0x097   */	OPT_BMG_MID,
+	/* 0x098   */	OPT_FORCE_ATTRIB,
+	/* 0x099   */	OPT_DEF_ATTRIB,
+	/* 0x09a   */	OPT_NO_ATTRIB,
+	/* 0x09b   */	OPT_X_ESCAPES,
+	/* 0x09c   */	OPT_OLD_ESCAPES,
+	/* 0x09d   */	OPT_NO_BMG_COLORS,
+	/* 0x09e   */	OPT_BMG_COLORS,
+	/* 0x09f   */	OPT_NO_BMG_INLINE,
+	/* 0x0a0   */	OPT_NO_ECHO,
+	/* 0x0a1   */	OPT_UTF_8,
+	/* 0x0a2   */	OPT_NO_UTF_8,
+	/* 0x0a3   */	OPT_FORCE,
+	/* 0x0a4   */	OPT_REPAIR_MAGICS,
+	/* 0x0a5   */	OPT_CREATE_DISTRIB,
+	/* 0x0a6   */	OPT_OLD,
+	/* 0x0a7   */	OPT_STD,
+	/* 0x0a8   */	OPT_NEW,
+	/* 0x0a9   */	OPT_EXTRACT,
+	/* 0x0aa   */	OPT_LIST,
+	/* 0x0ab   */	OPT_REF,
+	/* 0x0ac   */	OPT_FULL,
+	/* 0x0ad   */	OPT_HEX,
+	/* 0x0ae   */	OPT_CT_DIR,
+	/* 0x0af   */	OPT_CT_LOG,
+	/* 0x0b0   */	OPT_ALLOW_SLOTS,
+	/* 0x0b1   */	OPT_IMAGES,
+	/* 0x0b2   */	OPT_LOAD_BMG,
+	/* 0x0b3   */	OPT_PATCH_BMG,
+	/* 0x0b4   */	OPT_MACRO_BMG,
+	/* 0x0b5   */	OPT_FILTER_BMG,
+	/* 0x0b6   */	OPT_PATCH_NAMES,
+	/* 0x0b7   */	OPT_ORDER_BY,
+	/* 0x0b8   */	OPT_ORDER_ALL,
+	/* 0x0b9   */	OPT_DYNAMIC,
+	/* 0x0ba   */	OPT_WRITE_TRACKS,
+	/* 0x0bb   */	OPT_NUMBER,
+	/* 0x0bc   */	OPT_SECTIONS,
+	/* 0x0bd   */	 0,0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1161,142 +1178,142 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[47] = // cmd #1
+static u8 option_allowed_cmd_VERSION[49] = // cmd #1
 {
     0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1
 };
 
-static u8 option_allowed_cmd_HELP[47] = // cmd #2
+static u8 option_allowed_cmd_HELP[49] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1
 };
 
-static u8 option_allowed_cmd_CONFIG[47] = // cmd #3
+static u8 option_allowed_cmd_CONFIG[49] = // cmd #3
 {
     0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0
 };
 
-static u8 option_allowed_cmd_ARGTEST[47] = // cmd #4
+static u8 option_allowed_cmd_ARGTEST[49] = // cmd #4
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1
 };
 
-static u8 option_allowed_cmd_EXPAND[47] = // cmd #5
+static u8 option_allowed_cmd_EXPAND[49] = // cmd #5
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1
 };
 
-static u8 option_allowed_cmd_TEST[47] = // cmd #6
+static u8 option_allowed_cmd_TEST[49] = // cmd #6
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1
 };
 
-static u8 option_allowed_cmd_COLORS[47] = // cmd #7
+static u8 option_allowed_cmd_COLORS[49] = // cmd #7
 {
     0,0,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0
 };
 
-static u8 option_allowed_cmd_ERROR[47] = // cmd #8
+static u8 option_allowed_cmd_ERROR[49] = // cmd #8
 {
     0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1
 };
 
-static u8 option_allowed_cmd_FILETYPE[47] = // cmd #9
+static u8 option_allowed_cmd_FILETYPE[49] = // cmd #9
 {
-    0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0
+    0,0,1,0,0, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[47] = // cmd #10
-{
-    0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
-};
-
-static u8 option_allowed_cmd_SYMBOLS[47] = // cmd #11
+static u8 option_allowed_cmd_FILEATTRIB[49] = // cmd #10
 {
     0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0
 };
 
-static u8 option_allowed_cmd_FUNCTIONS[47] = // cmd #12
+static u8 option_allowed_cmd_SYMBOLS[49] = // cmd #11
+{
+    0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0
+};
+
+static u8 option_allowed_cmd_FUNCTIONS[49] = // cmd #12
 {
     0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0
 };
 
-static u8 option_allowed_cmd_CALCULATE[47] = // cmd #13
+static u8 option_allowed_cmd_CALCULATE[49] = // cmd #13
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0
 };
 
-static u8 option_allowed_cmd_FLOAT[47] = // cmd #14
+static u8 option_allowed_cmd_FLOAT[49] = // cmd #14
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0
 };
 
-static u8 option_allowed_cmd_EXPORT[47] = // cmd #15
+static u8 option_allowed_cmd_EXPORT[49] = // cmd #15
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0
 };
 
-static u8 option_allowed_cmd_RAWDUMP[47] = // cmd #16
+static u8 option_allowed_cmd_RAWDUMP[49] = // cmd #16
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,1,1,0,  0,0,0,0,0, 0,0
+    0,0,0,0,0, 0,0,0,0,1,  1,0,0,0,0, 0,0,0,0
 };
 
-static u8 option_allowed_cmd_DUMP[47] = // cmd #17
+static u8 option_allowed_cmd_DUMP[49] = // cmd #17
 {
-    0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,1,
-    1,1,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0
+    0,0,1,0,0, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    1,1,1,1,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,1,0
 };
 
-static u8 option_allowed_cmd_CAT[47] = // cmd #18
+static u8 option_allowed_cmd_CAT[49] = // cmd #18
 {
-    0,0,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,  0,1,1,1,1, 1,1,0,1,1,
-    1,1,1,1,1, 0,1,0,0,0,  0,0,0,0,0, 1,0
+    0,0,0,1,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,1,1, 1,1,1,1,0,
+    1,1,1,1,1, 1,1,0,1,0,  0,0,0,0,0, 0,0,1,0
 };
 
-static u8 option_allowed_cmd_BMG[47] = // cmd #19
+static u8 option_allowed_cmd_BMG[49] = // cmd #19
 {
-    0,0,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,1,1,1, 1,1,0,1,1,
-    1,1,1,1,1, 0,1,0,0,0,  0,0,0,0,0, 1,0
+    0,0,1,1,1, 0,0,0,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,0,1,1, 1,1,1,1,0,
+    1,1,1,1,1, 1,1,0,1,0,  0,0,0,0,0, 0,0,1,0
 };
 
-static u8 option_allowed_cmd_TRACKS[47] = // cmd #20
+static u8 option_allowed_cmd_TRACKS[49] = // cmd #20
 {
-    0,0,1,1,1, 1,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,  0,1,1,1,1, 1,1,0,1,1,
-    1,1,1,1,1, 0,1,0,0,0,  0,0,0,0,0, 1,0
+    0,0,1,1,1, 0,0,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,1,1, 1,1,1,1,0,
+    1,1,1,1,1, 1,1,0,1,0,  0,0,0,0,0, 0,0,1,0
 };
 
-static u8 option_allowed_cmd_DECODE[47] = // cmd #21
+static u8 option_allowed_cmd_DECODE[49] = // cmd #21
 {
-    0,0,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,  0,1,1,1,1, 1,1,0,1,1,
-    1,1,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,0
+    0,0,0,1,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,1,0,1,1, 1,1,1,1,0,
+    1,1,1,1,1, 1,1,0,1,1,  1,1,1,1,1, 1,1,1,0
 };
 
-static u8 option_allowed_cmd_CREATE[47] = // cmd #22
+static u8 option_allowed_cmd_CREATE[49] = // cmd #22
 {
-    0,0,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,1,1,0,0, 0,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,0
+    0,0,1,1,1, 1,1,0,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,0,1,1, 0,0,0,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,0
 };
 
-static u8 option_allowed_cmd_PATCH[47] = // cmd #23
+static u8 option_allowed_cmd_PATCH[49] = // cmd #23
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,1,0,0, 0,0,0,1,1,
-    1,1,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,0
+    0,0,0,0,0, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
+    1,1,1,1,1, 1,1,0,1,1,  1,1,1,1,1, 1,1,1,0
 };
 
 
@@ -1415,8 +1432,10 @@ static const InfoOption_t * option_tab_cmd_ERROR[] =
 
 static const InfoOption_t * option_tab_cmd_FILETYPE[] =
 {
-	&option_cmd_FILETYPE_LONG,
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+	&option_cmd_FILETYPE_LONG,
 
 	0
 };
@@ -1474,6 +1493,12 @@ static const InfoOption_t * option_tab_cmd_RAWDUMP[] =
 
 static const InfoOption_t * option_tab_cmd_DUMP[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	&option_cmd_DUMP_LONG,
 	OptionInfo + OPT_LOAD_BMG,
 	OptionInfo + OPT_PATCH_BMG,
@@ -1488,7 +1513,12 @@ static const InfoOption_t * option_tab_cmd_DUMP[] =
 
 static const InfoOption_t * option_tab_cmd_CAT[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_LIST,
 	OptionInfo + OPT_REF,
 	OptionInfo + OPT_FULL,
@@ -1579,6 +1609,12 @@ static const InfoOption_t * option_tab_cmd_TRACKS[] =
 
 static const InfoOption_t * option_tab_cmd_DECODE[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_WRITE_TRACKS,
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
@@ -1591,7 +1627,6 @@ static const InfoOption_t * option_tab_cmd_DECODE[] =
 	OptionInfo + OPT_REMOVE_DEST,
 	OptionInfo + OPT_UPDATE,
 	OptionInfo + OPT_PRESERVE,
-	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_LIST,
 	OptionInfo + OPT_REF,
 	OptionInfo + OPT_FULL,
@@ -1614,6 +1649,12 @@ static const InfoOption_t * option_tab_cmd_DECODE[] =
 
 static const InfoOption_t * option_tab_cmd_CREATE[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_WRITE_TRACKS,
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
@@ -1626,7 +1667,6 @@ static const InfoOption_t * option_tab_cmd_CREATE[] =
 	OptionInfo + OPT_REMOVE_DEST,
 	OptionInfo + OPT_UPDATE,
 	OptionInfo + OPT_PRESERVE,
-	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_HEX,
 	&option_grp_TEXTOPT_NO_HEADER,
 	OptionInfo + OPT_BRIEF,
@@ -1664,6 +1704,12 @@ static const InfoOption_t * option_tab_cmd_CREATE[] =
 
 static const InfoOption_t * option_tab_cmd_PATCH[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_WRITE_TRACKS,
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
@@ -1676,7 +1722,6 @@ static const InfoOption_t * option_tab_cmd_PATCH[] =
 	OptionInfo + OPT_REMOVE_DEST,
 	OptionInfo + OPT_UPDATE,
 	OptionInfo + OPT_PRESERVE,
-	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_NO_CHECK,
 	OptionInfo + OPT_LOAD_BMG,
 	OptionInfo + OPT_PATCH_BMG,
@@ -1790,10 +1835,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"This debug command accepts (like ARGTEST) all kinds of parameters and"
 	" prints one line for each parameter. After that, the parameter is"
 	" treated as a filename with wildcards and all matching files are"
-	" searched. The special parameters '+h' and '_h' enable or disable the"
-	" search for hidden directories and files (files beginning with a"
-	" point) for the following parameters. All tools know the EXPAND"
-	" command.",
+	" searched. All tools know the EXPAND command.",
 	0,
 	0,
 	option_tab_cmd_EXPAND,
@@ -1855,9 +1897,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"FT",
 	"wctct FILETYPE file...",
 	"Scan the header of the entered files and print file type and path for"
-	" each file as list. All tools know the FILETYPE command.",
+	" each file as list. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. All tools know the"
+	" FILETYPE command.",
 	0,
-	2,
+	4,
 	option_tab_cmd_FILETYPE,
 	option_allowed_cmd_FILETYPE
     },
@@ -1986,9 +2030,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"DUMP",
 	"wctct DUMP [source]...",
 	"Print an information dump for the CT-CODE of each source file. BRRES,"
-	" TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted as input.",
+	" TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted as input. Wildcards"
+	" and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	8,
+	11,
 	option_tab_cmd_DUMP,
 	option_allowed_cmd_DUMP
     },
@@ -2001,11 +2047,12 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wctct CAT [source]...",
 	"Read the source files and print the CT-CODE part them as decoded text"
-	" files to standard output. The output of all source files is"
-	" concatenated. BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted"
-	" as input.",
+	" files to standard output. Wildcards and pipe characters are parsed,"
+	" see https://szs.wiimm.de/doc/wildcards for details. The output of"
+	" all source files is concatenated. BRRES, TEX0, CT-CODE, CT-TEXT and"
+	" LE-BIN are accepted as input.",
 	0,
-	18,
+	20,
 	option_tab_cmd_CAT,
 	option_allowed_cmd_CAT
     },
@@ -2048,11 +2095,12 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"DECODE",
 	"DEC",
 	"wctct DECODE [source]...",
-	"Read the source files and decode them to CT-TEXT files. The default"
-	" destination is '%P/%N.txt'. BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN"
-	" are accepted as input.",
+	"Read the source files and decode them to CT-TEXT files. Wildcards and"
+	" pipe characters are parsed, see https://szs.wiimm.de/doc/wildcards"
+	" for details. The default destination is '%P/%N.txt'. BRRES, TEX0,"
+	" CT-CODE, CT-TEXT and LE-BIN are accepted as input.",
 	0,
-	26,
+	28,
 	option_tab_cmd_DECODE,
 	option_allowed_cmd_DECODE
     },
@@ -2065,15 +2113,17 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"C",
 	"wctct CREATE keyword [source]...",
 	"Read the source files, scan the CT-CODE part and create an output"
-	" file controlled by the keyword. BRRES, TEX0, CT-CODE, CT-TEXT and"
-	" LE-BIN files are accepted as input. Possible keywords are: CUP1,"
-	" CRS1, r-MOD1, r-MOD2, r-OVR1, r-BAD1CODE, r-BAD1DATA (=r-CODE),"
-	" r-TEX0, r-BRRES, r-SZS, BMG, TRACKS, LIST, REF and FULL. 'r' defines"
-	" the region and is one of EU, RMCP, US, RMCE, JP, RMCJ, KO or RMCK.\n"
+	" file controlled by the keyword. Wildcards and pipe characters are"
+	" parsed, see https://szs.wiimm.de/doc/wildcards for details. BRRES,"
+	" TEX0, CT-CODE, CT-TEXT and LE-BIN files are accepted as input."
+	" Possible keywords are: CUP1, CRS1, r-MOD1, r-MOD2, r-OVR1,"
+	" r-BAD1CODE, r-BAD1DATA (=r-CODE), r-TEX0, r-BRRES, r-SZS, BMG,"
+	" TRACKS, LIST, REF and FULL. 'r' defines the region and is one of EU,"
+	" RMCP, US, RMCE, JP, RMCJ, KO or RMCK.\n"
 	"  The Korean support needs external CT-CODE files. Use option"
 	" --ct-dir to define at least one search path.",
 	0,
-	41,
+	43,
 	option_tab_cmd_CREATE,
 	option_allowed_cmd_CREATE
     },
@@ -2086,9 +2136,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"P",
 	"wctct PATCH [source]...",
 	"Read each source file, find and scan the CT-CODE part and patch it."
-	" BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN are accepted as input.",
+	" Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. BRRES, TEX0,"
+	" CT-CODE, CT-TEXT and LE-BIN are accepted as input.",
 	0,
-	18,
+	20,
 	option_tab_cmd_PATCH,
 	option_allowed_cmd_PATCH
     },

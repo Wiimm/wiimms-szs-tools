@@ -323,7 +323,7 @@ enumError LoadXBMG
 	if ( allow_archive && IsArchiveFF(szs.fform_arch) )
 	{
 	    bmg->src_is_arch = true;
-	    IterateFilesParSZS(&szs,read_bmg,bmg,false,false,0,-1,SORT_NONE);
+	    IterateFilesParSZS(&szs,read_bmg,bmg,false,false,false,0,-1,SORT_NONE);
 	    bmg->fname = szs.fname;
 	    szs.fname = 0;
 	    ResetSZS(&szs);
@@ -380,7 +380,7 @@ enumError ScanRawDataBMG
 	AssignSZS(&szs,true,raw->data,raw->data_size,false,raw->fform,bmg->fname);
 	szs.fname = raw->fname;
 	raw->fname = 0;
-	IterateFilesParSZS(&szs,read_bmg,bmg,false,false,0,-1,SORT_NONE);
+	IterateFilesParSZS(&szs,read_bmg,bmg,false,false,false,0,-1,SORT_NONE);
 	bmg->fname = szs.fname;
 	szs.fname = 0;
 	noPRINT("BMG/FNAME=%s\n",bmg->fname);
@@ -1314,11 +1314,14 @@ enumError cmd_bmg_cat ( bool mix )
 
     uint mix_count = 0;
     enumError cmd_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT_SUB);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,FF_BMG);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,FF_BMG);
 
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
@@ -1369,6 +1372,7 @@ enumError cmd_bmg_cat ( bool mix )
 	    return err;
     }
 
+    ResetStringField(&plist);
     ResetBMG(&mix_bmg);
     ResetRawData(&raw);
     return cmd_err;

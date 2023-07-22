@@ -1082,7 +1082,6 @@ bool LimitToLparMode ( le_lpar_t * lp, lpar_mode_t lpmode )
     }
 
  #if 0
-    // [[time-limit]]
     if ( lpmode <= LPM_TESTING )
     {
 	if ( lp->default_online_sec > LE_MAX_ONLINE_SEC )
@@ -1279,7 +1278,6 @@ void InitializeLPAR ( le_lpar_t *lpar, bool load_lpar )
     lpar->drag_blue_shell	=   1;
     lpar->thcloud_frames	= 300;
     lpar->block_textures	=   1;
-// [[time-limit]]
     lpar->default_online_sec	= LE_DEF_ONLINE_SEC;
     lpar->min_online_sec	= LE_DEF_ONLINE_SEC;
     lpar->max_online_sec	= LE_MAX_WD_ONLINE_SEC;
@@ -1330,6 +1328,7 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
     lp->vs_textures		&= LE_M_TEXTURE;
     lp->block_textures		= lp->block_textures > 0;
     lp->staticr_points		= lp->staticr_points > 0;
+    lp->developer_modes		= lp->developer_modes > 0;
 
     if ( build >= 37 )
     {
@@ -1342,7 +1341,6 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
 	lp->vs_worldwide	&= 1;
     }
 
-// [[time-limit]]
     lp->default_online_sec = MINMAX( lp->default_online_sec, LE_MIN_ONLINE_SEC, LE_MAX_ONLINE_SEC );
     if ( !lp->min_online_sec || lp->min_online_sec > lp->max_online_sec )
 	lp->min_online_sec = lp->max_online_sec = 0;
@@ -1361,7 +1359,6 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
  #endif
 
 }
-
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1445,13 +1442,20 @@ static void CopyLPAR2Data ( le_analyze_t * ana )
     if ( offsetof(le_binpar_v1_t,staticr_points) < ana->param_size )
 	h->staticr_points = lp->staticr_points;
 
-// [[time-limit]]
     if ( offsetof(le_binpar_v1_t,default_online_sec) < ana->param_size )
 	h->default_online_sec = htons(lp->default_online_sec);
     if ( offsetof(le_binpar_v1_t,min_online_sec) < ana->param_size )
 	h->min_online_sec = htons(lp->min_online_sec);
     if ( offsetof(le_binpar_v1_t,max_online_sec) < ana->param_size )
 	h->max_online_sec = htons(lp->max_online_sec);
+
+    if ( ana->param_size >= sizeof(le_binpar_v1_274_t)  )
+    {
+	h->developer_modes	= lp->developer_modes;
+	h->dev_mode1		= lp->dev_mode1;
+	h->dev_mode2		= lp->dev_mode2;
+	h->dev_mode3		= lp->dev_mode3;
+    }
 
     // [[new-lpar]]
 }
@@ -1609,13 +1613,16 @@ enumError WriteSectionLPAR
 		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
 		,lpar->block_textures
 		,lpar->staticr_points
-// [[time-limit]]
 		,LE_MIN_ONLINE_SEC ,PrintHMS(0,0,LE_MIN_ONLINE_SEC,LE_VIEW_ONLINE_HMS," (",")")
 		,LE_MAX_ONLINE_SEC ,PrintHMS(0,0,LE_MAX_ONLINE_SEC,LE_VIEW_ONLINE_HMS," (",")")
 		,LE_MAX_WD_ONLINE_SEC ,PrintHMS(0,0,LE_MAX_WD_ONLINE_SEC,LE_VIEW_ONLINE_HMS," (",")")
 		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
+		,lpar->developer_modes
+		,lpar->dev_mode1
+		,lpar->dev_mode2
+		,lpar->dev_mode3
 		);
     }
     else
@@ -1645,6 +1652,11 @@ enumError WriteSectionLPAR
 	       "DEF-ONLINE-SEC	= %3u%s\r\n"
 	       "MIN-ONLINE-SEC	= %3u%s\r\n"
 	       "MAX-ONLINE-SEC	= %3u%s\r\n"
+	       "\r\n"
+	       "DEVELOPER-MODES	= %u\r\n"   // always last 4 settings
+	       "DEV-MODE1	= %u\r\n"
+	       "DEV-MODE2	= %u\r\n"
+	       "DEV-MODE3	= %u\r\n"
 		,GetLparModeName(CalcCurrentLparMode(lpar,true),export_count>0)
 		,lpar->cheat_mode
 		,lpar->engine[0],lpar->engine[1],lpar->engine[2]
@@ -1664,10 +1676,13 @@ enumError WriteSectionLPAR
 		,lpar_std_flags( lpar->vs_textures & LE_M_TEXTURE )
 		,lpar->block_textures
 		,lpar->staticr_points
-// [[time-limit]]
 		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
+		,lpar->developer_modes
+		,lpar->dev_mode1
+		,lpar->dev_mode2
+		,lpar->dev_mode3
 		);
     }
 
@@ -2001,7 +2016,7 @@ enumError AnalyzeLEBinary
     uint n_ptr = 0;		// number of used pointers
 
 
-    //--- analyse parameters
+    //--- analyse parameters (LPAR)
 
     if ( off_param
 	&& !(off_param&3)
@@ -2141,11 +2156,19 @@ enumError AnalyzeLEBinary
 
 		if ( param_size >= sizeof(le_binpar_v1_270_t) )
 		{
-// [[time-limit]]
 		    le_binpar_v1_270_t *p	 = (le_binpar_v1_270_t*)(data+off_param);
 		    ana->lpar.default_online_sec = ntohs(p->default_online_sec);
 		    ana->lpar.min_online_sec	 = ntohs(p->min_online_sec);
 		    ana->lpar.max_online_sec	 = ntohs(p->max_online_sec);
+		}
+
+		if ( param_size >= sizeof(le_binpar_v1_274_t) )
+		{
+		    le_binpar_v1_274_t *p	= (le_binpar_v1_274_t*)(data+off_param);
+		    ana->lpar.developer_modes	= p->developer_modes;
+		    ana->lpar.dev_mode1		= p->dev_mode1;
+		    ana->lpar.dev_mode2		= p->dev_mode2;
+		    ana->lpar.dev_mode3		= p->dev_mode3;
 		}
 
 		// [[new-lpar]]
@@ -3083,7 +3106,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		"%*s" "Build:             %u, %c = %s\n"
 		"%*s" "Header size:       %8x/hex = %6u bytes\n"
 		"%*s" "Total size:        %8x/hex = %6u bytes\n"
-		"%*s" "Offset param:      %8x/hex\n"
+		"%*s" "Offset of LPAR:    %8x/hex\n"
 		"%*s" "Base address:      %8x/hex\n"
 		"%*s" "Entry point:       %8x/hex\n"
 		,indent,"", ntohl(h->version)
@@ -3197,8 +3220,8 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	DASSERT(h);
 	fprintf(f,
 		"%*s%s" "Parameters (magic: %.4s):%s\n"
-		"%*s" "Version:           %u\n"
-		"%*s" "Param size:        %x/hex = %u bytes\n"
+		"%*s" "LPAR Version:      %u\n"
+		"%*s" "LPAR size:         %x/hex = %u bytes\n"
 		,indent-2,"", col.heading, h->magic, col.reset
 		,indent,"", ntohl(h->version)
 		,indent,"", ntohl(h->size), ntohl(h->size)
@@ -3211,6 +3234,13 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
       {
 	const le_binpar_v1_t *h = ana->param_v1;
 	DASSERT(h);
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_274_t)  )
+	    fprintf(f,
+		"%*s" "Developer modes:   %u = %sabled / Modes: %u,%u,%u\n"
+		,indent,"", h->developer_modes, h->developer_modes ? "en" : "dis"
+		,h->dev_mode1 ,h->dev_mode2 ,h->dev_mode3
+		);
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_264_t)  )
 	    fprintf(f,
@@ -3289,28 +3319,28 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	    fprintf(f,
 		"%*s" "Worldwide:         battle=%s, versus=%s\n"
 		"%*s" "Textures:          battle=%s, versus=%s\n"
-		"%*s" "Block textures:    %u\n"
+		"%*s" "Block textures:    %u = %sabled\n"
 		,indent,""
 			,ana_std_flags( h->bt_worldwide & LE_M_BT_WORLDWIDE )
 			,ana_std_flags( h->vs_worldwide & LE_M_VS_WORLDWIDE )
 		,indent,""
 			,ana_std_flags( h->bt_textures & LE_M_TEXTURE )
 			,ana_std_flags( h->vs_textures & LE_M_TEXTURE )
-		,indent,"", h->block_textures
+		,indent,""
+			,h->block_textures ,h->block_textures ? "en" : "dis"
 		);
 	}
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_26a_t)  )
 	{
 	    fprintf(f,
-		"%*s" "Points by StaticR: %u\n"
-		,indent,"", h->staticr_points
+		"%*s" "Points by StaticR: %u = %sabled\n"
+		,indent,"", h->staticr_points, h->staticr_points ? "en" : "dis"
 		);
 	}
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_270_t)  )
 	{
-// [[time-limit]]
 	    const uint def = ntohs(h->default_online_sec);
 	    const uint min = ntohs(h->min_online_sec);
 	    const uint max = ntohs(h->max_online_sec);
@@ -4013,6 +4043,10 @@ static enumError ScanTextLPAR_PARAM
     const ScanParam_t ptab[] =
     {
 	{ "LIMIT-MODE",		SPM_INT, &limit_mode },
+	{ "DEVELOPER-MODES",	SPM_U8,  &lpar->developer_modes },
+	{ "DEV-MODE1",		SPM_U8,  &lpar->dev_mode1 },
+	{ "DEV-MODE2",		SPM_U8,  &lpar->dev_mode2 },
+	{ "DEV-MODE3",		SPM_U8,  &lpar->dev_mode3 },
 	{ "CHEAT-MODE",		SPM_U8,  &lpar->cheat_mode },
 	{ "ENGINE",		SPM_U8,	  lpar->engine, 3,3 },
 	{ "ENABLE-200CC",	SPM_U8,	 &lpar->enable_200cc },
@@ -4032,7 +4066,6 @@ static enumError ScanTextLPAR_PARAM
 	{ "VS-TEXTURES",	SPM_U8,  &lpar->vs_textures },
 	{ "BLOCK-TEXTURES",	SPM_U8,  &lpar->block_textures },
 	{ "STATICR-POINTS",	SPM_U8,  &lpar->staticr_points },
-// [[time-limit]]
 	{ "DEF-ONLINE-SEC",	SPM_U16, &lpar->default_online_sec },
 	{ "MIN-ONLINE-SEC",	SPM_U16, &lpar->min_online_sec },
 	{ "MAX-ONLINE-SEC",	SPM_U16, &lpar->max_online_sec },

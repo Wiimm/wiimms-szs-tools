@@ -64,6 +64,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"List only the track file names and suppress table header and footer."
     },
 
+    {	OPT_NO_WILDCARDS, false, false, false, false, false, 0, "no-wildcards",
+	0,
+	"Disable wildcard parsing and use each filename exactly as specified."
+    },
+
+    {	OPT_IN_ORDER, false, false, false, false, false, 0, "in-order",
+	0,
+	"Process the input files in order of the command line and don't delete"
+	" duplicates."
+    },
+
     {	OPT_NO_HEADER, false, false, false, false, false, 'H', "no-header",
 	0,
 	"Suppress the syntax information section in BMG text files."
@@ -80,11 +91,9 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"file",
 	"Each option call adds the filename to an internal list. Each file"
 	" must be of type GCT and is added to the internal wcode stock.\n"
-	"  If parameter FILE contains at least one wildcard (e.g. '*.gct'),"
+	" If parameter FILE contains at least one wildcard (e.g. \"*.gct\"),"
 	" then FILE is used as search pattern and all found files are added."
-	" In order to use this variant, the calling shell must not interpret"
-	" the wildcards. Therefore, the parameter must usually be enclosed in"
-	" single or double quotes.\n"
+	" Quote FILE for this purpose. \n"
 	"  If a single file is not found and the filename (not path) contains"
 	" at least 1 '@' character, then all '@' characters of it are replaced"
 	" by the region code (one of P,E,J,K) for a second try."
@@ -184,11 +193,9 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" and VBI hooks are optionally initialized. Use option --force to"
 	" allow overlapped sections. Use option --verbose up to 2 times for a"
 	" log.\n"
-	"  If parameter FILE contains at least one wildcard (e.g. '*.gct'),"
+	" If parameter FILE contains at least one wildcard (e.g. \"*.GCT\"),"
 	" then FILE is used as search pattern and all found files are added."
-	" In order to use this variant, the calling shell must not interpret"
-	" the wildcards. Therefore, the parameter must usually be enclosed in"
-	" single or double quotes.\n"
+	" Quote FILE for this purpose. \n"
 	"  If a single file is not found and the filename (not path) contains"
 	" at least 1 '@' character, then all '@' characters of it are replaced"
 	" by the region code (one of P,E,J,K) for a second try.\n"
@@ -292,11 +299,9 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Each option call adds the filename to an internal list. Each file"
 	" must be of type WPF (Wiimms Patch File) and defines a list of"
 	" conditionals and patches for staticr.rel and main.dol.\n"
-	"  If parameter FILE contains at least one wildcard (e.g. '*.wpf'),"
+	" If parameter FILE contains at least one wildcard (e.g. \"*.wpf\"),"
 	" then FILE is used as search pattern and all found files are added."
-	" In order to use this variant, the calling shell must not interpret"
-	" the wildcards. Therefore, the parameter must usually be enclosed in"
-	" single or double quotes."
+	" Quote FILE for this purpose. "
     },
 
     {	OPT_SECTIONS, false, false, false, false, true, 0, "sections",
@@ -501,7 +506,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" dependent (multiple of format size)."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 66
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 68
 
     //----- global options -----
 
@@ -919,7 +924,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" directory."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 121
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 123
 
 };
 
@@ -1167,6 +1172,10 @@ static const struct option OptionLong[] =
 	{ "const",		1, 0, 'c' },
 	{ "long",		0, 0, 'l' },
 	{ "brief",		0, 0, 'B' },
+	{ "no-wildcards",	0, 0, GO_NO_WILDCARDS },
+	 { "nowildcards",	0, 0, GO_NO_WILDCARDS },
+	{ "in-order",		0, 0, GO_IN_ORDER },
+	 { "inorder",		0, 0, GO_IN_ORDER },
 	{ "no-header",		0, 0, 'H' },
 	 { "noheader",		0, 0, 'H' },
 	{ "tracks",		1, 0, 'T' },
@@ -1377,87 +1386,88 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x08b   */	OPT_CT_CODE,
 	/* 0x08c   */	OPT_LE_CODE,
 	/* 0x08d   */	OPT_CHDIR,
-	/* 0x08e   */	OPT_VS_REGION,
-	/* 0x08f   */	OPT_BT_REGION,
-	/* 0x090   */	OPT_ALL_RANKS,
-	/* 0x091   */	OPT_POINTS,
-	/* 0x092   */	OPT_CHEAT,
-	/* 0x093   */	OPT_HTTPS,
-	/* 0x094   */	OPT_DOMAIN,
-	/* 0x095   */	OPT_WIIMMFI,
-	/* 0x096   */	OPT_TWIIMMFI,
-	/* 0x097   */	OPT_WC24,
-	/* 0x098   */	OPT_WCODE,
-	/* 0x099   */	OPT_ADD_WCODE,
-	/* 0x09a   */	OPT_PB_MODE,
-	/* 0x09b   */	OPT_PATCHED_BY,
-	/* 0x09c   */	OPT_VS,
-	/* 0x09d   */	OPT_VS2,
-	/* 0x09e   */	OPT_BT,
-	/* 0x09f   */	OPT_BT2,
-	/* 0x0a0   */	OPT_CANNON,
-	/* 0x0a1   */	OPT_MENO,
-	/* 0x0a2   */	OPT_UTF_8,
-	/* 0x0a3   */	OPT_NO_UTF_8,
-	/* 0x0a4   */	OPT_FORCE,
-	/* 0x0a5   */	OPT_REPAIR_MAGICS,
-	/* 0x0a6   */	OPT_OLD,
-	/* 0x0a7   */	OPT_STD,
-	/* 0x0a8   */	OPT_NEW,
-	/* 0x0a9   */	OPT_EXTRACT,
-	/* 0x0aa   */	OPT_NUMBER,
-	/* 0x0ab   */	OPT_CLEAN_DOL,
-	/* 0x0ac   */	OPT_ADD_LECODE,
-	/* 0x0ad   */	OPT_ADD_CTCODE,
-	/* 0x0ae   */	OPT_CT_DIR,
-	/* 0x0af   */	OPT_MOVE_D8,
-	/* 0x0b0   */	OPT_ADD_SECTION,
-	/* 0x0b1   */	OPT_FULL_GCH,
-	/* 0x0b2   */	OPT_GCT_NO_SEP,
-	/* 0x0b3   */	OPT_GCT_SEP,
-	/* 0x0b4   */	OPT_GCT_ASM_SEP,
-	/* 0x0b5   */	OPT_GCT_LIST,
-	/* 0x0b6   */	OPT_GCT_MOVE,
-	/* 0x0b7   */	OPT_GCT_ADDR,
-	/* 0x0b8   */	OPT_GCT_SPACE,
-	/* 0x0b9   */	OPT_ALLOW_USER_GCH,
-	/* 0x0ba   */	OPT_CREATE_SECT,
-	/* 0x0bb   */	OPT_WPF,
-	/* 0x0bc   */	OPT_SECTIONS,
-	/* 0x0bd   */	OPT_PORT_DB,
-	/* 0x0be   */	OPT_ORDER,
-	/* 0x0bf   */	OPT_VADDR,
-	/* 0x0c0   */	OPT_FADDR,
-	/* 0x0c1   */	OPT_SNAME,
-	/* 0x0c2   */	OPT_INT1,
-	/* 0x0c3   */	OPT_INT2,
-	/* 0x0c4   */	OPT_INT3,
-	/* 0x0c5   */	OPT_INT4,
-	/* 0x0c6   */	OPT_INT5,
-	/* 0x0c7   */	OPT_INT6,
-	/* 0x0c8   */	OPT_INT7,
-	/* 0x0c9   */	OPT_INT8,
-	/* 0x0ca   */	OPT_FLOAT,
-	/* 0x0cb   */	OPT_DOUBLE,
-	/* 0x0cc   */	OPT_LE,
-	/* 0x0cd   */	OPT_BE,
-	/* 0x0ce   */	OPT_ZEROS,
-	/* 0x0cf   */	OPT_HEX,
-	/* 0x0d0   */	OPT_DEC,
-	/* 0x0d1   */	OPT_C_SYNTAX,
-	/* 0x0d2   */	OPT_ADDR,
-	/* 0x0d3   */	OPT_ALIGN,
-	/* 0x0d4   */	OPT_TRIGGER,
-	/* 0x0d5   */	OPT_NO_ADDR,
-	/* 0x0d6   */	OPT_NO_NUMBERS,
-	/* 0x0d7   */	OPT_NO_TEXT,
-	/* 0x0d8   */	OPT_FORMAT,
-	/* 0x0d9   */	OPT_NO_NULL,
-	/* 0x0da   */	OPT_NARROW,
-	/* 0x0db   */	OPT_SMALL,
-	/* 0x0dc   */	OPT_WIDE,
-	/* 0x0dd   */	OPT_BYTES,
-	/* 0x0de   */	 0,0,
+	/* 0x08e   */	OPT_NO_WILDCARDS,
+	/* 0x08f   */	OPT_IN_ORDER,
+	/* 0x090   */	OPT_VS_REGION,
+	/* 0x091   */	OPT_BT_REGION,
+	/* 0x092   */	OPT_ALL_RANKS,
+	/* 0x093   */	OPT_POINTS,
+	/* 0x094   */	OPT_CHEAT,
+	/* 0x095   */	OPT_HTTPS,
+	/* 0x096   */	OPT_DOMAIN,
+	/* 0x097   */	OPT_WIIMMFI,
+	/* 0x098   */	OPT_TWIIMMFI,
+	/* 0x099   */	OPT_WC24,
+	/* 0x09a   */	OPT_WCODE,
+	/* 0x09b   */	OPT_ADD_WCODE,
+	/* 0x09c   */	OPT_PB_MODE,
+	/* 0x09d   */	OPT_PATCHED_BY,
+	/* 0x09e   */	OPT_VS,
+	/* 0x09f   */	OPT_VS2,
+	/* 0x0a0   */	OPT_BT,
+	/* 0x0a1   */	OPT_BT2,
+	/* 0x0a2   */	OPT_CANNON,
+	/* 0x0a3   */	OPT_MENO,
+	/* 0x0a4   */	OPT_UTF_8,
+	/* 0x0a5   */	OPT_NO_UTF_8,
+	/* 0x0a6   */	OPT_FORCE,
+	/* 0x0a7   */	OPT_REPAIR_MAGICS,
+	/* 0x0a8   */	OPT_OLD,
+	/* 0x0a9   */	OPT_STD,
+	/* 0x0aa   */	OPT_NEW,
+	/* 0x0ab   */	OPT_EXTRACT,
+	/* 0x0ac   */	OPT_NUMBER,
+	/* 0x0ad   */	OPT_CLEAN_DOL,
+	/* 0x0ae   */	OPT_ADD_LECODE,
+	/* 0x0af   */	OPT_ADD_CTCODE,
+	/* 0x0b0   */	OPT_CT_DIR,
+	/* 0x0b1   */	OPT_MOVE_D8,
+	/* 0x0b2   */	OPT_ADD_SECTION,
+	/* 0x0b3   */	OPT_FULL_GCH,
+	/* 0x0b4   */	OPT_GCT_NO_SEP,
+	/* 0x0b5   */	OPT_GCT_SEP,
+	/* 0x0b6   */	OPT_GCT_ASM_SEP,
+	/* 0x0b7   */	OPT_GCT_LIST,
+	/* 0x0b8   */	OPT_GCT_MOVE,
+	/* 0x0b9   */	OPT_GCT_ADDR,
+	/* 0x0ba   */	OPT_GCT_SPACE,
+	/* 0x0bb   */	OPT_ALLOW_USER_GCH,
+	/* 0x0bc   */	OPT_CREATE_SECT,
+	/* 0x0bd   */	OPT_WPF,
+	/* 0x0be   */	OPT_SECTIONS,
+	/* 0x0bf   */	OPT_PORT_DB,
+	/* 0x0c0   */	OPT_ORDER,
+	/* 0x0c1   */	OPT_VADDR,
+	/* 0x0c2   */	OPT_FADDR,
+	/* 0x0c3   */	OPT_SNAME,
+	/* 0x0c4   */	OPT_INT1,
+	/* 0x0c5   */	OPT_INT2,
+	/* 0x0c6   */	OPT_INT3,
+	/* 0x0c7   */	OPT_INT4,
+	/* 0x0c8   */	OPT_INT5,
+	/* 0x0c9   */	OPT_INT6,
+	/* 0x0ca   */	OPT_INT7,
+	/* 0x0cb   */	OPT_INT8,
+	/* 0x0cc   */	OPT_FLOAT,
+	/* 0x0cd   */	OPT_DOUBLE,
+	/* 0x0ce   */	OPT_LE,
+	/* 0x0cf   */	OPT_BE,
+	/* 0x0d0   */	OPT_ZEROS,
+	/* 0x0d1   */	OPT_HEX,
+	/* 0x0d2   */	OPT_DEC,
+	/* 0x0d3   */	OPT_C_SYNTAX,
+	/* 0x0d4   */	OPT_ADDR,
+	/* 0x0d5   */	OPT_ALIGN,
+	/* 0x0d6   */	OPT_TRIGGER,
+	/* 0x0d7   */	OPT_NO_ADDR,
+	/* 0x0d8   */	OPT_NO_NUMBERS,
+	/* 0x0d9   */	OPT_NO_TEXT,
+	/* 0x0da   */	OPT_FORMAT,
+	/* 0x0db   */	OPT_NO_NULL,
+	/* 0x0dc   */	OPT_NARROW,
+	/* 0x0dd   */	OPT_SMALL,
+	/* 0x0de   */	OPT_WIDE,
+	/* 0x0df   */	OPT_BYTES,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0f0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x100   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1471,179 +1481,179 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[66] = // cmd #1
+static u8 option_allowed_cmd_VERSION[68] = // cmd #1
 {
     0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_HELP[66] = // cmd #2
+static u8 option_allowed_cmd_HELP[68] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1
+    1,1,1,1,1, 1,1,1
 };
 
-static u8 option_allowed_cmd_CONFIG[66] = // cmd #3
-{
-    0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_ARGTEST[66] = // cmd #4
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1
-};
-
-static u8 option_allowed_cmd_EXPAND[66] = // cmd #5
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1
-};
-
-static u8 option_allowed_cmd_TEST[66] = // cmd #6
-{
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1
-};
-
-static u8 option_allowed_cmd_COLORS[66] = // cmd #7
+static u8 option_allowed_cmd_CONFIG[68] = // cmd #3
 {
     0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_ERROR[66] = // cmd #8
+static u8 option_allowed_cmd_ARGTEST[68] = // cmd #4
 {
-    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    1,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1
 };
 
-static u8 option_allowed_cmd_FILETYPE[66] = // cmd #9
+static u8 option_allowed_cmd_EXPAND[68] = // cmd #5
 {
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1
+};
+
+static u8 option_allowed_cmd_TEST[68] = // cmd #6
+{
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1
+};
+
+static u8 option_allowed_cmd_COLORS[68] = // cmd #7
+{
+    0,1,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[66] = // cmd #10
+static u8 option_allowed_cmd_ERROR[68] = // cmd #8
 {
-    0,0,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    0,1,1,0,0, 1,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_RAWDUMP[66] = // cmd #11
+static u8 option_allowed_cmd_FILETYPE[68] = // cmd #9
 {
-    0,0,0,0,0, 0,1,1,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,1,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_DUMP[66] = // cmd #12
+static u8 option_allowed_cmd_FILEATTRIB[68] = // cmd #10
+{
+    0,0,0,0,0, 1,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_RAWDUMP[68] = // cmd #11
+{
+    0,0,0,0,0, 0,0,0,1,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_DUMP[68] = // cmd #12
+{
+    0,1,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_CDUMP[68] = // cmd #13
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_HEXDUMP[68] = // cmd #14
+{
+    0,0,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,1,1, 1,1,1
+};
+
+static u8 option_allowed_cmd_PORT[68] = // cmd #15
+{
+    0,1,1,0,0, 1,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,1,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_WHERE[68] = // cmd #16
+{
+    0,1,1,0,0, 1,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_HTTPS[68] = // cmd #17
+{
+    0,1,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_EXTRACT[68] = // cmd #18
+{
+    0,0,0,1,1, 0,0,0,1,1,  0,1,0,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_TRACKS[68] = // cmd #19
+{
+    0,1,1,0,0, 1,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_ARENAS[68] = // cmd #20
+{
+    0,1,1,0,0, 1,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_FILES[68] = // cmd #21
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
+};
+
+static u8 option_allowed_cmd_FIND[68] = // cmd #22
 {
     0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_CDUMP[66] = // cmd #13
+static u8 option_allowed_cmd_POINTS[68] = // cmd #23
 {
+    0,1,1,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_HEXDUMP[66] = // cmd #14
+static u8 option_allowed_cmd_ANALYZE[68] = // cmd #24
 {
+    0,1,0,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1
+    0,0,0,0,0, 0,0,0
 };
 
-static u8 option_allowed_cmd_PORT[66] = // cmd #15
+static u8 option_allowed_cmd_PATCH[68] = // cmd #25
 {
-    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,1,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_WHERE[66] = // cmd #16
-{
-    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,1,1,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_HTTPS[66] = // cmd #17
-{
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_EXTRACT[66] = // cmd #18
-{
-    0,0,0,0,0, 0,1,1,0,1,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_TRACKS[66] = // cmd #19
-{
-    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_ARENAS[66] = // cmd #20
-{
-    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_FILES[66] = // cmd #21
-{
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_FIND[66] = // cmd #22
-{
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_POINTS[66] = // cmd #23
-{
-    0,1,1,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_ANALYZE[66] = // cmd #24
-{
-    0,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
-};
-
-static u8 option_allowed_cmd_PATCH[66] = // cmd #25
-{
-    0,0,0,0,0, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0
+    0,0,0,1,1, 0,0,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0,0, 0,0,0
 };
 
 
@@ -1773,8 +1783,10 @@ static const InfoOption_t * option_tab_cmd_ERROR[] =
 
 static const InfoOption_t * option_tab_cmd_FILETYPE[] =
 {
-	&option_cmd_FILETYPE_LONG,
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+	&option_cmd_FILETYPE_LONG,
 
 	0
 };
@@ -1796,6 +1808,12 @@ static const InfoOption_t * option_tab_cmd_RAWDUMP[] =
 
 static const InfoOption_t * option_tab_cmd_DUMP[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	&option_cmd_DUMP_LONG,
 
 	0
@@ -1809,6 +1827,12 @@ static const InfoOption_t * option_tab_cmd_CDUMP[] =
 
 static const InfoOption_t * option_tab_cmd_HEXDUMP[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_VADDR,
 	OptionInfo + OPT_FADDR,
 	OptionInfo + OPT_SNAME,
@@ -1877,6 +1901,12 @@ static const InfoOption_t * option_tab_cmd_WHERE[] =
 
 static const InfoOption_t * option_tab_cmd_HTTPS[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	&option_cmd_HTTPS_LONG,
 	&option_cmd_HTTPS_VERBOSE,
 
@@ -1885,6 +1915,12 @@ static const InfoOption_t * option_tab_cmd_HTTPS[] =
 
 static const InfoOption_t * option_tab_cmd_EXTRACT[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
 	OptionInfo + OPT_OVERWRITE,
@@ -1997,6 +2033,12 @@ static const InfoOption_t * option_tab_cmd_POINTS[] =
 
 static const InfoOption_t * option_tab_cmd_ANALYZE[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_CLEAN_DOL,
 	OptionInfo + OPT_TRACKS,
 	OptionInfo + OPT_ARENAS,
@@ -2020,6 +2062,12 @@ static const InfoOption_t * option_tab_cmd_ANALYZE[] =
 
 static const InfoOption_t * option_tab_cmd_PATCH[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
 	OptionInfo + OPT_ESC,
@@ -2031,7 +2079,6 @@ static const InfoOption_t * option_tab_cmd_PATCH[] =
 	OptionInfo + OPT_REMOVE_DEST,
 	OptionInfo + OPT_UPDATE,
 	OptionInfo + OPT_PRESERVE,
-	OptionInfo + OPT_IGNORE,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -2165,10 +2212,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"This debug command accepts (like ARGTEST) all kinds of parameters and"
 	" prints one line for each parameter. After that, the parameter is"
 	" treated as a filename with wildcards and all matching files are"
-	" searched. The special parameters '+h' and '_h' enable or disable the"
-	" search for hidden directories and files (files beginning with a"
-	" point) for the following parameters. All tools know the EXPAND"
-	" command.",
+	" searched. All tools know the EXPAND command.",
 	0,
 	0,
 	option_tab_cmd_EXPAND,
@@ -2230,9 +2274,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"FT",
 	"wstrt FILETYPE file...",
 	"Scan the header of the entered files and print file type and path for"
-	" each file as list. All tools know the FILETYPE command.",
+	" each file as list. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. All tools know the"
+	" FILETYPE command.",
 	0,
-	2,
+	4,
 	option_tab_cmd_FILETYPE,
 	option_allowed_cmd_FILETYPE
     },
@@ -2278,9 +2324,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wstrt DUMP file...",
 	"Dump the structure of REL files (e.g. StaticR.rel) and of DOL files"
-	" (e.g. main.dol) as text.",
+	" (e.g. main.dol) as text. Wildcards and pipe characters are parsed,"
+	" see https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	1,
+	4,
 	option_tab_cmd_DUMP,
 	option_allowed_cmd_DUMP
     },
@@ -2307,10 +2354,12 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"XDUMP",
 	"wstrt HEXDUMP file...",
 	"Dump the content of DOL files as hex dump and use virtual addresses."
-	" Select parts by --vaddr, --faddr and --sname. Without selectors, the"
-	" whole file is dumped.",
+	" Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. Select parts by"
+	" --vaddr, --faddr and --sname. Without selectors, the whole file is"
+	" dumped.",
 	0,
-	34,
+	37,
 	option_tab_cmd_HEXDUMP,
 	option_allowed_cmd_HEXDUMP
     },
@@ -2366,9 +2415,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wstrt _HTTPS file...",
 	"Collect data about https-requests and print a total summary for all"
-	" accepted files.",
+	" accepted files. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	2,
+	5,
 	option_tab_cmd_HTTPS,
 	option_allowed_cmd_HTTPS
     },
@@ -2380,9 +2430,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"EXTRACT",
 	"X",
 	"wstrt EXTRACT dol...",
-	"Extract the sections of a DOL or a REL file into a directory.",
+	"Extract the sections of DOL and REL file into a directory. Wildcards"
+	" and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	3,
+	6,
 	option_tab_cmd_EXTRACT,
 	option_allowed_cmd_EXTRACT
     },
@@ -2477,10 +2529,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"ANALYZE",
 	"ANA",
 	"wstrt ANALYZE [file]...",
-	"Open 'StaticR.rel' and DOL files and analyze them. The files will be"
-	" classified using SHA1 checksums.",
+	"Open 'StaticR.rel' and DOL files and analyze them. Wildcards and pipe"
+	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
+	" details. The files will be classified using SHA1 checksums.",
 	0,
-	17,
+	20,
 	option_tab_cmd_ANALYZE,
 	option_allowed_cmd_ANALYZE
     },
@@ -2492,10 +2545,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"PATCH",
 	0,
 	"wstrt PATCH [file]...",
-	"Patch 'main.dol and 'StaticR.rel' files of Mario Kart Wii. No backup"
-	" is made.",
+	"Patch 'main.dol and 'StaticR.rel' files of Mario Kart Wii. Wildcards"
+	" and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. No backup is made.",
 	0,
-	34,
+	36,
 	option_tab_cmd_PATCH,
 	option_allowed_cmd_PATCH
     },

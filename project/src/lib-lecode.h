@@ -62,7 +62,6 @@
 #define LE_RESERVED_SLOTS	(LE_FIRST_CT_SLOT - 32)
 #define LE_MAX_BLOCK_TRACK	50
 
-// [[time-limit]]
 #define LE_DEF_ONLINE_SEC	340	//     5:40 : default online time limit
 #define LE_MIN_ONLINE_SEC	 30	//     0:30 : min accepted online time limit
 #define LE_MAX_WD_ONLINE_SEC	525	//     8:45 : max online time limit for enabled watchdog
@@ -319,12 +318,16 @@ typedef struct le_lpar_t
     lpar_mode_t limit_mode;	// limit of other params
 
     u16 thcloud_frames;		// number of frames a player is small after thundercloud hit
-// [[time-limit]]
     u16 default_online_sec;	// default time limit in seconds
     u16 min_online_sec;		// minimal time limit in seconds, that can be set by LEX:SET1
     u16 max_online_sec;		// maximal time limit in seconds, that can be set by LEX:SET1
 
-    u8  cheat_mode;		// 0:off, 1:debug only, 2:allow all
+    u8	developer_modes;	// >0: developer settings are recognized and accepted.
+    u8	dev_mode1;		// First developer mode
+    u8	dev_mode2;		// Second developer mode
+    u8	dev_mode3;		// Third developer mode
+
+    u8	cheat_mode;		// 0:off, 1:debug only, 2:allow all
     u8	engine[3];		// 100cc, 150cc, mirror (sum always 100)
     u8	enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
     u8	enable_perfmon;		// >0: performance monitor enabled; >1: for dolphin too
@@ -333,14 +336,14 @@ typedef struct le_lpar_t
     u8	enable_speedo;		// speedometer selection (0..3), see SPEEDO_*
     u8	block_track;		// block used tracks for 0..20 races
     u8	no_speedo_if_debug;	// 1 bit for each debug configuration
-    u8  item_cheat;		// 0:disabled, 1:enabled
-    u8  drag_blue_shell;	// >0: allow dragging of blue shell
-    u8  bt_worldwide;		// >0: enable worldwide battles
-    u8  vs_worldwide;		// >0: enable worldwide versus races, >1: extended
-    u8  bt_textures;		// &1: enable texture hacks for battles, &2:alternable
-    u8  vs_textures;		// &1: enable texture hacks for versus, &2:alternable
-    u8  block_textures;		// >0: enable blocking of recent texture hacks
-    u8  staticr_points;		// >0: use points definied by StaticR.rel
+    u8	item_cheat;		// 0:disabled, 1:enabled
+    u8	drag_blue_shell;	// >0: allow dragging of blue shell
+    u8	bt_worldwide;		// >0: enable worldwide battles
+    u8	vs_worldwide;		// >0: enable worldwide versus races, >1: extended
+    u8	bt_textures;		// &1: enable texture hacks for battles, &2:alternable
+    u8	vs_textures;		// &1: enable texture hacks for versus, &2:alternable
+    u8	block_textures;		// >0: enable blocking of recent texture hacks
+    u8	staticr_points;		// >0: use points definied by StaticR.rel
 
     u8  debug_mode;		// debug mode
     u8  debug_predef[LEDEB__N_CONFIG];
@@ -435,7 +438,7 @@ typedef struct le_binary_head_v3_t
  /*0c*/  u32	base_address;	// memory address of binary (destination)
  /*10*/  u32	entry_point;	// memory address (prolog function)
  /*14*/  u32	file_size;	// size of complete file
- /*18*/  u32	off_param;	// offset of param section
+ /*18*/  u32	off_param;	// offset of LPAR section
  /*1c*/  char	region;		// one of: P, E, J, K
  /*1d*/  char	build_mode;	// one of: D (debug) or R (release)
  /*1e*/  u8	phase;		// >0: PHASE
@@ -454,7 +457,7 @@ typedef struct le_binary_head_v4_t
  /*0c*/  u32	base_address;	// memory address of binary (destination)
  /*10*/  u32	entry_point;	// memory address (prolog function)
  /*14*/  u32	file_size;	// size of complete file
- /*18*/  u32	off_param;	// offset of param section
+ /*18*/  u32	off_param;	// offset of LPAR section
  /*1c*/  char	region;		// one of: P, E, J, K
  /*1d*/  char	build_mode;	// one of: D (debug) or R (release)
  /*1e*/  u8	phase;		// >0: PHASE
@@ -584,7 +587,7 @@ u_sec_t GetRefTimeLeHead    ( const le_binary_head_t *head );
 
 typedef struct le_binary_param_t
 {
- /*00*/  char	magic[8];	// LE_PARAM_MAGIC
+ /*00*/  char	magic[8];	// LE_PARAM_MAGIC ("LPAR")
  /*08*/  u32	version;	// always 1 for v1
  /*0c*/  u32	size;		// size (and minor version)
  /*10*/  u32	off_eod;	// offset of end-of-data
@@ -597,7 +600,7 @@ __attribute__ ((packed)) le_binary_param_t;
 
 typedef struct le_binpar_v1_35_t
 {
- /*00*/  char magic[8];		// LE_PARAM_MAGIC
+ /*00*/  char magic[8];		// LE_PARAM_MAGIC ("LPAR")
  /*08*/  u32  version;		// always 1 for v1
  /*0c*/  u32  size;		// size (and minor version)
  /*10*/  u32  off_eod;		// offset of end-of-data
@@ -624,10 +627,10 @@ _Static_assert(sizeof(le_binpar_v1_35_t)==0x35,"le_binpar_v1_35_t");
 
 typedef struct le_binpar_v1_37_t
 {
- /*00*/  char magic[8];	// LE_PARAM_MAGIC
- /*08*/  u32  version;	// always 1 for v1
+ /*00*/  char magic[8];		// LE_PARAM_MAGIC ("LPAR")
+ /*08*/  u32  version;		// always 1 for v1
  /*0c*/  u32  size;		// size (and minor version)
- /*10*/  u32  off_eod;	// offset of end-of-data
+ /*10*/  u32  off_eod;		// offset of end-of-data
 
  /*14*/  u32  off_cup_par;	// offset to cup param
  /*18*/  u32  off_cup_track;	// offset of cup-track list
@@ -653,10 +656,10 @@ _Static_assert(sizeof(le_binpar_v1_37_t)==0x37,"le_binpar_v1_37_t");
 
 typedef struct le_binpar_v1_f8_t
 {
- /*00*/  char magic[8];	// LE_PARAM_MAGIC
- /*08*/  u32  version;	// always 1 for v1
+ /*00*/  char magic[8];		// LE_PARAM_MAGIC ("LPAR")
+ /*08*/  u32  version;		// always 1 for v1
  /*0c*/  u32  size;		// size (and minor version)
- /*10*/  u32  off_eod;	// offset of end-of-data
+ /*10*/  u32  off_eod;		// offset of end-of-data
 
  /*14*/  u32  off_cup_par;	// offset to cup param
  /*18*/  u32  off_cup_track;	// offset of cup-track list
@@ -684,7 +687,7 @@ _Static_assert(sizeof(le_binpar_v1_f8_t)==0xf8,"le_binpar_v1_f8_t");
 
 typedef struct le_binpar_v1_1b8_t
 {
- /*000*/ char magic[8];	// LE_PARAM_MAGIC
+ /*000*/ char magic[8];		// LE_PARAM_MAGIC ("LPAR")
  /*008*/ u32  version;		// always 1 for v1
  /*00c*/ u32  size;		// size (and minor version)
  /*010*/ u32  off_eod;		// offset of end-of-data
@@ -716,7 +719,7 @@ _Static_assert(sizeof(le_binpar_v1_1b8_t)==0x1b8,"le_binpar_v1_1b8_t");
 
 typedef struct le_binpar_v1_1bc_t
 {
- /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC ("LPAR")
  /*008*/ u32  version;			// always 1 for v1
  /*00c*/ u32  size;			// size (and minor version)
  /*010*/ u32  off_eod;			// offset of end-of-data
@@ -755,7 +758,7 @@ _Static_assert(sizeof(le_binpar_v1_1bc_t)==0x1bc,"le_binpar_v1_1bc_t");
 
 typedef struct le_binpar_v1_260_t
 {
- /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC ("LPAR")
  /*008*/ u32  version;			// always 1 for v1
  /*00c*/ u32  size;			// size (and minor version)
  /*010*/ u32  off_eod;			// offset of end-of-data
@@ -796,7 +799,7 @@ _Static_assert(sizeof(le_binpar_v1_260_t)==0x260,"le_binpar_v1_260_t");
 
 typedef struct le_binpar_v1_264_t
 {
- /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC ("LPAR")
  /*008*/ u32  version;			// always 1 for v1
  /*00c*/ u32  size;			// size (and minor version)
  /*010*/ u32  off_eod;			// offset of end-of-data
@@ -843,7 +846,7 @@ _Static_assert(sizeof(le_binpar_v1_264_t)==0x264,"le_binpar_v1_264_t");
 
 typedef struct le_binpar_v1_269_t
 {
- /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC ("LPAR")
  /*008*/ u32  version;			// always 1 for v1
  /*00c*/ u32  size;			// size (and minor version)
  /*010*/ u32  off_eod;			// offset of end-of-data
@@ -896,7 +899,7 @@ _Static_assert(sizeof(le_binpar_v1_269_t)==0x269,"le_binpar_v1_269_t");
 
 typedef struct le_binpar_v1_26a_t
 {
- /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC ("LPAR")
  /*008*/ u32  version;			// always 1 for v1
  /*00c*/ u32  size;			// size (and minor version)
  /*010*/ u32  off_eod;			// offset of end-of-data
@@ -948,7 +951,7 @@ __attribute__ ((packed)) le_binpar_v1_26a_t;
 
 typedef struct le_binpar_v1_270_t
 {
- /*000*/ char magic[8];			// LE_PARAM_MAGIC
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC ("LPAR")
  /*008*/ u32  version;			// always 1 for v1
  /*00c*/ u32  size;			// size (and minor version)
  /*010*/ u32  off_eod;			// offset of end-of-data
@@ -990,7 +993,6 @@ typedef struct le_binpar_v1_270_t
  /*268*/ u8   block_textures;		// >0: enable blocking of recent texture hacks
  /*269*/ u8   staticr_points;		// >0: use points definied by StaticR.rel
 
-// [[time-limit]]
  /*26a*/ u16  default_online_sec;	// default time limit in seconds
  /*26c*/ u16  min_online_sec;		// minimal time limit in seconds, that can be set by LEX:SET1
  /*26e*/ u16  max_online_sec;		// maximal time limit in seconds, that can be set by LEX:SET1
@@ -1002,9 +1004,103 @@ __attribute__ ((packed)) le_binpar_v1_270_t;
 _Static_assert(sizeof(le_binpar_v1_270_t)==0x270,"le_binpar_v1_270_t");
 
 //-----------------------------------------------------------------------------
+// [[le_binpar_v1_274_t]]
+
+typedef struct le_binpar_v1_274_t
+{
+ //--- le_binary_param_t
+
+ /*000*/ char magic[8];			// LE_PARAM_MAGIC ("LPAR")
+ /*008*/ u32  version;			// always 1 for v1
+ /*00c*/ u32  size;			// size (and minor version)
+ /*010*/ u32  off_eod;			// offset of end-of-data
+
+ //--- le_binpar_v1_35_t
+
+ /*014*/ u32  off_cup_par;		// offset to cup param
+ /*018*/ u32  off_cup_track;		// offset of cup-track list
+ /*01c*/ u32  off_cup_arena;		// offset of cup-arena list
+ /*020*/ u32  off_course_par;		// offset of course param
+ /*024*/ u32  off_property;		// offset of property list
+ /*028*/ u32  off_music;		// offset of music list
+ /*02c*/ u32  off_flags;		// offset of flags
+
+ /*030*/ u8   engine[3];		// 100cc, 150cc, mirror (sum always 100)
+ /*033*/ u8   enable_200cc;		// TRUE: 200C enabled => 150cc, 200cc, mirror
+ /*034*/ u8   enable_perfmon;		// >0: performance monitor enabled; >1: for dolphin too
+
+ //--- le_binpar_v1_37_t
+
+ /*035*/ u8   enable_custom_tt;		// TRUE: time trial for cusotm tracks enabled
+ /*036*/ u8   enable_xpflags;		// TRUE: extended presence flags enabled
+
+ //--- le_binpar_v1_f8_t
+
+ /*037*/ u8   block_track;		// block used track for 0.. tracks
+ /*038*/ u16  chat_mode_1[BMG_N_CHAT];	// mode for each chat message
+
+ //--- le_binpar_v1_1b8_t
+
+ /*0f8*/ u16  chat_mode_2[BMG_N_CHAT];	// mode for each chat message
+
+ //--- le_binpar_v1_1bc_t
+
+ /*1b8*/ u8   enable_speedo;		// speedometer selection (0..2), see SPEEDO_*
+ /*1b9*/ u8   no_speedo_if_debug;	// if bit is set: suppress speedometer
+ /*1ba*/ u8   debug_mode;		// debug mode (0..), see DEBUGMD_*
+
+ //--- le_binpar_v1_260_t
+
+ /*1bb*/ u8   item_cheat;		// 0:disabled, 1:enabled
+
+ /*1bc*/ u8   debug_predef[LEDEB__N_CONFIG];
+					// information about used predefined mode
+ /*1c0*/ u32  debug[LEDEB__N_CONFIG][LEDEB__N_LINE];
+					// debug line settings, see LEDEB_*
+
+ //--- le_binpar_v1_264_t
+
+ /*260*/ u8   cheat_mode;		// 0:off, 1:debug only, 2:allow all
+ /*261*/ u8   drag_blue_shell;		// >0: allow dragging of blue shell
+ /*262*/ u16  thcloud_frames;		// number of frames a player is small after thundercloud hit
+
+ //--- le_binpar_v1_269_t
+
+ /*264*/ u8   bt_worldwide;		// >0: enable worldwide battles
+ /*265*/ u8   vs_worldwide;		// >0: enable worldwide versus races
+ /*266*/ u8   bt_textures;		// &1: enable texture hacks for battles, &2:alternable
+ /*267*/ u8   vs_textures;		// &1: enable texture hacks for versus, &2:alternable
+ /*268*/ u8   block_textures;		// >0: enable blocking of recent texture hacks
+
+ //--- le_binpar_v1_26a_t
+
+ /*269*/ u8   staticr_points;		// >0: use points definied by StaticR.rel
+
+ //--- le_binpar_v1_270_t
+
+ /*26a*/ u16  default_online_sec;	// default time limit in seconds
+ /*26c*/ u16  min_online_sec;		// minimal time limit in seconds, that can be set by LEX:SET1
+ /*26e*/ u16  max_online_sec;		// maximal time limit in seconds, that can be set by LEX:SET1
+
+ //--- le_binpar_v1_274_t
+
+ /*270*/ u8   developer_modes;		// >0: developer settings are recognized and accepted.
+ /*271*/ u8   dev_mode1;		// First developer mode
+ /*272*/ u8   dev_mode2;		// Second developer mode
+ /*273*/ u8   dev_mode3;		// Third developer mode
+
+ //--- END
+
+ /*274*/
+}
+__attribute__ ((packed)) le_binpar_v1_274_t;
+
+_Static_assert(sizeof(le_binpar_v1_274_t)==0x274,"le_binpar_v1_274_t");
+
+//-----------------------------------------------------------------------------
 // [[le_binpar_v1_t]] [[new-lpar]]
 
-typedef struct le_binpar_v1_270_t le_binpar_v1_t;
+typedef struct le_binpar_v1_274_t le_binpar_v1_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////

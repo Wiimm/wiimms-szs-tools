@@ -127,12 +127,14 @@
   { T_DEF_CMD,	"DUMP",		"D|DUMP",
 		    "wctct DUMP [source]...",
 		"Print an information dump for the CT-CODE of each source file."
-		" " CT_CODE_SOURCE " are accepted as input." },
+		" " CT_CODE_SOURCE " are accepted as input."
+		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"CAT",		"CAT",
 		    "wctct CAT [source]...",
 		"Read the source files and print the CT-CODE part"
 		" them as decoded text files to standard output."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated."
 		" " CT_CODE_SOURCE " are accepted as input." },
 
@@ -149,6 +151,7 @@
   { T_DEF_CMD,	"DECODE",	"DECODE|DEC",
 		    "wctct DECODE [source]...",
 		"Read the source files and decode them to CT-TEXT files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.txt'@."
 		" " CT_CODE_SOURCE " are accepted as input." },
 
@@ -156,6 +159,7 @@
 		    "wctct CREATE keyword [source]...",
 		"Read the source files, scan the CT-CODE part"
 		" and create an output file controlled by the keyword."
+		" " WILDCARDS_PIPE
 		" BRRES, TEX0, CT-CODE, CT-TEXT and LE-BIN files are accepted as input."
 		" Possible keywords are: @CUP1, CRS1, r-MOD1, r-MOD2, r-OVR1,"
 		" r-BAD1CODE, r-BAD1DATA (=r-CODE), r-TEX0, r-BRRES, r-SZS,"
@@ -170,6 +174,7 @@
 		    "wctct PATCH [source]...",
 		"Read each source file, find and scan the CT-CODE part"
 		" and patch it."
+		" " WILDCARDS_PIPE
 		" " CT_CODE_SOURCE " are accepted as input." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
@@ -271,6 +276,12 @@
   { T_OPT_C,	"BRIEF",	"B|brief",
 		0,
 		"Suppress cross reference comments." },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
+		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"RAW",	"raw",
 		0,
@@ -648,10 +659,12 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wctct FILEATTRIB ----------
 
@@ -699,6 +712,10 @@
 
   { T_CMD_BEG,	"DUMP",		0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"LONG",		0,0,
 		"Print headers as hexdump." },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
@@ -758,29 +775,40 @@
   //---------- COMMAND wctct CAT ----------
 
   { T_CMD_BEG,	"CAT",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"WRITE_TRACKS",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
 
   //---------- COMMAND wctct DECODE ----------
 
   { T_CMD_BEG,	"DECODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
 
   //---------- COMMAND wctct CREATE ----------
 
   { T_CMD_BEG,	"CREATE",	0,0,0 },
 
-  { T_COPY_GRP,	"DEST",		0,0,0 },
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TEXTOPT",	0,0,0 },
   { T_COPT,	"BMG_ENDIAN",	0,0,0 },
   { T_COPT,	"BMG_ENCODING",	0,0,0 },
@@ -818,8 +846,12 @@
   //---------- COMMAND wctct PATCH ----------
 
   { T_CMD_BEG,	"PATCH",	0,0,0 },
-  { T_COPY_GRP,	"DEST",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
+  { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },

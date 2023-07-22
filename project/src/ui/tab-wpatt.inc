@@ -121,18 +121,21 @@
 		    "wpatt CAT [source]...",
 		"Read the entered PAT files (text or binary) and print"
 		" them as decoded text files to standard output (stdout)."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated." },
 
   { T_DEF_CMD,	"DECODE",	"DECODE|DEC",
 		    "wpatt DECODE [source]...",
 		"Read the entered PAT files (text or binary)"
 		" and decode them to text files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.txt'@." },
 
   { T_DEF_CMD,	"ENCODE",	"ENCODE|ENC",
 		    "wpatt ENCODE [source]...",
 		"Read the entered PAT files (text or binary)"
 		" and encode (compile) them to binary files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.pat'@." },
 
   //
@@ -219,6 +222,12 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"BRIEF",	"B|brief",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"NO_PARAM",	"P|no-param|noparam",
@@ -410,10 +419,12 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wpatt FILEATTRIB ----------
 
@@ -453,27 +464,39 @@
   //---------- COMMAND wpatt CAT ----------
 
   { T_CMD_BEG,	"CAT",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wpatt DECODE ----------
 
   { T_CMD_BEG,	"DECODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wpatt ENCODE ----------
 
   { T_CMD_BEG,	"ENCODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
 
 //

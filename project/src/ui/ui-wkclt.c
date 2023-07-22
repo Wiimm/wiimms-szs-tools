@@ -311,6 +311,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Create smaller output."
     },
 
+    {	OPT_NO_WILDCARDS, false, false, false, false, false, 0, "no-wildcards",
+	0,
+	"Disable wildcard parsing and use each filename exactly as specified."
+    },
+
+    {	OPT_IN_ORDER, false, false, false, false, false, 0, "in-order",
+	0,
+	"Process the input files in order of the command line and don't delete"
+	" duplicates."
+    },
+
     {	OPT_NO_PARAM, false, false, false, false, false, 'P', "no-param",
 	0,
 	"Disable parameter support in decoded KMP text files."
@@ -393,7 +404,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Print in machine readable sections and parameter lines."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 41
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 43
 
     //----- global options -----
 
@@ -698,7 +709,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 80
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 82
 
 };
 
@@ -1048,6 +1059,10 @@ static const struct option OptionLong[] =
 	{ "no-header",		0, 0, 'H' },
 	 { "noheader",		0, 0, 'H' },
 	{ "brief",		0, 0, 'B' },
+	{ "no-wildcards",	0, 0, GO_NO_WILDCARDS },
+	 { "nowildcards",	0, 0, GO_NO_WILDCARDS },
+	{ "in-order",		0, 0, GO_IN_ORDER },
+	 { "inorder",		0, 0, GO_IN_ORDER },
 	{ "no-param",		0, 0, 'P' },
 	 { "noparam",		0, 0, 'P' },
 	{ "no-echo",		0, 0, GO_NO_ECHO },
@@ -1185,19 +1200,21 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x0a7   */	OPT_DB64,
 	/* 0x0a8   */	OPT_CODING,
 	/* 0x0a9   */	OPT_ROUND,
-	/* 0x0aa   */	OPT_NO_ECHO,
-	/* 0x0ab   */	OPT_UTF_8,
-	/* 0x0ac   */	OPT_NO_UTF_8,
-	/* 0x0ad   */	OPT_FORCE,
-	/* 0x0ae   */	OPT_REPAIR_MAGICS,
-	/* 0x0af   */	OPT_TINY,
-	/* 0x0b0   */	OPT_OLD,
-	/* 0x0b1   */	OPT_STD,
-	/* 0x0b2   */	OPT_NEW,
-	/* 0x0b3   */	OPT_EXTRACT,
-	/* 0x0b4   */	OPT_NUMBER,
-	/* 0x0b5   */	OPT_SECTIONS,
-	/* 0x0b6   */	 0,0,0,0, 0,0,0,0, 0,0,
+	/* 0x0aa   */	OPT_NO_WILDCARDS,
+	/* 0x0ab   */	OPT_IN_ORDER,
+	/* 0x0ac   */	OPT_NO_ECHO,
+	/* 0x0ad   */	OPT_UTF_8,
+	/* 0x0ae   */	OPT_NO_UTF_8,
+	/* 0x0af   */	OPT_FORCE,
+	/* 0x0b0   */	OPT_REPAIR_MAGICS,
+	/* 0x0b1   */	OPT_TINY,
+	/* 0x0b2   */	OPT_OLD,
+	/* 0x0b3   */	OPT_STD,
+	/* 0x0b4   */	OPT_NEW,
+	/* 0x0b5   */	OPT_EXTRACT,
+	/* 0x0b6   */	OPT_NUMBER,
+	/* 0x0b7   */	OPT_SECTIONS,
+	/* 0x0b8   */	 0,0,0,0, 0,0,0,0, 
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1213,202 +1230,202 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[41] = // cmd #1
+static u8 option_allowed_cmd_VERSION[43] = // cmd #1
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,1
 };
 
-static u8 option_allowed_cmd_HELP[41] = // cmd #2
+static u8 option_allowed_cmd_HELP[43] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_CONFIG[41] = // cmd #3
+static u8 option_allowed_cmd_CONFIG[43] = // cmd #3
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_ARGTEST[41] = // cmd #4
+static u8 option_allowed_cmd_ARGTEST[43] = // cmd #4
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_EXPAND[41] = // cmd #5
+static u8 option_allowed_cmd_EXPAND[43] = // cmd #5
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_TEST[41] = // cmd #6
+static u8 option_allowed_cmd_TEST[43] = // cmd #6
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1,1,1,1, 1,1,1,1,1,  1
+    1,1,1,1,1, 1,1,1,1,1,  1,1,1
 };
 
-static u8 option_allowed_cmd_COLORS[41] = // cmd #7
+static u8 option_allowed_cmd_COLORS[43] = // cmd #7
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_ERROR[41] = // cmd #8
+static u8 option_allowed_cmd_ERROR[43] = // cmd #8
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  1
+    0,0,0,0,0, 0,0,0,0,0,  0,0,1
 };
 
-static u8 option_allowed_cmd_FILETYPE[41] = // cmd #9
+static u8 option_allowed_cmd_FILETYPE[43] = // cmd #9
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,0,1,1,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[41] = // cmd #10
-{
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
-};
-
-static u8 option_allowed_cmd_SYMBOLS[41] = // cmd #11
+static u8 option_allowed_cmd_FILEATTRIB[43] = // cmd #10
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_FUNCTIONS[41] = // cmd #12
+static u8 option_allowed_cmd_SYMBOLS[43] = // cmd #11
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,0,0,0,
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
+};
+
+static u8 option_allowed_cmd_FUNCTIONS[43] = // cmd #12
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,1,1,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_CALCULATE[41] = // cmd #13
+static u8 option_allowed_cmd_CALCULATE[43] = // cmd #13
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_MATRIX[41] = // cmd #14
+static u8 option_allowed_cmd_MATRIX[43] = // cmd #14
 {
     0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_FLOAT[41] = // cmd #15
+static u8 option_allowed_cmd_FLOAT[43] = // cmd #15
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_EXPORT[41] = // cmd #16
+static u8 option_allowed_cmd_EXPORT[43] = // cmd #16
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_CAT[41] = // cmd #17
+static u8 option_allowed_cmd_CAT[43] = // cmd #17
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,1,
-    1,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,1,1,
+    0,1,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_DECODE[41] = // cmd #18
+static u8 option_allowed_cmd_DECODE[43] = // cmd #18
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,1,
-    1,1,1,1,1, 1,1,1,1,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,1,1,
+    0,1,1,1,1, 1,1,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_ENCODE[41] = // cmd #19
+static u8 option_allowed_cmd_ENCODE[43] = // cmd #19
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,1,
-    1,1,1,1,1, 1,1,1,1,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,1,1,
+    0,1,1,1,1, 1,1,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_COPY[41] = // cmd #20
+static u8 option_allowed_cmd_COPY[43] = // cmd #20
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,1,
-    1,1,1,1,1, 1,1,1,1,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,1,1,
+    0,1,1,1,1, 1,1,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_CFF[41] = // cmd #21
+static u8 option_allowed_cmd_CFF[43] = // cmd #21
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 1,0,1,0,1,
-    1,1,1,1,1, 1,1,1,1,1,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,0,  0,0,0,0,0, 1,0,1,1,1,
+    0,1,1,1,1, 1,1,1,1,1,  1,1,0
 };
 
-static u8 option_allowed_cmd_TYPES[41] = // cmd #22
+static u8 option_allowed_cmd_TYPES[43] = // cmd #22
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,1,1,0,0,
-    0,0,0,0,0, 0,0,0,0,0,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0
 };
 
-static u8 option_allowed_cmd_FLAGS[41] = // cmd #23
+static u8 option_allowed_cmd_FLAGS[43] = // cmd #23
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,1,1,0,0,
-    1,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,1,1,1,1,
+    0,0,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_DUMP[41] = // cmd #24
+static u8 option_allowed_cmd_DUMP[43] = // cmd #24
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
-    1,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,1,1,
+    0,0,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_DBRIEF[41] = // cmd #25
+static u8 option_allowed_cmd_DBRIEF[43] = // cmd #25
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
-    1,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,1,1,
+    0,0,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_LIST[41] = // cmd #26
+static u8 option_allowed_cmd_LIST[43] = // cmd #26
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,0,
-    1,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,1,1,
+    0,0,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_TRIANGLES[41] = // cmd #27
+static u8 option_allowed_cmd_TRIANGLES[43] = // cmd #27
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
-    1,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,1,1,
+    0,0,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_TRAVERSE[41] = // cmd #28
-{
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
-    1,0,0,0,0, 0,0,0,0,1,  0
-};
-
-static u8 option_allowed_cmd_FALL[41] = // cmd #29
+static u8 option_allowed_cmd_TRAVERSE[43] = // cmd #28
 {
     0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
-    1,0,0,0,0, 0,0,0,0,1,  0
+    0,0,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_CHECK[41] = // cmd #30
+static u8 option_allowed_cmd_FALL[43] = // cmd #29
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,0,1,
-    1,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 1,0,1,0,0,
+    0,0,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_SHA1[41] = // cmd #31
+static u8 option_allowed_cmd_CHECK[43] = // cmd #30
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,1,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 1,0,1,1,1,
+    0,1,1,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_ANALYZE[41] = // cmd #32
+static u8 option_allowed_cmd_SHA1[43] = // cmd #31
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,1,1,1,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0
 };
 
-static u8 option_allowed_cmd_BLOW[41] = // cmd #33
+static u8 option_allowed_cmd_ANALYZE[43] = // cmd #32
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0,0,0,0, 0,0,0,0,1,  0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  0,0,0,0,0, 0,0,0,1,1,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0
+};
+
+static u8 option_allowed_cmd_BLOW[43] = // cmd #33
+{
+    0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,1,1,
+    0,0,0,0,0, 0,0,0,0,0,  0,1,0
 };
 
 
@@ -1523,8 +1540,10 @@ static const InfoOption_t * option_tab_cmd_ERROR[] =
 
 static const InfoOption_t * option_tab_cmd_FILETYPE[] =
 {
-	&option_cmd_FILETYPE_LONG,
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+	&option_cmd_FILETYPE_LONG,
 
 	0
 };
@@ -1609,9 +1628,14 @@ static const InfoOption_t * option_tab_cmd_EXPORT[] =
 
 static const InfoOption_t * option_tab_cmd_CAT[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_NO_ECHO,
 	OptionInfo + OPT_NO_CHECK,
-	OptionInfo + OPT_IGNORE,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1644,6 +1668,12 @@ static const InfoOption_t * option_tab_cmd_CAT[] =
 
 static const InfoOption_t * option_tab_cmd_DECODE[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
 	OptionInfo + OPT_ESC,
@@ -1657,7 +1687,6 @@ static const InfoOption_t * option_tab_cmd_DECODE[] =
 	OptionInfo + OPT_PRESERVE,
 	OptionInfo + OPT_NO_ECHO,
 	OptionInfo + OPT_NO_CHECK,
-	OptionInfo + OPT_IGNORE,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1690,6 +1719,12 @@ static const InfoOption_t * option_tab_cmd_DECODE[] =
 
 static const InfoOption_t * option_tab_cmd_ENCODE[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
 	OptionInfo + OPT_ESC,
@@ -1703,7 +1738,6 @@ static const InfoOption_t * option_tab_cmd_ENCODE[] =
 	OptionInfo + OPT_PRESERVE,
 	OptionInfo + OPT_NO_ECHO,
 	OptionInfo + OPT_NO_CHECK,
-	OptionInfo + OPT_IGNORE,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1736,6 +1770,12 @@ static const InfoOption_t * option_tab_cmd_ENCODE[] =
 
 static const InfoOption_t * option_tab_cmd_COPY[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
 	OptionInfo + OPT_ESC,
@@ -1749,7 +1789,6 @@ static const InfoOption_t * option_tab_cmd_COPY[] =
 	OptionInfo + OPT_PRESERVE,
 	OptionInfo + OPT_NO_ECHO,
 	OptionInfo + OPT_NO_CHECK,
-	OptionInfo + OPT_IGNORE,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1782,6 +1821,12 @@ static const InfoOption_t * option_tab_cmd_COPY[] =
 
 static const InfoOption_t * option_tab_cmd_CFF[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	&option_cmd_CFF_LONG,
 	&option_cmd_CFF_BRIEF,
 	OptionInfo + OPT_DEST,
@@ -1797,7 +1842,6 @@ static const InfoOption_t * option_tab_cmd_CFF[] =
 	OptionInfo + OPT_PRESERVE,
 	OptionInfo + OPT_NO_ECHO,
 	OptionInfo + OPT_NO_CHECK,
-	OptionInfo + OPT_IGNORE,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1817,9 +1861,14 @@ static const InfoOption_t * option_tab_cmd_TYPES[] =
 
 static const InfoOption_t * option_tab_cmd_FLAGS[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_NO_HEADER,
 	OptionInfo + OPT_NO_CHECK,
-	OptionInfo + OPT_IGNORE,
 	&option_cmd_FLAGS_BRIEF,
 
 	OptionInfo + OPT_NONE, // separator
@@ -1853,7 +1902,12 @@ static const InfoOption_t * option_tab_cmd_FLAGS[] =
 
 static const InfoOption_t * option_tab_cmd_DUMP[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_NO_CHECK,
 	&option_cmd_DUMP_BRIEF,
 	&option_cmd_DUMP_LONG,
@@ -1889,7 +1943,12 @@ static const InfoOption_t * option_tab_cmd_DUMP[] =
 
 static const InfoOption_t * option_tab_cmd_DBRIEF[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_NO_CHECK,
 	&option_cmd_DUMP_BRIEF,
 	&option_cmd_DUMP_LONG,
@@ -1925,7 +1984,12 @@ static const InfoOption_t * option_tab_cmd_DBRIEF[] =
 
 static const InfoOption_t * option_tab_cmd_LIST[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_NO_CHECK,
 
 	OptionInfo + OPT_NONE, // separator
@@ -1959,7 +2023,12 @@ static const InfoOption_t * option_tab_cmd_LIST[] =
 
 static const InfoOption_t * option_tab_cmd_TRIANGLES[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_NO_CHECK,
 	&option_cmd_TRIANGLES_BRIEF,
 	&option_cmd_TRIANGLES_LONG,
@@ -2067,6 +2136,12 @@ static const InfoOption_t * option_tab_cmd_FALL[] =
 
 static const InfoOption_t * option_tab_cmd_CHECK[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_COLORS,
 	OptionInfo + OPT_NO_COLORS,
 	&option_cmd_CHECK_BRIEF,
@@ -2074,14 +2149,18 @@ static const InfoOption_t * option_tab_cmd_CHECK[] =
 	&option_cmd_CHECK_QUIET,
 	OptionInfo + OPT_NO_ECHO,
 	OptionInfo + OPT_NO_CHECK,
-	OptionInfo + OPT_IGNORE,
 
 	0
 };
 
 static const InfoOption_t * option_tab_cmd_SHA1[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_ID,
 	OptionInfo + OPT_BASE64,
 	OptionInfo + OPT_DB64,
@@ -2119,6 +2198,8 @@ static const InfoOption_t * option_tab_cmd_SHA1[] =
 
 static const InfoOption_t * option_tab_cmd_ANALYZE[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
 
 	OptionInfo + OPT_NONE, // separator
@@ -2152,6 +2233,8 @@ static const InfoOption_t * option_tab_cmd_ANALYZE[] =
 
 static const InfoOption_t * option_tab_cmd_BLOW[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
 
 	0
@@ -2258,10 +2341,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"This debug command accepts (like ARGTEST) all kinds of parameters and"
 	" prints one line for each parameter. After that, the parameter is"
 	" treated as a filename with wildcards and all matching files are"
-	" searched. The special parameters '+h' and '_h' enable or disable the"
-	" search for hidden directories and files (files beginning with a"
-	" point) for the following parameters. All tools know the EXPAND"
-	" command.",
+	" searched. All tools know the EXPAND command.",
 	0,
 	0,
 	option_tab_cmd_EXPAND,
@@ -2323,9 +2403,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"FT",
 	"wkclt FILETYPE file...",
 	"Scan the header of the entered files and print file type and path for"
-	" each file as list. All tools know the FILETYPE command.",
+	" each file as list. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. All tools know the"
+	" FILETYPE command.",
 	0,
-	2,
+	4,
 	option_tab_cmd_FILETYPE,
 	option_allowed_cmd_FILETYPE
     },
@@ -2464,11 +2546,13 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wkclt CAT source...",
 	"Read the entered KCL and OBJ files and print them as OBJ files to"
-	" standard output. The output of all source files is concatenated.\n"
+	" standard output. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. The output of all"
+	" source files is concatenated.\n"
 	"  Automated dropping of bad KCL triangles is enabled if no other drop"
 	" option is specified by option --kcl.",
 	0,
-	26,
+	28,
 	option_tab_cmd_CAT,
 	option_allowed_cmd_CAT
     },
@@ -2480,12 +2564,14 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"DECODE",
 	"DEC",
 	"wkclt DECODE source...",
-	"Read the entered KCL and OBJ files and export them to OBJ files. The"
-	" default destination is '%P/%N.txt'.\n"
+	"Read the entered KCL and OBJ files and export them to OBJ files."
+	" Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. The default"
+	" destination is '%P/%N.txt'.\n"
 	"  Automated dropping of bad KCL triangles is enabled if no other drop"
 	" option is specified by option --kcl.",
 	0,
-	34,
+	36,
 	option_tab_cmd_DECODE,
 	option_allowed_cmd_DECODE
     },
@@ -2498,10 +2584,12 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"ENC",
 	"wkclt ENCODE source...",
 	"Read the entered KCL and OBJ files and encode (compile) them to"
-	" binary KCL files. The default destination is '%P/%N.kcl'.\n"
+	" binary KCL files. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. The default"
+	" destination is '%P/%N.kcl'.\n"
 	"  See https://szs.wiimm.de/doc/kcl for encoding details.",
 	0,
-	34,
+	36,
 	option_tab_cmd_ENCODE,
 	option_allowed_cmd_ENCODE
     },
@@ -2516,7 +2604,8 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wkclt COPY source... [-d|-D] dest",
 	"Copy and convert a collision file from 'source' to 'dest'. Multiple"
 	" KCL and OBJ sources can be used, if 'dest' is a directory or"
-	" contains at least one %-pattern.\n"
+	" contains at least one %-pattern. Wildcards and pipe characters are"
+	" parsed, see https://szs.wiimm.de/doc/wildcards for details.\n"
 	"  This is an alternative for the DECODE and ENCODE commands. The"
 	" default destination file format is selected by scanning the file"
 	" extension of the destination. Is it '.kcl', a binary KCL file is"
@@ -2525,7 +2614,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"  Automated dropping of bad KCL triangles is enabled if no other drop"
 	" option is specified and the destination is an OBJ file.",
 	0,
-	34,
+	36,
 	option_tab_cmd_COPY,
 	option_allowed_cmd_COPY
     },
@@ -2538,10 +2627,12 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wkclt CFF source...",
 	"CFF is an abbreviation of 'create flag file' and will create a flag"
-	" file template for each entered source file. If the flag file already"
-	" exists, only missing group names are added at the end of file.",
+	" file template for each entered source file. Wildcards and pipe"
+	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
+	" details. If the flag file already exists, only missing group names"
+	" are added at the end of file.",
 	0,
-	15,
+	17,
 	option_tab_cmd_CFF,
 	option_allowed_cmd_CFF
     },
@@ -2574,9 +2665,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"F",
 	"wkclt FLAGS source...",
 	"Print a KCL type and flag usage statistic for each source to standard"
-	" output.",
+	" output. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	27,
+	29,
 	option_tab_cmd_FLAGS,
 	option_allowed_cmd_FLAGS
     },
@@ -2590,10 +2682,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wkclt DUMP source...",
 	"This debugging command prints an information dump about the internal"
 	" triangle data base and the octree in human and machine readable text"
-	" format. The output of all source files is concatenated and printed"
-	" to standard output.",
+	" format. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. The output of all"
+	" source files is concatenated and printed to standard output.",
 	0,
-	27,
+	29,
 	option_tab_cmd_DUMP,
 	option_allowed_cmd_DUMP
     },
@@ -2609,7 +2702,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" triangle list is suppressed and only the header data and statistics"
 	" are printed.",
 	0,
-	27,
+	29,
 	option_tab_cmd_DBRIEF,
 	option_allowed_cmd_DBRIEF
     },
@@ -2623,10 +2716,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wkclt LIST source...",
 	"This debugging command prints a list of all triangles with metrics in"
 	" human and machine readable text format. It is like DUMP, but reduced"
-	" to the list of triangles. The output of all source files is"
-	" concatenated and printed to standard output.",
+	" to the list of triangles. Wildcards and pipe characters are parsed,"
+	" see https://szs.wiimm.de/doc/wildcards for details. The output of"
+	" all source files is concatenated and printed to standard output.",
 	0,
-	25,
+	27,
 	option_tab_cmd_LIST,
 	option_allowed_cmd_LIST
     },
@@ -2640,11 +2734,13 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wkclt TRIANGLES source...",
 	"This debugging commands prints one data line for each triangle. The"
 	" goal is to compare data. Therefor and to create smaller lines the"
-	" precision of the floating points numbers is reduced.\n"
+	" precision of the floating points numbers is reduced. Wildcards and"
+	" pipe characters are parsed, see https://szs.wiimm.de/doc/wildcards"
+	" for details.\n"
 	"  The print order is: flag used length | 3 points | 4 normals. For"
 	" each point and normal 3 coordinates are printed.",
 	0,
-	27,
+	29,
 	option_tab_cmd_TRIANGLES,
 	option_allowed_cmd_TRIANGLES
     },
@@ -2690,11 +2786,12 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"CHK",
 	"wkclt CHECK source...",
 	"Read the entered KCL files (text or binary) and and make a"
-	" plausibility check. Hints and warnings are written to standard"
-	" output. The exit status is 'DIFFER' if at least one KMP warning"
-	" found.",
+	" plausibility check. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. Hints and warnings"
+	" are written to standard output. The exit status is 'DIFFER' if at"
+	" least one KMP warning found.",
 	0,
-	8,
+	10,
 	option_tab_cmd_CHECK,
 	option_allowed_cmd_CHECK
     },
@@ -2706,10 +2803,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"SHA1",
 	0,
 	"wszst SHA1 [source]...",
-	"Print a SHA1 checksum of the KCL for each source. The checksum is"
-	" calculated after patching.",
+	"Print a SHA1 checksum of the KCL for each source. Wildcards and pipe"
+	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
+	" details. The checksum is calculated after patching.",
 	0,
-	29,
+	31,
 	option_tab_cmd_SHA1,
 	option_allowed_cmd_SHA1
     },
@@ -2721,9 +2819,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"ANALYZE",
 	0,
 	"wkclt ANALYZE source...",
-	"Analyze some KCL data.",
+	"Analyze some KCL data. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	24,
+	26,
 	option_tab_cmd_ANALYZE,
 	option_allowed_cmd_ANALYZE
     },
@@ -2735,10 +2834,12 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"BLOW",
 	0,
 	"wkclt BLOW source...",
-	"Try to calculate the used blow size (KCL_BLOW) of a KCL. Print one"
-	" line for each source file.",
+	"Try to calculate the used blow size (KCL_BLOW) of a KCL. Wildcards"
+	" and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. Print one line for"
+	" each source file.",
 	0,
-	1,
+	3,
 	option_tab_cmd_BLOW,
 	option_allowed_cmd_BLOW
     },

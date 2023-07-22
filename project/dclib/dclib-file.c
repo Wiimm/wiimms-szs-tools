@@ -3770,8 +3770,9 @@ ccp GetBlockDeviceHolder ( ccp name, ccp sep, int *ret_level )
 
 typedef struct search_paths_t
 {
+    wildcard_mode_t	wc_mode;	// bit field: modes for wildcard handling
     mem_t		source;		// path to analyse, any string outside
-    bool		allow_hidden;	// true: allow hidden dirs and files
+    mem_t		append;		// append string behind search result
 
     char		*path_buf;	// pointer to complete path, work buffer
     char		*path_star;	// begin of '**' for search_paths_dir()
@@ -3790,7 +3791,16 @@ search_paths_t;
 static void search_paths_hit ( search_paths_t *sp, mem_t path, uint d_type )
 {
     DASSERT(sp);
-    enumError err = sp->func(path,d_type,sp->param);
+    enumError err;
+    if ( sp->append.len )
+    {
+	mem_t temp = MemCat2A(path,sp->append);
+	err = sp->func(temp,d_type,sp->param);
+	FreeString(temp.ptr);
+    }
+    else
+	err = sp->func(path,d_type,sp->param);
+
     if ( err < 0 )
     {
 	err = -err;
@@ -3830,7 +3840,7 @@ static void search_paths_dir
 		break;
 
 	    if ( dent->d_name[0] == '.'
-		&& (  !local.allow_hidden
+		&& (  !(local.wc_mode&WM_HIDDEN)
 		   || !dent->d_name[1]
 		   || dent->d_name[1] == '.' && !dent->d_name[2] ))
 	    {
@@ -3901,7 +3911,7 @@ static void search_paths_helper ( search_paths_t *sp )
     mem_t pattern;
     pattern.len = next - pat;
     pattern.ptr = MEMDUP(pat,pattern.len);
-    const bool allow_hidden = local.allow_hidden || pattern.ptr[0] == '.';
+    const bool allow_hidden = ( local.wc_mode & WM_HIDDEN ) || pattern.ptr[0] == '.';
 
     char *path_ptr = StringCopyEM(local.path_ptr,local.path_end,local.source.ptr,pat-local.source.ptr);
     local.path_ptr = path_ptr;
@@ -4052,7 +4062,7 @@ search_paths_stat_t SearchPaths
 (
     ccp			path1,		// not NULL: part #1 of base path
     ccp			path2,		// not NULL: part #2 of base path
-    bool		allow_hidden,	// allow hiddent directories and files
+    wildcard_mode_t	wc_mode,	// bit field: modes for wildcard handling
     SearchPathsFunc	func,		// callback function, never NULL
     void		*param		// last param for func()
 )
@@ -4065,13 +4075,19 @@ search_paths_stat_t SearchPaths
 
     char srcbuf[PATH_MAX+2];
     ccp source = PathCatPP(srcbuf,sizeof(srcbuf),path1,path2);
+    if ( source != srcbuf && wc_mode & WM_SUBFILE )
+    {
+	// we need the temporary 'srcbuf' for '||' adjustemnt
+	StringCopyS(srcbuf,sizeof(srcbuf),source);
+	source = srcbuf;
+    }
 
     char pathbuf[PATH_MAX];
     search_paths_t sp =
     {
 	.source.ptr	= source,
 	.source.len	= strlen(source),
-	.allow_hidden	= allow_hidden,
+	.wc_mode	= wc_mode,
 	.path_buf	= pathbuf,
 	.path_ptr	= pathbuf,
 	.path_end	= pathbuf + sizeof(pathbuf) - 2,
@@ -4079,9 +4095,51 @@ search_paths_stat_t SearchPaths
 	.param		= param,
     };
 
-    search_paths_helper(&sp);
-    PRINT0("abort=%d, max_err = %d, %u dirs scanned, %u func calls, %u hits\n",
+    if ( wc_mode & WM_IGNORE && source[0] == WM_CONTROL_CHAR )
+    {
+	sp.source.ptr++;
+	sp.source.len--;
+	char *end = StringCopyEM(sp.path_ptr,sp.path_end,sp.source.ptr,sp.source.len);
+	struct stat st;
+	stat(sp.path_buf,&st);
+	mem_t path = { .ptr = sp.path_buf, .len = end - sp.path_buf };
+	search_paths_hit(&sp,path,st.st_mode);
+    }
+    else
+    {
+	if ( wc_mode & WM_SUBFILE )
+	{
+	    ccp ptr = sp.source.ptr;
+	    ccp end = ptr + sp.source.len;
+	    while ( ptr < end )
+	    {
+		char *pipe = memchr(ptr,WM_CONTROL_CHAR,end-ptr);
+		if (!pipe)
+		    break;
+		if ( pipe+1 < end && pipe[1] == WM_CONTROL_CHAR  )
+		{
+		    PRINT0(">>> \"||\" found: [%zd] %.*s\n",end-pipe,(int)(end-pipe),pipe);
+		    sp.source.len--;
+		    end--;
+		    memmove(pipe,pipe+1,end-pipe);
+		    ptr = pipe+1;
+		}
+		else
+		{
+		    PRINT0(">>> \"|\" found: [%zd] %.*s\n",end-pipe,(int)(end-pipe),pipe);
+		    sp.append.ptr = pipe;
+		    sp.append.len = end - pipe;
+		    sp.source.len = pipe - sp.source.ptr;
+		    break;
+		}
+	    }
+	    PRINT0(">>> »%.*s«\n",sp.source.len,sp.source.ptr);
+	}
+
+	search_paths_helper(&sp);
+	PRINT0("abort=%d, max_err = %d, %u dirs scanned, %u func calls, %u hits\n",
 		sp.abort, sp.max_err, sp.dir_count, sp.func_count, sp.hit_count );
+    }
     return sp.status;
 }
 
@@ -4104,10 +4162,10 @@ static enumError insert_string_field
 //-----------------------------------------------------------------------------
 
 uint InsertStringFieldExpand
-	( StringField_t * sf, ccp path1, ccp path2, bool allow_hidden )
+	( StringField_t * sf, ccp path1, ccp path2, wildcard_mode_t wc_mode )
 {
     DASSERT(sf);
-    search_paths_stat_t stat = SearchPaths(path1,path2,allow_hidden,insert_string_field,sf);
+    search_paths_stat_t stat = SearchPaths(path1,path2,wc_mode,insert_string_field,sf);
     PRINT0("%d %d %d\n",stat.dir_count,stat.func_count,stat.hit_count);
     if (!stat.hit_count)
     {
@@ -4137,10 +4195,10 @@ static enumError append_string_field
 //-----------------------------------------------------------------------------
 
 uint AppendStringFieldExpand
-	( StringField_t * sf, ccp path1, ccp path2, bool allow_hidden )
+	( StringField_t * sf, ccp path1, ccp path2, wildcard_mode_t wc_mode )
 {
     DASSERT(sf);
-    search_paths_stat_t stat = SearchPaths(path1,path2,allow_hidden,append_string_field,sf);
+    search_paths_stat_t stat = SearchPaths(path1,path2,wc_mode,append_string_field,sf);
     PRINT0("%d %d %d\n",stat.dir_count,stat.func_count,stat.hit_count);
     if (!stat.hit_count)
     {
@@ -4181,11 +4239,11 @@ static enumError insert_param_field
 //-----------------------------------------------------------------------------
 
 uint InsertParamFieldExpand
-	( ParamField_t * pf, ccp path1, ccp path2, bool allow_hidden, uint num, cvp data )
+	( ParamField_t * pf, ccp path1, ccp path2, wildcard_mode_t wc_mode, uint num, cvp data )
 {
     DASSERT(pf);
     search_param_field_t spf = { .pf = pf, .num = num, .data = data };
-    search_paths_stat_t stat = SearchPaths(path1,path2,allow_hidden,insert_param_field,&spf);
+    search_paths_stat_t stat = SearchPaths(path1,path2,wc_mode,insert_param_field,&spf);
     PRINT0("%d %d %d\n",stat.dir_count,stat.func_count,stat.hit_count);
     if (!stat.hit_count)
     {
@@ -4215,11 +4273,11 @@ static enumError append_param_field
 //-----------------------------------------------------------------------------
 
 uint AppendParamFieldExpand
-	( ParamField_t * pf, ccp path1, ccp path2, bool allow_hidden, uint num, cvp data )
+	( ParamField_t * pf, ccp path1, ccp path2, wildcard_mode_t wc_mode, uint num, cvp data )
 {
     DASSERT(pf);
     search_param_field_t spf = { .pf = pf, .num = num, .data = data };
-    search_paths_stat_t stat = SearchPaths(path1,path2,allow_hidden,append_param_field,&spf);
+    search_paths_stat_t stat = SearchPaths(path1,path2,wc_mode,append_param_field,&spf);
     PRINT0("%d %d %d\n",stat.dir_count,stat.func_count,stat.hit_count);
     if (!stat.hit_count)
     {

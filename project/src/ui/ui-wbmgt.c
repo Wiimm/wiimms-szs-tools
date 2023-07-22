@@ -73,6 +73,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" suppressed."
     },
 
+    {	OPT_NO_WILDCARDS, false, false, false, false, false, 0, "no-wildcards",
+	0,
+	"Disable wildcard parsing and use each filename exactly as specified."
+    },
+
+    {	OPT_IN_ORDER, false, false, false, false, false, 0, "in-order",
+	0,
+	"Process the input files in order of the command line and don't delete"
+	" duplicates."
+    },
+
     {	OPT_DEST, false, false, false, false, true, 'd', "dest",
 	"path",
 	"Define a destination path (directory/file). The destination - means:"
@@ -293,7 +304,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Print in machine readable sections and parameter lines."
     },
 
-    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 32
+    {0,0,0,0,0,0,0,0,0,0}, // OPT__N_SPECIFIC == 34
 
     //----- global options -----
 
@@ -559,7 +570,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 67
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 69
 
 };
 
@@ -727,6 +738,10 @@ static const struct option OptionLong[] =
 	{ "no-header",		0, 0, 'H' },
 	 { "noheader",		0, 0, 'H' },
 	{ "brief",		0, 0, 'B' },
+	{ "no-wildcards",	0, 0, GO_NO_WILDCARDS },
+	 { "nowildcards",	0, 0, GO_NO_WILDCARDS },
+	{ "in-order",		0, 0, GO_IN_ORDER },
+	 { "inorder",		0, 0, GO_IN_ORDER },
 	{ "max-file-size",	1, 0, 'M' },
 	 { "maxfilesize",	1, 0, 'M' },
 	{ "tracks",		1, 0, 'T' },
@@ -874,33 +889,35 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x08b   */	OPT_CT_CODE,
 	/* 0x08c   */	OPT_LE_CODE,
 	/* 0x08d   */	OPT_CHDIR,
-	/* 0x08e   */	OPT_POINTS,
-	/* 0x08f   */	OPT_UTF_8,
-	/* 0x090   */	OPT_NO_UTF_8,
-	/* 0x091   */	OPT_FORCE,
-	/* 0x092   */	OPT_REPAIR_MAGICS,
-	/* 0x093   */	OPT_OLD,
-	/* 0x094   */	OPT_STD,
-	/* 0x095   */	OPT_NEW,
-	/* 0x096   */	OPT_EXTRACT,
-	/* 0x097   */	OPT_NUMBER,
-	/* 0x098   */	OPT_ALIGN,
-	/* 0x099   */	OPT_MACRO_BMG,
-	/* 0x09a   */	OPT_FILTER_BMG,
-	/* 0x09b   */	OPT_BMG_ENDIAN,
-	/* 0x09c   */	OPT_BMG_ENCODING,
-	/* 0x09d   */	OPT_BMG_INF_SIZE,
-	/* 0x09e   */	OPT_BMG_MID,
-	/* 0x09f   */	OPT_FORCE_ATTRIB,
-	/* 0x0a0   */	OPT_DEF_ATTRIB,
-	/* 0x0a1   */	OPT_NO_ATTRIB,
-	/* 0x0a2   */	OPT_X_ESCAPES,
-	/* 0x0a3   */	OPT_OLD_ESCAPES,
-	/* 0x0a4   */	OPT_NO_BMG_COLORS,
-	/* 0x0a5   */	OPT_BMG_COLORS,
-	/* 0x0a6   */	OPT_NO_BMG_INLINE,
-	/* 0x0a7   */	OPT_SECTIONS,
-	/* 0x0a8   */	 0,0,0,0, 0,0,0,0, 
+	/* 0x08e   */	OPT_NO_WILDCARDS,
+	/* 0x08f   */	OPT_IN_ORDER,
+	/* 0x090   */	OPT_POINTS,
+	/* 0x091   */	OPT_UTF_8,
+	/* 0x092   */	OPT_NO_UTF_8,
+	/* 0x093   */	OPT_FORCE,
+	/* 0x094   */	OPT_REPAIR_MAGICS,
+	/* 0x095   */	OPT_OLD,
+	/* 0x096   */	OPT_STD,
+	/* 0x097   */	OPT_NEW,
+	/* 0x098   */	OPT_EXTRACT,
+	/* 0x099   */	OPT_NUMBER,
+	/* 0x09a   */	OPT_ALIGN,
+	/* 0x09b   */	OPT_MACRO_BMG,
+	/* 0x09c   */	OPT_FILTER_BMG,
+	/* 0x09d   */	OPT_BMG_ENDIAN,
+	/* 0x09e   */	OPT_BMG_ENCODING,
+	/* 0x09f   */	OPT_BMG_INF_SIZE,
+	/* 0x0a0   */	OPT_BMG_MID,
+	/* 0x0a1   */	OPT_FORCE_ATTRIB,
+	/* 0x0a2   */	OPT_DEF_ATTRIB,
+	/* 0x0a3   */	OPT_NO_ATTRIB,
+	/* 0x0a4   */	OPT_X_ESCAPES,
+	/* 0x0a5   */	OPT_OLD_ESCAPES,
+	/* 0x0a6   */	OPT_NO_BMG_COLORS,
+	/* 0x0a7   */	OPT_BMG_COLORS,
+	/* 0x0a8   */	OPT_NO_BMG_INLINE,
+	/* 0x0a9   */	OPT_SECTIONS,
+	/* 0x0aa   */	 0,0,0,0, 0,0,
 	/* 0x0b0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -917,142 +934,142 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 ///////////////                opt_allowed_cmd_*                ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static u8 option_allowed_cmd_VERSION[32] = // cmd #1
+static u8 option_allowed_cmd_VERSION[34] = // cmd #1
 {
     0,1,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,1
+    0,0,0,1
 };
 
-static u8 option_allowed_cmd_HELP[32] = // cmd #2
+static u8 option_allowed_cmd_HELP[34] = // cmd #2
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1
+    1,1,1,1
 };
 
-static u8 option_allowed_cmd_CONFIG[32] = // cmd #3
+static u8 option_allowed_cmd_CONFIG[34] = // cmd #3
 {
     0,1,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_ARGTEST[32] = // cmd #4
+static u8 option_allowed_cmd_ARGTEST[34] = // cmd #4
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1
+    1,1,1,1
 };
 
-static u8 option_allowed_cmd_EXPAND[32] = // cmd #5
+static u8 option_allowed_cmd_EXPAND[34] = // cmd #5
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1
+    1,1,1,1
 };
 
-static u8 option_allowed_cmd_TEST[32] = // cmd #6
+static u8 option_allowed_cmd_TEST[34] = // cmd #6
 {
     1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,1
+    1,1,1,1
 };
 
-static u8 option_allowed_cmd_COLORS[32] = // cmd #7
+static u8 option_allowed_cmd_COLORS[34] = // cmd #7
 {
     0,1,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_ERROR[32] = // cmd #8
+static u8 option_allowed_cmd_ERROR[34] = // cmd #8
 {
     0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,1
+    0,0,0,1
 };
 
-static u8 option_allowed_cmd_FILETYPE[32] = // cmd #9
+static u8 option_allowed_cmd_FILETYPE[34] = // cmd #9
 {
-    0,1,0,0,0, 0,0,0,0,0,  0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,1,0,0,1, 1,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_FILEATTRIB[32] = // cmd #10
+static u8 option_allowed_cmd_FILEATTRIB[34] = // cmd #10
 {
     0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_POINTS[32] = // cmd #11
+static u8 option_allowed_cmd_POINTS[34] = // cmd #11
 {
     0,1,0,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_REGEXP[32] = // cmd #12
+static u8 option_allowed_cmd_REGEXP[34] = // cmd #12
 {
     0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_EXTRACT[32] = // cmd #13
+static u8 option_allowed_cmd_EXTRACT[34] = // cmd #13
 {
     0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_SECTIONS[32] = // cmd #14
+static u8 option_allowed_cmd_SECTIONS[34] = // cmd #14
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,1,0,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0,1, 1,0,0,0,0,  0,0,0,0,1, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_LIST[32] = // cmd #15
+static u8 option_allowed_cmd_LIST[34] = // cmd #15
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,1,0,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0,1, 1,0,0,0,0,  0,0,0,0,1, 0,1,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_SLOTS[32] = // cmd #16
+static u8 option_allowed_cmd_SLOTS[34] = // cmd #16
 {
-    0,0,0,0,0, 0,0,0,0,0,  0,0,1,0,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0,1, 1,0,0,0,0,  0,0,0,0,1, 0,1,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_DIFF[32] = // cmd #17
+static u8 option_allowed_cmd_DIFF[34] = // cmd #17
 {
-    0,0,0,0,1, 0,1,0,0,0,  0,0,0,0,1, 1,1,0,0,0,  0,0,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0,0, 0,1,0,1,0,  0,0,0,0,0, 0,1,1,1,0,  0,0,0,0,0, 0,0,0,0,0,
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_CAT[32] = // cmd #18
+static u8 option_allowed_cmd_CAT[34] = // cmd #18
 {
-    0,1,1,1,0, 0,0,0,0,0,  0,0,1,0,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,0
+    0,1,1,1,1, 1,0,0,0,0,  0,0,0,0,1, 0,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,0
 };
 
-static u8 option_allowed_cmd_MIX[32] = // cmd #19
+static u8 option_allowed_cmd_MIX[34] = // cmd #19
 {
-    0,1,1,1,0, 0,0,0,0,0,  0,0,1,0,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,0
+    0,1,1,1,1, 1,0,0,0,0,  0,0,0,0,1, 0,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,0
 };
 
-static u8 option_allowed_cmd_IDENTIFIER[32] = // cmd #20
+static u8 option_allowed_cmd_IDENTIFIER[34] = // cmd #20
 {
-    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,0
+    0,1,1,1,0, 0,0,0,0,0,  0,0,0,0,0, 0,0,0,0,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,0
 };
 
-static u8 option_allowed_cmd_DECODE[32] = // cmd #21
+static u8 option_allowed_cmd_DECODE[34] = // cmd #21
 {
-    0,1,1,1,1, 1,1,1,1,1,  1,1,1,0,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,0
+    0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 0,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
+    1,1,1,0
 };
 
-static u8 option_allowed_cmd_ENCODE[32] = // cmd #22
+static u8 option_allowed_cmd_ENCODE[34] = // cmd #22
 {
-    0,0,0,0,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,0,0,0, 0,0,0,0,0,
-    0,0
+    0,0,0,0,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,0, 0,0,0,0,0,
+    0,0,0,0
 };
 
-static u8 option_allowed_cmd_PATCH[32] = // cmd #23
+static u8 option_allowed_cmd_PATCH[34] = // cmd #23
 {
     0,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,  1,1,1,1,1, 1,1,1,1,1,
-    1,0
+    1,1,1,0
 };
 
 
@@ -1165,8 +1182,10 @@ static const InfoOption_t * option_tab_cmd_ERROR[] =
 
 static const InfoOption_t * option_tab_cmd_FILETYPE[] =
 {
-	&option_cmd_FILETYPE_LONG,
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+	&option_cmd_FILETYPE_LONG,
 
 	0
 };
@@ -1202,6 +1221,8 @@ static const InfoOption_t * option_tab_cmd_EXTRACT[] =
 
 static const InfoOption_t * option_tab_cmd_SECTIONS[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
 
 	0
@@ -1209,7 +1230,12 @@ static const InfoOption_t * option_tab_cmd_SECTIONS[] =
 
 static const InfoOption_t * option_tab_cmd_LIST[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_WIDTH,
 	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_PATCH_BMG,
@@ -1221,7 +1247,12 @@ static const InfoOption_t * option_tab_cmd_LIST[] =
 
 static const InfoOption_t * option_tab_cmd_SLOTS[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
 	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_WIDTH,
 	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_PATCH_BMG,
@@ -1246,6 +1277,12 @@ static const InfoOption_t * option_tab_cmd_DIFF[] =
 
 static const InfoOption_t * option_tab_cmd_CAT[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_NO_HEADER,
 	OptionInfo + OPT_BRIEF,
 
@@ -1266,7 +1303,6 @@ static const InfoOption_t * option_tab_cmd_CAT[] =
 	OptionInfo + OPT_NO_BMG_INLINE,
 	OptionInfo + OPT_LONG,
 	OptionInfo + OPT_EXPORT,
-	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_PATCH_BMG,
 	OptionInfo + OPT_MACRO_BMG,
 	OptionInfo + OPT_FILTER_BMG,
@@ -1276,6 +1312,12 @@ static const InfoOption_t * option_tab_cmd_CAT[] =
 
 static const InfoOption_t * option_tab_cmd_MIX[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_NO_HEADER,
 	OptionInfo + OPT_BRIEF,
 
@@ -1296,7 +1338,6 @@ static const InfoOption_t * option_tab_cmd_MIX[] =
 	OptionInfo + OPT_NO_BMG_INLINE,
 	OptionInfo + OPT_LONG,
 	OptionInfo + OPT_EXPORT,
-	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_PATCH_BMG,
 	OptionInfo + OPT_MACRO_BMG,
 	OptionInfo + OPT_FILTER_BMG,
@@ -1337,6 +1378,12 @@ static const InfoOption_t * option_tab_cmd_IDENTIFIER[] =
 
 static const InfoOption_t * option_tab_cmd_DECODE[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
 	OptionInfo + OPT_ESC,
@@ -1368,7 +1415,6 @@ static const InfoOption_t * option_tab_cmd_DECODE[] =
 	OptionInfo + OPT_NO_BMG_INLINE,
 	OptionInfo + OPT_LONG,
 	OptionInfo + OPT_EXPORT,
-	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_PATCH_BMG,
 	OptionInfo + OPT_MACRO_BMG,
 	OptionInfo + OPT_FILTER_BMG,
@@ -1378,6 +1424,12 @@ static const InfoOption_t * option_tab_cmd_DECODE[] =
 
 static const InfoOption_t * option_tab_cmd_ENCODE[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
 	OptionInfo + OPT_ESC,
@@ -1397,7 +1449,6 @@ static const InfoOption_t * option_tab_cmd_ENCODE[] =
 	OptionInfo + OPT_BMG_INF_SIZE,
 	OptionInfo + OPT_BMG_MID,
 	OptionInfo + OPT_FORCE_ATTRIB,
-	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_PATCH_BMG,
 	OptionInfo + OPT_MACRO_BMG,
 	OptionInfo + OPT_FILTER_BMG,
@@ -1408,6 +1459,12 @@ static const InfoOption_t * option_tab_cmd_ENCODE[] =
 
 static const InfoOption_t * option_tab_cmd_PATCH[] =
 {
+	OptionInfo + OPT_NO_WILDCARDS,
+	OptionInfo + OPT_IN_ORDER,
+	OptionInfo + OPT_IGNORE,
+
+	OptionInfo + OPT_NONE, // separator
+
 	OptionInfo + OPT_DEST,
 	OptionInfo + OPT_DEST2,
 	OptionInfo + OPT_ESC,
@@ -1439,7 +1496,6 @@ static const InfoOption_t * option_tab_cmd_PATCH[] =
 	OptionInfo + OPT_NO_BMG_INLINE,
 	OptionInfo + OPT_LONG,
 	OptionInfo + OPT_EXPORT,
-	OptionInfo + OPT_IGNORE,
 	OptionInfo + OPT_PATCH_BMG,
 	OptionInfo + OPT_MACRO_BMG,
 	OptionInfo + OPT_FILTER_BMG,
@@ -1548,10 +1604,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"This debug command accepts (like ARGTEST) all kinds of parameters and"
 	" prints one line for each parameter. After that, the parameter is"
 	" treated as a filename with wildcards and all matching files are"
-	" searched. The special parameters '+h' and '_h' enable or disable the"
-	" search for hidden directories and files (files beginning with a"
-	" point) for the following parameters. All tools know the EXPAND"
-	" command.",
+	" searched. All tools know the EXPAND command.",
 	0,
 	0,
 	option_tab_cmd_EXPAND,
@@ -1613,9 +1666,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"FT",
 	"wbmgt FILETYPE file...",
 	"Scan the header of the entered files and print file type and path for"
-	" each file as list. All tools know the FILETYPE command.",
+	" each file as list. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details. All tools know the"
+	" FILETYPE command.",
 	0,
-	2,
+	4,
 	option_tab_cmd_FILETYPE,
 	option_allowed_cmd_FILETYPE
     },
@@ -1693,9 +1748,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wbmgt SECTIONS [source]...",
 	"List all sections of each binary BMG file. Print offset, size, magic"
-	" and a short info. If known, print number and size of elements too.",
+	" and a short info. If known, print number and size of elements too."
+	" Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	1,
+	3,
 	option_tab_cmd_SECTIONS,
 	option_allowed_cmd_SECTIONS
     },
@@ -1708,9 +1765,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"LS",
 	"wbmgt LIST [source]...",
 	"List messages to proof the content. Patches are applied before"
-	" listing. The lines are cut to fit the terminal width.",
+	" listing. The lines are cut to fit the terminal width. Wildcards and"
+	" pipe characters are parsed, see https://szs.wiimm.de/doc/wildcards"
+	" for details.",
 	0,
-	6,
+	8,
 	option_tab_cmd_LIST,
 	option_allowed_cmd_LIST
     },
@@ -1723,9 +1782,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wbmgt SLOTS [source]...",
 	"Print a slot ordered list with slot number, message id, delta and"
-	" attributes. Patches are applied before listing.",
+	" attributes. Patches are applied before listing. Wildcards and pipe"
+	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
+	" details.",
 	0,
-	6,
+	8,
 	option_tab_cmd_SLOTS,
 	option_allowed_cmd_SLOTS
     },
@@ -1758,9 +1819,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Read the entered BMG files (text, binary or szs sub file) and print"
 	" them as decoded text files to standard output. All BMG files of a"
 	" single archive (SZS,...) are combined to 1 source. The output of all"
-	" source files is concatenated.",
+	" source files is concatenated. Wildcards and pipe characters are"
+	" parsed, see https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	21,
+	23,
 	option_tab_cmd_CAT,
 	option_allowed_cmd_CAT
     },
@@ -1776,9 +1838,10 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" them as decoded text files to standard output. All BMG files of all"
 	" archives (SZS,...) are read. The output of all source files is"
 	" combined and strings of later source files override prior defined"
-	" strings.",
+	" strings. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	21,
+	23,
 	option_tab_cmd_MIX,
 	option_allowed_cmd_MIX
     },
@@ -1809,9 +1872,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Read the entered message files and decode them to text files. All BMG"
 	" files of a single archive (SZS,...) are concatenated to 1 source."
 	" This command is similar to PATCH, but the result is always decoded."
-	" The default destination is '%P/%N.txt'.",
+	" The default destination is '%P/%N.txt'. Wildcards and pipe"
+	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
+	" details.",
 	0,
-	29,
+	31,
 	option_tab_cmd_DECODE,
 	option_allowed_cmd_DECODE
     },
@@ -1826,9 +1891,11 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Read the entered message files and encode them to BMG files. All BMG"
 	" files of a single archive (SZS,...) are concatenated to 1 source."
 	" This command is similar to PATCH, but the result is always encoded."
-	" The default destination is '%P/%N.bmg'.",
+	" The default destination is '%P/%N.bmg'. Wildcards and pipe"
+	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
+	" details.",
 	0,
-	18,
+	20,
 	option_tab_cmd_ENCODE,
 	option_allowed_cmd_ENCODE
     },
@@ -1842,11 +1909,12 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wbmgt PATCH [source]...",
 	"Patch the entered files by using the patch list specified by option"
 	" --patch-bmg. The coding of the source files is not changed. The"
-	" default destination is '%P/%F'.\n"
+	" default destination is '%P/%F'. Wildcards and pipe characters are"
+	" parsed, see https://szs.wiimm.de/doc/wildcards for details.\n"
 	"  Use 'wszst patch --patch-bmg ...' to patch BMG files within a SZS"
 	" file.",
 	0,
-	30,
+	32,
 	option_tab_cmd_PATCH,
 	option_allowed_cmd_PATCH
     },

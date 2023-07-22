@@ -344,11 +344,13 @@ static enumError cmd_dump ( int long_level )
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -393,6 +395,7 @@ static enumError cmd_dump ( int long_level )
 	CloseLDUMP();
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -755,20 +758,22 @@ static enumError cmd_patch()
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
 	    return err;
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(raw.fform_file,raw.fform),false);
-	const bool dest_is_source = IsSameFilename(dest,param->arg);
+	const bool dest_is_source = IsSameFilename(dest,arg);
 
 	if ( verbose >= 0 || testmode )
 	{
@@ -802,6 +807,7 @@ static enumError cmd_patch()
 	CloseLDUMP();
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -821,20 +827,22 @@ static enumError cmd_timestamp()
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,0,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,0,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
 	    return err;
 
 	char dest[PATH_MAX];
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(raw.fform_file,raw.fform),false);
-	const bool dest_is_source = IsSameFilename(dest,param->arg);
+	const bool dest_is_source = IsSameFilename(dest,arg);
 
 	if ( verbose >= 0 || testmode )
 	{
@@ -877,6 +885,7 @@ static enumError cmd_timestamp()
 	ResetLEAnalyze(&ana);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -1004,10 +1013,12 @@ static enumError cmd_create()
     //--- data
 
     enum { C_HELP,
-		C_LEX, C_FEATURES, C_SET1, C_CANNON, C_HIDE_PT, C_RND_ITPH, C_TEST,
+		C_LEX, C_FEATURES, C_DEV1, C_SET1, C_CANNON, C_HIDE_PT, C_RND_ITPH, C_TEST,
 		C_LPAR, C_LEDEF, C_PREFIX, C_CATEGORY,
 		C_LEINFO,
     };
+
+    // [[lex-new-sect]]
 
     static const KeywordTab_t tab[] =
     {
@@ -1017,6 +1028,7 @@ static enumError cmd_create()
 	{ C_LEX,	"LEX+",		0,		 1 },
 	{ C_LEX,	"DEVELOP",	0,		 2 },
 	{ C_FEATURES,	"FEATURES",	0,		0 },
+	{ C_DEV1,	"DEV1",		0,		0 },
 	{ C_SET1,	"SET1",		0,		0 },
 	{ C_CANNON,	"CANNONS",	0,		0 },
 	{ C_HIDE_PT,	"HIPT",		0,		0 },
@@ -1069,6 +1081,7 @@ static enumError cmd_create()
 	break;
 
      case C_FEATURES:
+     case C_DEV1:
      case C_SET1:
      case C_CANNON:
      case C_HIDE_PT:
@@ -1079,6 +1092,7 @@ static enumError cmd_create()
 	    switch (cmd->id)
 	    {
 	      case C_FEATURES:	AppendFeatLEX(&lex,false,0); break;
+	      case C_DEV1:	AppendDev1LEX(&lex,false); break;
 	      case C_SET1:	AppendSet1LEX(&lex,false); break;
 	      case C_CANNON:	AppendCannLEX(&lex,false); break;
 	      case C_HIDE_PT:	AppendHiptLEX(&lex,false); break;
@@ -1088,6 +1102,8 @@ static enumError cmd_create()
 	    ResetLEX(&lex);
 	}
 	break;
+
+    // [[lex-new-sect]]
 
      case C_TEST:
 	{
@@ -1225,16 +1241,19 @@ static void help_distrib ( enumError exit_code )
 	" which is helpful for the automatic completion of filenames.\n"
 	"\n"
 	"  |Otherwise it is a {name|filename of an input file}."
-	" The file is read and generally overwrites existing content."
+	" Wildcards and pipe characters are parsed," 
+	" see https://szs.wiimm.de/doc/wildcards for details."
+	" The file (or files in case of wildcards) is read"
+	" and generally overwrites existing content."
 	" This means that the file last read in has the highest priority."
 	" However, this can be influenced by the processing options."
-	" Arguments beginning with »{file|/}« or »{file|./}«"
+	" Arguments beginning with »{file|/}«, »{file|./}« or »{file|||}«"
 	" are always recognized as filenames.\n"
 	"\n"
 	"  |All arguments are executed in the order in which they were entered without any logging."
 	" Only error messages are displayed."
 	" With option {opt|--verbose} (short: {opt|-v}),"
-	"  at least one log line for each argument is printed.\n"
+	" at least one log line for each argument is printed.\n"
 	"\n"
 	"  |It is possible to store arguments into a file (e.g. into file »{file|param.txt}«)"
 	" and to include those file by option {opt|-@FILENAME}"
@@ -1759,7 +1778,7 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|[key]}:\t|"
 		"For each track there is a set of character strings at the user's disposal."
 		" The character strings are addressed via KEY."
-		" The KEY itself can consist of any character and are case-sensitive."
+		" The KEY itself can consist of any character and is case-sensitive."
 		" This type of square bracket option can only be used"
 		" directly after the leading plus sign. More processing options may follow.\n"
 	"\n"
@@ -2236,7 +2255,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     {
 	StringField_t filelist;
 	InitializeStringField(&filelist);
-	InsertStringFieldExpand(&filelist,arg,0,true);
+	InsertStringFieldExpand(&filelist,arg,WM__DEFAULT,true);
 
 	switch (cmd->id)
 	{
@@ -2328,6 +2347,7 @@ static enumError cmd_distrib()
     le_distrib_t ld;
     InitializeLD(&ld);
 
+    // no wildcard expansion here (step by step)
     for ( ParamList_t *param = first_param; param; param = param->next )
     {
 	NORMALIZE_FILENAME_PARAM(param);
@@ -2401,11 +2421,13 @@ static enumError cmd_cat()
     InitializeRawData(&raw);
 
     enumError cmd_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,autoname,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,autoname,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2465,6 +2487,7 @@ static enumError cmd_cat()
 	}
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return cmd_err;
 }
@@ -2481,11 +2504,13 @@ static enumError cmd_lpar()
     InitializeRawData(&raw);
 
     enumError cmd_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,autoname,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,autoname,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2510,6 +2535,7 @@ static enumError cmd_lpar()
 	ResetLEAnalyze(&ana);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return cmd_err;
 }
@@ -2527,11 +2553,13 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
     raw_data_t raw;
     InitializeRawData(&raw);
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
-	enumError err = LoadRawData(&raw,false,param->arg,autoname,opt_ignore>0,0);
+	ccp arg = plist.field[argi];
+	enumError err = LoadRawData(&raw,false,arg,autoname,opt_ignore>0,0);
 	if ( err == ERR_NOT_EXISTS || err > ERR_WARNING && opt_ignore )
 	    continue;
 	if ( err > ERR_WARNING )
@@ -2540,7 +2568,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 	char dest[PATH_MAX];
 	const file_format_t dest_ff = cmd_id == CMD_ENCODE ? FF_LEX : FF_LEX_TXT;
 
-	SubstDest(dest,sizeof(dest),param->arg,opt_dest,def_path,
+	SubstDest(dest,sizeof(dest),arg,opt_dest,def_path,
 			GetExtFF(dest_ff,0),false);
 
 	if ( verbose >= 0 || testmode )
@@ -2575,6 +2603,7 @@ static enumError cmd_convert ( int cmd_id, ccp cmd_name, ccp def_path )
 	ResetLEX(&lex);
     }
 
+    ResetStringField(&plist);
     ResetRawData(&raw);
     return ERR_OK;
 }
@@ -2691,6 +2720,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_LONG:		long_count++; break;
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_BRIEF:		brief_count++; break;
+	case GO_NO_WILDCARDS:	no_wildcards_count++; break;
+	case GO_IN_ORDER:	inorder_count++; break;
 	case GO_EXPORT:		export_count++; print_header = false; break;
 
 	case GO_LT_CLEAR:	opt_lt_clear = true; break;

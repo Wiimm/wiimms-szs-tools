@@ -351,6 +351,79 @@ szs_have_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			    UI-Check			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[ui_type_t]]
+
+typedef enum ui_type_t
+{
+    UIT_UNDEFINED,	// ?
+    UIT_UNKNOWN,	// -
+
+    UIT_AWARD,		// A
+    UIT_CHANNEL,	// C
+    UIT_EVENT,		// E
+    UIT_FONT,		// F
+    UIT_GLOBE,		// G
+    UIT_MENU_MULTI,	// M
+    UIT_MENU_OTHER,	// O
+    UIT_MENU_SINGLE,	// S
+    UIT_PRESENT,	// P
+    UIT_RACE,		// R
+    UIT_TITLE,		// T
+
+    UIT_LANGUAGE,	// l
+    UIT__N,
+
+    UIT__FIRST		= UIT_AWARD,
+    UIT__LAST		= UIT_TITLE,
+
+    UIT_M_AWARD		= 1 << UIT_AWARD,
+    UIT_M_CHANNEL	= 1 << UIT_CHANNEL,
+    UIT_M_EVENT		= 1 << UIT_EVENT,
+    UIT_M_FONT		= 1 << UIT_FONT,
+    UIT_M_GLOBE		= 1 << UIT_GLOBE,
+    UIT_M_MENU_MULTI	= 1 << UIT_MENU_MULTI,
+    UIT_M_MENU_OTHER	= 1 << UIT_MENU_OTHER,
+    UIT_M_MENU_SINGLE	= 1 << UIT_MENU_SINGLE,
+    UIT_M_PRESENT	= 1 << UIT_PRESENT,
+    UIT_M_RACE		= 1 << UIT_RACE,
+    UIT_M_TITLE		= 1 << UIT_TITLE,
+    UIT_M_LANGUAGE	= 1 << UIT_LANGUAGE,
+    UIT_M_ALL		= ( 1 << UIT__N ) -1,
+
+    UIT_M_CUP_ICONS	= UIT_M_CHANNEL | UIT_M_MENU_MULTI | UIT_M_MENU_SINGLE,
+}
+ui_type_t;
+
+//-----------------------------------------------------------------------------
+
+extern const char ui_type_char[UIT__N+1];
+extern const ccp  ui_type_name[UIT__N+1];
+
+ccp GetUiTypeColor ( const ColorSet_t *colset, ui_type_t type );
+
+///////////////////////////////////////////////////////////////////////////////
+// [[ui_check_t]]
+
+typedef struct ui_check_t
+{
+    OffOn_t	is_ui;		// is language independent UI file
+    OffOn_t	is_korean;	// is korean variant
+
+    uint	possible;	// mask of possible types (1<<UIT_*)
+    char	ui_lang;	// '-' or language character
+    ui_type_t	ui_type;	// UI type except UIT_LANGUAGE
+    ui_type_t	type;		// final detected type := ui_type | UIT_LANGUAGE
+}
+ui_check_t;
+
+//-----------------------------------------------------------------------------
+
+void UiCheck ( ui_check_t *uc, szs_file_t *szs );
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			szs_file_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[szs_file_t]]
@@ -937,6 +1010,8 @@ typedef struct iterator_param_t
     bool		clean_path;	// true: clean path
     bool		show_root_node;	// true: show root node
     bool		cut_files;	// true: cut files into peaces
+    bool		job_ui_check;	// true: call UiCheck() before main iteration
+    bool		job_norm_create;// true: normalize norm_create before main iteration
     SortMode_t		sort_mode;	// sort files
 }
 iterator_param_t;
@@ -956,6 +1031,13 @@ typedef struct szs_iterator_t
 
     void		* param;	// user defined parameter
     int			client_int;	// initial set to null
+// not used yet!
+//  int			condition;	// 0:not set, <0:disabled, >0:enabled
+
+    //--- UI check
+
+    bool		job_ui_check;	// true: call UiCheck() before main iteration
+    ui_check_t		ui_check;	// result of UiCheck()
 
     //--- call back functions
 
@@ -997,6 +1079,12 @@ typedef struct szs_iterator_t
     int			brsub_version;	// 0 or version of parent brsub file
     s16			group;		// group index, type grp_entry_t
     s16			entry;		// entry index, type grp_entry_t
+
+    //--- adding files
+
+    bool		job_create;	// true: re-create archive by adding new files
+    //bool		log_created;	// true: archive updated
+    szs_norm_t		norm_create;	// param for CreateU8ByInfo()
 }
 szs_iterator_t;
 
@@ -1044,6 +1132,7 @@ int IterateFilesParSZS
     void		*param,		// user defined parameter
     bool		clean_path,	// true: clean path from ../ and more
     bool		show_root_node,	// true: include root node in iteration
+    bool		job_ui_check,	// true: call UiCheck() before main iteration
     int			recurse,	// 0:off, <0:unlimited, >0:max depth
     int			cut_files,	// <0:never, =0:auto(first level), >0:always
     SortMode_t		sort_mode	// sort mode
@@ -1385,72 +1474,6 @@ enumError ExtractFilesSZS
 );
 
 ccp GetOptBasedir();
-
-//
-///////////////////////////////////////////////////////////////////////////////
-///////////////			    UI-Check			///////////////
-///////////////////////////////////////////////////////////////////////////////
-// [[ui_type_t]]
-
-typedef enum ui_type_t
-{
-    UIT_UNDEFINED,	// ?
-    UIT_UNKNOWN,	// -
-    UIT_AWARD,		// A
-    UIT_CHANNEL,	// C
-    UIT_EVENT,		// E
-    UIT_FONT,		// F
-    UIT_GLOBE,		// G
-    UIT_MENU_MULTI,	// M
-    UIT_MENU_OTHER,	// O
-    UIT_MENU_SINGLE,	// S
-    UIT_PRESENT,	// P
-    UIT_RACE,		// R
-    UIT_TITLE,		// T
-    UIT_LANGUAGE,	// l
-    UIT__N,
-
-    UIT_M_AWARD		= 1 << UIT_AWARD,
-    UIT_M_CHANNEL	= 1 << UIT_CHANNEL,
-    UIT_M_EVENT		= 1 << UIT_EVENT,
-    UIT_M_FONT		= 1 << UIT_FONT,
-    UIT_M_GLOBE		= 1 << UIT_GLOBE,
-    UIT_M_MENU_MULTI	= 1 << UIT_MENU_MULTI,
-    UIT_M_MENU_OTHER	= 1 << UIT_MENU_OTHER,
-    UIT_M_MENU_SINGLE	= 1 << UIT_MENU_SINGLE,
-    UIT_M_PRESENT	= 1 << UIT_PRESENT,
-    UIT_M_RACE		= 1 << UIT_RACE,
-    UIT_M_TITLE		= 1 << UIT_TITLE,
-    UIT_M_LANGUAGE	= 1 << UIT_LANGUAGE,
-    UIT_M_ALL		= ( 1 << UIT__N ) -1,
-
-    UIT_M_CUP_ICONS	= UIT_M_CHANNEL | UIT_M_MENU_MULTI | UIT_M_MENU_SINGLE,
-}
-ui_type_t;
-
-//-----------------------------------------------------------------------------
-
-extern const char ui_type_char[UIT__N+1];
-extern const ccp  ui_type_name[UIT__N+1];
-
-ccp GetUiTypeColor ( const ColorSet_t *colset, ui_type_t type );
-
-///////////////////////////////////////////////////////////////////////////////
-// [[ui_check_t]]
-
-typedef struct ui_check_t
-{
-    OffOn_t	is_ui;		// is language independent UI file
-    OffOn_t	is_korean;	// is korean variant
-
-    uint	possible;	// mask of possible types (1<<UIT_*)
-    ui_type_t	type;		// final detected type
-}
-ui_check_t;
-
-//-----------------------------------------------------------------------------
-
-void UiCheck ( ui_check_t *uc, szs_file_t *szs );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

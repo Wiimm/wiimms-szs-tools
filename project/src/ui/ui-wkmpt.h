@@ -87,6 +87,8 @@ typedef enum enumOptions
 	OPT_LONG,
 	OPT_NO_HEADER,
 	OPT_BRIEF,
+	OPT_NO_WILDCARDS,
+	OPT_IN_ORDER,
 	OPT_EXPORT,
 	OPT_NO_PARAM,
 	OPT_EPSILON,
@@ -105,7 +107,7 @@ typedef enum enumOptions
 	OPT_IGNORE,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 49
+	OPT__N_SPECIFIC, // == 51
 
 	//----- global options -----
 
@@ -141,6 +143,7 @@ typedef enum enumOptions
 	OPT_TRI_HEIGHT,
 	OPT_XTRIDATA,
 	OPT_KMP,
+	OPT_N_LAPS,
 	OPT_SPEED_MOD,
 	OPT_KTPT2,
 	OPT_TFORM_KMP,
@@ -158,7 +161,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 97
+	OPT__N_TOTAL // == 100
 
 } enumOptions;
 
@@ -204,6 +207,8 @@ typedef enum enumOptions
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
 //	OB_BRIEF		= 1llu << OPT_BRIEF,
+//	OB_NO_WILDCARDS		= 1llu << OPT_NO_WILDCARDS,
+//	OB_IN_ORDER		= 1llu << OPT_IN_ORDER,
 //	OB_EXPORT		= 1llu << OPT_EXPORT,
 //	OB_NO_PARAM		= 1llu << OPT_NO_PARAM,
 //	OB_EPSILON		= 1llu << OPT_EPSILON,
@@ -282,8 +287,10 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_BRIEF,
 //
-//	OB_CMD_FILETYPE		= OB_LONG
-//				| OB_IGNORE,
+//	OB_CMD_FILETYPE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG,
 //
 //	OB_CMD_FILEATTRIB	= OB_NO_HEADER,
 //
@@ -311,23 +318,29 @@ typedef enum enumOptions
 //
 //	OB_CMD_XEXPORT		= 0,
 //
-//	OB_CMD_CAT		= OB_GRP_TEXTOUT
-//				| OB_NO_ECHO
-//				| OB_NO_CHECK
+//	OB_CMD_CAT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
-//				| OB_GRP_TRANSFORM,
-//
-//	OB_CMD_DECODE		= OB_GRP_DEST
 //				| OB_GRP_TEXTOUT
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
-//				| OB_IGNORE
 //				| OB_GRP_TRANSFORM,
 //
-//	OB_CMD_ENCODE		= OB_GRP_DEST
+//	OB_CMD_DECODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
+//				| OB_GRP_TEXTOUT
 //				| OB_NO_ECHO
 //				| OB_NO_CHECK
+//				| OB_GRP_TRANSFORM,
+//
+//	OB_CMD_ENCODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_GRP_DEST
+//				| OB_NO_ECHO
+//				| OB_NO_CHECK
 //				| OB_GRP_TRANSFORM,
 //
 //	OB_CMD_DIFF		= OB_EPSILON
@@ -335,35 +348,52 @@ typedef enum enumOptions
 //				| OB_DEST
 //				| OB_ESC,
 //
-//	OB_CMD_DRAW		= OB_DRAW
+//	OB_CMD_DRAW		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_DRAW
 //				| OB_POS_MODE
 //				| OB_POS_FILE
 //				| OB_PNG
 //				| OB_CMD_DECODE
 //				| OB_KCL_SCRIPT,
 //
-//	OB_CMD_CHECK		= OB_BRIEF
+//	OB_CMD_CHECK		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_BRIEF
 //				| OB_LONG
 //				| OB_NO_ECHO
 //				| OB_GENERIC
-//				| OB_NO_CHECK
-//				| OB_IGNORE,
+//				| OB_NO_CHECK,
 //
-//	OB_CMD_STGI		= OB_NO_HEADER
-//				| OB_IGNORE,
+//	OB_CMD_STGI		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_NO_HEADER,
 //
-//	OB_CMD_KTPT		= OB_IGNORE
+//	OB_CMD_KTPT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_LONG,
 //
-//	OB_CMD_ROUTES		= OB_NO_HEADER
-//				| OB_IGNORE,
+//	OB_CMD_ROUTES		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_NO_HEADER,
 //
-//	OB_CMD_GOBJ		= OB_IGNORE
+//	OB_CMD_GOBJ		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_NO_HEADER
 //				| OB_BRIEF
 //				| OB_LONG,
 //
-//	OB_CMD_GAMEMODES	= OB_IGNORE
+//	OB_CMD_GAMEMODES	= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_GAMEMODES
 //				| OB_NO_HEADER
 //				| OB_BRIEF
@@ -508,12 +538,15 @@ typedef enum enumGetOpt
 	GO_FLAG_FILE,
 	GO_XTRIDATA,
 	GO_KMP,
+	GO_N_LAPS,
 	GO_SPEED_MOD,
 	GO_KTPT2,
 	GO_TFORM_KMP,
 	GO_REPAIR_XPF,
 	GO_GAMEMODES,
 	GO_ROUND,
+	GO_NO_WILDCARDS,
+	GO_IN_ORDER,
 	GO_EPSILON,
 	GO_DIFF,
 	GO_NO_ECHO,

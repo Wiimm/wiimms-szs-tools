@@ -3389,7 +3389,7 @@ static enumError ScanLeDefCUPS
     }
 
  #if 0
-    xBINGO;
+    xBINGO; // keep
     HexDump16(stdout,0,0,ld->cup_versus.list,
 		sizeof(*ld->cup_versus.list)*ld->cup_versus.used*ld->cup_versus.tracks);
  #endif
@@ -4547,7 +4547,7 @@ void ImportCtcodeLD ( le_distrib_t *ld, const ctcode_t *ctcode )
  #endif
 
  #if 0
-    xBINGO;
+    xBINGO; // keep
     HexDump16(stdout,0,0,ld->cup_versus.list,
 		sizeof(*ld->cup_versus.list)*ld->cup_versus.used*ld->cup_versus.tracks);
  #endif
@@ -4758,7 +4758,7 @@ enumError ImportFileLD
 	    {
 		PRINT0(" > SEARCH %s\n",fname);
 		struct search_t param = { .ld = ld };
-		SearchPaths(fname,0,false,search_func,&param);
+		SearchPaths(fname,0,WM__DEFAULT,search_func,&param);
 		return param.count
 		    ? param.max_err
 		    : ERROR0(ERR_CANT_OPEN,"File not found: %s\n",fname);

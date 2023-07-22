@@ -125,6 +125,7 @@
 		    "wmdlt CAT [source]...",
 		"Read the entered MDL files (text or binary) and print"
 		" them as decoded text files to standard output (stdout)."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated."
 		"\n "
 		" A decoded MDL0 file can only be used for analysis."
@@ -134,6 +135,7 @@
 		    "wmdlt DECODE [source]...",
 		"Read the entered MDL files (text or binary)"
 		" and decode them to text files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.txt'@."
 		"\n "
 		" A decoded MDL0 file can only be used for analysis."
@@ -143,6 +145,7 @@
 		    "wmdlt ENCODE [source]...",
 		"Read the entered MDL files (text or binary)"
 		" and encode (compile) them to binary files."
+		" " WILDCARDS_PIPE
 		" The default destination is @'%P/%N.mdl'@." },
 
   { T_SEP_CMD,	0,0,0,0 }, //----- separator -----
@@ -151,6 +154,7 @@
 		    "wmdlt STRINGS [source]...",
 		"Read the entered MDL files (text or binary)"
 		" and print all strings of all sections."
+		" " WILDCARDS_PIPE
 		"\n "
 		" For archives like SZS or BREES,"
 		" the strings of each containing MDL are printed."
@@ -161,11 +165,13 @@
 		    "wmdlt GEOMETRY [source]...",
 		"Read the entered MDL files (text or binary) and print"
 		" some geometry information to the standard output (stdout)."
+		" " WILDCARDS_PIPE
 		" The output of all source files is concatenated." },
 
   { H_DEF_CMD,	"XTEST",	"_TEST",
 		    "wszst _TEST [files]",
-		"Test something." },
+		"Test something."
+		" " WILDCARDS_PIPE },
 
   //
   //---------- list of all wmdlt options ----------
@@ -299,6 +305,12 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"BRIEF",	"B|brief",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"NO_WILDCARDS",	"no-wildcards|nowildcards",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_C,	"IN_ORDER",	"in-order|inorder",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_C,	"NO_PARAM",	"P|no-param|noparam",
@@ -514,10 +526,12 @@
 
   { T_CMD_BEG,	"FILETYPE",	0,0,0 },
 
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
   { T_COPT,	"LONG",		0,0,
 	"Print an additional column with the decompressed file type and version."
 	" If entered twice, a validation status column is added." },
-  { T_COPT,	"IGNORE",	0,0,0 },
 
   //---------- COMMAND wmdlt FILEATTRIB ----------
 
@@ -577,61 +591,85 @@
   //---------- COMMAND wmdlt CAT ----------
 
   { T_CMD_BEG,	"CAT",		0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wmdlt DECODE ----------
 
   { T_CMD_BEG,	"DECODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wmdlt ENCODE ----------
 
   { T_CMD_BEG,	"ENCODE",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"DEST",		0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wmdlt STRINGS ----------
 
   { T_CMD_BEG,	"STRINGS",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wmdlt GEOMETRY ----------
 
   { T_CMD_BEG,	"GEOMETRY",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 
   //---------- COMMAND wmdlt _TEST ----------
 
   { T_CMD_BEG,	"XTEST",	0,0,0 },
+
+  { T_COPT,	"NO_WILDCARDS",	0,0,0 },
+  { T_COPT,	"IN_ORDER",	0,0,0 },
+  { T_COPT,	"IGNORE",	0,0,0 },
+  { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TEXTOUT",	0,0,0 },
   { T_COPT,	"NO_ECHO",	0,0,0 },
   { T_COPT,	"NO_CHECK",	0,0,0 },
-  { T_COPT,	"IGNORE",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"TRANSFORM",	0,0,0 },
 

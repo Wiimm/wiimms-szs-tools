@@ -58,6 +58,8 @@ typedef enum enumOptions
 
 	OPT_LONG,
 	OPT_BRIEF,
+	OPT_NO_WILDCARDS,
+	OPT_IN_ORDER,
 	OPT_NO_HEADER,
 	OPT_CHEAT,
 	OPT_ADD_WCODE,
@@ -122,7 +124,7 @@ typedef enum enumOptions
 	OPT_WIDE,
 	OPT_BYTES,
 
-	OPT__N_SPECIFIC, // == 66
+	OPT__N_SPECIFIC, // == 68
 
 	//----- global options -----
 
@@ -182,7 +184,7 @@ typedef enum enumOptions
 	OPT_CLEAN_DOL,
 	OPT_CT_DIR,
 
-	OPT__N_TOTAL // == 121
+	OPT__N_TOTAL // == 123
 
 } enumOptions;
 
@@ -199,6 +201,8 @@ typedef enum enumOptions
 //
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_BRIEF		= 1llu << OPT_BRIEF,
+//	OB_NO_WILDCARDS		= 1llu << OPT_NO_WILDCARDS,
+//	OB_IN_ORDER		= 1llu << OPT_IN_ORDER,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
 //	OB_CHEAT		= 1llu << OPT_CHEAT,
 //	OB_ADD_WCODE		= 1llu << OPT_ADD_WCODE,
@@ -328,19 +332,27 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_BRIEF,
 //
-//	OB_CMD_FILETYPE		= OB_LONG
-//				| OB_IGNORE,
+//	OB_CMD_FILETYPE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG,
 //
 //	OB_CMD_FILEATTRIB	= OB_NO_HEADER,
 //
 //	OB_CMD_RAWDUMP		= OB_DEST
 //				| OB_DEST2,
 //
-//	OB_CMD_DUMP		= OB_LONG,
+//	OB_CMD_DUMP		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG,
 //
 //	OB_CMD_CDUMP		= 0,
 //
-//	OB_CMD_HEXDUMP		= OB_VADDR
+//	OB_CMD_HEXDUMP		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_VADDR
 //				| OB_FADDR
 //				| OB_SNAME
 //				| OB_GRP_HEXDUMP,
@@ -360,9 +372,15 @@ typedef enum enumOptions
 //				| OB_BRIEF
 //				| OB_LONG,
 //
-//	OB_CMD_HTTPS		= OB_LONG,
+//	OB_CMD_HTTPS		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG,
 //
-//	OB_CMD_EXTRACT		= OB_DEST
+//	OB_CMD_EXTRACT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_DEST
 //				| OB_DEST2
 //				| OB_OVERWRITE,
 //
@@ -382,11 +400,16 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_CHEAT,
 //
-//	OB_CMD_ANALYZE		= OB_GRP_PATCH
+//	OB_CMD_ANALYZE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_PATCH
 //				| OB_LONG,
 //
-//	OB_CMD_PATCH		= OB_GRP_DEST
+//	OB_CMD_PATCH		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_GRP_PATCH
 //				| OB_ADD_LECODE
 //				| OB_ADD_CTCODE
@@ -502,6 +525,8 @@ typedef enum enumGetOpt
 	GO_CT_CODE,
 	GO_LE_CODE,
 	GO_CHDIR,
+	GO_NO_WILDCARDS,
+	GO_IN_ORDER,
 	GO_VS_REGION,
 	GO_BT_REGION,
 	GO_ALL_RANKS,

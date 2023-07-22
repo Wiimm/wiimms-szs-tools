@@ -271,18 +271,20 @@ static enumError cmd_test()
 static enumError cmd_dump ( bool use_c )
 {
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 	staticr_t str;
-	enumError err = LoadSTR(&str,true,param->arg,opt_ignore>0);
+	enumError err = LoadSTR(&str,true,arg,opt_ignore>0);
 
 	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 	{
 	    if ( verbose >= 0 )
 		printf("\n%sDUMP of %s:%s\n", use_c ? "C-" : "",
-			GetNameFF(str.fform,0), param->arg );
+			GetNameFF(str.fform,0), arg );
 	    DumpSTR(stdout,2,&str,use_c);
 	}
 
@@ -292,6 +294,7 @@ static enumError cmd_dump ( bool use_c )
     }
     putchar('\n');
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -333,19 +336,21 @@ static enumError cmd_hexdump()
     SetupXDump(&xparam,XDUMPC_DUMP);
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 	staticr_t str;
-	enumError err = LoadSTR(&str,true,param->arg,opt_ignore>0);
+	enumError err = LoadSTR(&str,true,arg,opt_ignore>0);
 
 	bool is_ok = err <= ERR_WARNING && err != ERR_NOT_EXISTS;
 	if ( is_ok && !str.is_dol )
 	{
 	    is_ok = false;
 	    err = ERROR0(ERR_WRONG_FILE_TYPE,
-			"DOL expected, file ignored: %s\n",param->arg);
+			"DOL expected, file ignored: %s\n",arg);
 	}
 
 	if (is_ok)
@@ -371,7 +376,7 @@ static enumError cmd_hexdump()
 
 	    if ( verbose >= 0 )
 		printf("\nHEXDUMP of %s:%s\n",
-			GetNameFF(str.fform,0), param->arg );
+			GetNameFF(str.fform,0), arg );
 
 	    uint mi;
 	    for ( mi = 0; mi < mm.used; mi++ )
@@ -399,6 +404,7 @@ static enumError cmd_hexdump()
 	ResetSTR(&str);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -848,12 +854,14 @@ static enumError cmd_https()
     memset(patch_list,0,sizeof(patch_list));
     uint n_list = 0;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 	staticr_t str;
-	enumError err = LoadSTR(&str,true,param->arg,opt_ignore>0);
+	enumError err = LoadSTR(&str,true,arg,opt_ignore>0);
 	if ( max_err < err )
 	     max_err = err;
 
@@ -863,12 +871,12 @@ static enumError cmd_https()
 	    //printf("ST=%x,%x\n",str.str_status,str.dol_status);
 	    if ( !( str.is_dol ? str.dol_status & DOL_S_ORIG : str.str_status & STR_S_ORIG ))
 	    {
-		printf("\nIGNORE [NO ORIGINAL] %s:%s\n", GetNameFF(str.fform,0), param->arg );
+		printf("\nIGNORE [NO ORIGINAL] %s:%s\n", GetNameFF(str.fform,0), arg );
 		goto endloop;
 	    }
 
 	    if ( verbose >= 0 )
-		printf("SCAN %s:%s\n", GetNameFF(str.fform,0), param->arg );
+		printf("SCAN %s:%s\n", GetNameFF(str.fform,0), arg );
 
 	    const u8 *ptr = str.data;
 	    const u8 *end = ptr + str.data_size;
@@ -969,6 +977,8 @@ static enumError cmd_https()
 	ResetSTR(&str);
     }
 
+    ResetStringField(&plist);
+
     if ( n_list > 1 )
 	qsort( patch_list, n_list, sizeof(*patch_list),
 			(qsort_func)compare_server_patch );
@@ -1038,17 +1048,19 @@ static enumError cmd_extract()
     opt_mkdir = true;
 
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 	staticr_t str;
-	enumError err = LoadSTR(&str,true,param->arg,opt_ignore>0);
+	enumError err = LoadSTR(&str,true,arg,opt_ignore>0);
 
 	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 	{
 	    char dest[PATH_MAX];
-	    StringCat2S(dest,sizeof(dest),param->arg,".d");
+	    StringCat2S(dest,sizeof(dest),arg,".d");
 
 	    if ( verbose >= 0 || testmode )
 	    {
@@ -1074,6 +1086,7 @@ static enumError cmd_extract()
 	ResetSTR(&str);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -1431,12 +1444,15 @@ static enumError cmd_analyze()
 {
     enumError max_err = ERR_OK;
 
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	printf("\n* Analyze %s\n",param->arg);
+	ccp arg = plist.field[argi];
+	printf("\n* Analyze %s\n",arg);
 	staticr_t str;
-	enumError err = LoadSTR(&str,true,param->arg,opt_ignore>0);
+	enumError err = LoadSTR(&str,true,arg,opt_ignore>0);
 	if (err)
 	{
 	    if ( max_err < err )
@@ -1452,6 +1468,7 @@ static enumError cmd_analyze()
     }
     putchar('\n');
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -1463,23 +1480,25 @@ static enumError cmd_analyze()
 static enumError cmd_patch()
 {
     enumError max_err = ERR_OK;
-    ParamList_t *param;
-    for ( param = first_param; param; param = param->next )
+    StringField_t plist = {0};
+    CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
+
+    for ( int argi = 0; argi < plist.used; argi++ )
     {
-	NORMALIZE_FILENAME_PARAM(param);
+	ccp arg = plist.field[argi];
 	staticr_t str;
-	enumError err = LoadSTR(&str,true,param->arg,opt_ignore>0);
+	enumError err = LoadSTR(&str,true,arg,opt_ignore>0);
 
 	if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 	{
 	    char dest[PATH_MAX];
-	    SubstDest(dest,sizeof(dest),param->arg,opt_dest,0,0,false);
+	    SubstDest(dest,sizeof(dest),arg,opt_dest,0,0,false);
 
 	    if ( verbose >= 0 || testmode )
 	    {
-		if (strcmp(param->arg,dest))
+		if (strcmp(arg,dest))
 		    fprintf(stdlog,"%sPATCH %s -> %s\n",
-			    testmode ? "WOULD " : "", param->arg, dest );
+			    testmode ? "WOULD " : "", arg, dest );
 		else
 		    fprintf(stdlog,"%sPATCH %s\n",
 			    testmode ? "WOULD " : "", dest );
@@ -1488,14 +1507,14 @@ static enumError cmd_patch()
 	    const uint patch_count = PatchSTR(&str);
 
 	    char path_buf[PATH_MAX];
-	    ccp dest_fname = param->arg;
+	    ccp dest_fname = arg;
 	    if ( opt_dest && *opt_dest )
 	    {
 		if (IsDirectory(opt_dest,0))
 		{
-		    ccp slash = strrchr(param->arg,'/');
+		    ccp slash = strrchr(arg,'/');
 		    dest_fname = PathCatPP(path_buf,sizeof(path_buf),opt_dest,
-						slash ? slash+1 : param->arg );
+						slash ? slash+1 : arg );
 		}
 		else
 		    dest_fname = opt_dest;
@@ -1510,7 +1529,7 @@ static enumError cmd_patch()
 			testmode ? "Would s" : "S",
 			GetNameFF(str.fform,0), dest_fname );
 	    }
-	    else if (strcmp(dest_fname,param->arg))
+	    else if (strcmp(dest_fname,arg))
 	    {
 		create = true;
 		if ( verbose >= 0 )
@@ -1528,7 +1547,7 @@ static enumError cmd_patch()
 	    if (create)
 	    {
 		File_t F;
-		err = CreateFileOpt(&F,true,dest,testmode,param->arg);
+		err = CreateFileOpt(&F,true,dest,testmode,arg);
 		if (F.f)
 		{
 		    SetFileAttrib(&F.fatt,&str.fatt,0);
@@ -1536,7 +1555,7 @@ static enumError cmd_patch()
 		    if ( wstat != str.data_size )
 			err = FILEERROR1(&F,
 				    ERR_WRITE_FAILED,"Write failed: %s\n",
-				    param->arg);
+				    arg);
 		}
 		ResetFile(&F,opt_preserve);
 	    }
@@ -1547,6 +1566,7 @@ static enumError cmd_patch()
 	ResetSTR(&str);
     }
 
+    ResetStringField(&plist);
     return max_err;
 }
 
@@ -1636,7 +1656,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_ADD_CTCODE:	opt_add_ctcode = true; break;
 	case GO_CT_DIR:		AppendStringField(&ct_dir_list,optarg,false); break;
 	case GO_MOVE_D8:	opt_move_d8 = true; break;
-	case GO_ADD_SECTION:	AppendStringFieldExpand(&opt_sect_list,optarg,0,false); break;
+	case GO_ADD_SECTION:	AppendStringFieldExpand(&opt_sect_list,optarg,0,WM__DEFAULT); break;
 	case GO_FULL_GCH:	opt_full_gch = true; break;
 
 	case GO_GCT_SEP:	opt_gct_sep = true; break;
@@ -1649,7 +1669,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_GCT_NO_SEP:	opt_gct_scan_sep = false; break;
 
 	case GO_CREATE_SECT:	err += ScanOptCreateSect(optarg); break;
-	case GO_WPF:		AppendStringFieldExpand(&opt_wpf_list,optarg,0,false); break;
+	case GO_WPF:		AppendStringFieldExpand(&opt_wpf_list,optarg,0,WM__DEFAULT); break;
 
 	case GO_HTTPS:		err += ScanOptHttps(optarg); break;
 	case GO_DOMAIN:		err += ScanOptDomain(0,optarg); break;
@@ -1657,7 +1677,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_TWIIMMFI:	err += ScanOptDomain("domain","test.wiimmfi.de"); break;
 	case GO_WC24:		opt_wc24 = true; break;
 	case GO_WCODE:		err += ScanOptWCode(optarg); break;
-	case GO_ADD_WCODE:	AppendStringFieldExpand(&opt_wcode_list,optarg,0,false); break;
+	case GO_ADD_WCODE:	AppendStringFieldExpand(&opt_wcode_list,optarg,0,WM__DEFAULT); break;
 	case GO_PB_MODE:	err += ScanOptPBMode(optarg); break;
 	case GO_PATCHED_BY:	err += ScanOptPatchedBy(optarg); break;
 	case GO_VS:		err += ScanOptVS(0,0,optarg); break;
@@ -1669,6 +1689,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 
 	case GO_LONG:		long_count++; break;
 	case GO_BRIEF:		brief_count++; break;
+	case GO_NO_WILDCARDS:	no_wildcards_count++; break;
+	case GO_IN_ORDER:	inorder_count++; break;
 	case GO_NO_HEADER:	print_header = false; break;
 	case GO_SECTIONS:	print_sections++; break;
 	case GO_PORT_DB:	opt_port_db = optarg; break;

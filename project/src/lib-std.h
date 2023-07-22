@@ -102,6 +102,12 @@ void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 #define CHECK_FILE_SIZE		0x800
 #define OPT_PNG_TYPE_CLASS	0x7fef0bff
 
+#if BETA_VERSION && 0
+  #define MAX_STGI_LAPS		255
+#else
+  #define MAX_STGI_LAPS		9
+#endif
+
 #define DEF_EPSILON_POS		0.01
 #define DEF_EPSILON_ROT		0.01
 #define DEF_EPSILON_SCALE	0.01
@@ -1618,14 +1624,14 @@ int AddParam ( ccp arg );
 void AtExpandParam ( ParamList_t ** param );
 void AtExpandAllParam ( ParamList_t ** first_param );
 
+//-----------------------------------------------------------------------------
+
 void CollectExpandParam
 (
-    StringField_t   *plist,	// insert or append (inorder_count>0) to this list
-    ParamList_t	    *param,	// first param to add
-    int		    max,	// max num of param to add; -1: add all param
-    uint	    hidden	// bit field:
-				//  1 : allow hidden files
-				//  2 : '+h' and '/h' enables or disables hidden files
+    StringField_t	*plist,		// insert or append (inorder_count>0) to this list
+    ParamList_t		*param,		// first param to add
+    int			max,		// max num of param to add; -1: add all param
+    wildcard_mode_t	wc_mode		// bit field: modes for wildcard handling
 );
 
 enumError cmd_wildcards ( int argc, char ** argv );
@@ -2759,6 +2765,7 @@ extern bool		opt_round;
 extern int		brief_count;
 extern int		long_count;
 //extern int		full_count;
+extern int		no_wildcards_count;
 extern int		inorder_count;
 extern int		pipe_count;
 extern int		delta_count;
@@ -2769,6 +2776,7 @@ extern int		all_count;
 extern bool		raw_mode;
 extern SortMode_t	opt_sort;
 extern bool		opt_le_menu;
+extern bool		opt_9laps;
 extern ccp		opt_cup_icons;
 extern ccp		opt_title_screen;
 extern u32		opt_max_file_size;

@@ -382,16 +382,16 @@ char * SplitSubPath
     while ( ptr > buf )
     {
 	ptr--;
-	while ( ptr > buf && *ptr != '/' && *ptr != '\\' )
+	while ( ptr > buf && *ptr != '/' && *ptr != '\\' && *ptr != WM_CONTROL_CHAR )
 	    ptr--;
 	if ( ptr == buf )
 	    break;
 
 	*ptr = 0;
-	noPRINT("TEST: |%s|\n",buf);
+	PRINT0("TEST: |%s|\n",buf);
 	if (!stat(buf,&st))
 	{
-	    noPRINT("FOUND: |%s|\n",buf);
+	    PRINT0("FOUND: |%s|\n",buf);
 	    if (S_ISREG(st.st_mode))
 	    {
 		memmove(ptr+1,ptr,end-ptr+1);
@@ -399,7 +399,7 @@ char * SplitSubPath
 		return ptr;
 	    }
 	    *ptr = '/';
-		return 0;
+	    return 0;
 	}
 	*ptr = '/';
     }
@@ -1059,7 +1059,7 @@ file_format_t GetByMagicFF
     // test FF_WAV_OBJ & FF_SKP_OBJ
     {
 	ccp ptr = data, end = ptr + data_size;
-	for(;;)
+	while ( ptr < end )
 	{
 	    while ( ptr < end && ( *ptr == ' ' || *ptr == '\t'
 				    || *ptr == '\r' || *ptr == '\n' ))

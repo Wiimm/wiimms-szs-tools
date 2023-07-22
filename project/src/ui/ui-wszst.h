@@ -100,6 +100,7 @@ typedef enum enumOptions
 	OPT_MACRO_BMG,
 	OPT_FILTER_BMG,
 	OPT_LE_MENU,
+	OPT_9LAPS,
 	OPT_TITLE_SCREEN,
 	OPT_CUP_ICONS,
 	OPT_NO_COPY,
@@ -112,6 +113,7 @@ typedef enum enumOptions
 	OPT_LONG,
 	OPT_NO_HEADER,
 	OPT_BRIEF,
+	OPT_NO_WILDCARDS,
 	OPT_IN_ORDER,
 	OPT_PIPE,
 	OPT_DELTA,
@@ -198,7 +200,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 142
+	OPT__N_SPECIFIC, // == 144
 
 	//----- global options -----
 
@@ -236,6 +238,7 @@ typedef enum enumOptions
 	OPT_TRI_HEIGHT,
 	OPT_XTRIDATA,
 	OPT_KMP,
+	OPT_N_LAPS,
 	OPT_SPEED_MOD,
 	OPT_KTPT2,
 	OPT_TFORM_KMP,
@@ -286,7 +289,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 225
+	OPT__N_TOTAL // == 228
 
 } enumOptions;
 
@@ -345,6 +348,7 @@ typedef enum enumOptions
 //	OB_MACRO_BMG		= 1llu << OPT_MACRO_BMG,
 //	OB_FILTER_BMG		= 1llu << OPT_FILTER_BMG,
 //	OB_LE_MENU		= 1llu << OPT_LE_MENU,
+//	OB_9LAPS		= 1llu << OPT_9LAPS,
 //	OB_TITLE_SCREEN		= 1llu << OPT_TITLE_SCREEN,
 //	OB_CUP_ICONS		= 1llu << OPT_CUP_ICONS,
 //	OB_NO_COPY		= 1llu << OPT_NO_COPY,
@@ -357,6 +361,7 @@ typedef enum enumOptions
 //	OB_LONG			= 1llu << OPT_LONG,
 //	OB_NO_HEADER		= 1llu << OPT_NO_HEADER,
 //	OB_BRIEF		= 1llu << OPT_BRIEF,
+//	OB_NO_WILDCARDS		= 1llu << OPT_NO_WILDCARDS,
 //	OB_IN_ORDER		= 1llu << OPT_IN_ORDER,
 //	OB_PIPE			= 1llu << OPT_PIPE,
 //	OB_DELTA		= 1llu << OPT_DELTA,
@@ -473,6 +478,7 @@ typedef enum enumOptions
 //				| OB_MACRO_BMG
 //				| OB_FILTER_BMG
 //				| OB_LE_MENU
+//				| OB_9LAPS
 //				| OB_TITLE_SCREEN
 //				| OB_CUP_ICONS,
 //
@@ -544,7 +550,9 @@ typedef enum enumOptions
 //				| OB_TRANSFORM
 //				| OB_STRIP,
 //
-//	OB_GRP_CREATE		= OB_IGNORE_SETUP
+//	OB_GRP_CREATE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE_SETUP
 //				| OB_GRP_FFORMAT2
 //				| OB_PT_DIR
 //				| OB_LINKS
@@ -593,14 +601,17 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_GRP_SCRIPT,
 //
-//	OB_CMD_INSTALL		= 0,
+//	OB_CMD_INSTALL		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE,
 //
 //	OB_CMD_ARGTEST		= ~(u64)0,
 //
 //	OB_CMD_EXPAND		= ~(u64)0,
 //
-//	OB_CMD_WILDCARDS	= OB_IGNORE
-//				| OB_IN_ORDER,
+//	OB_CMD_WILDCARDS	= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE,
 //
 //	OB_CMD_TEST		= ~(u64)0,
 //
@@ -612,14 +623,17 @@ typedef enum enumOptions
 //				| OB_LONG
 //				| OB_BRIEF,
 //
-//	OB_CMD_FILETYPE		= OB_LONG
-//				| OB_NO_HEADER
-//				| OB_IGNORE,
-//
-//	OB_CMD_UI_CHECK		= OB_LONG
-//				| OB_NO_HEADER
+//	OB_CMD_FILETYPE		= OB_NO_WILDCARDS
 //				| OB_IN_ORDER
-//				| OB_IGNORE,
+//				| OB_IGNORE
+//				| OB_LONG
+//				| OB_NO_HEADER,
+//
+//	OB_CMD_UI_CHECK		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG
+//				| OB_NO_HEADER,
 //
 //	OB_CMD_FILEATTRIB	= OB_NO_HEADER,
 //
@@ -646,7 +660,9 @@ typedef enum enumOptions
 //
 //	OB_CMD_VR_RACE		= OB_LONG,
 //
-//	OB_CMD_AUTOADD		= OB_IGNORE
+//	OB_CMD_AUTOADD		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_DEST
 //				| OB_DEST2
 //				| OB_OVERWRITE
@@ -666,22 +682,25 @@ typedef enum enumOptions
 //	OB_CMD_SIZEOF		= OB_SORT
 //				| OB_BRIEF,
 //
-//	OB_CMD_CODE		= 0,
+//	OB_CMD_CODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE,
 //
 //	OB_CMD_RECODE		= 0,
 //
 //	OB_CMD_SUBFILE		= OB_GRP_DEST,
 //
-//	OB_CMD_LIST		= OB_RECURSE
+//	OB_CMD_LIST		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_RECURSE
+//				| OB_IGNORE
 //				| OB_EXT
 //				| OB_CUT
 //				| OB_ALL
 //				| OB_LONG
 //				| OB_SORT
 //				| OB_NO_HEADER
-//				| OB_IN_ORDER
 //				| OB_GRP_CREATE
-//				| OB_IGNORE
 //				| OB_NORM
 //				| OB_LINKS
 //				| OB_RM_AIPARAM
@@ -701,13 +720,15 @@ typedef enum enumOptions
 //				| OB_BRIEF
 //				| OB_LONG,
 //
-//	OB_CMD_ILIST		= OB_RECURSE
+//	OB_CMD_ILIST		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_RECURSE
+//				| OB_IGNORE
 //				| OB_ALL
 //				| OB_LONG
 //				| OB_SORT
 //				| OB_NO_HEADER
 //				| OB_GRP_CREATE
-//				| OB_IGNORE
 //				| OB_NORM
 //				| OB_LINKS,
 //
@@ -719,7 +740,10 @@ typedef enum enumOptions
 //
 //	OB_CMD_ILIST_LA		= OB_CMD_ILIST_A,
 //
-//	OB_CMD_MEMORY		= OB_RECURSE
+//	OB_CMD_MEMORY		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_RECURSE
+//				| OB_IGNORE
 //				| OB_EXT
 //				| OB_DECODE
 //				| OB_MIPMAPS
@@ -727,7 +751,6 @@ typedef enum enumOptions
 //				| OB_ALL
 //				| OB_LONG
 //				| OB_GRP_CREATE
-//				| OB_IGNORE
 //				| OB_NORM
 //				| OB_LINKS
 //				| OB_RM_AIPARAM
@@ -735,12 +758,17 @@ typedef enum enumOptions
 //
 //	OB_CMD_MEMORY_A		= OB_CMD_MEMORY,
 //
-//	OB_CMD_DUMP		= OB_GRP_CREATE
+//	OB_CMD_DUMP		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_GRP_CREATE
 //				| OB_NORM
 //				| OB_LINKS,
 //
-//	OB_CMD_SHA1		= OB_IGNORE
+//	OB_CMD_SHA1		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_RECURSE
+//				| OB_IGNORE
 //				| OB_NORM
 //				| OB_LINKS
 //				| OB_GRP_CREATE
@@ -752,34 +780,44 @@ typedef enum enumOptions
 //				| OB_BRIEF
 //				| OB_LONG,
 //
-//	OB_CMD_ANALYZE		= OB_LONG
+//	OB_CMD_ANALYZE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_LONG
 //				| OB_GRP_SCRIPT
 //				| OB_REFERENCE
 //				| OB_DEST
 //				| OB_DEST2,
 //
-//	OB_CMD_SPLIT		= OB_PLUS
+//	OB_CMD_SPLIT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_PLUS
 //				| OB_SPLIT
 //				| OB_PRINTF
-//				| OB_IGNORE
 //				| OB_GRP_SCRIPT
 //				| OB_DEST
 //				| OB_DEST2,
 //
-//	OB_CMD_IS_TEXTURE	= OB_IGNORE
+//	OB_CMD_IS_TEXTURE	= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_REFERENCE
 //				| OB_LONG,
 //
-//	OB_CMD_FEATURES		= OB_BRIEF
-//				| OB_LONG
+//	OB_CMD_FEATURES		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_BRIEF
+//				| OB_LONG
 //				| OB_GRP_SCRIPT
 //				| OB_FMODES
 //				| OB_DEST
 //				| OB_DEST2,
 //
-//	OB_CMD_DISTRIBUTION	= OB_IGNORE
+//	OB_CMD_DISTRIBUTION	= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_NORM
 //				| OB_LINKS
 //				| OB_GRP_CREATE
@@ -794,38 +832,50 @@ typedef enum enumOptions
 //				| OB_DEST
 //				| OB_ESC,
 //
-//	OB_CMD_CHECK		= OB_NO_CHECK
+//	OB_CMD_CHECK		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_NO_CHECK
 //				| OB_BRIEF
 //				| OB_LONG
 //				| OB_GRP_CREATE
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_SLOTS		= OB_IGNORE
+//	OB_CMD_SLOTS		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_BRIEF
 //				| OB_GRP_CREATE
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_STGI		= OB_NO_HEADER
-//				| OB_IGNORE,
+//	OB_CMD_STGI		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_NO_HEADER,
 //
-//	OB_CMD_ISARENA		= OB_NO_HEADER
-//				| OB_BRIEF
-//				| OB_IGNORE,
+//	OB_CMD_IS_ARENA		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_NO_HEADER
+//				| OB_BRIEF,
 //
-//	OB_CMD_NORMALIZE	= OB_GRP_DEST
+//	OB_CMD_NORMALIZE	= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_REMOVE_SRC
 //				| OB_GRP_FFORMAT1
-//				| OB_IGNORE
 //				| OB_GRP_NORM
 //				| OB_FAST
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_PATCH		= OB_GRP_DEST
+//	OB_CMD_PATCH		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_REMOVE_SRC
 //				| OB_NO_COPY
 //				| OB_GRP_FFORMAT1
-//				| OB_IGNORE
 //				| OB_COMPRESS
 //				| OB_GRP_NORM
 //				| OB_FAST
@@ -836,10 +886,12 @@ typedef enum enumOptions
 //	OB_CMD_DUPLICATE	= OB_GAMEMODES
 //				| OB_CMD_PATCH,
 //
-//	OB_CMD_MINIMAP		= OB_LONG
+//	OB_CMD_MINIMAP		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_LONG
 //				| OB_REMOVE_DEST
 //				| OB_PRESERVE
-//				| OB_IGNORE
 //				| OB_COMPRESS
 //				| OB_GRP_NORM
 //				| OB_FAST
@@ -857,24 +909,31 @@ typedef enum enumOptions
 //				| OB_CENTER
 //				| OB_GRP_TRANSFORM,
 //
-//	OB_CMD_COMPRESS		= OB_GRP_DEST
+//	OB_CMD_COMPRESS		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_REMOVE_SRC
 //				| OB_GRP_FFORMAT1
-//				| OB_IGNORE
 //				| OB_COMPRESS
 //				| OB_GRP_NORM
 //				| OB_FAST
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_DECOMPRESS	= OB_GRP_DEST
+//	OB_CMD_DECOMPRESS	= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_REMOVE_SRC
 //				| OB_U8
 //				| OB_WU8
-//				| OB_IGNORE
 //				| OB_GRP_NORM
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_ENCODE		= OB_IGNORE_SETUP
+//	OB_CMD_ENCODE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_IGNORE_SETUP
 //				| OB_GRP_ALIGN
 //				| OB_GRP_ENCODE
 //				| OB_MIPMAPS
@@ -886,15 +945,20 @@ typedef enum enumOptions
 //				| OB_CMPR_DEFAULT
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_CREATE		= OB_GRP_DEST
+//	OB_CMD_CREATE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST
 //				| OB_GRP_CREATE
 //				| OB_NO_COMPRESS
 //				| OB_COMPRESS
 //				| OB_FAST
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_UPDATE		= OB_SOURCE
+//	OB_CMD_UPDATE		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_SOURCE
 //				| OB_GRP_DEST
 //				| OB_ESC
 //				| OB_NO_COMPRESS
@@ -905,9 +969,11 @@ typedef enum enumOptions
 //				| OB_GRP_ENCODE
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_EXTRACT		= OB_GRP_DEST
-//				| OB_GRP_EXTRACT
+//	OB_CMD_EXTRACT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
 //				| OB_IGNORE
+//				| OB_GRP_DEST
+//				| OB_GRP_EXTRACT
 //				| OB_ANALYZE
 //				| OB_ANALYZE_MODE
 //				| OB_GRP_TRANSFORM2,
@@ -918,36 +984,50 @@ typedef enum enumOptions
 //
 //	OB_CMD_XALL		= OB_CMD_EXTRACT,
 //
-//	OB_CMD_XCOMMON		= OB_GRP_DEST
-//				| OB_IGNORE,
-//
-//	OB_CMD_BINARY		= OB_IGNORE
+//	OB_CMD_XCOMMON		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_GRP_DEST,
 //
-//	OB_CMD_TEXT		= OB_IGNORE
+//	OB_CMD_BINARY		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST,
+//
+//	OB_CMD_TEXT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_DECODE
 //				| OB_GRP_TEXTOUT
 //				| OB_GRP_BMG
 //				| OB_GRP_DEST,
 //
-//	OB_CMD_CAT		= OB_IGNORE
+//	OB_CMD_CAT		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_DECODE
 //				| OB_GRP_TEXTOUT
 //				| OB_GRP_BMG,
 //
-//	OB_CMD_BMG		= OB_IGNORE
+//	OB_CMD_BMG		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_NO_HEADER
 //				| OB_BRIEF
 //				| OB_GRP_BMG,
 //
-//	OB_CMD_KCL		= OB_IGNORE
+//	OB_CMD_KCL		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_NO_HEADER
 //				| OB_BRIEF
 //				| OB_NO_PARAM
 //				| OB_NO_CHECK
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_KMP		= OB_IGNORE
+//	OB_CMD_KMP		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_NO_HEADER
 //				| OB_BRIEF
 //				| OB_EXPORT
@@ -955,21 +1035,30 @@ typedef enum enumOptions
 //				| OB_NO_CHECK
 //				| OB_GRP_TRANSFORM2,
 //
-//	OB_CMD_LEX		= OB_IGNORE
+//	OB_CMD_LEX		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_NO_HEADER
 //				| OB_BRIEF
 //				| OB_EXPORT,
 //
-//	OB_CMD_INFO		= OB_IGNORE
+//	OB_CMD_INFO		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_NO_HEADER,
 //
-//	OB_CMD_GHOST		= OB_IGNORE
+//	OB_CMD_GHOST		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
 //				| OB_NO_HEADER
 //				| OB_GRP_SCRIPT
 //				| OB_DEST
 //				| OB_DEST2,
 //
-//	OB_CMD_YAZDUMP		= OB_GRP_DEST,
+//	OB_CMD_YAZDUMP		= OB_NO_WILDCARDS
+//				| OB_IN_ORDER
+//				| OB_IGNORE
+//				| OB_GRP_DEST,
 //
 //	OB_CMD_VEHICLE		= OB_SOURCE
 //				| OB_DEST
@@ -1049,7 +1138,7 @@ typedef enum enumCommands
 	CMD_CHECK,
 	CMD_SLOTS,
 	CMD_STGI,
-	CMD_ISARENA,
+	CMD_IS_ARENA,
 	CMD_NORMALIZE,
 	CMD_PATCH,
 	CMD_COPY,
@@ -1193,6 +1282,7 @@ typedef enum enumGetOpt
 	GO_FLAG_FILE,
 	GO_XTRIDATA,
 	GO_KMP,
+	GO_N_LAPS,
 	GO_SPEED_MOD,
 	GO_KTPT2,
 	GO_TFORM_KMP,
@@ -1218,6 +1308,7 @@ typedef enum enumGetOpt
 	GO_MACRO_BMG,
 	GO_FILTER_BMG,
 	GO_LE_MENU,
+	GO_9LAPS,
 	GO_TITLE_SCREEN,
 	GO_CUP_ICONS,
 	GO_NO_COPY,
@@ -1231,6 +1322,7 @@ typedef enum enumGetOpt
 	GO_CODING,
 	GO_VERIFY,
 	GO_ROUND,
+	GO_NO_WILDCARDS,
 	GO_IN_ORDER,
 	GO_PIPE,
 	GO_DELTA,

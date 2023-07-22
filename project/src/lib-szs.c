@@ -1931,13 +1931,13 @@ static void iterate_wu8
     wu8_info_t		*wu8	// valud wu8
 )
 {
-    IterateFilesParSZS(szs,code_wu8_pass_1,wu8,false,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(szs,code_wu8_pass_1,wu8,false,false,false,0,-1,SORT_NONE);
     PRINT("PASS1-COUNT = %d, ERR-COUNT = %d\n",wu8->pass1_count,wu8->err_count);
     if (!wu8->err_count)
     {
 	if (!wu8->pass1_count)
 	    load_wu8(wu8,"itembox.brres",0);
-	IterateFilesParSZS(szs,code_wu8_pass_2,wu8,false,false,0,-1,SORT_NONE);
+	IterateFilesParSZS(szs,code_wu8_pass_2,wu8,false,false,false,0,-1,SORT_NONE);
     }
 }
 
@@ -2499,7 +2499,7 @@ enumError CreateU8
     if ( logging >= 1 )
     {
 	printf("----- internal file list -----\n");
-	IterateFilesParSZS(szs,PrintFileSZS,0,false,true,0,0,SORT_NONE);
+	IterateFilesParSZS(szs,PrintFileSZS,0,false,true,false,0,0,SORT_NONE);
 	printf("------------------------------\n");
     }
 
@@ -2722,7 +2722,6 @@ enumError ExtractSZS
 	return ERR_OK;
 
     eszs->subfile_found = true;
-    noPRINT("SUBPATH: %s\n",subpath);
 
     szs_file_t szs;
     InitializeSZS(&szs);
@@ -2736,9 +2735,8 @@ enumError ExtractSZS
     const bool is_arch = IsArchiveFF(szs.fform_current);
     if ( !is_arch || szs.fform_current == FF_BRRES )
 	autoname = 0;
-    else if ( autoname && ( !*subpath || !strcmp(subpath,"/") ))
+    else if ( autoname && ( !*subpath || !strcmp(subpath,"/") || !strcmp(subpath,"|") ))
 	subpath = autoname;
-    PRINT0("SUBPATH 2: %s\n",subpath);
 
     if ( !is_arch || !subpath || !*subpath )
     {
@@ -2750,7 +2748,7 @@ enumError ExtractSZS
     eszs->szs_found	= true;
     eszs->subpath	= subpath + 1;
     eszs->subpath_len	= strlen(eszs->subpath);
-    IterateFilesParSZS(&szs,extract_data_func,eszs,false,false,0,-1,SORT_NONE);
+    IterateFilesParSZS(&szs,extract_data_func,eszs,false,false,false,0,-1,SORT_NONE);
 
     PRINT("### FOUND: lev=%d n=%d off=%x siz=%x %s\n",
 	eszs->exlevel, eszs->found_count,
@@ -2970,7 +2968,6 @@ enumError LoadRawData
 ///////////////			    UI-Check			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-
 const char ui_type_char[UIT__N+1] = "?-ACEFGMOSPRTl";
 
 const ccp ui_type_name[UIT__N+1] =
@@ -3121,10 +3118,12 @@ void UiCheck ( ui_check_t *uc, szs_file_t *szs )
     DASSERT(uc);
     DASSERT(szs);
     memset(uc,0,sizeof(*uc));
-    uc->type = UIT_UNKNOWN;
-    uc->possible = UIT_M_ALL;
+    uc->ui_lang		= '-';
+    uc->ui_type		= UIT_UNKNOWN;
+    uc->type		= UIT_UNKNOWN;
+    uc->possible	= UIT_M_ALL;
 
-    IterateFilesParSZS(szs,ui_check_func,uc,false,false,-1,-1,SORT_NONE);
+    IterateFilesParSZS(szs,ui_check_func,uc,false,false,false,-1,-1,SORT_NONE);
 
     if ( uc->is_korean == OFFON_ON && uc->is_ui == OFFON_AUTO )
 	uc->is_ui = OFFON_ON;
@@ -3151,6 +3150,43 @@ void UiCheck ( ui_check_t *uc, szs_file_t *szs )
 
     if (uc->type)
 	uc->possible = 1 << uc->type;
+
+    //-- ui_type & ui_lang
+
+    uc->ui_type = uc->type;
+    ccp fname = strrchr(szs->fname,'/');
+    if (fname)
+    {
+	fname++;
+	if ( uc->ui_type == UIT_LANGUAGE )
+	{
+	    uc->ui_type = UIT_UNKNOWN;
+	    //PRINT1("NAME; %s\n",fname);
+	    for ( int idx = UIT__FIRST; idx <= UIT__LAST; idx++ )
+	    {
+		ccp tab = ui_type_name[idx];
+		if (!strncasecmp(fname,tab,strlen(tab)))
+		{
+		    uc->ui_type = idx;
+		    uc->possible = 1 << idx;
+		    break;
+		}
+	    }
+	}
+
+	ccp point = strrchr(fname,'.');
+	if ( point && point - fname > 3 && point[-2] == '_' )
+	{
+	    const char ch = point[-1];
+	    if ( isalpha(ch))
+	    {
+		if ( ch == 'R' )
+		    uc->is_korean = true;
+		else
+		    uc->ui_lang = ch;
+	    }
+	}
+    }
 }
 
 //
@@ -3561,6 +3597,105 @@ static int iterate_sub_files
 
 
 ///////////////////////////////////////////////////////////////////////////////
+
+static int simple_norm_collect_func
+(
+    struct szs_iterator_t	*it,	// iterator struct with all infos
+    bool			term	// true: termination hint
+)
+{
+    DASSERT(it);
+    DASSERT(it->szs);
+    if (term)
+	return 0;
+
+// [[norm]]
+    szs_norm_t * norm = it->param;
+    DASSERT(norm);
+
+    uint depth = it->depth;
+    ccp path = it->path;
+    if ( path[0] == '.' && path[1] == '/' )
+    {
+	path += 2;
+	depth--;
+	if (!*path)
+	{
+	    norm->u8.have_pt_dir = true;
+	    return 0;
+	}
+    }
+
+    if (!*path)
+	return 0;
+
+    szs_subfile_t * file = AppendSubfileSZS(it->szs,it,0);
+    DASSERT(file);
+    ccp ptr = file->path + strlen(file->path) - 1;
+    if (it->is_dir)
+	ptr--;
+    while ( ptr > file->path && *ptr != '/' )
+	ptr--;
+    if ( *ptr == '/' )
+	ptr++;
+
+    norm->u8.namepool_size += strlen(ptr);
+    noPRINT("ADD: %s[%zu+%u]\n",ptr,strlen(ptr),!it->is_dir);
+    if (it->is_dir)
+    {
+	file->offset = depth;
+	file->size   = it->size - it->index - 1;
+    }
+    else
+    {
+	file->device = it->size;
+	file->inode  = it->off;
+
+	uint relevant_size = file->size;
+	if (it->szs->ext_data.used)
+	{
+	    int idx;
+	    for ( idx = 0; idx < it->szs->ext_data.used; idx++ )
+	    {
+		szs_subfile_t * f = it->szs->ext_data.list + idx;
+		if (!StrPathCmp(it->path,f->path))
+		{
+		    PRINT("########## %s %s / %u -> %u%s\n",
+				it->path, f->path, it->size, f->size,
+				f->removed ? " REMOVE!" : "" );
+		    file->ext = f;
+		    relevant_size = f->size;
+		    file->device = 0;
+		    file->inode  = 0;
+
+		    if ( f->removed)
+		    {
+			norm->u8.namepool_size -= strlen(ptr)+1;
+			relevant_size = 0;
+		    }
+		}
+	    }
+	}
+
+	szs_subfile_t *lptr = opt_links
+			? FindLinkSZS(it->szs,file->device,file->inode,file) : 0;
+	if (lptr)
+	{
+	    if (!lptr->link_index)
+		lptr->link_index = ++it->szs->subfile.link_count;
+	    file->link_index = lptr->link_index;
+	    PRINT("NORM/LINK[%d]: %s  ->  %s\n",
+			lptr->link_index, lptr->path, file->path );
+	}
+	else
+	    norm->u8.total_size += ALIGN32(relevant_size,opt_align_u8);
+
+	norm->u8.namepool_size++;
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // [[IterateFilesSZS]]
 
 int IterateFilesSZS
@@ -3581,7 +3716,7 @@ int IterateFilesSZS
 	memcpy(&itpar,p_itpar,sizeof(itpar));
     else
 	memset(&itpar,0,sizeof(itpar));
-
+    
     PRINT("IterateFilesParSZS(ipar=%d,clean=%d,rec=%d,cut=%d,sort=%d) ff=%s\n",
 	p_itpar!=0, itpar.clean_path, recurse, itpar.cut_files, itpar.sort_mode,
 	GetNameFF(szs->fform_file,szs->fform_arch));
@@ -3590,7 +3725,7 @@ int IterateFilesSZS
 	= GetIteratorFunction( szs->fform_arch, itpar.cut_files>=0 );
     if (!ifunc)
 	return -1;
-
+    
     if ( itpar.sort_mode == SORT_NONE && IsBRSUB(szs->fform_arch) )
 	itpar.sort_mode = SORT_OFFSET;
     const bool sort_files = itpar.sort_mode != SORT_NONE;
@@ -3609,10 +3744,39 @@ int IterateFilesSZS
     it.group		= GROUP_INVALID;
     it.entry		= ENTRY_INVALID;
 
+    it.job_ui_check	= itpar.job_ui_check;
+    if (itpar.job_ui_check)
+	UiCheck (&it.ui_check,szs);
+
+    if ( itpar.job_norm_create && ( szs->fform_arch == FF_U8 || szs->fform_arch == FF_WU8 ))
+    {
+	ResetFileSZS(szs,false);
+	// [[norm]]
+	IterateFilesParSZS(szs,simple_norm_collect_func,&it.norm_create,false,false,false,0,-1,SORT_NONE);
+    }
+
     const int stat = ifunc(&it,false);
     it.name = 0;
     *it.path = 0;
     const int stat_term = it.func_it(&it,true);
+
+    if (it.job_create)
+    {
+	SortSubFilesSZS(szs,SORT_AUTO);
+
+	//uint old_size		= szs->size;
+	u8 * old_data		= szs->data;
+	bool old_alloced	= szs->data_alloced;
+	szs->data		= 0;
+	szs->data_alloced	= false;
+
+	CreateU8ByInfo(szs,0,old_data,&it.norm_create.u8);
+
+	//it.log_created = old_size != szs->size || memcmp(old_data,szs->data,old_size);
+	if (old_alloced)
+	    FREE(old_data);
+    }
+
     return stat ? stat : stat_term;
 }
 
@@ -3626,6 +3790,7 @@ int IterateFilesParSZS
     void		*param,		// user defined parameter
     bool		clean_path,	// true: clean path from ../ and more
     bool		show_root_node,	// true: include root node in iteration
+    bool		job_ui_check,	// true: call UiCheck() before main iteration
     int			recurse,	// 0:off, <0:unlimited, >0:max depth
     int			cut_files,	// <0:never, =0:auto(first level), >0:always
     SortMode_t		sort_mode	// sort mode
@@ -3634,11 +3799,14 @@ int IterateFilesParSZS
     DASSERT(szs);
     DASSERT(func);
 
-    iterator_param_t itpar	= {0};
-    itpar.cut_files		= cut_files > 0;
-    itpar.sort_mode		= sort_mode;
-    itpar.clean_path		= clean_path;
-    itpar.show_root_node	= show_root_node;
+    iterator_param_t itpar =
+    {
+	.cut_files	= cut_files > 0,
+	.sort_mode	= sort_mode,
+	.clean_path	= clean_path,
+	.show_root_node	= show_root_node,
+	.job_ui_check	= job_ui_check,
+    };
     return IterateFilesSZS(szs,func,param,&itpar,recurse);
 }
 
@@ -3786,10 +3954,10 @@ uint CollectFilesSZS
 	cr.szs = szs;
 	cr.path_end = cr.path;
 	cr.last_path = EmptyString;
-	IterateFilesParSZS(szs,collect_r_func,&cr,false,false,recurse,cut_files,SORT_NONE);
+	IterateFilesParSZS(szs,collect_r_func,&cr,false,false,false,recurse,cut_files,SORT_NONE);
     }
     else
-	IterateFilesParSZS(szs,collect_func,0,false,false,0,-1,SORT_NONE);
+	IterateFilesParSZS(szs,collect_func,0,false,false,false,0,-1,SORT_NONE);
 
     SortSubFilesSZS(szs,sort_mode);
     noPRINT("%d/%d files collected.\n", szs->subfile.used - base, szs->subfile.used );
@@ -3815,7 +3983,7 @@ int IterateFilesData
     szs_file_t szs;
     AssignSZS(&szs,true,(u8*)data,data_size,false,fform,fname);
     const int stat
-	= IterateFilesParSZS ( &szs, func, param, false, true, -1, 1, SORT_OFFSET );
+	= IterateFilesParSZS ( &szs, func, param, false, true, false, -1, 1, SORT_OFFSET );
     ResetSZS(&szs);
     return stat;
 }
