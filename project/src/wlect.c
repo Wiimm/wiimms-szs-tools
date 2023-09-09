@@ -356,11 +356,12 @@ static enumError cmd_dump ( int long_level )
 	if ( err > ERR_WARNING )
 	    return err;
 
-	if ( verbose >= 0 )
+	if ( verbose >= 0 && raw.fform != FF_LTA )
 	{
 	    fprintf(stdlog,"\nDUMP %s:%s\n\n", GetNameFF(raw.fform,0), raw.fname );
 	    fflush(stdlog);
 	}
+// [[lfl]] [[2do]]
 
 	if ( raw.fform == FF_LE_BIN )
 	{
@@ -381,6 +382,12 @@ static enumError cmd_dump ( int long_level )
 			long_count > 0 ? 0x10 : 1 );
 	    ResetLEX(&lex);
 	}
+	else if ( raw.fform == FF_LTA )
+	{
+	    putchar('\n');
+	    DumpLTA(stdout,0,colout,arg,raw.data,raw.data_size);
+	}
+// [[lfl]] [[2do]]
 	else
 	{
 	    ctcode_t ctcode;
@@ -397,6 +404,7 @@ static enumError cmd_dump ( int long_level )
 
     ResetStringField(&plist);
     ResetRawData(&raw);
+    putchar('\n');
     return ERR_OK;
 }
 
@@ -1241,7 +1249,7 @@ static void help_distrib ( enumError exit_code )
 	" which is helpful for the automatic completion of filenames.\n"
 	"\n"
 	"  |Otherwise it is a {name|filename of an input file}."
-	" Wildcards and pipe characters are parsed," 
+	" Wildcards and pipe characters are parsed,"
 	" see https://szs.wiimm.de/doc/wildcards for details."
 	" The file (or files in case of wildcards) is read"
 	" and generally overwrites existing content."
@@ -1331,7 +1339,7 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|*.szs}:\t|"
 		"Track files are added to 2 different internal track tracks lists,"
 		" one for racing tracks and one for battle areans."
-		" I the argument is quoted then wlect will resolve the wildcards by itself." 
+		" I the argument is quoted then wlect will resolve the wildcards by itself."
 	"\n"
 	"  |All file types that are accepted by option {opt|--le-define}"
 	" ({name|BRRES}, {name|TEX0}, {name|CT-CODE}, ...) are also possible.\n"
@@ -1642,6 +1650,26 @@ static void help_distrib ( enumError exit_code )
 		"Log planned actions only and don't touch any file.\n"
 	"\n"
 
+	"\t{name|LTA}:\t|"
+		"This instruction copies the track files to {name|LE-CODE Track Archives}"
+		" with name »{name|tracks-#.lta}« where »{name|#}« is an index from 1 to N."
+		" {hl|PARAMETER} specifies the destination directory."
+		" Only files with valid member »{name|PATH}« are added to the archives."
+		" SZS files with unknown paths are searched in directories"
+		" defined by the options {opt|--copy-tracks}, {opt|--move-tracks},"
+		" {opt|--move1-tracks} and {opt|--link-tracks}."
+		" Files with identical content are recognized"
+		" and the content is saved only once."
+		" Executing this instruction may take a little longer"
+		" as all track files need to be processed.\n"
+	"\n"
+
+	"\t{name|LTA-RM}:\t|"
+		"Same as »{name|LTA}«,"
+		" but remove all used SZS source files at the very end.\n"
+	"\n"
+
+
 	//-------------------------------------------------------------------------
 
 	"\n"
@@ -1760,6 +1788,8 @@ static void help_distrib ( enumError exit_code )
 		" If reading, then get the SHA1 string.\n"
 	"\t{name|FILE}:\t|"
 		"Define a new or get the filename.\n"
+	"\t{name|PATH}:\t|"
+		"Define a new or get the path of a file.\n"
 	"\t{name|NAME}:\t|"
 		"Define a new or get the standard name.\n"
 	"\t{name|XNAME}:\t|"
@@ -1940,13 +1970,13 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     u_nsec_t start_nsec = GetTimerNSec();
 
     enum {	C_NAMES, C_INFO, C_RATING, C_LEINFO, C_SHA1, C_DISTRIB,
-		C_CTDEF, C_LEDEF, C_LEREF, C_STRINGS, C_DUMP, 
+		C_CTDEF, C_LEDEF, C_LEREF, C_STRINGS, C_DUMP,
 	#if LE_DIS_PATCH_ENABLED
 		C_DEST, C_PATCH,
 	#endif
 		C_LECODE, C_LECODE4, C_LPAR,
 		C_BMG, C_CUPICON, C_SEPARATOR, C_COPY, C_SPLIT, C_SUBST,
-		C_TRACKS,
+		C_TRACKS, C_LTA,
 	#if LE_DIS_SORTTRACKS_ENABLED
 		C_SORT_TRACKS,
 	#endif
@@ -1957,16 +1987,17 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 
     enum
     {
-	O_PARAM_OPTSRC	= 0x0100, // scan optional storage
-	O_PARAM_D	= 0x0200, // scan storage DEST
-	O_PARAM_S	= 0x0400, // scan storage SRC
-	O_PARAM_S2	= 0x0800, // scan second storage SRC
-	O_PARAM_SS	= 0x0c00, // scan storage SRC [ + SRC ]...
-	O_PARAM_OPT1	= 0x1000, // 
-	O_PARAM_OPT2	= 0x2000, // scan options before additional '='
-	O_PARAM_A	= 0x4000, // allow additonal arguments
+	O_PARAM_OPTSRC	= 0x00100, // scan optional storage
+	O_PARAM_D	= 0x00200, // scan storage DEST
+	O_PARAM_S	= 0x00400, // scan storage SRC
+	O_PARAM_S2	= 0x00800, // scan second storage SRC
+	O_PARAM_SS	= 0x00c00, // scan storage SRC [ + SRC ]...
+	O_PARAM_OPT1	= 0x01000, //
+	O_PARAM_OPT2	= 0x02000, // scan options before additional '='
+	O_PARAM_A	= 0x04000, // allow additonal arguments
+	O_PARAM_RM	= 0x08000, // remove source files
      #if LE_DIS_PATCH_ENABLED
-	O_FILE_LIST	= 0x8000, // create a file list by the final filename
+	O_FILE_LIST	= 0x10000, // create a file list by the final filename
      #endif
     };
 
@@ -2018,6 +2049,8 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_SUBST,	"SUBST",		0,		O_PARAM_D|O_PARAM_A },
 
 	{ C_TRACKS,	"TRACKS",		0,		0  },
+	{ C_LTA,	"LTA",			0,		0  },
+	{ C_LTA,	"LTA-RM",		"LTARM",	O_PARAM_RM  },
      #if LE_DIS_SORTTRACKS_ENABLED
 	{ C_SORT_TRACKS,"SORT-TRACKS",		"SORTTRACKS",	O_PARAM_OPTSRC|O_PARAM_OPT1 },
      #endif
@@ -2169,6 +2202,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	case C_COPY:		err = CopyLD(ld,&par_dest,par_src,n_par_src); break;
 	case C_SPLIT:		err = SplitLD(ld,&par_dest,par_src,arg); break;
 	case C_SUBST:		err = SubstLD(ld,&par_dest,arg); break;
+	case C_LTA:		err = CreateTrackArchivesLD(ld,arg,cmd->opt>0); break;
 
      #if LE_DIS_SORTTRACKS_ENABLED
 	case C_SORT_TRACKS:	err = SortTracksLD(ld,&par_opt,mem_opt); break;
@@ -2240,7 +2274,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 					lt->track_slot, ltty_name );
 			    }
 			}
-		    }    
+		    }
 		}
 	    }
 	    err = ERR_OK;
@@ -2249,7 +2283,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 
 
     //-- create a file list
-    
+
  #if LE_DIS_PATCH_ENABLED
     if ( err == ~0 && opt & O_FILE_LIST )
     {
@@ -2294,26 +2328,26 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	    const bool variant = cmd->opt & 1; // use xnames || force text mode
 	    switch (cmd->id)
 	    {
-	      case C_NAMES:   err = CreateNamesLD(F.f,ld,variant); break;
-	      case C_INFO:    err = CreateInfoLD(F.f,ld,variant,false); break;
-	      case C_RATING:  err = CreateInfoLD(F.f,ld,variant,true); break;
-	      case C_LEINFO:  err = CreateLeInfoLD(F.f,ld,false); break;
-	      case C_SHA1:    err = CreateSha1LD(F.f,ld,variant,true); break;
-	      case C_DISTRIB: err = CreateDistribLD(F.f,ld,variant); break;
+	      case C_NAMES:	err = CreateNamesLD(F.f,ld,variant); break;
+	      case C_INFO:	err = CreateInfoLD(F.f,ld,variant,false); break;
+	      case C_RATING:	err = CreateInfoLD(F.f,ld,variant,true); break;
+	      case C_LEINFO:	err = CreateLeInfoLD(F.f,ld,false); break;
+	      case C_SHA1:	err = CreateSha1LD(F.f,ld,variant,true); break;
+	      case C_DISTRIB:	err = CreateDistribLD(F.f,ld,variant); break;
 
-	      case C_CTDEF:   err = CreateCtDefLD(F.f,ld); break;
-	      case C_LEDEF:   err = CreateLeDefLD(F.f,ld); break;
-	      case C_LEREF:   err = CreateRefLD(F.f,ld,true); break;
-	      case C_STRINGS: err = CreateStringsLD(F.f,ld); break;
-	      case C_DUMP:    err = CreateDumpLD(F.f,ld); break;
+	      case C_CTDEF:	err = CreateCtDefLD(F.f,ld); break;
+	      case C_LEDEF:	err = CreateLeDefLD(F.f,ld); break;
+	      case C_LEREF:	err = CreateRefLD(F.f,ld,true); break;
+	      case C_STRINGS:	err = CreateStringsLD(F.f,ld); break;
+	      case C_DUMP:	err = CreateDumpLD(F.f,ld); break;
 
-	      case C_LECODE:  err = CreateLecodeLD(F.f,ld,cmd->opt); break;
-	      case C_LPAR:    err = CreateLparLD(F.f,ld,true); break;
-	      case C_BMG:     err = CreateBmgLD(F.f,ld,variant||F.is_stdio); break;
-	      case C_CUPICON: err = CreateCupIconsLD(&lop,mem_opt,variant||F.is_stdio); break;
-	      case C_PREFIX:  err = SavePrefixTable(F.f,0); break;
-	      case C_DEBUG:   err = CreateDebugLD(F.f,ld); break;
-	      case C_REPORT:  err = CreateReportLD(&lop,mem_opt); break;
+	      case C_LECODE:	err = CreateLecodeLD(F.f,ld,cmd->opt); break;
+	      case C_LPAR:	err = CreateLparLD(F.f,ld,true); break;
+	      case C_BMG:	err = CreateBmgLD(F.f,ld,variant||F.is_stdio); break;
+	      case C_CUPICON:	err = CreateCupIconsLD(&lop,mem_opt,variant||F.is_stdio); break;
+	      case C_PREFIX:	err = SavePrefixTable(F.f,0); break;
+	      case C_DEBUG:	err = CreateDebugLD(F.f,ld); break;
+	      case C_REPORT:	err = CreateReportLD(&lop,mem_opt); break;
 	    }
 	}
 	CloseFile(&F,0);
@@ -2405,6 +2439,7 @@ static enumError cmd_distrib()
 	}
     }
 
+    ResetLD(&ld);
     ClosePager();
     return ProgInfo.max_error;
 }

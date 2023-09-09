@@ -47,10 +47,33 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			struct sha1_size_t		///////////////
+///////////////			struct sha1_size_hash_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-void CreateSSChecksum ( char *buf, uint bufsize, const sha1_size_t *ss )
+void CreateSS ( cvp data, uint size, sha1_size_hash_t *dest )
+{
+    if ( dest && data )
+    {
+	SHA1(data,size,dest->hash);
+	dest->size = htonl(size);
+    }
+    else if (dest)
+	memset(dest,0,sizeof(*dest));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void CreateSS64 ( cvp data, uint size, sha1_size_b64_t dest )
+{
+    sha1_size_hash_t sha1;
+    CreateSS(data,size,&sha1);
+    if (dest)
+	EncodeBase64(dest,sizeof(sha1_size_b64_t),&sha1,sizeof(sha1),0,false,0,0);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void CreateSSChecksum ( char *buf, uint bufsize, const sha1_size_hash_t *ss )
 {
     DASSERT(buf);
     DASSERT(bufsize>1);
@@ -99,7 +122,7 @@ void CreateSSChecksumBySZS ( char *buf, uint bufsize, const szs_file_t *szs )
 	return;
     }
 
-    sha1_size_t info;
+    sha1_size_hash_t info;
     SHA1(szs->data,szs->size,info.hash);
     info.size = htonl(szs->size);
     CreateSSChecksum(buf,bufsize,&info);
@@ -109,7 +132,7 @@ void CreateSSChecksumBySZS ( char *buf, uint bufsize, const szs_file_t *szs )
 ///////////////////////////////////////////////////////////////////////////////
 // normed DB coding (independent of options)
 
-void CreateSSChecksumDB ( char *buf, uint bufsize, const sha1_size_t *ss )
+void CreateSSChecksumDB ( char *buf, uint bufsize, const sha1_size_hash_t *ss )
 {
     DASSERT(buf);
     DASSERT(bufsize>CHECKSUM_DB_SIZE);
@@ -131,7 +154,7 @@ void CreateSSChecksumDBByData ( char *buf, uint bufsize, cvp data, uint size )
 	*buf = 0;
     else
     {
-	sha1_size_t info;
+	sha1_size_hash_t info;
 	SHA1(data,size,info.hash);
 	info.size = htonl(size);
 	CreateSSChecksumDB(buf,bufsize,&info);
@@ -154,7 +177,7 @@ void CreateSSChecksumDBBySZS ( char *buf, uint bufsize, const szs_file_t *szs )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError GetSSByFile ( sha1_size_t *ss, ccp path1, ccp path2 )
+enumError GetSSByFile ( sha1_size_hash_t *ss, ccp path1, ccp path2 )
 {
     DASSERT(ss);
     memset(ss,0,sizeof(*ss));
@@ -177,7 +200,7 @@ enumError GetSSByFile ( sha1_size_t *ss, ccp path1, ccp path2 )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-int IsSSChecksum ( sha1_size_t *res, ccp source, int slen )
+int IsSSChecksum ( sha1_size_hash_t *res, ccp source, int slen )
 {
     // slen < 0 => strlen(source)
     // returns: 0:fail, 1:SHA1, 2:DB64
@@ -192,7 +215,7 @@ int IsSSChecksum ( sha1_size_t *res, ccp source, int slen )
     while ( source < end && (uchar)*source > ' ' )
 	source++;
 
-    sha1_size_t temp;
+    sha1_size_hash_t temp;
     if (!res)
 	res = &temp;
 
@@ -215,9 +238,9 @@ int IsSSChecksum ( sha1_size_t *res, ccp source, int slen )
     }
     else if ( len == CHECKSUM_DB_SIZE )
     {
-	char buf[sizeof(sha1_size_t)+12];
+	char buf[sizeof(sha1_size_hash_t)+12];
 	uint len64 = DecodeBase64(buf,sizeof(buf),start,len,TableDecode64url,false,0);
-	if ( len64 == sizeof(sha1_size_t) )
+	if ( len64 == sizeof(sha1_size_hash_t) )
 	{
 	    memcpy(res,buf,sizeof(*res));
 	    return 2;
@@ -225,7 +248,7 @@ int IsSSChecksum ( sha1_size_t *res, ccp source, int slen )
     }
 
     // no a checksum
-    memset(res,0,sizeof(sha1_size_t));
+    memset(res,0,sizeof(sha1_size_hash_t));
     return 0;
 }
 

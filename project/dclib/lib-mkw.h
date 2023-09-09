@@ -90,6 +90,13 @@ enum mkw_consts_t // some constants
 	MKW_ORIGINAL_END	= MKW_ARENA_END,
 
 
+	//--- original extra slots
+
+	MKW_EXTRA_BEG		= 0x36,
+	MKW_EXTRA_END		= 0x3b,
+	MKW_N_EXTRA		= MKW_EXTRA_END - MKW_EXTRA_BEG,
+
+
 	//--- LE-CODE random tracks
 
 	MKW_LE_RANDOM_BEG	= 0x3d,
@@ -101,6 +108,7 @@ enum mkw_consts_t // some constants
 	MKW_LE_RANDOM_END,
 	MKW_N_LE_RANDOM		= MKW_LE_RANDOM_END - MKW_LE_RANDOM_BEG,
 
+
 	//--- LE-CODE extended slots
 
 	MKW_LE_SLOT_BEG		=   0x44,
@@ -108,7 +116,7 @@ enum mkw_consts_t // some constants
 	MKW_N_LE_SLOT		= MKW_LE_SLOT_END - MKW_LE_SLOT_BEG,
 
 
-	//--- special slots (LE-CODE randon included)
+	//--- special slots (LE-CODE random included)
 
 	MKW_SPECIAL_BEG		= MKW_ORIGINAL_END,
 	MKW_SPECIAL_END		= MKW_LE_SLOT_BEG,
@@ -122,6 +130,8 @@ enum mkw_consts_t // some constants
 };
 
 //-----------------------------------------------------------------------------
+
+ccp GetMkwExtraInfo ( uint slot, ccp return_on_err );
 
 ccp GetLecodeRandomName ( uint slot, ccp return_on_err );
 ccp GetLecodeRandomInfo ( uint slot, ccp return_on_err );
@@ -147,11 +157,15 @@ static inline bool IsMkwOriginal ( uint tid )
 static inline bool IsMkwCustom ( uint tid )
 	{ return tid >= MKW_ARENA_END; }
 
+static inline bool IsMkwExtra ( uint tid )
+	{ return tid >= MKW_EXTRA_BEG && tid < MKW_EXTRA_END; }
+
 static inline bool IsLecodeRandom ( uint tid )
 	{ return tid >= MKW_LE_RANDOM_BEG && tid < MKW_LE_RANDOM_END; }
 
 static inline bool IsValidLecodeSlot ( uint tid )
 	{ return tid < MKW_ARENA_END
+		|| tid >= MKW_EXTRA_BEG && tid < MKW_EXTRA_END
 		|| tid >= MKW_LE_SLOT_BEG && tid < MKW_LE_SLOT_END
 		|| tid >= MKW_LE_RANDOM_BEG && tid < MKW_LE_RANDOM_END; }
 

@@ -117,6 +117,7 @@
 
 //-----------------------------------------------------------------------------
 
+// [[le_group_t]] [[track_slot_t]] [[cup_slot_t]]
 typedef u16			le_group_t;
 typedef u16			track_slot_t;
 typedef u16			cup_slot_t;
@@ -148,8 +149,9 @@ typedef enum le_track_type_t
     LTTY_NONE	= 0x00,
     LTTY_ARENA	= 0x01,  // true: is a battle arena
     LTTY_TRACK	= 0x02,  // true: is a versus track
-    LTTY_RANDOM	= 0x04,  // true: is a LE-CODE random slot
-    LTTY__NEXT	= 0x08,  // next free bit
+    LTTY_EXTRA	= 0x04,  // true: is a MKW extra slot
+    LTTY_RANDOM	= 0x08,  // true: is a LE-CODE random slot
+    LTTY__NEXT	= 0x10,  // next free bit
 }
 __attribute__ ((packed)) le_track_type_t;
 
@@ -207,6 +209,7 @@ typedef enum le_track_text_t
     LTT_IDENT,		// access identification (standard)
     LTT_IDENT_D,	// access identification (_d file)
     LTT_FILE,		// access file name
+    LTT_PATH,		// access full path of LTT_FILE
     LTT_NAME,		// access name
     LTT_XNAME,		// access xname
     LTT_XNAME2,		// access xname with fallback to name
@@ -251,7 +254,7 @@ typedef enum le_options_t
 {
     //-- text selector
 
-    LEO_LTT_SELECTOR	= 0x0000000f,  // mask to store le_track_text_t selector
+    LEO_LTT_SELECTOR	= 0x0000000f,		// mask to store le_track_text_t selector
 
     LEO_UNDEFINED	= LTT_UNDEFINED,	// always NULL to support GetTextLEO()
     LEO_SHA1		= LTT_SHA1,		// access SHA1 checksum (standard)
@@ -259,6 +262,7 @@ typedef enum le_options_t
     LEO_IDENT		= LTT_IDENT,		// access identification (standard)
     LEO_IDENT_D		= LTT_IDENT_D,		// access identification (_d file)
     LEO_FILE		= LTT_FILE,		// access file name
+    LEO_PATH		= LTT_PATH,		// access full path of LEO_FILE
     LEO_NAME		= LTT_NAME,		// access name
     LEO_XNAME		= LTT_XNAME,		// access xname
     LEO_XNAME2		= LTT_XNAME2,		// access xname with fallback to name
@@ -318,6 +322,7 @@ typedef enum le_options_t
     LEO_IN_LECODE	= 0x00100000,  // import lecode binary
     LEO_NO_SLOT		= 0x00200000,  // suppress 'SLOT <num>' if creating a LE-DEF file.
     LEO_BRIEF		= 0x00400000,  // suppress descriptions
+    LEO_AUTO_PATH	= 0x00800000,  // enable auto paths
 
 
     //-- special signals
@@ -327,13 +332,13 @@ typedef enum le_options_t
     LEO_CUT_CTCODE	= 0x04000000,  // cut for CT-CODE distribution.
      LEO_M_CUT		= LEO_CUT_ALL | LEO_CUT_STD | LEO_CUT_CTCODE,
 
-    LEO_HELP		= 0x0800000,  // print help and exit
+    LEO_HELP		= 0x08000000,  // print help and exit
 
 
     //-- misc
 
     LEO__ALL		= 0x07ffffff,
-    LEO__DEFAULT	= LTT__DEFAULT | LEO_OVERWRITE | LEO_OUT_DUMMY,
+    LEO__DEFAULT	= LTT__DEFAULT | LEO_OVERWRITE | LEO_OUT_DUMMY | LEO_AUTO_PATH,
     LEO__SRC		= LEO_LTT_SELECTOR | LEO_IN_ALL,
     LEO__DEST		= LEO_LTT_SELECTOR | LEO_OUT_ALL | LEO_M_OUTPUT | LEO_M_HOW,
 }
@@ -385,7 +390,7 @@ typedef struct le_strpar_t
     bool		csum_only;	// true: set sha1 only, but not an ident string.
 
  #if LE_STRING_SET_ENABLED
-    ccp			key;	// NULL or key for LTT_STRSET, alloced, lower case
+    ccp			key;		// NULL or key for LTT_STRSET, alloced, lower case
  #endif
 }
 le_strpar_t;
@@ -519,6 +524,7 @@ typedef struct le_track_t
 
     le_track_id_t	lti[2];		// index 0: normal, index 1:_d
     ccp			file;		// NULL or filename of track
+    ccp			path;		// NULL or full path to track file
     ccp			name;		// NULL or name of track
     ccp			xname;		// NULL or extended name of track, fallback 'name'
 
@@ -574,6 +580,7 @@ static inline bool IsTitleLT ( const le_track_t *lt )
 
 void SetIdentLT	( le_track_t *lt, const le_strpar_t *par, ccp ident ); // par: opt, use_d, csum_only
 void SetFileLT	( le_track_t *lt, const le_strpar_t *par, ccp fname ); // par: opt
+void SetPathLT	( le_track_t *lt, const le_strpar_t *par, ccp path  ); // par: opt
 void SetNameLT	( le_track_t *lt, const le_strpar_t *par, ccp name  ); // par: opt
 void SetXNameLT	( le_track_t *lt, const le_strpar_t *par, ccp xname ); // par: opt
 #if LE_STRING_LIST_ENABLED
@@ -602,6 +609,7 @@ const u8 * GetSha1BinLT ( const le_track_t *lt, bool use_d );
 ccp GetSha1LT	  ( const le_track_t *lt, bool use_d,			ccp return_on_empty );
 ccp GetIdentLT	  ( const le_track_t *lt, bool use_d, bool use_sha1,	ccp return_on_empty );
 ccp GetFileLT	  ( const le_track_t *lt,				ccp return_on_empty );
+ccp GetPathLT	  ( const le_track_t *lt, le_options_t opt,		ccp return_on_empty );
 ccp GetNameLT	  ( const le_track_t *lt,				ccp return_on_empty );
 ccp GetXNameLT	  ( const le_track_t *lt,				ccp return_on_empty );
 ccp GetXName2LT	  ( const le_track_t *lt,				ccp return_on_empty );
@@ -612,12 +620,15 @@ ccp GetTextOptLT  ( const le_track_t *lt, le_options_t opt,		ccp return_on_empty
 ccp QuoteSha1LT	  ( const le_track_t *lt, bool use_d,			ccp return_on_empty );
 ccp QuoteIdentLT  ( const le_track_t *lt, bool use_d, bool use_sha1,	ccp return_on_empty );
 ccp QuoteFileLT	  ( const le_track_t *lt,				ccp return_on_empty );
+ccp QuotePathLT	  ( const le_track_t *lt, le_options_t opt,		ccp return_on_empty );
 ccp QuoteNameLT	  ( const le_track_t *lt,				ccp return_on_empty );
 ccp QuoteXNameLT  ( const le_track_t *lt,				ccp return_on_empty );
 ccp QuoteXName2LT ( const le_track_t *lt,				ccp return_on_empty );
 
 ccp QuoteTextLT    ( const le_track_t *lt, const le_strpar_t *par,	ccp return_on_empty );
 ccp QuoteTextOptLT ( const le_track_t *lt, le_options_t opt,		ccp return_on_empty );
+
+ccp GetPathL2 ( le_distrib_t *ld, const le_track_t *lt, le_options_t opt, ccp return_on_empty );
 
 //-----------------------------------------------------------------------------
 
@@ -684,8 +695,9 @@ typedef enum le_auto_setup_t
     LAS_OFF		= 0,
     LAS_ARENA		= LTTY_ARENA,	// true: setup original battle arenas automatically
     LAS_TRACK		= LTTY_TRACK,	// true: setup original versus tracks automatically
+    LAS_EXTRA		= LTTY_EXTRA,	// true: setup MKW extra slots automatically
     LAS_RANDOM		= LTTY_RANDOM,	// true: setup LE-CODE random slots automatically
-    LAS_DEFAULT		= LAS_ARENA | LAS_TRACK | LAS_RANDOM,
+    LAS_DEFAULT		= LAS_ARENA | LAS_TRACK | LTTY_EXTRA | LAS_RANDOM,
 
     LAS_TEMPLATE	= LTTY__NEXT	// true: insert example tracks
 }
@@ -754,6 +766,7 @@ typedef struct le_distrib_t
 
     //-- more data
 
+    StringField_t	remove_files;		// list of files, that ResetTD() should remove
     ParamField_t	dis_param;		// parameter list for FF_DISTRIB
     le_lpar_t		*lpar;			// NULL or LPAR settings
     le_cup_t		cup_battle;		// track list for battle cups
@@ -825,7 +838,9 @@ void SetupLparLD ( le_distrib_t *ld, bool load_lpar );
 uint PackTracksLD		( const le_distrib_t *ld );
 void CheckTracksLD		( const le_distrib_t *ld );
 
+void DefineExtraTracksLD	( le_distrib_t *ld );
 void DefineRandomTracksLD	( le_distrib_t *ld );
+
 le_track_t * GetTrackLD		( le_distrib_t *ld, int slot );
 le_track_t * DefineTrackLD	( le_distrib_t *ld, int slot, bool mark_export );
 le_track_t * DefineFreeTrackLD	( le_distrib_t *ld, le_track_type_t ltty, bool mark_export );
@@ -1053,6 +1068,7 @@ enumError ImportDistribLD ( le_distrib_t *ld, cvp data, uint size );
 enumError ImportDistribSTLD ( le_distrib_t *ld, ScanText_t *st );
 
 enumError CreateDistribLD ( FILE *f, le_distrib_t *ld, bool use_xname );
+enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, bool rm_source );
 
 //-----------------------------------------------------------------------------
 // lecode support

@@ -1683,7 +1683,7 @@
   { T_OPT_C,	"9LAPS",	"9laps",
 		0,
 		"Patch RACE*.szs files from directory .../Scene/UI/ to support 9 laps."
-		" See https://wiki.tockdom.com/wiki/Lap_Texture_Fix for details." },
+		" It is based on https://wiki.tockdom.com/wiki/Lap_Texture_Fix v1.03." },
 
   { T_OPT_CP,	"TITLE_SCREEN",	"title-screen|titlescreen",
 		"dir",
@@ -1925,7 +1925,7 @@
 		0,
 		"Disable parameter support in decoded KMP text files." },
 
-  { T_OPT_CP,	"SORT",		"S|sort",
+  { T_OPT_CP,	"SORT",		"S|sort|order",
 		"mode",
 		"Define a sort mode. Allowed keywords are:"
 		" @NONE@ (default), @NAME, OFFSET, U8, PACK, BRRES, BREFT@ and @AUTO@" },
@@ -1934,7 +1934,7 @@
 		"size",
 		"This security option defines the maximum file size"
 		" for input files; larger files are ignored with a warning."
-		" The default unit is MiB and the default size is 100 MiB;"
+		" The default unit is MiB and the default size is 100 MiB (2 GiB for LTA);"
 		" that should be enough for standard usage." },
 
   { T_OPT_GP,	"TRACKS",	"T|tracks",
@@ -2283,6 +2283,12 @@
 		" The value must be a power of 2 and the default value is 32 (0x20)"
 		" This value is only relevant if creating or normalizing U8 archives." },
 
+  { T_OPT_CP,	"ALIGN_LTA",	"align-lta|alignlta",
+		"size",
+		"Define an align value for the sub files in LTA archives."
+		" The value must be a power of 2 and the default value is 32 (0x20)"
+		" This value is only relevant if creating LTA archives." },
+
   { T_OPT_CP,	"ALIGN_PACK",	"align-pack|alignpack",
 		"size",
 		"Define an align value for the sub files in PACK archives."
@@ -2411,6 +2417,16 @@
 		"Short cut for {--wu8 --bz}:"
 		" Create a WU8 archive, if possible,"
 		" and set the compression method to BZ." },
+
+#if 0
+  { T_OPT_C,	"LTA",		"lta",
+		0,
+		"Create a LTA (LE-CODE Track Archive)." },
+#endif
+
+  { T_OPT_C,	"LFL",		"lfl",
+		0,
+		"Create a LFL (LE-CODE File List) archive." },
 
   { T_OPT_C,	"PACK",		"pack",
 		0,
@@ -2688,6 +2704,8 @@
   { T_COPT,	"SZS",		0,0,0 },
   { H_COPT,	"XWU8",		0,0,0 },
   { T_COPT,	"WBZ",		0,0,0 },
+//  { T_COPT,	"LTA",		0,0,0 },
+  { T_COPT,	"LFL",		0,0,0 },
 
   //---------- wszst GROUP FFORMAT2 ----------
 
@@ -2706,6 +2724,8 @@
   { T_COPT,	"SZS",		0,0,0 },
   { H_COPT,	"XWU8",		0,0,0 },
   { T_COPT,	"WBZ",		0,0,0 },
+//  { T_COPT,	"LTA",		0,0,0 },
+  { T_COPT,	"LFL",		0,0,0 },
 
   //
   //---------- wszst GROUP SCRIPT ----------
@@ -2730,6 +2750,7 @@
   { T_GRP_BEG,	"ALIGN",	0,0,0 },
 
   { T_COPT,	"ALIGN_U8",	0,0,0 },
+  { T_COPT,	"ALIGN_LTA",	0,0,0 },
   { T_COPT,	"ALIGN_PACK",	0,0,0 },
   { T_COPT,	"ALIGN_BRRES",	0,0,0 },
   { T_COPT,	"ALIGN_BREFF",	0,0,0 },

@@ -1110,7 +1110,7 @@ static enumError cmd_sha1()
 	if ( err > ERR_WARNING )
 	    return err;
 
-	sha1_size_t info;
+	sha1_size_hash_t info;
 	SHA1(kcl.raw_data,kcl.raw_data_size,info.hash);
 	info.size = htonl(kcl.raw_data_size);
 	char checksum[100];

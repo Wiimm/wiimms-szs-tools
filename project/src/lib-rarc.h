@@ -35,11 +35,6 @@
  *                                                                         *
  ***************************************************************************/
 
-// all about SZS, YAZ0 and U8 files:
-//	https://wiki.tockdom.de/index.php?title=SZS
-//	https://wiki.tockdom.de/index.php?title=YAZ0
-//	https://wiki.tockdom.de/index.php?title=U8
-
 ///////////////////////////////////////////////////////////////////////////////
 
 #ifndef SZS_LIB_RARC_H

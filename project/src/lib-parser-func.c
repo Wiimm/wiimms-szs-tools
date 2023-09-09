@@ -74,6 +74,8 @@ void DefineParserVars ( VarMap_t * vm )
     struct inttab_t { ccp name; int val; };
     static const struct inttab_t inttab[] =
     {
+	{ "FALSE",		0 },
+	{ "TRUE",		1 },
 	{ "NO",			0 },
 	{ "YES",		1 },
 	{ "OFF",		0 },

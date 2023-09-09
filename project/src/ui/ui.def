@@ -193,10 +193,10 @@
 
 #:def_cmd( "LIST", "LIST|LS", \
 	"wszst LIST [source]...", \
-	"List all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
-	" archives. If listing a directory, then a virtual SZS file is created" \
-	" (like CREATE does it) and listed. $Wildcards$ and pipe characters" \
-	" are parsed." )
+	"List all sub files of SZS, U8, LTA, PACK, BRRES, BREFF, BREFT and" \
+	" RARC archives. If listing a directory, then a virtual SZS file is" \
+	" created (like CREATE does it) and listed. $Wildcards$ and pipe" \
+	" characters are parsed." )
 
 #:def_cmd( "LIST_L", "LIST-L|LL|LISTL", \
 	"wszst LIST-L [source]...", \
@@ -236,7 +236,7 @@
 
 #:def_cmd( "ILIST", "ILIST|IL", \
 	"wszst ILIST [source]...", \
-	"List the images files of all sub files of SZS, U8, PACK, BRRES," \
+	"List the images files of all sub files of SZS, U8, LTA, PACK, BRRES," \
 	" BREFF, BREFT and RARC archives; non image files are ignored. If" \
 	" listing a directory, then a virtual SZS file is created (like CREATE" \
 	" does it) and listed. $Wildcards$ and pipe characters are parsed." )
@@ -336,10 +336,10 @@
 #:def_cmd( "DIFF", "DIFF|CMP", \
 	"wszst DIFF source1 source2\n" \
 	"wszst DIFF source... --dest dest", \
-	"Compare two or more sources (each SZS, U8, PACK, BRRES, BREFF, BREFT," \
-	" RARC or directory) on file level and report mismatches for each sub" \
-	" file. If option {--dest} is set, then each source file is compared" \
-	" with a file in the destination." )
+	"Compare two or more sources (each SZS, U8, LTA, PACK, BRRES, BREFF," \
+	" BREFT, RARC or directory) on file level and report mismatches for" \
+	" each sub file. If option {--dest} is set, then each source file is" \
+	" compared with a file in the destination." )
 
 #:def_cmd( "CHECK", "CHECK", \
 	"wszst CHECK [source]...", \
@@ -459,7 +459,7 @@
 
 #:def_cmd( "UPDATE", "UPDATE|U", \
 	"wszst UPDATE [source]... [--source=] [--dest=]", \
-	"Update an existing SZS, U8, PACK, BRRES, BREFF, BREFT and" \
+	"Update an existing SZS, U8, LTA, PACK, BRRES, BREFF, BREFT and" \
 	" RARCarchive. This is done in similar way as the {EXTRACT} command," \
 	" but instead of extracting, source files are searched in a prior" \
 	" extracted archive. Only files with the same size are updated. The" \
@@ -469,29 +469,29 @@
 
 #:def_cmd( "EXTRACT", "EXTRACT|X", \
 	"wszst EXTRACT [source]...", \
-	"Extract all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
-	" archives. The default destination is @'%P/%N.d/'@. $Wildcards$ and" \
-	" pipe characters are parsed." )
+	"Extract all sub files of SZS, U8, LTA, PACK, BRRES, BREFF, BREFT and" \
+	" RARC archives. The default destination is @'%P/%N.d/'@. $Wildcards$" \
+	" and pipe characters are parsed." )
 
 #:def_cmd( "XDECODE", "XDECODE|XD", \
 	"wszst XDECODE [source]...", \
 	"Command @XDECODE@ is a short cut for {EXTRACT --decode}. It extract" \
-	" all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
+	" all sub files of SZS, U8, LTA, PACK, BRRES, BREFF, BREFT and RARC" \
 	" archives and decodes all supported files. The default destination is" \
 	" @'%P/%N.d/'@. $Wildcards$ and pipe characters are parsed." )
 
 #:def_cmd( "XEXPORT", "XEXPORT|XX", \
 	"wszst XEXPORT [source]...", \
 	"Command @XEXPORT@ is a short cut for {EXTRACT --decode --export}. It" \
-	" extract all sub files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC" \
-	" archives and decodes all supported files with enabled export mode." \
-	" The default destination is @'%P/%N.d/'@. $Wildcards$ and pipe" \
+	" extract all sub files of SZS, U8, LTA, PACK, BRRES, BREFF, BREFT and" \
+	" RARC archives and decodes all supported files with enabled export" \
+	" mode. The default destination is @'%P/%N.d/'@. $Wildcards$ and pipe" \
 	" characters are parsed." )
 
 #:def_cmd( "XALL", "XALL|XA", \
 	"wszst XALL [source]...", \
 	"Command @XALL@ is a short cut for {EXTRACT --all}. It extract all sub" \
-	" files of SZS, U8, PACK, BRRES, BREFF, BREFT and RARC archives" \
+	" files of SZS, U8, LTA, PACK, BRRES, BREFF, BREFT and RARC archives" \
 	" recursively and decodes all supported files. The default destination" \
 	" is @'%P/%N.d/'@. $Wildcards$ and pipe characters are parsed." )
 
@@ -523,10 +523,10 @@
 
 #:def_cmd( "CAT", "CAT", \
 	"wszst CAT [source/subfile]...", \
-	"Extract one or more sub files of SZS, U8, PACK, BRRES, BREFF, BREFT" \
-	" and RARC archives. $Wildcards$, pipe characters and sub-files are" \
-	" parsed. The output of all source files is concatenated and written" \
-	" to stdout." )
+	"Extract one or more sub files of SZS, U8, LTA, PACK, BRRES, BREFF," \
+	" BREFT and RARC archives. $Wildcards$, pipe characters and sub-files" \
+	" are parsed. The output of all source files is concatenated and" \
+	" written to stdout." )
 
 #:def_cmd( "BMG", "BMG", \
 	"wszst BMG [source]...", \
@@ -1358,7 +1358,7 @@
 #:def_opt( "9LAPS", "9laps", "C", \
 	"", \
 	"Patch RACE*.szs files from directory .../Scene/UI/ to support 9 laps." \
-	" See https://wiki.tockdom.com/wiki/Lap_Texture_Fix for details." )
+	" It is based on https://wiki.tockdom.com/wiki/Lap_Texture_Fix v1.03." )
 
 #:def_opt( "TITLE_SCREEN", "title-screen|titlescreen", "CP", \
 	"dir", \
@@ -1577,7 +1577,7 @@
 	"", \
 	"Disable parameter support in decoded KMP text files." )
 
-#:def_opt( "SORT", "S|sort", "CP", \
+#:def_opt( "SORT", "S|sort|order", "CP", \
 	"mode", \
 	"Define a sort mode. Allowed keywords are: @NONE@ (default), @NAME," \
 	" OFFSET, U8, PACK, BRRES, BREFT@ and @AUTO@" )
@@ -1586,8 +1586,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "TRACKS", "T|tracks", "GP", \
 	"tracks", \
@@ -1833,6 +1833,12 @@
 	" must be a power of 2 and the default value is 32 (0x20) This value" \
 	" is only relevant if creating or normalizing U8 archives." )
 
+#:def_opt( "ALIGN_LTA", "align-lta|alignlta", "CP", \
+	"size", \
+	"Define an align value for the sub files in LTA archives. The value" \
+	" must be a power of 2 and the default value is 32 (0x20) This value" \
+	" is only relevant if creating LTA archives." )
+
 #:def_opt( "ALIGN_PACK", "align-pack|alignpack", "CP", \
 	"size", \
 	"Define an align value for the sub files in PACK archives. The value" \
@@ -1944,6 +1950,10 @@
 	"", \
 	"Short cut for {--wu8 --bz}: Create a WU8 archive, if possible, and" \
 	" set the compression method to BZ." )
+
+#:def_opt( "LFL", "lfl", "C", \
+	"", \
+	"Create a LFL (LE-CODE File List) archive." )
 
 #:def_opt( "PACK", "pack", "C", \
 	"", \
@@ -2674,6 +2684,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST", "PT_DIR", \
 	"", \
 	"" )
@@ -2687,6 +2701,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -2883,6 +2901,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_L", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_L", "PT_DIR", \
 	"", \
 	"" )
@@ -2896,6 +2918,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_L", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -3092,6 +3118,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LL", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LL", "PT_DIR", \
 	"", \
 	"" )
@@ -3105,6 +3135,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LL", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -3301,6 +3335,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LLL", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LLL", "PT_DIR", \
 	"", \
 	"" )
@@ -3314,6 +3352,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LLL", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -3510,6 +3552,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_A", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_A", "PT_DIR", \
 	"", \
 	"" )
@@ -3523,6 +3569,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_A", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -3719,6 +3769,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LA", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LA", "PT_DIR", \
 	"", \
 	"" )
@@ -3732,6 +3786,10 @@
 	"" )
 
 #:def_cmd_opt( "LIST_LA", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -3939,6 +3997,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST", "PT_DIR", \
 	"", \
 	"" )
@@ -3952,6 +4014,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -4136,6 +4202,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_L", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_L", "PT_DIR", \
 	"", \
 	"" )
@@ -4149,6 +4219,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST_L", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -4333,6 +4407,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LL", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LL", "PT_DIR", \
 	"", \
 	"" )
@@ -4346,6 +4424,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST_LL", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -4530,6 +4612,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_A", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_A", "PT_DIR", \
 	"", \
 	"" )
@@ -4543,6 +4629,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST_A", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -4727,6 +4817,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LA", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LA", "PT_DIR", \
 	"", \
 	"" )
@@ -4740,6 +4834,10 @@
 	"" )
 
 #:def_cmd_opt( "ILIST_LA", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -4932,6 +5030,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY", "PT_DIR", \
 	"", \
 	"" )
@@ -4945,6 +5047,10 @@
 	"" )
 
 #:def_cmd_opt( "MEMORY", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -5137,6 +5243,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY_A", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY_A", "PT_DIR", \
 	"", \
 	"" )
@@ -5150,6 +5260,10 @@
 	"" )
 
 #:def_cmd_opt( "MEMORY_A", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -5313,6 +5427,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUMP", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUMP", "PT_DIR", \
 	"", \
 	"" )
@@ -5326,6 +5444,10 @@
 	"" )
 
 #:def_cmd_opt( "DUMP", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -5506,6 +5628,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SHA1", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SHA1", "PT_DIR", \
 	"", \
 	"" )
@@ -5515,6 +5641,10 @@
 	"" )
 
 #:def_cmd_opt( "SHA1", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -5982,6 +6112,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DISTRIBUTION", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DISTRIBUTION", "PT_DIR", \
 	"", \
 	"" )
@@ -5991,6 +6125,10 @@
 	"" )
 
 #:def_cmd_opt( "DISTRIBUTION", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -6226,6 +6364,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CHECK", "PT_DIR", \
 	"", \
 	"" )
@@ -6239,6 +6381,10 @@
 	"" )
 
 #:def_cmd_opt( "CHECK", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -6607,6 +6753,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SLOTS", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SLOTS", "PT_DIR", \
 	"", \
 	"" )
@@ -6620,6 +6770,10 @@
 	"" )
 
 #:def_cmd_opt( "SLOTS", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -7063,6 +7217,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "NORMALIZE", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "NORMALIZE", "NORM", \
 	"", \
 	"" )
@@ -7072,6 +7230,10 @@
 	"" )
 
 #:def_cmd_opt( "NORMALIZE", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -7395,6 +7557,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PATCH", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "COMPRESS", \
 	"", \
 	"" )
@@ -7408,6 +7574,10 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -7731,6 +7901,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COPY", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COPY", "COMPRESS", \
 	"", \
 	"" )
@@ -7744,6 +7918,10 @@
 	"" )
 
 #:def_cmd_opt( "COPY", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -8071,6 +8249,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUPLICATE", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUPLICATE", "COMPRESS", \
 	"", \
 	"" )
@@ -8084,6 +8266,10 @@
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -8368,6 +8554,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MINIMAP", "ALIGN_LTA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MINIMAP", "ALIGN_PACK", \
 	"", \
 	"" )
@@ -8596,6 +8786,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COMPRESS", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COMPRESS", "COMPRESS", \
 	"", \
 	"" )
@@ -8609,6 +8803,10 @@
 	"" )
 
 #:def_cmd_opt( "COMPRESS", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -8920,6 +9118,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DECOMPRESS", "ALIGN_LTA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DECOMPRESS", "ALIGN_PACK", \
 	"", \
 	"" )
@@ -9173,6 +9375,10 @@
 	"" )
 
 #:def_cmd_opt( "ENCODE", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ENCODE", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -9569,6 +9775,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "LFL", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CREATE", "PT_DIR", \
 	"", \
 	"" )
@@ -9582,6 +9792,10 @@
 	"" )
 
 #:def_cmd_opt( "CREATE", "ALIGN_U8", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "ALIGN_LTA", \
 	"", \
 	"" )
 
@@ -12898,8 +13112,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "TRACKS", "T|tracks", "GP", \
 	"tracks", \
@@ -14381,8 +14595,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "TEST", "t|test", "GM", \
 	"", \
@@ -15731,8 +15945,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "TEST", "t|test", "GM", \
 	"", \
@@ -17112,8 +17326,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "TEST", "t|test", "GM", \
 	"", \
@@ -19965,8 +20179,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "TEST", "t|test", "GM", \
 	"", \
@@ -21770,8 +21984,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "LT_CLEAR", "lt-clear|ltclear", "C", \
 	"", \
@@ -23659,8 +23873,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "TEST", "t|test", "GM", \
 	"", \
@@ -24860,8 +25074,8 @@
 	"size", \
 	"This security option defines the maximum file size for input files;" \
 	" larger files are ignored with a warning. The default unit is MiB and" \
-	" the default size is 100 MiB; that should be enough for standard" \
-	" usage." )
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
+	" for standard usage." )
 
 #:def_opt( "PAT", "pat", "GP", \
 	"list", \
@@ -25829,7 +26043,7 @@
 	" database. If not set, then file @port-db.bin@ is searched in the" \
 	" share path." )
 
-#:def_opt( "ORDER", "order", "CP", \
+#:def_opt( "ORDER", "order|sort", "CP", \
 	"pujk", \
 	"The parameter is scanned for the first appearance of letters P (for" \
 	" PAL), U (USA), J (JAPAN) and K (KOREA) to define the order of the" \

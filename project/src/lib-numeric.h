@@ -299,6 +299,7 @@ __attribute__ ((packed)) chat_mode_t;
 ///////////////////////////////////////////////////////////////////////////////
 
 int ScanOptAlignU8	( ccp arg );
+int ScanOptAlignLTA	( ccp arg );
 int ScanOptAlignPACK	( ccp arg );
 int ScanOptAlignBRRES	( ccp arg );
 int ScanOptAlignBREFF	( ccp arg );

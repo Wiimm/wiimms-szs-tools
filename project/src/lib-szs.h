@@ -64,6 +64,7 @@
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			yaz0_header_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[yaz0_header_t]]
 
 #define YAZ0_MAGIC	"Yaz0"
 #define YAZ1_MAGIC	"Yaz1"
@@ -90,6 +91,9 @@ __attribute__ ((packed)) yaz0_header_t;
 #define U8_MAGIC_NUM	  0x55AA382D
 #define U8_DEFAULT_ALIGN  0x20
 
+//-----------------------------------------------------------------------------
+// [[u8_header_t]]
+
 typedef struct u8_header_t
 {
     be32_t	magic;		// = U8_MAGIC_NUM
@@ -101,6 +105,7 @@ typedef struct u8_header_t
 __attribute__ ((packed)) u8_header_t;
 
 //-----------------------------------------------------------------------------
+// [[u8_node_t]]
 
 typedef struct u8_node_t
 {
@@ -245,6 +250,177 @@ CmpFuncSubFile GetCmpFunc
 (
     SortMode_t		sort_mode,	// wanted sort mode
     file_format_t	fform		// use it if 'sort_mode==SORT_AUTO'
+);
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			lta support			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// LTA = LE-CODE Track Archive
+
+#define LTA_MAGIC		"LTR-ARCH"
+#define LTA_MAGIC_NUM		0x4c54522d41524348ull
+#define LTA_VERSION		1
+#define LTA_DEFAULT_ALIGN	0x20
+#define LTA_MAX_SIZE		0x7fffffe0
+#define LTA_MAX_NODES		1024
+
+//-----------------------------------------------------------------------------
+// [[lta_header_t]]
+
+typedef struct lta_header_t
+{
+    be64_t	magic;		// file magic = LTA_MAGIC_NUM
+    be32_t	version;	// major version number = LTA_VERSION
+    be32_t	head_size;	// size of this header = minor version
+    be32_t	file_size;	// total size of this file, aligned
+    be32_t	node_off;	// offset of slot node list, aligned
+    be32_t	node_size;	// size of single node == sizeof(lta_node_t)
+    be32_t	base_slot;	// first used slot
+    be32_t	n_slots;	// number of used slots
+}
+__attribute__ ((packed)) lta_header_t;
+
+//-----------------------------------------------------------------------------
+// [[lta_node_index_t]]
+
+typedef enum lta_node_index_t
+{
+    LNPI_STD_SZS,	// par index for std SZS
+    LNPI_STD_LFL,	// par index for std LFL
+    LNPI_D_SZS,		// par index for _d SZS
+    LNPI_D_LFL,		// par index for _d LFL
+    LNPI__N,		// total number of 'par' indices
+
+    LNRI_STD = 0,	// record index for std files
+    LNRI_D,		// record index for _d files
+    LNRI__N,		// total number of 'record' indices
+}
+lta_node_index_t;
+
+//-----------------------------------------------------------------------------
+// [[lta_node_par_t]]
+
+typedef struct lta_node_par_t
+{
+    be32_t	offset;		// offset of file, aligned
+    be32_t	size;		// size of file
+}
+__attribute__ ((packed)) lta_node_par_t;
+
+//-----------------------------------------------------------------------------
+// [[lta_node_record_t]]
+
+typedef struct lta_node_record_t
+{
+    be32_t	szs_off;	// offset of SZS file, aligned
+    be32_t	szs_size;	// size of SZS file
+    be32_t	lfl_off;	// offset of LFL file, aligned
+    be32_t	lfl_size;	// size of LFL file
+}
+__attribute__ ((packed)) lta_node_record_t;
+
+//-----------------------------------------------------------------------------
+// [[lta_node_t]]
+
+typedef struct lta_node_t
+{
+    union
+    {
+	lta_node_par_t    par   [LNPI__N];  // 4 par as array
+	lta_node_record_t record[LNRI__N];  // 2 records as array
+	struct
+	{
+	    lta_node_record_t std;	// std file
+	    lta_node_record_t d;	// _d file
+	};
+    };
+}
+__attribute__ ((packed)) lta_node_t;
+
+//-----------------------------------------------------------------------------
+// [[lta_manager_t]]
+
+typedef struct lta_manager_t
+{
+    le_distrib_t *ld;			// current le_distrib_t
+    ccp		destdir;		// destination directory
+    bool	rm_source;		// remove source SZS files
+    uint	track_index;		// current track index for "tracks-%u.lta"
+    u_nsec_t	start_nsec;		// start time by GetTimerNSec();
+
+    File_t	F;			// current LTA file
+
+    int		distrib_end_slot;	// max used slot +1 of distribution, calculated first
+    int		max_slots;		// max slots of current LTA
+    int		base_slot;		// base slot of current LTA, only valid if >= 0
+    int		last_slot;		// last used slot of current LTA
+
+    uint	data_offset;		// current data offset
+    size_t	current_offset;		// return value of WriteFileAt()
+
+    char	*buf;			// temp buffer for files, alloced
+    uint	buf_size;		// size of 'buf'
+    exmem_list_t stored_szs;		// list with already stored SZS files (lta_node_record_t)
+    exmem_list_t stored_lfl;		// list with already stored LFL files (lta_node_par_t)
+
+    uint	std_count;		// counter of inserted std SZS files
+    uint	d_count;		// counter of inserted _d SZS files
+    uint	lfl_count;		// counter of inserted LFL files
+
+    lta_node_t node[LTA_MAX_NODES];	// nodes, local endian
+}
+lta_manager_t;
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			lfl support			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// LFL = LE-CODE File List
+
+#define LFL_MAGIC		"L-FL"
+#define LFL_MAGIC_NUM		0x4c2d464c
+#define LFL_VERSION		1
+
+//-----------------------------------------------------------------------------
+// [[lfl_node_t]]
+
+typedef struct lfl_node_t
+{
+    be32_t	data_offset;	// offset of data relative to this record
+    be32_t	data_size;	// size of data
+    be32_t	next_offset;	// offset to next file of this chain, relative to this record
+    char	file_name[];	// filename and aligned(4) data
+}
+__attribute__ ((packed)) lfl_node_t;
+
+//-----------------------------------------------------------------------------
+// [[lfl_header_t]]
+
+typedef struct lfl_header_t
+{
+    be32_t	magic;		// file magic = LFL_MAGIC_NUM
+    be32_t	version;	// major version number = LFL_VERSION
+    be32_t	file_size;	// total size of this file, aligned(LTA)
+    lfl_node_t	first_node[];	// first node
+}
+__attribute__ ((packed)) lfl_header_t;
+
+//-----------------------------------------------------------------------------
+// LFL interface
+
+int IterateFilesLFL
+(
+    struct szs_iterator_t	*it,	// iterator struct with all infos
+    bool			term	// true: termination hint
+);
+
+enumError CreateLFL
+(
+    struct szs_file_t	*szs,		// valid szs
+    ccp			source_dir,	// path to source dir
+    bool		rm_common,	// TRUE: remove leading 'common/' from path
+    bool		clear_if_empty	// TRUE: clear data (size 0 bytes) if no sub file added
 );
 
 //
@@ -622,7 +798,61 @@ typedef struct szs_norm_t
 }
 szs_norm_t;
 
+///////////////////////////////////////////////////////////////////////////////
+// [[scan_data_t]]
+
+typedef struct scan_data_t
+{
+    szs_file_t	* szs;			// valid pointer to szs data structure
+    SetupParam_t * setup_param;		// valid pointer to setup parameters
+    char	path[PATH_MAX];		// the current path
+    char	* path_rel;		// ptr to 'path': path relative to base directory
+    char	* path_dir;		// ptr to 'path': current directory
+    u32		n_directories;		// total number of directories
+    u32		namepool_size_u8;	// total size of name pool (for U8)
+    u32		depth;			// current depth
+    u32		max_depth;		// max allowed depth
+    u64		total_size;		// total aligned size of all files
+    u32		align;			// data alignment
+}
+scan_data_t;
+
+///////////////////////////////////////////////////////////////////////////////
+// [[add_missing_t]]
+
+typedef struct add_missing_t
+{
+    szs_file_t		*szs;		// valid szs
+    scan_data_t		*sd;		// NULL or valid scan data
+    szs_norm_t		*norm;		// NULL or valid norm data
+
+    ccp			fname;		// not NULL: add this file (no autoadd)
+    szs_subfile_t	*link;		// not NULL: link to this file (no autoadd)
+    void		*data;		// not NULL: add this data (no autoadd)
+    uint		size;		// size of 'data'
+    bool		move_data;	// data is alloced
+
+    szs_subfile_t	*last_subfile;	// last added file, set by AddMissingFile()
+
+    bool		print_err;	// true: print errors about missing files
+    int			log_indent;	// >-1: print log with indention
+
+}
+add_missing_t;
+
 //-----------------------------------------------------------------------------
+
+int AddMissingFile
+(
+    // returns 1 if added, 0 otherwise
+
+    ccp			path,		// calculated path
+    file_format_t	fform,		// FF_BRRES | FF_BREFF | FF_BREFT | FF_U8
+    add_missing_t	*am		// user defined parameter
+);
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
 void SetupStandardSZS();
 void SetupExtendedSZS();
@@ -784,6 +1014,8 @@ enumError DecompressYAZ
 bool IsFileOptional ( szs_file_t *szs, const DbFileFILE_t *file );
 
 struct szs_norm_t;
+struct scan_data_t;
+
 int AddMissingFileSZS
 (
     szs_file_t		* szs,		// valid szs
@@ -793,8 +1025,6 @@ int AddMissingFileSZS
     int			log_indent	// >-1: print log with indention
 );
 
-struct scan_data_t;
-struct szs_norm_t;
 enumError AddMissingFiles
 (
     szs_file_t		* szs,		// valid szs
@@ -1055,6 +1285,7 @@ typedef struct szs_iterator_t
 
     //--- file specific parameters
 
+    bool		no_dirs;	// true: archive without directory support
     bool		is_dir;		// true: directory argument
     bool		has_subfiles;	// true: this file has enabled sub files
     u16			fform;		// NULL or file format
@@ -1144,6 +1375,13 @@ uint CollectFilesSZS
     bool		clear,		// true: clear list before adding
     int			recurse,	// 0:off, <0:unlimited, >0:max depth
     int			cut_files,	// <0:never, =0:auto, >0:always
+    SortMode_t		sort_mode	// sort subfiles
+);
+
+uint CollectCommonFilesSZS
+(
+    szs_file_t		* szs,		// valid szs
+    bool		clear,		// true: clear list before adding
     SortMode_t		sort_mode	// sort subfiles
 );
 
@@ -1365,6 +1603,28 @@ int CutFilesBRSUB
     ccp			sname_tab[],	// NULL or section name table
     uint		n_sname		// number of elements in 'sname_tab'
 					// if 0: 'sname_tab' is terminated by NULL
+);
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			LTA support			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int IterateFilesLTA
+(
+    struct
+	szs_iterator_t	*it,		// iterator struct with all infos
+    bool		term		// true: termination hint
+);
+
+bool DumpLTA
+(
+    FILE		*f,		// output file
+    uint		indent,		// indention
+    const ColorSet_t	*col,		// NULL or colorset
+    ccp			fname,		// NULL or filename
+    const u8		*data,		// data to dump
+    uint		size		// size of 'data'
 );
 
 //

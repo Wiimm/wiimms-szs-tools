@@ -182,7 +182,7 @@ void AnalyzeSZS
 
     //--- checksums
 
-    sha1_size_t sha1_data;
+    sha1_size_hash_t sha1_data;
     SHA1(szs->data,szs->size,sha1_data.hash);
     Sha1Bin2Hex(as->sha1_szs,sha1_data.hash);
     memcpy(as->sha1_szs_norm,as->sha1_szs,sizeof(as->sha1_szs_norm));
@@ -368,10 +368,14 @@ void AnalyzeSZS
     )
     {
 	ct_dest = StringCopyE(ct_dest,ct_end,",geohit");
+	as->have_common = 1;
     }
 
     if ( szs->have.szs[HAVESZS_MINIGAME] >= HFM_MODIFIED )
+    {
 	ct_dest = StringCopyE(ct_dest,ct_end,",minigame");
+	as->have_common = 1;
+    }
 
     if ( szs->have.szs[HAVESZS_AIPARAM_BAA] >= HFM_ORIGINAL
 	|| szs->have.szs[HAVESZS_AIPARAM_BAS] >= HFM_ORIGINAL
@@ -581,6 +585,7 @@ enumError ExecAnalyzeSZS ( analyze_param_t *ap )
 	"lex_sections=\"%s\"\n"
 	"lex_features=\"%s\"\n"
 	"warn=\"%u=%s\"\n"
+	"have_common=%d\n"
 	"ct_attributes=\"%s\"\n"
 	"name_attributes=\"%.*s\"\n"
 
@@ -639,6 +644,7 @@ enumError ExecAnalyzeSZS ( analyze_param_t *ap )
 	,CreateSectionInfoLEX(szs->have.lex_sect,true,"")
 	,CreateFeatureInfoLEX(szs->have.lex_feat,true,"")
 	,szs->warn_bits,GetWarnSZSNames(szs->warn_bits,' ')
+	,as.have_common
 	,as.ct_attrib+1
 	,name_attrib_len,name_attrib
 	);

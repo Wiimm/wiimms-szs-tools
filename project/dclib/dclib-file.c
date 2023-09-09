@@ -1195,6 +1195,7 @@ enumError CloseFile
     {
 	if (!f->is_stdio)
 	{
+	    PRINT0("close fd=%d\n",fileno(f->f));
 	    if ( fclose(f->f) && f->max_err <= ERR_WARNING )
 		f->max_err = ERROR1(ERR_WRITE_FAILED,
 				    "Error while closing file: %s\n",f->fname);
@@ -1253,7 +1254,7 @@ enumError OpenFile
     FileMode_t		file_mode,	// open modes
     off_t		limit,		// >0: don't open, if file size > limit
     ccp			limit_message	// NULL or a with LF terminated text.
-					//   It is printed after the message.
+					//   It is printed behind the error message.
 )
 {
     DASSERT(f);
@@ -1365,12 +1366,12 @@ enumError OpenFile
 	// be tolerant, if both values produce same text
 	if (strcmp(sbuf,lbuf))
 	{
-	    if ( !(f->fmode & FM_SILENT) )
-		ERROR0(ERR_CANT_OPEN,
-			"File too large (size=%s, limit=%s): %s\n%s",
+	    if ( !(f->fmode & (FM_SILENT|FM_SILENT_ON_LIMIT)) )
+		ERROR0(ERR_FILE_TOO_BIG,
+			"File too big (size=%s, limit=%s): %s\n%s",
 			sbuf, lbuf, fname,
 			limit_message ? limit_message : "" );
-	    return f->max_err = ERR_CANT_OPEN;
+	    return f->max_err = ERR_FILE_TOO_BIG;
 	}
     }
 
@@ -1379,6 +1380,7 @@ enumError OpenFile
 
     ccp omode = GetFileOpenMode(false,f->fmode);
     f->f = fopen(fname,omode);
+    PRINT0("open fd=%d : %s\n",fileno(f->f),fname);
     TRACE("OpenFile(%s,%s) : [%s], %p\n",
 		fname, omode, GetFileModeStatus(0,0,f->fmode,1), f->f );
 

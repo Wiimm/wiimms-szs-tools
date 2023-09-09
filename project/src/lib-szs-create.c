@@ -131,56 +131,6 @@ static bool AddSlotFiles ( szs_file_t *szs, struct szs_norm_t * norm )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////		    scan dir & create szs		///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[scan_data_t]]
-
-typedef struct scan_data_t
-{
-    szs_file_t	* szs;			// valid pointer to szs data structure
-    SetupParam_t * setup_param;		// valid pointer to setup parameters
-    char	path[PATH_MAX];		// the current path
-    char	* path_rel;		// ptr to 'path': path relative to base directory
-    char	* path_dir;		// ptr to 'path': current directory
-    u32		n_directories;		// total number of directories
-    u32		namepool_size_u8;	// total size of name pool (for U8)
-    u32		depth;			// current depth
-    u32		max_depth;		// max allowed depth
-    u64		total_size;		// total aligned size of all files
-    u32		align;			// data alignmet
-
-} scan_data_t;
-
-///////////////////////////////////////////////////////////////////////////////
-// [[add_missing_t]]
-
-typedef struct add_missing_t
-{
-    szs_file_t		*szs;		// valid szs
-    scan_data_t		*sd;		// NULL or valid scan data
-    szs_norm_t		*norm;		// NULL or valid norm data
-
-    szs_subfile_t	*link;		// not NULL: link to this file
-    void		*data;		// not NULL: add this data (no autoadd)
-    uint		size;		// size of 'data'
-    bool		move_data;	// data is alloced
-
-    szs_subfile_t	*last_subfile;	// last added file, set by add_missing_file()
-
-    bool		print_err;	// true: print errors about missing files
-    int			log_indent;	// >-1: print log with indention
-
-}
-add_missing_t;
-
-//-----------------------------------------------------------------------------
-
-static int add_missing_file
-(
-    ccp			path,		// calculated path
-    file_format_t	fform,		// FF_BRRES | FF_BREFF | FF_BREFT
-    add_missing_t	*am		// user defined parameter
-);
-
-///////////////////////////////////////////////////////////////////////////////
 
 static bool fname_allowed ( scan_data_t *sd, ccp name, char * path_dir )
 {
@@ -898,6 +848,12 @@ enumError CreateSZS
 	    sd.max_depth = 0;
 	    break;
 
+	case FF_LTA:
+	case FF_LFL:
+	    sd.align = opt_align_lta;
+	    sd.max_depth = 20;
+	    break;
+
 	//case FF_RARC: // [[2do]] [[arc]]
 	//case FF_U8:
 	//case FF_WU8:
@@ -959,6 +915,12 @@ enumError CreateSZS
 	case FF_RKC:
 	    err = CreateRKC(szs,source_dir);
 	    setup_param->compr_mode = -1;
+	    break;
+
+	case FF_LFL:
+	    err = CreateLFL(szs,source_dir,false,false);
+	    setup_param->compr_mode = -1;
+	    szs->allow_ext_data = true;
 	    break;
 
 	default:
@@ -1703,10 +1665,10 @@ bool NormalizeExSZS
 				.data = (u8*)raw.data.ptr, .size = raw.data.len,
 				.print_err = true };
 	    am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
-	    add_missing_file("button/timg/ct_icons.tpl",FF_TPL,&am);
+	    AddMissingFile("button/timg/ct_icons.tpl",FF_TPL,&am);
 //ALWAYS    if (opt_links)
 		am.link = am.last_subfile;
-	    add_missing_file("control/timg/ct_icons.tpl",FF_TPL,&am);
+	    AddMissingFile("control/timg/ct_icons.tpl",FF_TPL,&am);
 	}
     }
 
@@ -1735,10 +1697,12 @@ bool NormalizeExSZS
 ///////////////			AddMissingFiles()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static int add_missing_file
+int AddMissingFile
 (
+    // returns 1 if added, 0 otherwise
+
     ccp			path,		// calculated path
-    file_format_t	fform,		// FF_BRRES | FF_BREFF | FF_BREFT
+    file_format_t	fform,		// FF_BRRES | FF_BREFF | FF_BREFT | FF_U8 | FF_LTA
     add_missing_t	*am		// user defined parameter
 )
 {
@@ -1776,6 +1740,19 @@ static int add_missing_file
     {
 	StringCopyS(load_path,sizeof(load_path),path);
     }
+    else if ( am->fname )
+    {
+	struct stat st;
+	if ( stat(am->fname,&st) || !S_ISREG(st.st_mode) )
+	{
+	    if (am->print_err)
+		ERROR0(ERR_WARNING,
+		    "Can't add file: %s\n",am->fname);
+	    return 0;
+	}
+	size = st.st_size;
+	StringCopyS(load_path,sizeof(load_path),am->fname);
+    }
     else if ( am->link > 0 )
     {
 	size = am->link->size;
@@ -1805,7 +1782,7 @@ static int add_missing_file
     }
 
     if ( am->log_indent >= 0 )
-	fprintf(stdlog,"%*s>> %s%s [%llu] %sxx\n",
+	fprintf(stdlog,"%*s>> %s%s [%llu] %s\n",
 			am->log_indent, "",
 			testmode ? "would " : "",
 			am->link ? "link" : am->data ? "add" : "auto-add",
@@ -1917,7 +1894,7 @@ static int add_missing_file
 	if (!am->link->link_index)
 	    am->link->link_index = ++szs->subfile.link_count;
 	file->link_index	= am->link->link_index;
-	
+
 
 	if (am->norm)
 	{
@@ -1962,7 +1939,7 @@ static int add_missing_file
 
 	if (!is_course_lex)
 	    file->load_path = STRDUP(load_path);
-	PRINT("ADD-FILE[%d]: %s\n",dir_id,path);
+	PRINT("ADD-FILE[did=%d,size:%llx/%llx]: %s\n",dir_id,size,am->sd->total_size,path);
     }
     else if (am->norm)
     {
@@ -2020,7 +1997,7 @@ int AddMissingFileSZS
     am.norm		= norm;
     am.log_indent	= log_indent;
     am.print_err	= true;
-    return add_missing_file(fname,fform,&am);
+    return AddMissingFile(fname,fform,&am);
 }
 
 //-----------------------------------------------------------------------------
@@ -2072,7 +2049,7 @@ enumError AddMissingFiles
 	{
 	    const DbFileFILE_t *ptr = DbFileFILE + i;
 	    if (!IsFileOptionalSZS(szs,ptr))
-		insert_count += add_missing_file(ptr->file,ptr->fform,&am);
+		insert_count += AddMissingFile(ptr->file,ptr->fform,&am);
 	}
 
     #if HAVE_PRINT0
@@ -2769,7 +2746,7 @@ static void patch_9laps ( struct szs_iterator_t *it )
 	{ M_ADD,       "game_image/timg/tt_lap_S_lap7.tpl",		&s_tt_lap_s_lap7_tpl_mgr },
 	{ M_ADD,       "game_image/timg/tt_lap_S_lap8.tpl",		&s_tt_lap_s_lap8_tpl_mgr },
 	{ M_ADD,       "game_image/timg/tt_lap_S_lap9.tpl",		&s_tt_lap_s_lap9_tpl_mgr },
-	
+
 	{0,0,0}
     };
 
@@ -2819,7 +2796,7 @@ static void patch_9laps ( struct szs_iterator_t *it )
 			add_missing_t am = { .szs = it->szs, .norm = &it->norm_create,
 					.data = (u8*)bm->data, .size = bm->size, .print_err = true };
 			am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
-			add_missing_file(ptr->fname,FF_TPL,&am);
+			AddMissingFile(ptr->fname,FF_TPL,&am);
 			it->job_create = true;
 		    }
 		}
@@ -2861,7 +2838,7 @@ static void patch_title_screen ( struct szs_iterator_t *it )
     ccp base_name = strrchr(ppar->path,'/');
     if (!base_name)
 	base_name = ppar->path;
-    
+
     u8 *data;
     size_t size;
     LoadFileAlloc(opt_title_screen,base_name,0,&data,&size,0,2,0,false);
@@ -4459,6 +4436,7 @@ ccp CreateSlotInfo ( szs_file_t *szs )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			ExtractFilesSZS()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[extract_param_t]]
 
 typedef struct extract_param_t
 {
@@ -4468,6 +4446,7 @@ typedef struct extract_param_t
     bool		extract;	// true: extract subfiles
     bool		decode;		// true: store subfiles for decoding
     bool		mipmap;		// true: extract mipmaps too
+    bool		avail_txt;	// true: create file "avail.txt" if at least one file is extracted
     int			recurse_level;	// current recurse level
     int			indent;		// indention of log messages
     u32			align;		// found alignment
@@ -4479,6 +4458,7 @@ typedef struct extract_param_t
 
     file_format_t	parent_fform;	// file format of parent
 
+    uint		extract_count;	// number of extracted files
     StringField_t	include_list;	// include usually hidden files
     StringField_t	exclude_list;	// exclude files
     FormatField_t	decode_list;	// list with decode jobs
@@ -4564,9 +4544,6 @@ static int extract_func
 	= AppendFormatField(&ep->order_list,local_path,false,false);
 
     char pathbuf[PATH_MAX];
-// [[sdir]]
-//    ccp pathptr = sdir ? local_path
-//		: PathCatPP(pathbuf,sizeof(pathbuf),ep->dest,local_path);
     ccp pathptr = PathCatPP(pathbuf,sizeof(pathbuf),ep->dest,local_path);
 
     if (it->is_dir)
@@ -4627,11 +4604,9 @@ static int extract_func
 	}
     }
 
-    File_t F;
+    File_t F = {0};
     if (ep->sdir)
     {
-	memset(&F,0,sizeof(F));
-
 	bool new_file;
 	SubFile_t *sf = InsertSubFile(ep->sdir,MemByString(local_path),&new_file);
 	if ( sf && new_file && subszs.size )
@@ -4675,6 +4650,15 @@ static int extract_func
 	CreateFileOpt(&F,true,pathptr,testmode,0);
 	if (F.f)
 	{
+	    if ( !ep->extract_count++ && ep->avail_txt )
+	    {
+		// first extract => write "avail.txt"
+		InsertStringField(&ep->exclude_list,"avail.txt",false);
+		char buf[20];
+		snprintf(buf,sizeof(buf),"%u\r\n",ep->extract_count);
+		SaveFile(ep->dest,"avail.txt",FM_OVERWRITE|FM_TOUCH,buf,strlen(buf),0);
+	    }
+
 	    SetFileAttrib(&F.fatt,&szs->fatt,0);
 	    size_t wstat = fwrite(subszs.data,1,subszs.size,F.f);
 	    enumError err = wstat != subszs.size ? ERR_WRITE_FAILED : ERR_OK;
@@ -5043,6 +5027,8 @@ enumError ExtractFilesSZS
 	    {
 		case FF_U8:
 		case FF_WU8:
+		case FF_LTA:
+		case FF_LFL:
 		case FF_RARC:
 		case FF_PACK:
 		case FF_RKC:
@@ -5100,6 +5086,7 @@ enumError ExtractFilesSZS
     ep.decode		= opt_decode;
     ep.mipmap		= opt_mipmaps >= 0;
     ep.recurse_level	= recurse_level;
+    ep.avail_txt	= opt_avail_txt;
     ep.extract		= recurse_level < opt_recurse;
     ep.is_cutting	= is_cutting;
     ep.indent		= indent + 1;
@@ -5120,6 +5107,10 @@ enumError ExtractFilesSZS
 	InsertFormatFieldFF(&ep.decode_list,"course.kcl",FF_KCL,false,false,0);
 	InsertFormatFieldFF(&ep.decode_list,"course.kmp",FF_KMP,false,false,0);
 	InsertFormatFieldFF(&ep.decode_list,"course.lex",FF_LEX,false,false,0);
+	break;
+
+     case FF_LTA:
+	InsertStringField(&ep.exclude_list,NODE_LIST_FILE,false);
 	break;
 
      default:
@@ -5183,7 +5174,7 @@ enumError ExtractFilesSZS
 		szs->obj_id );
 
 	fprintf(f,
-	    "# The internal archive format (U8, WU8, BRRES, BREFF or BREFT):\r\n"
+	    "# The internal archive format (U8, WU8, BRRES, BREFF, BREFT, LTA or LFL):\r\n"
 	    "archive-format = %s\r\n"
 	    "\r\n"
 	    "# The file format (YAZ0, YAZ1 or BZ for a compressed archive, other ignored):\r\n"

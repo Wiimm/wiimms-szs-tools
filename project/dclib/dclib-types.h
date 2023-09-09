@@ -257,6 +257,8 @@ typedef enum enumError
 	ERR_CANT_CLOSE,
 	ERU_CANT_CONNECT,
 	ERR_CANT_CONNECT,
+	ERU_FILE_TOO_BIG,
+	ERR_FILE_TOO_BIG,
 	ERU_CANT_OPEN,
 	ERR_CANT_OPEN,
 	ERU_CANT_APPEND,
@@ -311,8 +313,6 @@ typedef enum enumError
 	 ERU_FATAL_00,
 	 ERU_FATAL_01,
 	 ERU_FATAL_02,
-	 ERU_FATAL_03,
-	 ERU_FATAL_04,
 	 ERU_FATAL_XX,
 
 	ERU_OUT_OF_MEMORY,
@@ -451,10 +451,22 @@ intx_t;
 struct mem_t;
 typedef struct mem_t mem_t;
 
-// [[sha1_hash_t]] [[sha1_hex_t]] [[sha1_id_t]]
+// [[sha1_hash_t]] [[sha1_hex_t]] [[sha1_b64_t]] [[sha1_id_t]]
 typedef u8   sha1_hash_t[20];
 typedef char sha1_hex_t[41];	// 40 chars + NULL
+typedef char sha1_b64_t[28];	// 27 chars + NULL
 typedef u8   sha1_id_t[9];	// 8*chars + NULL
+
+// [[sha1_size_hash_t]] [[sha1_size_hex_t]] [[sha1_size_b64_t]]
+typedef struct sha1_size_hash_t
+{
+    sha1_hash_t	hash;	    // SHA1 checksum (binary)
+    u32		size;	    // size of data (big endian)
+}
+__attribute__ ((packed)) sha1_size_hash_t;
+
+typedef char sha1_size_hex_t[49]; // 48 chars + NULL
+typedef char sha1_size_b64_t[33]; // 32 chars + NULL
 
 // [[uuid_buf_t]] [[uuid_text_t]]
 typedef u8 uuid_buf_t[16];

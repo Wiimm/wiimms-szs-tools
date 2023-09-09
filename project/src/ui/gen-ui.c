@@ -77,9 +77,9 @@ bool DefineIntVar ( VarMap_t * vm, ccp varname, int value ) { return false; }
 #define UI_TO_TEXT(x) UI_TO_TEXT1(x)
 #define UI_TO_TEXT1(x) #x
 
-#define ARCHIVES_OR	"SZS, U8, PACK, BRRES, BREFF, BREFT or RARC"
-#define ARCHIVES_AND	"SZS, U8, PACK, BRRES, BREFF, BREFT and RARC"
-#define ARCHIVES_COMMA	"SZS, U8, PACK, BRRES, BREFF, BREFT, RARC"
+#define ARCHIVES_OR	"SZS, U8, LTA, PACK, BRRES, BREFF, BREFT or RARC"
+#define ARCHIVES_AND	"SZS, U8, LTA, PACK, BRRES, BREFF, BREFT and RARC"
+#define ARCHIVES_COMMA	"SZS, U8, LTA, PACK, BRRES, BREFF, BREFT, RARC"
 
 // create archives
 #define CARCHIVES_OR	"SZS, U8, PACK, BRRES, BREFF or BREFT"

@@ -303,7 +303,6 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(BZIP2_t)
 	SIZEOF_INFO_ENTRY(BZ2Manager_t)
 	SIZEOF_INFO_ENTRY(BZ2Source_t)
-	SIZEOF_INFO_ENTRY(sha1_size_t)
 	SIZEOF_INFO_ENTRY(sha1_type_t)
 	SIZEOF_INFO_ENTRY(sha1_db_t)
 	SIZEOF_INFO_ENTRY(DistributionInfo_t)
@@ -517,6 +516,15 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(lex_t)
 	SIZEOF_INFO_ENTRY(lex_info_t)
 
+    SIZEOF_INFO_TITLE("LE-CODE file types")
+	SIZEOF_INFO_ENTRY(lta_header_t)
+	SIZEOF_INFO_ENTRY(lta_node_par_t)
+	SIZEOF_INFO_ENTRY(lta_node_record_t)
+	SIZEOF_INFO_ENTRY(lta_node_t)
+	SIZEOF_INFO_ENTRY(lta_manager_t)
+	SIZEOF_INFO_ENTRY(lfl_header_t)
+	SIZEOF_INFO_ENTRY(lfl_node_t)
+
     SIZEOF_INFO_TITLE("MDL")
 	SIZEOF_INFO_ENTRY(mdl_head_t)
 	SIZEOF_INFO_ENTRY(mdl_t)
@@ -595,7 +603,10 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(szs_subfile_list_t)
 	SIZEOF_INFO_ENTRY(szs_have_t)
 	SIZEOF_INFO_ENTRY(szs_file_t)
+	SIZEOF_INFO_ENTRY(szs_u8_info_t)
 	SIZEOF_INFO_ENTRY(szs_norm_t)
+	SIZEOF_INFO_ENTRY(scan_data_t)
+	SIZEOF_INFO_ENTRY(add_missing_t)
 //	SIZEOF_INFO_ENTRY(check_szs_t)
 	SIZEOF_INFO_ENTRY(slot_ana_t)
 	SIZEOF_INFO_ENTRY(iterator_param_t)
@@ -648,6 +659,7 @@ static enumError cmd_test_options()
     printf("  escape-char: %16x = %12d\n",escape_char,escape_char);
     printf("  align:       %16x = %12d\n",opt_align,opt_align);
     printf("  align-u8:    %16x = %12d\n",opt_align_u8,opt_align_u8);
+    printf("  align-lta:   %16x = %12d\n",opt_align_lta,opt_align_lta);
     printf("  align-pack:  %16x = %12d\n",opt_align_pack,opt_align_pack);
     printf("  align-brres: %16x = %12d\n",opt_align_brres,opt_align_brres);
     printf("  align-breff: %16x = %12d\n",opt_align_breff,opt_align_breff);
@@ -1108,7 +1120,7 @@ static enumError cmd_autoadd()
 			    DASSERT( db->sha1 < N_DB_FILE_SHA1 );
 			    const u8 *sha1 = DbFileSHA1[db->sha1].sha1;
 
-			    sha1_size_t ss;
+			    sha1_size_hash_t ss;
 			    GetSSByFile(&ss,path,0);
 			    if (memcmp(sha1,ss.hash,sizeof(ss.hash)))
 			    {
@@ -1519,8 +1531,6 @@ void PrintNorm ( const szs_norm_t *norm )
 {
     if ( !norm || !norm->f )
 	return;
-
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1896,7 +1906,6 @@ static enumError cmd_list ( int long_level )
 	    continue;
 	if ( err > ERR_WARNING )
 	    return err;
-
 
 	CollectFilesSZS(&szs,true,-1,-1,SORT_NONE);
 	if ( opt_norm || need_norm > 0 )
@@ -2945,6 +2954,8 @@ enumError ScanDistribFile
 	return err == ERR_NOT_EXISTS || ignore ? ERR_OK : err;
     }
 
+// [[lta]] [[2do]]
+// [[lfl]] [[2do]]
     if ( szs.fform_arch != FF_U8 && szs.fform_arch != FF_WU8 )
     {
 	ResetSZS(&szs);
@@ -3750,6 +3761,19 @@ static bool ScanByExtFF
 	*ff_arch = FF_XYZ;
 	return true;
     }
+
+    if (!strcmp(point,"lta"))
+    {
+	*ff_arch = FF_LTA;
+	return true;
+    }
+
+    if (!strcmp(point,"lfl"))
+    {
+	*ff_arch = FF_LFL;
+	return true;
+    }
+
     return false;
 }
 
@@ -3842,6 +3866,8 @@ static enumError patch_file_helper
 
 	char dest[PATH_MAX];
 	if ( opt_fform == FF_U8 || opt_fform == FF_WU8 )
+// [[lta]] [[2do]]
+// [[lfl]] [[2do]]
 	{
 	    SubstDest( dest, sizeof(dest), fname,
 		opt_dest && *opt_dest ? opt_dest : "\1P/\1N\1?T", "\1N\1?T",
@@ -4087,6 +4113,8 @@ static enumError cmd_duplicate()
     }
 
     if ( szs.fform_current != FF_U8 && szs.fform_current != FF_WU8  )
+// [[lta]] [[2do]]
+// [[lfl]] [[2do]]
 	return ERROR0(ERR_INVALID_DATA,"A track file (SZS or WBZ) expected!\n");
 
     force_lex_test = true; // force patch to insert LEX/TEST
@@ -4858,6 +4886,8 @@ static enumError job_update
 	    {
 		case FF_U8:
 		case FF_WU8:
+// [[lta]] [[2do]]
+// [[lfl]] [[2do]]
 		case FF_RARC:
 		case FF_PACK:
 		case FF_RKC:
@@ -4982,15 +5012,16 @@ static enumError cmd_extract ( enumCommands mode )
     else if ( mode == CMD_XALL )
     {
 	RegisterOptionByIndex(&InfoUI_wszst,OPT_ALL,1,false);
-	opt_recurse = INT_MAX;
-	opt_decode  = true;
-	opt_mipmaps = 1;
+	opt_recurse	= INT_MAX;
+	opt_decode	= true;
+	opt_mipmaps	= 1;
     }
     else if ( mode == CMD_XCOMMON )
     {
-	opt_recurse = INT_MAX;
-	opt_decode  = false;
-	basedir	    = "common/";
+	opt_recurse	= INT_MAX;
+	opt_decode	= false;
+	opt_avail_txt	= true;
+	basedir		= "common/";
     }
 
     if ( opt_dest && !*opt_dest )
@@ -5851,6 +5882,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_WU8:		SetCompressionFF(FF_WU8,0); break;
 	case GO_XWU8:		SetCompressionFF(FF_WU8,FF_XYZ); break;
 	case GO_WBZ:		SetCompressionFF(FF_WU8,FF_BZ); break;
+	//case GO_LTA:		SetCompressionFF(FF_LTA,0); break;
+	case GO_LFL:		SetCompressionFF(FF_LFL,0); break;
 	//case GO_ARC:		SetCompressionFF(FF_RARC,0); break;
 	case GO_BRRES:		SetCompressionFF(FF_BRRES,0); break;
 	case GO_BREFF:		SetCompressionFF(FF_BREFF,0); break;
@@ -5873,6 +5906,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_LINKS:		opt_links = true; break;
 	case GO_RM_AIPARAM:	opt_rm_aiparam = true; break;
 	case GO_ALIGN_U8:	err += ScanOptAlignU8(optarg); break;
+	case GO_ALIGN_LTA:	err += ScanOptAlignLTA(optarg); break;
 	case GO_ALIGN_PACK:	err += ScanOptAlignPACK(optarg); break;
 	case GO_ALIGN_BRRES:	err += ScanOptAlignBRRES(optarg); break;
 	case GO_ALIGN_BREFF:	err += ScanOptAlignBREFF(optarg); break;

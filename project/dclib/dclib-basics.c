@@ -11475,7 +11475,7 @@ void Sha1Hex2Bin ( sha1_hash_t bin, ccp src, ccp end )
     DASSERT(src);
 
     uint i;
-    for ( i = 0; i < 20; i++ )
+    for ( i = 0; i < sizeof(sha1_hash_t); i++ )
 	bin[i] = ScanDigits(&src,end,16,2,0);
 }
 
@@ -11492,6 +11492,26 @@ void Sha1Bin2Hex ( sha1_hex_t hex, cvp bin )
 
 //-----------------------------------------------------------------------------
 
+void Sha1B642Bin ( sha1_hash_t bin, ccp src, ccp end )
+{
+    DASSERT(bin);
+    DASSERT(src);
+
+    DecodeBase64((char*)bin,sizeof(sha1_hash_t),src,end-src,0,true,0);
+}
+
+//-----------------------------------------------------------------------------
+
+void Sha1Bin2B64 ( sha1_b64_t b64, cvp bin )
+{
+    DASSERT(b64);
+    DASSERT(bin);
+
+    EncodeBase64(b64,sizeof(sha1_b64_t),bin,sizeof(sha1_hash_t),0,false,0,0);
+}
+
+//-----------------------------------------------------------------------------
+
 ccp GetSha1Hex ( cvp bin )
 {
     DASSERT(bin);
@@ -11499,6 +11519,49 @@ ccp GetSha1Hex ( cvp bin )
     char *hex = GetCircBuf(sizeof(sha1_hex_t));
     Sha1Bin2Hex(hex,bin);
     return hex;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void Sha1SizeHex2Bin ( sha1_size_hash_t *bin, ccp src, ccp end )
+{
+    DASSERT(bin);
+    DASSERT(src);
+
+    char *dest = (char*)&bin;
+    for ( int i = 0; i < sizeof(sha1_size_hash_t); i++ )
+	*dest++ = ScanDigits(&src,end,16,2,0);
+}
+
+//-----------------------------------------------------------------------------
+
+void Sha1SizeBin2Hex ( sha1_size_hex_t hex, cvp bin )
+{
+    DASSERT(hex);
+    DASSERT(bin);
+
+    snprintf(hex,sizeof(sha1_hex_t),"%08x%08x%08x%08x%08x%08x",
+	be32(bin), be32(bin+4), be32(bin+8), be32(bin+12), be32(bin+16), be32(bin+20) );
+}
+
+//-----------------------------------------------------------------------------
+
+void Sha1SizeB642Bin ( sha1_size_hash_t *bin, ccp src, ccp end )
+{
+    DASSERT(bin);
+    DASSERT(src);
+
+    DecodeBase64((char*)bin,sizeof(sha1_size_hash_t),src,end-src,0,true,0);
+}
+
+//-----------------------------------------------------------------------------
+
+void Sha1SizeBin2B64 ( sha1_size_b64_t b64, cvp bin )
+{
+    DASSERT(b64);
+    DASSERT(bin);
+
+    EncodeBase64(b64,sizeof(sha1_size_b64_t),bin,sizeof(sha1_hash_t),0,false,0,0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

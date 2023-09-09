@@ -72,6 +72,24 @@ int ScanOptAlignU8 ( ccp arg )
 
 //-----------------------------------------------------------------------------
 
+int ScanOptAlignLTA ( ccp arg )
+{
+    return ScanSizeOptU32(
+		&opt_align_lta,		// u32 * num
+		arg,			// ccp source
+		1,			// default_factor1
+		0,			// int force_base
+		"align-lta",		// ccp opt_name
+		0x00001,		// u64 min
+		0x10000,		// u64 max
+		0,			// u32 multiple
+		1,			// u32 pow2
+		true			// bool print_err
+		) != ERR_OK;
+}
+
+//-----------------------------------------------------------------------------
+
 int ScanOptAlignPACK ( ccp arg )
 {
     return ScanSizeOptU32(
@@ -176,7 +194,7 @@ int ScanOptMaxFileSize ( ccp arg )
 		0,			// int force_base
 		"max-file-size",	// ccp opt_name
 		MiB,			// u64 min
-		GiB,			// u64 max
+		2ull*GiB,		// u64 max
 		0,			// u32 multiple
 		0,			// u32 pow2
 		true			// bool print_err

@@ -615,8 +615,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"size",
 	"This security option defines the maximum file size for input files;"
 	" larger files are ignored with a warning. The default unit is MiB and"
-	" the default size is 100 MiB; that should be enough for standard"
-	" usage."
+	" the default size is 100 MiB (2 GiB for LTA); that should be enough"
+	" for standard usage."
     },
 
     {	OPT_TRACKS, false, true, false, false, false, 'T', "tracks",
@@ -1223,6 +1223,7 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x110   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x130   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x140   */	 0,0,0,0, 0,0,0,0, 0,0,
 };
 
 //

@@ -1275,6 +1275,7 @@ static const struct option OptionLong[] =
 	{ "port-db",		1, 0, GO_PORT_DB },
 	 { "portdb",		1, 0, GO_PORT_DB },
 	{ "order",		1, 0, GO_ORDER },
+	 { "sort",		1, 0, GO_ORDER },
 	{ "no-0x",		0, 0, '0' },
 	 { "no0x",		0, 0, '0' },
 	{ "upper",		0, 0, 'U' },
@@ -1474,6 +1475,7 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x110   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x130   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x140   */	 0,0,0,0, 0,0,0,0, 0,0,
 };
 
 //

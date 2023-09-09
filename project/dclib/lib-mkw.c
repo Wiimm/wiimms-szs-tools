@@ -1811,6 +1811,24 @@ ccp GetLecodeRandomInfo ( uint slot, ccp return_on_err )
 		: return_on_err;
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetMkwExtraInfo ( uint slot, ccp return_on_err )
+{
+    _Static_assert( MKW_N_EXTRA == 5,"GetMkwExtraInfo()");
+    static ccp info[] =
+    {
+	    "Extra: Galaxy Colosseum",
+	    "Extra: Winning scene",
+	    "Extra: Losing scene",
+	    "Extra: Luigi Circuit (Credits)",
+	    "Extra: Broken losing scene",
+    };
+
+    return IsMkwExtra(slot)
+		? info[ slot - MKW_EXTRA_BEG ]
+		: return_on_err;
+}
 
 //
 ///////////////////////////////////////////////////////////////////////////////

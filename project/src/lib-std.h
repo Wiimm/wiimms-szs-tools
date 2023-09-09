@@ -99,6 +99,7 @@ void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 
 #define CONFIG_FILE		"wiimms-szs-tools.conf"
 #define SZS_SETUP_FILE		"wszst-setup.txt"
+#define NODE_LIST_FILE		"node-list.bin"
 #define CHECK_FILE_SIZE		0x800
 #define OPT_PNG_TYPE_CLASS	0x7fef0bff
 
@@ -561,6 +562,9 @@ void PrintNumF
     ccp			type_str	// NULL or type string
 );
 
+// insert "_d" before extension
+char * Insert_d ( char * buf, uint bufsize, ccp path );
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			word compare functions		///////////////
@@ -689,15 +693,23 @@ file_format_t GetByMagicFF
     uint	file_size	// NULL or total size of file
 );
 
+file_format_t GetFileTypeByMagic
+(
+    // returns FF_INVALID on read err, or detected FF.
+
+    ccp			fname,		// file to open
+    FileAttrib_t	* fatt		// not NULL: store file attributes
+);
+
 const file_type_t * GetFileTypeByExt
 (
-    ccp		ext,		// NULL  or file extension with optional preceeding point
+    ccp		ext,		// NULL or file extension with optional preceeding point
     bool	need_magic	// filter only file types with magic
 );
 
 const file_type_t * GetFileTypeBySubdir
 (
-    ccp		path,		// NULL  or file extension with optional preceeding point
+    ccp		path,		// NULL or file extension with optional preceeding point
     bool	need_magic	// filter only file types with magic
 );
 
@@ -763,7 +775,7 @@ file_format_t GetImageFFByFName
 (
     // returns the normalized FF for a valid image or NULL (=FF_UNKNOWN)
 
-    ccp			fname,		// NULL or filename to analyse extention
+    ccp			fname,		// NULL or filename to analyse extension
     file_format_t	default_fform,	// use this as default/fallback
     bool		allow_png	// true: allow FF_PNG
 );
@@ -2095,6 +2107,16 @@ valid_t IsValidCTCODE
     ccp			fname		// not NULL: print warnings with file ref
 );
 
+//-----------------------------------------------------------------------------
+
+valid_t IsValidLTA
+(
+    const void		* data,		// data
+    uint		data_size,	// size of 'data'
+    uint		file_size,	// NULL or size of complete file
+    ccp			fname		// not NULL: print warnings with file ref
+);
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			scan configuration		///////////////
@@ -2346,7 +2368,7 @@ typedef struct split_filename_t
 
     mem_t f_name;		// %F source name, stripped
     mem_t f_d;			// %D empty or "_d"
-    mem_t f_ext;		// %E file extention
+    mem_t f_ext;		// %E file extension
 
     //--- split name into N parts
 
@@ -2456,7 +2478,7 @@ exmem_t PrintNameSPF
 //	%d  editors,	list of editors, format "(editors)", options=0
 //	%D  f_d,	empty or "_d"
 //	%e  extra,	extra info, format "(extra)", options=0, curly braces
-//	%E  f_ext,	file extention, format ".ext", options=0
+//	%E  f_ext,	file extension, format ".ext", options=0
 //	%g  game1,	first game prefix
 //	%G  game2,	second game prefix
 //	%F  f_name,	file name, stripped
@@ -2742,6 +2764,7 @@ extern bool		opt_links;
 extern bool		opt_rm_aiparam;
 extern u32		opt_align;
 extern u32		opt_align_u8;
+extern u32		opt_align_lta;
 extern u32		opt_align_pack;
 extern u32		opt_align_brres;
 extern u32		opt_align_breff;
@@ -2791,6 +2814,7 @@ extern int		opt_recurse;
 extern int		opt_ext;
 extern bool		opt_decode;
 extern bool		opt_cut;
+extern bool		opt_avail_txt;		// only for internal use (no real option)
 extern bool		opt_cmpr_valid;
 extern u8		opt_cmpr_def[8];
 extern uint		opt_n_images;

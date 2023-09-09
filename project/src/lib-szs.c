@@ -509,8 +509,8 @@ enumError LoadSZS
 	szs->fname = F.fname;
 	F.fname = 0;
 	SetFileAttrib(&szs->fatt,&F.fatt,0);
-	ResetFile(&F,false);
     }
+    ResetFile(&F,false);
 
 // [[analyse-magic+]]
     szs->fform_file
@@ -578,7 +578,7 @@ enumError SaveSZS
 	return ERROR0(ERR_INVALID_DATA,"No SZS data");
 
     File_t F;
-    enumError err = CreateFILE(&F,true,fname,testmode,false,overwrite,true,false);
+    enumError err = CreateFILE(&F,true,fname,testmode,false,overwrite,opt_remove_dest,false);
     if (F.f)
     {
 	SetFileAttrib(&F.fatt,&szs->fatt,0);
@@ -900,7 +900,7 @@ enumError DecompressSZS
     if ( !szs->csize || !szs->cdata || szs->data )
 	return ERR_OK;
 
-    u8  *cdata = szs->cdata;
+    u8 *cdata = szs->cdata;
     if (!memcmp(cdata,BZ_MAGIC,4))
 	return DecompressBZ(szs,rm_compressed);
 
@@ -2168,12 +2168,12 @@ enumError CompressBZ ( szs_file_t * szs, bool remove_uncompressed )
 int PrintFileHeadSZS ( int fw_name )
 {
     if ( fw_name <= 0 )
-	fw_name = 62;
+	fw_name = 60;
     if ( fw_name <= 17 )
 	fw_name = 17;
-    fw_name += 58;
+    fw_name += 60;
 
-    printf("\n%s idx     offset/hex  size/hex size/dec magic f.form vers file or directory\n"
+    printf("\n%s idx      offset/hex   size/hex size/dec magic f.form vers file or directory\n"
 	   "%s%.*s%s\n",
 	   colout->heading, colout->heading, 3*fw_name, ThinLine300_3, colout->reset );
     return fw_name;
@@ -2252,12 +2252,13 @@ int PrintFileSZS
 	char vers_buf[50];
 	PrintVersionSZS(vers_buf,sizeof(vers_buf),it);
 
-	printf("%s%3x: %7x..%7x %7x %8u  %-4s %-6s %s  %.*s%s%s\n",
+	printf("%s%3x: %8x..%8x %7x %8u  %-4s %-6s %s %s%.*s%s%s\n",
 		col->heading,
 		it->index, it->off, it->off+it->size, it->size, it->size,
 		PrintID(data, it->size < 4 ? it->size : 4, 0 ),
 		GetNameFF(0,fform),
 		vers_buf,
+		it->no_dirs ? "": " ",
 		2 * it->recurse_level, indent_msg, it->path,
 		col->reset );
     }
@@ -2431,20 +2432,14 @@ enumError CreateU8
 	    else
 	    {
 		relevant_size = f->size;
-//DEL		if (f->data)
-//DEL		{
-//DEL		    memcpy(data_ptr,f->data,relevant_size);
-//DEL		}
-//DEL		else
-		{
-		    enumError err = f->load_path
+		enumError err = f->load_path
 			? LoadFILE( f->load_path, 0, 0,
 					data_ptr, relevant_size, 0, &szs->fatt, true )
 			: LoadFILE( source_dir, f->path, 0,
 					data_ptr, relevant_size, 0, &szs->fatt, true );
-		    if ( max_err < err )
-			max_err = err;
-		}
+
+		if ( max_err < err )
+		    max_err = err;
 	    }
 	    f->offset      = data_ptr - szs->data;
 	    u8node->offset = htonl(f->offset);
@@ -3355,6 +3350,327 @@ int IterateFilesU8
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			IterateFilesLTA()		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int IterateFilesLTA
+(
+    struct szs_iterator_t	*it,	// iterator struct with all infos
+    bool			term	// true: termination hint
+)
+{
+    if (term)
+	return 0;
+
+    DASSERT(it);
+    DASSERT(it->func_it);
+    szs_file_t * szs = it->szs;
+    DASSERT(szs);
+
+    if ( !szs->data || szs->size < sizeof(lta_header_t) )
+	return -1;
+
+    const lta_header_t lta = *(lta_header_t*)szs->data;
+    if ( ntoh64(lta.magic) != LTA_MAGIC_NUM )
+	return -1;
+
+    // convert to local endian
+    be32n( (u32*)&lta, (u32*)&lta, sizeof(lta_header_t)/4 );
+
+    const lta_node_t *src_node = (lta_node_t*)( szs->data + lta.node_off );
+
+
+    //----- main loop
+
+    it->index	= 0;
+    it->is_dir	= false;
+    it->no_dirs	= true;
+
+    int stat = 0;
+    for ( uint rel_slot = 0; rel_slot < lta.n_slots && !stat; rel_slot++ )
+    {
+	const uint slot = lta.base_slot + rel_slot;
+	lta_node_t node = src_node[rel_slot];
+	// convert to local endian
+	be32n( (u32*)&node, (u32*)&node, sizeof(node)/4 );
+
+	if ( node.std.szs_size )
+	{
+	    snprintf(it->path,sizeof(it->path),"%03x.szs",slot);
+	    it->name	= it->path;
+	    it->off	= node.std.szs_off;
+	    it->size	= node.std.szs_size;
+	    stat	= it->func_it(it,false);
+	    it->index++;
+	}
+
+	if ( !stat && node.std.lfl_size )
+	{
+	    snprintf(it->path,sizeof(it->path),"%03x.lfl",slot);
+	    it->name	= it->path;
+	    it->off	= node.std.lfl_off;
+	    it->size	= node.std.lfl_size;
+	    stat	= it->func_it(it,false);
+	    it->index++;
+	}
+
+	if ( !stat && node.d.szs_size && node.d.szs_off != node.std.szs_off )
+	{
+	    snprintf(it->path,sizeof(it->path),"%03x_d.szs",slot);
+	    it->name	= it->path;
+	    it->off	= node.d.szs_off;
+	    it->size	= node.d.szs_size;
+	    stat	= it->func_it(it,false);
+	    it->index++;
+	}
+
+	if ( !stat && node.d.lfl_size && node.d.lfl_off != node.std.lfl_off )
+	{
+	    snprintf(it->path,sizeof(it->path),"%03x_d.lfl",slot);
+	    it->name	= it->path;
+	    it->off	= node.d.lfl_off;
+	    it->size	= node.d.lfl_size;
+	    stat	= it->func_it(it,false);
+	    it->index++;
+	}
+    }
+
+    StringCopyS(it->path,sizeof(it->path),NODE_LIST_FILE);
+    it->name	= it->path;
+    it->off	= lta.node_off;
+    it->size	= lta.n_slots * sizeof(lta_node_t);
+    stat	= it->func_it(it,false);
+
+    // reset param
+    it->name = 0;
+    it->no_dirs	= false;
+    return stat;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool DumpLTA
+(
+    FILE		*f,		// output file
+    uint		indent,		// indention
+    const ColorSet_t	*col,		// NULL or colorset
+    ccp			fname,		// NULL or filename
+    const u8		*data,		// data to dump
+    uint		size		// size of 'data'
+)
+{
+    DASSERT(f);
+    DASSERT(col);
+    DASSERT(data||!size);
+
+    if ( !data || size < sizeof(lta_header_t) )
+	return false;
+
+    indent = NormalizeIndent(indent);
+    if (!col)
+	col = GetColorSet0();
+
+    if ( fname && *fname )
+	fprintf(f,"%*.s%sInfo dump of LTA:%s%s\n",
+		indent,"", col->caption, fname, col->reset );
+    else
+	fprintf(f,"%*.s%sInfo dump of a LTA file:%s\n",
+		indent,"", col->caption, col->reset );
+
+    const lta_header_t *xhead = (lta_header_t*)data;
+    lta_header_t head;
+    be32n((u32*)&head,(u32*)xhead,sizeof(head)/4);
+
+    indent += 2;
+    const unsigned last_slot = head.base_slot + head.n_slots - 1;
+    printf(
+	"%*s" "Magic:        %.8s\n"
+	"%*s" "Version:      %10u\n"
+	"%*s" "Header size:  %10u = %#10x\n"
+	"%*s" "File size:    %10u = %#10x\n"
+	"%*s" "Node offset:  %10u = %#10x\n"
+	"%*s" "Node size:    %10u = %#10x\n"
+	"%*s" "Base slot:    %10u = %#10x\n"
+	"%*s" "Num of slots: %10u = %#10x\n"
+	"%*s" "Last slot:    %10u = %#10x\n"
+	,indent,"", (char*)&xhead->magic
+	,indent,"", head.version
+	,indent,"", head.head_size, head.head_size
+	,indent,"", head.file_size, head.file_size
+	,indent,"", head.node_off,  head.node_off
+	,indent,"", head.node_size, head.node_size
+	,indent,"", head.base_slot, head.base_slot
+	,indent,"", head.n_slots,   head.n_slots
+	,indent,"", last_slot,      last_slot
+	);
+    return true;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			    LFL interface		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int IterateFilesLFL
+(
+    struct szs_iterator_t	*it,	// iterator struct with all infos
+    bool			term	// true: termination hint
+)
+{
+    if (term)
+	return 0;
+
+    DASSERT(it);
+    DASSERT(it->func_it);
+    szs_file_t * szs = it->szs;
+    DASSERT(szs);
+
+    if ( !szs->data || szs->size < sizeof(lfl_header_t) )
+	return -1;
+
+    const lfl_header_t lfl = *(lfl_header_t*)szs->data;
+    be32n( (u32*)&lfl, (u32*)&lfl, sizeof(lfl_header_t)/4 );
+    if ( lfl.magic != LFL_MAGIC_NUM )
+	return -1;
+
+    uint offset = sizeof(lfl_header_t);
+
+
+    //----- main loop
+
+    it->index	= 0;
+    it->is_dir	= false;
+    it->no_dirs	= true;
+
+    int stat = 0;
+    while (!stat)
+    {
+	const lfl_node_t *node = (lfl_node_t*)(szs->data + offset);
+	StringCopyS(it->path,sizeof(it->path),node->file_name);
+	it->name	= it->path;
+	it->off		= offset + ntohl(node->data_offset); 
+	it->size	= ntohl(node->data_size);
+	if (!it->size)
+	    break;
+	stat		= it->func_it(it,false);
+	it->index++;
+
+	offset += ntohl(node->next_offset); 
+    }
+
+    // reset param
+    it->name = 0;
+    it->no_dirs	= false;
+    return stat;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static ccp fix_path_lfl ( ccp path, bool rm_common )
+{
+    if ( path[0] == '.' || path[1] == '/' )
+	path += 2;
+    if ( rm_common && !strncasecmp(path,"common/",7) )
+	path += 7;
+    return path;
+}
+
+//-----------------------------------------------------------------------------
+
+enumError CreateLFL
+(
+    struct szs_file_t	*szs,		// valid szs
+    ccp			source_dir,	// path to source dir
+    bool		rm_common,	// TRUE: remove leading 'common/' from path
+    bool		clear_if_empty	// TRUE: clear data (size 0 bytes) if no sub file added
+)
+{
+    //--- sort
+
+    SortSubFilesSZS(szs,SORT_INAME);
+
+
+    //--- calculate size
+
+    uint total_size = sizeof(lfl_header_t) + sizeof(lfl_node_t); // header + terminal node
+    uint max_size   = 0;
+
+    szs_subfile_t *ptr = szs->subfile.list;
+    szs_subfile_t *end = ptr + szs->subfile.used;
+    for ( ; ptr < end; ptr++ )
+    {
+	if (ptr->is_dir)
+	    continue;
+
+	ccp path	= fix_path_lfl(ptr->path,rm_common);
+	const uint size	= sizeof(lfl_node_t)
+ 			+ ALIGN32(strlen(path)+1,4)
+			+ ALIGN32(ptr->size,4);
+	if ( max_size < size )
+	    max_size = size;
+	total_size += size;
+    }
+
+    if ( !max_size && clear_if_empty )
+    {
+	ResetSZS(szs);
+	return ERR_NO_SOURCE_FOUND;
+    }
+
+    u8 *buf = MALLOC(max_size);
+
+
+    //--- setup and write header
+
+    u8 *new_data = MALLOC(total_size);
+    memset(new_data,0,total_size);
+
+    lfl_header_t *head	= (lfl_header_t*)new_data;
+    head->magic		= htonl(LFL_MAGIC_NUM);
+    head->version	= htonl(LFL_VERSION);
+    head->file_size	= htonl(total_size);
+
+
+    //--- add files
+
+    uint offset = sizeof(lfl_header_t);
+    for ( szs_subfile_t *ptr = szs->subfile.list; ptr < end; ptr++ )
+    {
+	if (ptr->is_dir)
+	    continue;
+
+	ASSERT( offset + sizeof(lfl_node_t) + ptr->size <= total_size );
+	PRINT0("offset = %3x\n",offset);
+
+	ccp path		= fix_path_lfl(ptr->path,rm_common);
+	lfl_node_t *node	= (lfl_node_t*)(new_data+offset);
+	uint node_size		= sizeof(lfl_node_t) + ALIGN32(strlen(path)+1,4);
+	node->data_offset	= htonl(node_size);
+	node->data_size		= htonl(ptr->size);
+
+	strcpy(node->file_name,path);
+	StringLower(node->file_name);
+	if (ptr->data)
+	    memcpy(new_data+offset+node_size,ptr->data,ptr->size);
+	else
+	    LoadFILE(source_dir,path,0,new_data+offset+node_size,ptr->size,0,0,false);
+
+	node_size		+= ALIGN32(ptr->size,4);
+	node->next_offset	= htonl(node_size);
+	ASSERT( offset + node_size <= total_size );
+	offset			+= node_size;
+    }
+
+
+    //--- finalize
+
+    FREE(buf);
+    AssignSZS(szs,false,new_data,total_size,true,FF_LFL,0);
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			IterateFilesDOL()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -3716,7 +4032,7 @@ int IterateFilesSZS
 	memcpy(&itpar,p_itpar,sizeof(itpar));
     else
 	memset(&itpar,0,sizeof(itpar));
-    
+
     PRINT("IterateFilesParSZS(ipar=%d,clean=%d,rec=%d,cut=%d,sort=%d) ff=%s\n",
 	p_itpar!=0, itpar.clean_path, recurse, itpar.cut_files, itpar.sort_mode,
 	GetNameFF(szs->fform_file,szs->fform_arch));
@@ -3725,7 +4041,7 @@ int IterateFilesSZS
 	= GetIteratorFunction( szs->fform_arch, itpar.cut_files>=0 );
     if (!ifunc)
 	return -1;
-    
+
     if ( itpar.sort_mode == SORT_NONE && IsBRSUB(szs->fform_arch) )
 	itpar.sort_mode = SORT_OFFSET;
     const bool sort_files = itpar.sort_mode != SORT_NONE;
@@ -3748,6 +4064,8 @@ int IterateFilesSZS
     if (itpar.job_ui_check)
 	UiCheck (&it.ui_check,szs);
 
+// [[lta]] [[2do]]
+// [[lfl]] [[2do]]
     if ( itpar.job_norm_create && ( szs->fform_arch == FF_U8 || szs->fform_arch == FF_WU8 ))
     {
 	ResetFileSZS(szs,false);
@@ -3850,6 +4168,29 @@ static int collect_func
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static int collect_common_func
+(
+    struct szs_iterator_t	*it,	// iterator struct with all infos
+    bool			term	// true: termination hint
+)
+{
+    DASSERT(it);
+    DASSERT(it->szs);
+
+    if (!term)
+    {
+	ccp path = it->path;
+	if ( path[0] == '.' && path[1] == '/' )
+	    path += 2;
+
+	if (!strncasecmp(path,"common/",7))
+	    AppendSubfileSZS(it->szs,it,0);
+    }
+    return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 static int collect_r_func
 (
     struct szs_iterator_t	*it,	// iterator struct with all infos
@@ -3862,7 +4203,6 @@ static int collect_r_func
 
     collect_recurse_t *cr = it->param;
     DASSERT(cr);
-
 
     if (term)
     {
@@ -3961,6 +4301,32 @@ uint CollectFilesSZS
 
     SortSubFilesSZS(szs,sort_mode);
     noPRINT("%d/%d files collected.\n", szs->subfile.used - base, szs->subfile.used );
+    return szs->subfile.used - base;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+uint CollectCommonFilesSZS
+(
+    szs_file_t		* szs,		// valid szs
+    bool		clear,		// true: clear list before adding
+    SortMode_t		sort_mode	// sort subfiles
+)
+{
+    DASSERT(szs);
+    if ( clear && szs->subfile.used )
+	ResetFileSZS(szs,false);
+    const uint base = szs->subfile.used;
+    DecompressSZS(szs,true,0);
+
+    szs->n_dirs		= 0;
+    szs->n_files	= 0;
+    szs->fw_dirs	= 0;
+    szs->fw_files	= 0;
+
+    IterateFilesParSZS(szs,collect_common_func,0,false,false,false,0,-1,SORT_NONE);
+
+    SortSubFilesSZS(szs,sort_mode);
     return szs->subfile.used - base;
 }
 
@@ -4484,6 +4850,9 @@ szs_subfile_t * InsertSubfileSZS
 	file->brsub_version	= it->brsub_version;
 	file->group		= it->group;
 	file->entry		= it->entry;
+
+	if ( it->off && szs->data )
+	    file->data = szs->data + it->off;
     }
     else
 	file->path = path;
@@ -5161,6 +5530,8 @@ void SetupStandardSZS()
 
     std_iter_func[FF_U8]	= IterateFilesU8;
     std_iter_func[FF_WU8]	= IterateFilesU8;
+    std_iter_func[FF_LTA]	= IterateFilesLTA;
+    std_iter_func[FF_LFL]	= IterateFilesLFL;
     std_iter_func[FF_RARC]	= IterateFilesRARC;
     std_iter_func[FF_RKC]	= IterateFilesRKC;
     std_iter_func[FF_PACK]	= IterateFilesPACK;

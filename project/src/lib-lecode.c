@@ -1328,6 +1328,7 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
     lp->vs_textures		&= LE_M_TEXTURE;
     lp->block_textures		= lp->block_textures > 0;
     lp->staticr_points		= lp->staticr_points > 0;
+    lp->use_avail_txt		= lp->use_avail_txt > 0;
     lp->developer_modes		= lp->developer_modes > 0;
 
     if ( build >= 37 )
@@ -1448,6 +1449,8 @@ static void CopyLPAR2Data ( le_analyze_t * ana )
 	h->min_online_sec = htons(lp->min_online_sec);
     if ( offsetof(le_binpar_v1_t,max_online_sec) < ana->param_size )
 	h->max_online_sec = htons(lp->max_online_sec);
+    if ( offsetof(le_binpar_v1_t,use_avail_txt) < ana->param_size )
+	h->use_avail_txt = lp->use_avail_txt;
 
     if ( ana->param_size >= sizeof(le_binpar_v1_274_t)  )
     {
@@ -1619,6 +1622,7 @@ enumError WriteSectionLPAR
 		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
+		,lpar->use_avail_txt
 		,lpar->developer_modes
 		,lpar->dev_mode1
 		,lpar->dev_mode2
@@ -1652,6 +1656,7 @@ enumError WriteSectionLPAR
 	       "DEF-ONLINE-SEC	= %3u%s\r\n"
 	       "MIN-ONLINE-SEC	= %3u%s\r\n"
 	       "MAX-ONLINE-SEC	= %3u%s\r\n"
+	       "USE-AVAIL-TXT	= %u\r\n"
 	       "\r\n"
 	       "DEVELOPER-MODES	= %u\r\n"   // always last 4 settings
 	       "DEV-MODE1	= %u\r\n"
@@ -1679,6 +1684,7 @@ enumError WriteSectionLPAR
 		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
+		,lpar->use_avail_txt
 		,lpar->developer_modes
 		,lpar->dev_mode1
 		,lpar->dev_mode2
@@ -2171,6 +2177,12 @@ enumError AnalyzeLEBinary
 		    ana->lpar.dev_mode3		= p->dev_mode3;
 		}
 
+		if ( param_size >= sizeof(le_binpar_v1_275_t) )
+		{
+		    le_binpar_v1_275_t *p	= (le_binpar_v1_275_t*)(data+off_param);
+		    ana->lpar.use_avail_txt	= p->use_avail_txt;
+		}
+
 		// [[new-lpar]]
 
 		break;
@@ -2528,6 +2540,20 @@ ccp GetLEValid ( le_valid_t valid )
     *d++ = valid & LE_PARAM_KNOWN  ? 'k' : '-';
     *d = 0;
     return buf;
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetLEInValid ( le_valid_t valid )
+{
+    if ( !( valid & LE_HEAD_FOUND   )) return "File header not found";
+    if ( !( valid & LE_HEAD_VALID   )) return "Invalid file header";
+    if ( !( valid & LE_HEAD_KNOWN   )) return "Unknown file header";
+    if ( !( valid & LE_HEAD_VERSION )) return "Unsupported file header version";
+    if ( !( valid & LE_PARAM_FOUND  )) return "LPAR not found";
+    if ( !( valid & LE_PARAM_VALID  )) return "Invalid LPAR";
+    if ( !( valid & LE_PARAM_KNOWN  )) return "Unknown LPAR";
+    return 0;
 }
 
 //-----------------------------------------------------------------------------
@@ -3058,10 +3084,12 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
     ColorSet_t col;
     SetupColorSet(&col,f);
 
-    fprintf(f,"%*s%sLE-CODE binary, valid=%s, file size: %x/hex = %u bytes%s\n",
-		indent,"",
-		col.caption, GetLEValid(ana->valid), ana->data_size, ana->data_size,
-		col.reset );
+    ccp invalid = GetLEInValid(ana->valid);
+    if (invalid)
+	fprintf(f,"%*s%sLE-CODE binary, %s%s%s\n",
+		indent,"", col.caption, col.warn, invalid, col.reset );
+    else
+	fprintf(f,"%*s%sLE-CODE binary%s\n", indent,"", col.caption, col.reset );
     indent += 4;
 
  #if 0 // TEST only!
@@ -3235,14 +3263,14 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	const le_binpar_v1_t *h = ana->param_v1;
 	DASSERT(h);
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_274_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_274_t) )
 	    fprintf(f,
-		"%*s" "Developer modes:   %u = %sabled / Modes: %u,%u,%u\n"
+		"%*s" "Developer modes:   %u = %sabled / Modes: %u, %u, %u\n"
 		,indent,"", h->developer_modes, h->developer_modes ? "en" : "dis"
 		,h->dev_mode1 ,h->dev_mode2 ,h->dev_mode3
 		);
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_264_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_264_t) )
 	    fprintf(f,
 		"%*s" "Allow cheat codes: %u = %s\n"
 		,indent,"", h->cheat_mode, GetCheatModeInfo(h->cheat_mode)
@@ -3263,7 +3291,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 			: h->enable_perfmon ? "Wii(U) only" :"disabled"
 		);
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_37_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_37_t) )
 	    fprintf(f,
 		"%*s" "Custom Timetrial:  %u = %sabled\n"
 		"%*s" "Extended P-Flags:  %u = %sabled\n"
@@ -3273,7 +3301,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		,indent,"", h->block_track, h->block_track == 1 ? "" : "s"
 		);
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t) )
 	{
 	    ccp comment;
 	    char buf[50];
@@ -3293,7 +3321,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		indent,"", h->enable_speedo, comment );
 	}
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_260_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_260_t) )
 	{
 	    fprintf(f,
 		"%*s" "Debug mode:        %u = %s\n"
@@ -3303,7 +3331,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		);
 	}
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_264_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_264_t) )
 	{
 	    const int nframes  = ntohs(h->thcloud_frames);
 	    fprintf(f,
@@ -3314,7 +3342,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		);
 	}
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_269_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_269_t) )
 	{
 	    fprintf(f,
 		"%*s" "Worldwide:         battle=%s, versus=%s\n"
@@ -3331,15 +3359,15 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		);
 	}
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_26a_t)  )
-	{
-	    fprintf(f,
-		"%*s" "Points by StaticR: %u = %sabled\n"
-		,indent,"", h->staticr_points, h->staticr_points ? "en" : "dis"
-		);
-	}
+	if ( ana->param_size >= sizeof(le_binpar_v1_26a_t) )
+	    fprintf(f,"%*s" "Points by StaticR: %u = %sabled\n"
+		,indent,"", h->staticr_points, h->staticr_points ? "en" : "dis" );
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_270_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_275_t) )
+	    fprintf(f,"%*s" "Use \"avail.txt\":%4u = %sabled\n",
+			indent,"", h->use_avail_txt, h->use_avail_txt ? "en" : "dis" );
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_270_t) )
 	{
 	    const uint def = ntohs(h->default_online_sec);
 	    const uint min = ntohs(h->min_online_sec);
@@ -3356,7 +3384,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	// [[new-lpar]]
 
  #if 0 // for later use
-	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t)  )
+	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t) )
 	{
 	    if (h->reserved_1bb)
 		fprintf(f,"%*s" "Reserved 1BB:      %u\n",
@@ -3521,7 +3549,34 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			copy track files		///////////////
+///////////////			find + copy track files		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+ccp FindTrackFile ( ccp src_name, TransferMode_t *tfer_mode )
+{
+    if (opt_track_source.used)
+    {
+	char src[PATH_MAX];
+	ParamFieldItem_t *ptr = opt_track_source.field, *end;
+	for ( end = ptr + opt_track_source.used; ptr < end; ptr++ )
+	{
+	    PathCatBufPPE(src,sizeof(src),ptr->key,src_name,".szs");
+
+	    struct stat st;
+	    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
+	    {
+		if (tfer_mode)
+		    *tfer_mode = ptr->num;
+		return STRDUP(src);
+	    }
+	}
+    }
+
+    if (tfer_mode)
+	*tfer_mode = 0;
+    return 0;
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 void TransferTrackFile
@@ -4069,6 +4124,7 @@ static enumError ScanTextLPAR_PARAM
 	{ "DEF-ONLINE-SEC",	SPM_U16, &lpar->default_online_sec },
 	{ "MIN-ONLINE-SEC",	SPM_U16, &lpar->min_online_sec },
 	{ "MAX-ONLINE-SEC",	SPM_U16, &lpar->max_online_sec },
+	{ "USE-AVAIL-TXT",	SPM_U8,  &lpar->use_avail_txt },
 
 	// [[new-lpar]]
 	{0}

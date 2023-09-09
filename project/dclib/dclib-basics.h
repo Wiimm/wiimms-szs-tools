@@ -7598,9 +7598,16 @@ static inline uint CreateUniqueIdNBO(void) { return htonl(CreateUniqueIdN(1)); }
 
 void Sha1Hex2Bin ( sha1_hash_t bin, ccp src, ccp end );
 void Sha1Bin2Hex ( sha1_hex_t hex, cvp bin );
+void Sha1B642Bin ( sha1_hash_t bin, ccp src, ccp end );
+void Sha1Bin2B64 ( sha1_b64_t b64, cvp bin );
 
 // return CircBuf()
 ccp GetSha1Hex ( cvp bin );
+
+void Sha1SizeHex2Bin ( sha1_size_hash_t *bin, ccp src, ccp end );
+void Sha1SizeBin2Hex ( sha1_size_hex_t hex, cvp bin );
+void Sha1SizeB642Bin ( sha1_size_hash_t *bin, ccp src, ccp end );
+void Sha1SizeBin2B64 ( sha1_size_b64_t b64, cvp bin );
 
 ///////////////////////////////////////////////////////////////////////////////
 

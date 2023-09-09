@@ -186,12 +186,30 @@ enumError OpenFILE
     bool		ignore_limit	// ignore opt_max_file_size
 )
 {
-    FileMode_t fmode = FM_STDIO;
+    FileMode_t fmode = FM_STDIO | FM_SILENT_ON_LIMIT;
     if (ignore_no_file)
 	fmode |= FM_IGNORE;
-    return OpenFile( f,initialize, fname,fmode,
-	ignore_limit ? 0 : opt_max_file_size,
-	"You can change this security limit with --max-file-size=MiB.\n" );
+
+    off_t use_limit = ignore_limit ? 0 : opt_max_file_size;
+
+    enumError err = OpenFile( f, initialize, fname, fmode, use_limit, 0 );
+    if ( err != ERR_FILE_TOO_BIG )
+	return err;
+
+    CloseFile(f,0);
+
+    // change limit for some file types
+
+    const file_format_t fform = GetFileTypeByMagic(fname,0);
+    switch (fform)
+    {
+	case FF_LTA:	use_limit = 2ull*GiB; break;
+	default:	break;
+    }
+
+    fmode &= ~FM_SILENT_ON_LIMIT;
+    return OpenFile( f, initialize, fname, fmode, use_limit,
+	"The security limit can be increased with e.g. --max-file-size=2g\n" );
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -865,6 +883,7 @@ file_format_t GetByMagicFF
 	    case LE_PREFIX_MAGIC8_NUM:		return FF_PREFIX;
 	    case LE_MTCAT_MAGIC8_NUM:		return FF_MTCAT;
 	    case LE_CT_SHA1_MAGIC8_NUM:		return FF_CT_SHA1;
+	    case LTA_MAGIC_NUM:			return FF_LTA;
 	}
     }
 
@@ -913,6 +932,7 @@ file_format_t GetByMagicFF
 	    case LE_BINARY_MAGIC_NUM:	return FF_LE_BIN;
 	    case LEX_BIN_MAGIC_NUM:	return FF_LEX;
 	    case LEX_TEXT_MAGIC_NUM:	return FF_LEX_TXT;
+	    case LFL_MAGIC_NUM:		return FF_LFL;
 
 	    case CT0_CODE_MAGIC_NUM:	return FF_CT0_CODE;
 	    case CT0_DATA_MAGIC_NUM:	return FF_CT0_DATA;
@@ -1186,6 +1206,34 @@ file_format_t GetByMagicFF
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+//  [[GetFileTypeByMagic]]
+
+file_format_t GetFileTypeByMagic
+(
+    // returns FF_INVALID on read err, or detected FF.
+
+    ccp			fname,		// file to open
+    FileAttrib_t	* fatt		// not NULL: store file attributes
+)
+{
+    FileAttrib_t local_fatt;
+    if (!fatt)
+	fatt = &local_fatt;
+
+    char buf[CHECK_FILE_SIZE];
+    enumError err = LoadFILE(fname,0,0,buf,sizeof(buf),1,fatt,false);
+    if ( err <= ERR_WARNING )
+    {
+	if (S_ISDIR(fatt->mode))
+	    return FF_DIRECTORY;
+
+	return GetByMagicFF(buf,sizeof(buf),fatt->size);
+    }
+
+    return FF_INVALID;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 // [[GetFileTypeByExt]]
 
 const file_type_t * GetFileTypeByExt
@@ -1321,7 +1369,7 @@ file_format_t GetImageFFByFName
 (
     // returns the normalized FF for a valid image or NULL (=FF_UNKNOWN)
 
-    ccp			fname,		// NULL or filename to analyse extention
+    ccp			fname,		// NULL or filename to analyse extension
     file_format_t	default_fform,	// use this as default/fallback
     bool		allow_png	// true: allow FF_PNG
 )
@@ -2453,6 +2501,22 @@ int GetVersionFF
 	    {
 		const bmg_header_t *bh = (bmg_header_t*)data;
 		return ntohl(bh->n_sections)*10 + bh->encoding;
+	    }
+	    break;
+
+	case FF_LTA:
+	    if ( data_size >= sizeof(lta_header_t) )
+	    {
+		const lta_header_t *lta = (lta_header_t*)data;
+		return ntohl(lta->version);
+	    }
+	    break;
+
+	case FF_LFL:
+	    if ( data_size >= sizeof(lfl_header_t) )
+	    {
+		const lfl_header_t *lfl = (lfl_header_t*)data;
+		return ntohl(lfl->version);
 	    }
 	    break;
 
@@ -5451,7 +5515,7 @@ exmem_t PrintSPF
 			color = 0x21; // BLUE1
 		    break;
 
-		  case 'E':	// f_ext: file extention
+		  case 'E':	// f_ext: file extension
 		    src = spf->f_ext;
 		    if (!add_space)
 			add_space = -1;

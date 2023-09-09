@@ -108,6 +108,7 @@ ccp GetErrorName
 	case ERR_CANT_RENAME:		return "CAN'T RENAME FILE";
 	case ERR_CANT_CLOSE:		return "CAN'T CLOSE FILE";
 	case ERR_CANT_CONNECT:		return "CAN'T CONNECT";
+	case ERR_FILE_TOO_BIG:		return "FILE TOO BIG";
 	case ERR_CANT_OPEN:		return "CAN'T OPEN FILE";
 	case ERR_CANT_APPEND:		return "CAN'T APPEND FILE";
 	case ERR_CANT_CREATE:		return "CAN'T CREATE FILE";
@@ -229,6 +230,7 @@ ccp GetErrorText
 	case ERR_CANT_RENAME:		return "Can't rename file";
 	case ERR_CANT_CLOSE:		return "Can't close file";
 	case ERR_CANT_CONNECT:		return "Can't connect";
+	case ERR_FILE_TOO_BIG:		return "Can't open, because file is too big";
 	case ERR_CANT_OPEN:		return "Can't open file";
 	case ERR_CANT_APPEND:		return "Can't open file for appending";
 	case ERR_CANT_CREATE:		return "Can't create file";

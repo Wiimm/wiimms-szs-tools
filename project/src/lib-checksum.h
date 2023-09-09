@@ -48,38 +48,32 @@ typedef struct szs_file_t szs_file_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
-///////////////			struct sha1_size_t		///////////////
+///////////////			struct sha1_size_hash_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[sha1_size_t]]
+// [[sha1_size_hash_t]]
 
 #define CHECKSUM_DB_SIZE 32
 
 ///////////////////////////////////////////////////////////////////////////////
 
-typedef struct sha1_size_t
-{
-    sha1_hash_t	hash;	    // SHA1 checksum (binary)
-    u32		size;	    // size of data (big endian)
-}
-__attribute__ ((packed)) sha1_size_t;
-
-///////////////////////////////////////////////////////////////////////////////
+void CreateSS ( cvp data, uint size, sha1_size_hash_t *dest );
+void CreateSS64 ( cvp data, uint size, sha1_size_b64_t dest );
 
 // bufsize should be >40
-void CreateSSChecksum		( char *buf, uint bufsize, const sha1_size_t *ss );
+void CreateSSChecksum		( char *buf, uint bufsize, const sha1_size_hash_t *ss );
 void CreateSSChecksumBySZS	( char *buf, uint bufsize, const szs_file_t *szs );
 
 // normed DB coding (independent of options)
-void CreateSSChecksumDB		( char *buf, uint bufsize, const sha1_size_t *ss );
+void CreateSSChecksumDB		( char *buf, uint bufsize, const sha1_size_hash_t *ss );
 void CreateSSChecksumDBByData	( char *buf, uint bufsize, cvp data, uint size );
 void CreateSSChecksumDBBySZS	( char *buf, uint bufsize, const szs_file_t *szs );
 
-enumError GetSSByFile ( sha1_size_t *ss, ccp path1, ccp path2 );
+enumError GetSSByFile ( sha1_size_hash_t *ss, ccp path1, ccp path2 );
 
 // slen < 0 => strlen(source)
 // returns: 0:fail, 1:SHA1, 2:DB64
 // if res != NULL: scanned SHA1
-int IsSSChecksum ( sha1_size_t *res, ccp source, int slen );
+int IsSSChecksum ( sha1_size_hash_t *res, ccp source, int slen );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

@@ -98,6 +98,66 @@ static void print_title ( FILE * f )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////		    simulate MKW environment		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+#define alignNumberUp ALIGN32
+
+static inline void * EGG__Heap__alloc ( uint size, uint align, void * heap )
+	{ return MALLOC(size); }
+
+static inline void EGG__Heap__free ( void * memoryspace, void * EGG__Heap )
+	{ FREE(memoryspace); }
+
+///////////////////////////////////////////////////////////////////////////////
+
+#define LEDebugReport(...) PRINT_FUNC(__VA_ARGS__)
+
+#if 0
+void LEDebugReport ( ccp format, ... ) __attribute__ ((__format__(__printf__,3,4)));
+
+void LEDebugReport ( ccp format, ... )
+{
+    
+}
+#endif
+
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct DVDFileInfo
+{
+    FILE *f;
+}
+DVDFileInfo;
+
+//-----------------------------------------------------------------------------
+
+int DVDOpen ( char * path, DVDFileInfo * fi )
+{
+    ASSERT(fi);
+    fi->f = fopen(path,"rb");
+    return fi->f != 0;
+}
+
+//-----------------------------------------------------------------------------
+
+int DVDReadPrio ( DVDFileInfo * fi, void * dest, int length, int filepos, int prio )
+{
+    fseek(fi->f,filepos,SEEK_SET);
+    return fread(dest,1,length,fi->f);
+}
+
+//-----------------------------------------------------------------------------
+
+int DVDClose ( DVDFileInfo * fi )
+{
+    int stat = fclose(fi->f);
+    fi->f = 0;
+    return stat;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			test_float()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4083,7 +4143,7 @@ static enumError test_xcode_hex ( int argc, char ** argv )
 static enumError test_is_checksum ( int argc, char ** argv )
 {
     putchar('\n');
-    sha1_size_t res;
+    sha1_size_hash_t res;
     sha1_hex_t hex;
 
     for ( int i = 1; i < argc; i++ )
@@ -4429,6 +4489,376 @@ static enumError test_hms ( int argc, char ** argv )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			test_d()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_d ( int argc, char ** argv )
+{
+    char buf[PATH_MAX];
+
+    for ( int i = 1; i < argc; i++ )
+    {
+	ccp arg = argv[i];
+	Insert_d(buf,sizeof(buf),arg);
+	printf("%s => %s\n",arg,buf);
+    }
+
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////	    LTA + LFL interface of mkwfun: simulation	///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+char LTA_PATH[200];
+
+#define LTA_LOAD_NODES_SIZE	(LTA_MAX_NODES*sizeof(lta_node_t)+LTA_DEFAULT_ALIGN)
+#define LTA_MAX_LIST		5
+
+static inline bool isEnabledLTA() { return true; }
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////	    LTA + LFL interface of mkwfun patcher.h	///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[lta_file_ref_t]]
+
+typedef struct lta_file_ref_t
+{
+    // call ClearCacheLTA() to free dynamic data
+
+    void	*data;	// pointer to io-buf
+    unsigned	size;
+}
+lta_file_ref_t;
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+typedef struct lta_info_t
+{
+    unsigned index;		// index of record
+    unsigned node_off;		// offset of first node
+    unsigned first_slot;	// first supported slot
+    unsigned end_slot;		// first excluded slot, range = (first_slot..end_slot(
+}
+lta_info_t;
+
+extern lta_info_t lta_info_list[LTA_MAX_LIST];
+
+//-----------------------------------------------------------------------------
+
+extern int lta_cache_slot;
+extern int lta_cache_par_index;
+extern lta_file_ref_t lta_cache_data;
+
+void ClearCacheLTA(void);
+
+//-----------------------------------------------------------------------------
+
+// setup lta_info_list
+void SetupInfoLTA(void);
+
+// print a slot overview, format "a-b/c-d/...", returns 'buf'
+char * CreateSlotInfoLTA ( char *buf, unsigned bufsize, const char *prefix );
+
+// find LTA info for a slot
+const lta_info_t * FindInfoLTA ( int slot );
+
+// read node of slot
+lta_node_t ReadNodeLTA ( DVDFileInfo *fi, const lta_info_t *info, int slot );
+
+// read track data, call ClearCacheLTA() to free dynamic memory
+lta_file_ref_t ReadTrackLTA ( DVDFileInfo *fi, const lta_info_t *info, int slot, int use_d );
+lta_file_ref_t LoadTrackLTA ( int slot, int use_d );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////	    LTA + LFL interface of mkwfun patcher.c	///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+lta_info_t lta_info_list[LTA_MAX_LIST] = {{0}};
+
+int lta_cache_slot = -1;
+int lta_cache_par_index = -1;
+lta_file_ref_t lta_cache_data;
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ClearCacheLTA(void)
+{
+    if (lta_cache_data.data)
+	EGG__Heap__free(lta_cache_data.data,0);
+    lta_cache_data.data = 0;
+    lta_cache_data.size = 0;
+
+    lta_cache_slot = lta_cache_par_index = -1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+// setup lta_info_list
+void SetupInfoLTA(void)
+{
+    if (!isEnabledLTA())
+	return;
+
+    // Lets get some space on the heap to store file content
+    // That needs to be 32-byte aligned for the DVD read.
+    const int load_size = alignNumberUp(sizeof(lta_header_t),32);
+    void *iobuf = EGG__Heap__alloc(load_size,32,0);
+    if (!iobuf)
+	return;
+
+    for ( int idx = 0; idx < LTA_MAX_LIST; idx++ )
+    {
+	lta_info_t *li = lta_info_list + idx;
+	li->index = idx+1;
+	li->first_slot = li->end_slot = 0;
+
+	char fname[sizeof(LTA_PATH)+10];
+	snprintf(fname,sizeof(fname),LTA_PATH,li->index);
+
+	// Try to open file
+	DVDFileInfo fi;
+	if (!DVDOpen((char*)&fname, &fi))
+	{
+	    // File doesn't seem to exist.
+	    continue;
+	}
+
+	const int stat = DVDReadPrio(&fi,iobuf,load_size,0,2);
+	if ( stat == load_size )
+	{
+	    lta_header_t *head = (lta_header_t*)iobuf;
+be32n((u32*)&head->version,(u32*)&head->version,sizeof(lta_header_t)/4-2);
+	    if ( !memcmp(&head->magic,LTA_MAGIC,sizeof(head->magic))
+		&& head->version == LTA_VERSION
+		&& head->node_size == sizeof(lta_node_t) )
+	    {
+		li->node_off	= head->node_off;
+		li->first_slot	= head->base_slot;
+		li->end_slot	= head->base_slot + head->n_slots;
+	    }
+	}
+	DVDClose(&fi);
+    }
+
+    // free io buffer
+    EGG__Heap__free(iobuf,0);
+
+    char info[120];
+    CreateSlotInfoLTA(info,sizeof(info),0);
+    LEDebugReport("LTA: %s\n",info);
+}
+
+//-----------------------------------------------------------------------------
+
+char * CreateSlotInfoLTA ( char *buf, unsigned bufsize, const char *prefix )
+{
+    if (!isEnabledLTA())
+    {
+	strncpy(buf,"disabled",bufsize);
+	return buf;
+    }
+
+    char *start = buf;
+    char *end   = buf + bufsize - 1;
+
+    if (prefix)
+	while ( *prefix && start < end-1 )
+	    *start++ = *prefix++;
+
+    char *dest = start;
+    lta_info_t *li = lta_info_list;
+    for ( int idx = 0; idx < LTA_MAX_LIST && dest < end; idx++, li++ )
+    {
+	if ( li->first_slot < li->end_slot  )
+	    dest += snprintf(dest,end-dest,"%s%u-%u",
+			dest  > start ? "/" : "",
+			li->first_slot, li->end_slot - 1 );
+    }
+    if ( dest == start )
+	*dest++ = '-';
+    *dest = 0;
+    return buf;
+}
+
+//-----------------------------------------------------------------------------
+
+// find LTA info for a slot
+const lta_info_t * FindInfoLTA ( int slot )
+{
+    lta_info_t *li = lta_info_list;
+    for ( int idx = 0; idx < LTA_MAX_LIST; idx++, li++ )
+	if ( slot >= li->first_slot && slot < li->end_slot )
+	    return li;
+    
+    return 0;
+}
+
+//-----------------------------------------------------------------------------
+
+// read node data of slot
+lta_node_t ReadNodeLTA ( DVDFileInfo *fi, const lta_info_t *info, int slot )
+{
+    lta_node_t node = { .std.szs_off = 0 };
+    if ( info && slot >= info->first_slot && slot < info->end_slot && sizeof(lta_node_t) == 32 )
+    {
+	// nodes are well aligned!
+	const int load_size = alignNumberUp(sizeof(lta_node_t),32);
+	void *iobuf = EGG__Heap__alloc(load_size,32,0);
+	if (iobuf)
+	{
+	    const unsigned off = info->node_off + sizeof(lta_node_t) * ( slot - info->first_slot );
+	    const int stat = DVDReadPrio(fi,iobuf,load_size,off,2);
+	    if ( stat == load_size )
+		memcpy(&node,iobuf,sizeof(node));
+be32n((u32*)&node,(u32*)&node,sizeof(node)/4);
+	}
+    }
+    return node;
+}
+
+//-----------------------------------------------------------------------------
+
+// read file by slot + par_index; use cache if valid
+lta_file_ref_t ReadFileLTA ( DVDFileInfo *fi, const lta_info_t *info, int slot, int par_index )
+{
+    if ( lta_cache_slot == slot && lta_cache_par_index == par_index )
+    {
+PRINT1("Use LTA Cache %d.%d\n",slot,par_index);
+	return lta_cache_data;
+    }
+
+    lta_file_ref_t fref = {0};
+    lta_node_t node = ReadNodeLTA(fi,info,slot);
+    const lta_node_par_t *par = node.par + par_index;
+    if ( par->size )
+    {
+xBINGO;
+	ClearCacheLTA();
+	const int load_size = alignNumberUp(par->size,32);
+	fref.data = EGG__Heap__alloc(load_size,32,0);
+	fref.size = par->size;
+	const int stat = DVDReadPrio(fi,fref.data,load_size,par->offset,2);
+PRINT1("load_size=%d, stat=%d\n",load_size,stat);
+	if ( stat != load_size )
+	    EGG__Heap__free(fref.data,0);
+	else
+	{
+PRINT1("Load LTA %d.%d\n",slot,par_index);
+	    lta_cache_data = fref;
+	    lta_cache_slot = slot;
+	    lta_cache_par_index = par_index;
+	}
+    }
+    return fref;
+}
+
+//-----------------------------------------------------------------------------
+
+// open+read+close file by slot + par_index; use cache if valid
+lta_file_ref_t LoadFileLTA ( int slot, int par_index )
+{
+    if ( lta_cache_slot == slot && lta_cache_par_index == par_index )
+    {
+PRINT1("Use LTA Cache %d.%d\n",slot,par_index);
+	return lta_cache_data;
+    }
+
+    lta_file_ref_t fref = {0};
+    const lta_info_t *info = FindInfoLTA(slot);
+    if (info)
+    {
+xBINGO;
+	char fname[sizeof(LTA_PATH)+10];
+	snprintf(fname,sizeof(fname),LTA_PATH,info->index);
+	DVDFileInfo fi;
+	if (DVDOpen((char*)&fname,&fi))
+	{
+	    fref = ReadFileLTA(&fi,info,slot,par_index);
+	    DVDClose(&fi);
+	}
+    }
+    return fref;
+}
+
+//-----------------------------------------------------------------------------
+
+// open+read+close file by slot + use_d; use cache if valid
+lta_file_ref_t LoadTrackLTA ( int slot, int use_d )
+{
+    return LoadFileLTA( slot, use_d ? LNPI_D_SZS : LNPI_STD_SZS );
+}
+
+//-----------------------------------------------------------------------------
+
+// open+read+close file by slot + use_d; use cache if valid
+lta_file_ref_t LoadCommonLTA ( int slot, int use_d, ccp path )
+{
+    lta_file_ref_t res = {0};
+    lta_file_ref_t ref = LoadFileLTA( slot, use_d ? LNPI_D_LFL : LNPI_STD_LFL );
+    if ( ref.data && ref.size > sizeof(lfl_header_t) + sizeof(lfl_node_t) )
+    {
+	lfl_header_t *head = (lfl_header_t*)ref.data;
+be32n((u32*)head,(u32*)head,sizeof(head)/4);
+	if ( head->magic == LFL_MAGIC_NUM )
+	{
+	    lfl_node_t *node = head->first_node;
+be32n((u32*)node,(u32*)node,sizeof(node)/4);
+	    while ( node->data_size )
+	    {
+xBINGO;
+		if (!strcasecmp(node->file_name,path))
+		{
+		    res.data = (u8*)node  + node->data_offset;
+		    res.size = node->data_size;
+		    break;
+		}
+		node = (lfl_node_t*)( (u8*)node  + node->next_offset );
+be32n((u32*)node,(u32*)node,sizeof(node)/4);
+	    }
+	}
+    }
+    return res;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			test_lfl()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError test_lfl ( int argc, char ** argv )
+{
+    if ( argc < 2 )
+    {
+	fputs(	"\n"
+		"Test LFL access of LTA files\n"
+		"\n"
+		"Syntax: 'wtest' 'lfl' LTA_DIR LFL_FILE...\n"
+		"\n"
+		,stdout);
+	return ERR_WARNING;
+    }
+
+    PathCatPP(LTA_PATH,sizeof(LTA_PATH),argv[1],"tracks-%d.lta");
+    SetupInfoLTA();
+
+    for ( int idx = 2; idx < argc; idx++ )
+    {
+	ccp arg = argv[idx];
+	lta_file_ref_t ref = LoadCommonLTA(32,false,arg);
+	printf("%p %6x %s\n",ref.data,ref.size,arg);
+	if (ref.data)
+	    HexDump16(stdout,0,0,ref.data,ref.size<64?ref.size:64);
+    }
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			develop()			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4737,6 +5167,8 @@ enum
     CMD_KEY_LIST,		// test_key_list(argc,argv)
     CMD_RANDOM,			// test_random(argc,argv)
     CMD_HMS,			// test_hms(argc,argv)
+    CMD_D,			// test_d(argc,argv)
+    CMD_LFL,			// test_lfl(argc,argv)
 
  #ifdef HAVE_WIIMM_EXT
     CMD_WIIMM,			// test_wiimm(argc,argv)
@@ -4818,6 +5250,8 @@ static const KeywordTab_t CommandTab[] =
 	{ CMD_KEY_LIST,		"KEY-LIST",	"KL",		0 },
 	{ CMD_RANDOM,		"RANDOM",	"RND",		0 },
 	{ CMD_HMS,		"HMS",		0,		0 },
+	{ CMD_D,		"_D",		0,		0 },
+	{ CMD_LFL,		"LFL",		0,		0 },
 
  #ifdef HAVE_WIIMM_EXT
 	{ CMD_WIIMM,		"WIIMM",	"W",		0 },
@@ -5027,6 +5461,8 @@ int main ( int argc, char ** argv )
 	case CMD_KEY_LIST:		test_key_list(argc,argv); break;
 	case CMD_RANDOM:		test_random(argc,argv); break;
 	case CMD_HMS:			test_hms(argc,argv); break;
+	case CMD_D:			test_d(argc,argv); break;
+	case CMD_LFL:			test_lfl(argc,argv); break;
 
  #ifdef HAVE_WIIMM_EXT
 	case CMD_WIIMM:			test_wiimm(argc,argv); break;

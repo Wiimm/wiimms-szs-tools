@@ -121,6 +121,7 @@ typedef struct analyze_szs_t
     int		lap_count;		// STGI lap counter
     float	speed_factor;		// STGI speed factor
     u16		speed_mod;		// STGI speed mod
+    u8		have_common;		// 1: found at least one common file
     u8		valid_track;		// 1: valid track or arena file
 
     char	gobj_info[20];		// gobj counters

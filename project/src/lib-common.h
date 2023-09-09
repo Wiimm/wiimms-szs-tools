@@ -408,7 +408,7 @@ enumError ScanITEMSLOT
     bool		init_itemslot,	// true: initialize 'itemslot' first
     const void		* data,		// data to scan
     uint		data_size,	// size of 'data'
-    ccp			fname		// not NULL: Analyse file extention for '.slt'
+    ccp			fname		// not NULL: Analyse file extension for '.slt'
 );
 
 ///////////////////////////////////////////////////////////////////////////////

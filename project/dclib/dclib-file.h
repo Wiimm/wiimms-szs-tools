@@ -112,7 +112,8 @@ typedef enum FileMode_t
 {
     FM_TEST		= 0x00001,  // test mode, don't modify any file
     FM_SILENT		= 0x00002,  // suppress error messages
-    FM_IGNORE		= 0x00004,  // ignore, if no file on OpenFile()
+    FM_SILENT_ON_LIMIT	= 0x00004,  // be silent if file limit reached
+    FM_IGNORE		= 0x00008,  // ignore, if no file on OpenFile()
 				    //   and return ERR_NOT_EXISTS
 
     FM_MODIFY		= 0x00010,  // open file for reading and writing
@@ -132,8 +133,11 @@ typedef enum FileMode_t
     FM_TOUCH		= 0x40000,  // touch file (set timestamp) on close
     FM_TEMP		= 0x80000,  // temporary file: remove file on close
 
+
+    // relevant for OpenFile()
     FM_M_OPEN		= FM_TEST
 			| FM_SILENT
+			| FM_SILENT_ON_LIMIT
 			| FM_IGNORE
 			| FM_MODIFY
 			| FM_STDIO
@@ -142,6 +146,7 @@ typedef enum FileMode_t
 			| FM_TCP
 			| FM_TEMP,
 
+    // relevant for CreateFile()
     FM_M_CREATE		= FM_TEST
 			| FM_SILENT
 			| FM_MODIFY
@@ -401,7 +406,7 @@ enumError OpenFile
     FileMode_t		file_mode,	// open modes
     off_t		limit,		// >0: don't open, if file size > limit
     ccp			limit_message	// NULL or a with LF terminated text.
-					//   It is printed after the message.
+					//   It is printed behind the error message.
 );
 
 //-----------------------------------------------------------------------------
@@ -1696,7 +1701,7 @@ typedef struct CpuStatus_t
     u64		iowait;		// 5: time waiting for I/O to complete (not reliable).
     u64		irq;		// 6..7:  Time servicing (soft-)interrupts.
     u64		virtual;	// 8..10: time for virtual os.
-    u64		unknown;	// 11...: time for future extentions
+    u64		unknown;	// 11...: time for future extensions
 
     int		running_proc;	// currently runnable processes
     int		total_proc;	// currently total processes

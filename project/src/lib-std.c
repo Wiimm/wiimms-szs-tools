@@ -131,6 +131,7 @@ bool		opt_links		= false;
 bool		opt_rm_aiparam		= false;
 u32		opt_align		= 0;
 u32		opt_align_u8		= U8_DEFAULT_ALIGN;
+u32		opt_align_lta		= LTA_DEFAULT_ALIGN;
 u32		opt_align_pack		= PACK_SUBFILE_ALIGN;
 u32		opt_align_brres		= BRRES_DEFAULT_ALIGN;
 u32		opt_align_breff		= BREFF_DEFAULT_ALIGN;
@@ -180,6 +181,7 @@ int		opt_recurse		= -1;
 int		opt_ext			= 0;
 bool		opt_decode		= false;
 bool		opt_cut			= false;
+bool		opt_avail_txt		= false;
 bool		opt_cmpr_valid		= false;
 u8		opt_cmpr_def[8]		= { 0x00,0x00, 0x00,0x20, 0xff,0xff,0xff,0xff };
 uint		opt_n_images		= 0;
@@ -1316,6 +1318,39 @@ void PrintNumF
 
     while ( data < end )
 	fprintf(f," 0x%02x",*data++);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+char * Insert_d ( char * buf, uint bufsize, ccp path )
+{
+    DASSERT(buf);
+    DASSERT(bufsize);
+    DASSERT(path);
+
+    if ( !path || !*path )
+	*buf = 0;
+    else
+    {    
+	char ext[100];
+
+	StringCopyS(buf,bufsize,path);
+	char *ptr = strrchr(buf,'/');
+	if (!ptr)
+	    ptr = buf;
+
+	ptr = strrchr(ptr,'.');
+	if (ptr)
+	{
+	    StringCopyS(ext,sizeof(ext),ptr);
+	    *ptr = 0;
+	}
+	else
+	    *ext = 0;
+
+	StringCat3S(buf,bufsize,buf,"_d",ext);
+    }
+    return buf;
 }
 
 //
@@ -3692,6 +3727,10 @@ SortMode_t GetSortMode
 		case FF_RARC:
 		    return SORT_U8;
 
+		case FF_LTA:
+		case FF_LFL:
+		    return SORT_NONE;
+
 		case FF_PACK:
 		    return SORT_PACK;
 
@@ -3722,7 +3761,7 @@ static const KeywordTab_t opt_sort_tab[] =
 
 	{  SORT_U8,		"U8",		0,		0 },
 	{  SORT_PACK,		"PACK",		0,		0 },
-	{  SORT_BRRES,		"BRRES",	"BRES",		0 },
+	{  SORT_BRRES,		"BRRES",	"BRES",	 	0 },
 	{  SORT_BREFF,		"BREFF",	"BREFT",	0 },
 
 	{  SORT_AUTO,		"AUTO",		0,		0 },
@@ -6181,6 +6220,10 @@ valid_t IsValid
 	case FF_CT1_DATA:
 	    return IsValidCTCODE(data,data_size,file_size,fname);
 
+	case FF_LTA:
+	    return IsValidLTA(data,data_size,file_size,fname);
+// [[lfl]] [[2do]]
+
 	default:
 	    break;
     }
@@ -6940,6 +6983,32 @@ valid_t IsValidSTATICR
 
     // ??? [[2do]]
     return VALID_NO_TEST; // [[2do]] or VALID_OK?
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+valid_t IsValidLTA
+(
+    const void		* data,		// data
+    uint		data_size,	// size of 'data'
+    uint		file_size,	// NULL or size of complete file
+    ccp			fname		// not NULL: print warnings with file ref
+)
+{
+    if ( !data || data_size < sizeof(lta_header_t) )
+	return VALID_WRONG_FF;
+
+    const lta_header_t * lta = data;
+    if ( ntoh64(lta->magic) != LTA_MAGIC_NUM )
+	return VALID_WRONG_FF;
+
+    const uint lta_size = ntohl(lta->file_size);
+    if ( lta_size < file_size )
+	return VALID_WARNING;
+    if ( lta_size > file_size )
+	return VALID_ERROR;
+
+    return VALID_OK;
 }
 
 //

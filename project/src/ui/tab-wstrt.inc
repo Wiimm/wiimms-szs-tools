@@ -691,7 +691,7 @@
 		"Load the specified update file and replace the internal porting database."
 		" If not set, then file @port-db.bin@ is searched in the share path." },
 
-  { T_OPT_CP,	"ORDER",	"order",
+  { T_OPT_CP,	"ORDER",	"order|sort",
 		"pujk",
 		"The parameter is scanned for the first appearance of letters P (for PAL),"
 		" U (USA), J (JAPAN) and K (KOREA) to define the order of the output."

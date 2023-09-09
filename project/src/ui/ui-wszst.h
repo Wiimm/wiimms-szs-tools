@@ -156,6 +156,7 @@ typedef enum enumOptions
 	OPT_IGNORE_SETUP,
 	OPT_PURGE,
 	OPT_ALIGN_U8,
+	OPT_ALIGN_LTA,
 	OPT_ALIGN_PACK,
 	OPT_ALIGN_BRRES,
 	OPT_ALIGN_BREFF,
@@ -175,6 +176,7 @@ typedef enum enumOptions
 	OPT_WU8,
 	OPT_XWU8,
 	OPT_WBZ,
+	OPT_LFL,
 	OPT_PACK,
 	OPT_BRRES,
 	OPT_BREFF,
@@ -200,7 +202,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 144
+	OPT__N_SPECIFIC, // == 146
 
 	//----- global options -----
 
@@ -289,7 +291,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 228
+	OPT__N_TOTAL // == 230
 
 } enumOptions;
 
@@ -404,6 +406,7 @@ typedef enum enumOptions
 //	OB_IGNORE_SETUP		= 1llu << OPT_IGNORE_SETUP,
 //	OB_PURGE		= 1llu << OPT_PURGE,
 //	OB_ALIGN_U8		= 1llu << OPT_ALIGN_U8,
+//	OB_ALIGN_LTA		= 1llu << OPT_ALIGN_LTA,
 //	OB_ALIGN_PACK		= 1llu << OPT_ALIGN_PACK,
 //	OB_ALIGN_BRRES		= 1llu << OPT_ALIGN_BRRES,
 //	OB_ALIGN_BREFF		= 1llu << OPT_ALIGN_BREFF,
@@ -423,6 +426,7 @@ typedef enum enumOptions
 //	OB_WU8			= 1llu << OPT_WU8,
 //	OB_XWU8			= 1llu << OPT_XWU8,
 //	OB_WBZ			= 1llu << OPT_WBZ,
+//	OB_LFL			= 1llu << OPT_LFL,
 //	OB_PACK			= 1llu << OPT_PACK,
 //	OB_BRRES		= 1llu << OPT_BRRES,
 //	OB_BREFF		= 1llu << OPT_BREFF,
@@ -495,7 +499,8 @@ typedef enum enumOptions
 //				| OB_WU8
 //				| OB_SZS
 //				| OB_XWU8
-//				| OB_WBZ,
+//				| OB_WBZ
+//				| OB_LFL,
 //
 //	OB_GRP_FFORMAT2		= OB_U8
 //				| OB_WU8
@@ -505,11 +510,13 @@ typedef enum enumOptions
 //				| OB_BREFT
 //				| OB_SZS
 //				| OB_XWU8
-//				| OB_WBZ,
+//				| OB_WBZ
+//				| OB_LFL,
 //
 //	OB_GRP_SCRIPT		= OB_SECTIONS,
 //
 //	OB_GRP_ALIGN		= OB_ALIGN_U8
+//				| OB_ALIGN_LTA
 //				| OB_ALIGN_PACK
 //				| OB_ALIGN_BRRES
 //				| OB_ALIGN_BREFF
@@ -1374,6 +1381,7 @@ typedef enum enumGetOpt
 	GO_IGNORE_SETUP,
 	GO_PURGE,
 	GO_ALIGN_U8,
+	GO_ALIGN_LTA,
 	GO_ALIGN_PACK,
 	GO_ALIGN_BRRES,
 	GO_ALIGN_BREFF,
@@ -1392,6 +1400,7 @@ typedef enum enumGetOpt
 	GO_WU8,
 	GO_XWU8,
 	GO_WBZ,
+	GO_LFL,
 	GO_PACK,
 	GO_BRRES,
 	GO_BREFF,
@@ -1425,7 +1434,7 @@ typedef enum enumGetOpt
 //extern const struct option OptionLong[];
 //extern u8 OptionUsed[OPT__N_TOTAL+1];
 //extern const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE];
-//UIOPT_INDEX_SIZE := 0x140 = 320
+//UIOPT_INDEX_SIZE := 0x14a = 330
 //extern const InfoCommand_t CommandInfo[CMD__N+1];
 extern const InfoUI_t InfoUI_wszst;
 

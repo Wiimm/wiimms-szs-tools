@@ -402,12 +402,16 @@ bool SplitIP ( SplitIP_t *sip, ccp addr )
 	    ? StringCopySM(sip->name,sizeof(sip->name),addr,slash-addr)
 	    : StringCopyS(sip->name,sizeof(sip->name),addr);
 
+ #if 0
 	if ( end_name > sip->name && end_name[-1] == '.' )
 	{
 	    // remove trailing point if not a valid IPv4 (domains only)
 	    if ( CheckIP4(sip->name,end_name-sip->name) <= CIP4_INVALID )
 		*--end_name = 0;
 	}
+ #else
+	MARK_USED(end_name);
+ #endif
 
 	ccp point = strchr(sip->name,'.');
 	if (point)

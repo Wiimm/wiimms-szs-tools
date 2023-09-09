@@ -176,6 +176,7 @@ static KeywordTab_t keywords_leo[] =
 	{ LTT_IDENT,		"IDENT",	0,		LEO_LTT_SELECTOR },
 	{ LTT_IDENT_D,		"D-IDENT",	"DIDENT",	LEO_LTT_SELECTOR },
 	{ LTT_FILE,		"FILES",	0,		LEO_LTT_SELECTOR },
+	{ LTT_PATH,		"PATHS",	0,		LEO_LTT_SELECTOR },
 	{ LTT_NAME,		"NAMES",	0,		LEO_LTT_SELECTOR },
 	{ LTT_XNAME,		"XNAMES",	0,		LEO_LTT_SELECTOR },
 	{ LTT_XNAME2,		"X2NAMES",	0,		LEO_LTT_SELECTOR },
@@ -220,6 +221,7 @@ static KeywordTab_t keywords_leo[] =
 	 { LEO_IN_LECODE,	"ILECODE",	0,		0 },
 	{ LEO_NO_SLOT,		"NO-SLOT",	"NOSLOT",	0 },
 	{ LEO_BRIEF,		"BRIEF",	0,		0 },
+	{ LEO_AUTO_PATH,	"AUTO-PATH",	"AUTOPATH",	0 },
 
 	{ LEO_HELP,		"HELP",	    	"H",		0 },
 
@@ -315,6 +317,7 @@ ccp GetUpperNameLTT ( le_track_text_t ltt )
 	case LTT_IDENT:		return "IDENT";
 	case LTT_IDENT_D:	return "D-IDENT";
 	case LTT_FILE:		return "FILE";
+	case LTT_PATH:		return "PATH";
 	case LTT_NAME:		return "NAME";
 	case LTT_XNAME:		return "XNAME";
 	case LTT_XNAME2:	return "XNAME2";
@@ -337,6 +340,7 @@ ccp GetLowerNameLTT ( le_track_text_t ltt )
 	case LTT_IDENT:		return "ident";
 	case LTT_IDENT_D:	return "d-ident";
 	case LTT_FILE:		return "file";
+	case LTT_PATH:		return "path";
 	case LTT_NAME:		return "name";
 	case LTT_XNAME:		return "xname";
 	case LTT_XNAME2:	return "xname2";
@@ -365,6 +369,7 @@ int GetDModeLTT ( le_track_text_t ltt )
 	    return 2;
 
 	case LTT_FILE:
+	case LTT_PATH:
 	case LTT_NAME:
 	case LTT_XNAME:
 	case LTT_XNAME2:
@@ -537,6 +542,7 @@ char * ScanLSP ( le_strpar_t *par, ccp arg, int arg_len, enumError *ret_err )
 	{ LTT_IDENT,		"IDENT",	0,		0 },
 	{ LTT_IDENT_D,		"D-IDENT",	"DIDENT",	0 },
 	{ LTT_FILE,		"FILES",	0,		0 },
+	{ LTT_PATH,		"PATHS",	0,		0 },
 	{ LTT_NAME,		"NAMES",	0,		0 },
 	{ LTT_XNAME,		"XNAMES",	0,		0 },
 	{ LTT_XNAME2,		"X2NAMES",	0,		0 },
@@ -944,6 +950,7 @@ void ClearStringsLT ( le_track_t *lt )
     if (lt)
     {
 	FreeString(lt->file);
+	FreeString(lt->path);
 	FreeString(lt->name);
 	FreeString(lt->xname);
 	FreeString(lt->lti[0].ident);
@@ -1089,6 +1096,22 @@ void SetupByTrackInfoLT ( le_track_t *lt, const TrackInfo_t *ti )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void SetupMkwExtraTrackLT ( le_track_t *lt, uint setup_slot )
+{
+    ccp info = GetMkwExtraInfo(setup_slot,0);
+    if (info)
+    {
+	lt->track_status = LTS_ACTIVE;
+	lt->track_type	= LTTY_EXTRA;
+	lt->property	= 0;
+	lt->music	= MKW_MUSIC_MIN_ID;
+
+	SetNameLT(lt,0,info);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SetupLecodeRandomTrackLT ( le_track_t *lt, uint setup_slot )
 {
     ccp info = GetLecodeRandomInfo(setup_slot,0);
@@ -1167,7 +1190,7 @@ void SetIdentLT ( le_track_t *lt, const le_strpar_t *par, ccp ident )
 	    while ( *ident == ' ' || *ident == '\t' )
 		ident++;
 
-	    sha1_size_t sha1size;
+	    sha1_size_hash_t sha1size;
 	    const int stat = IsSSChecksum(&sha1size,ident,-1);
 	    if (stat)
 	    {
@@ -1226,6 +1249,22 @@ void SetFileLT ( le_track_t *lt, const le_strpar_t *par, ccp fname )
     {
 	FreeString(lt->file);
 	lt->file = STRDUP(fname);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SetPathLT ( le_track_t *lt, const le_strpar_t *par, ccp path )
+{
+    // par: opt
+
+    if (!par)
+	par = &DefaultLSP;
+
+    if ( lt && IsAssignmentAllowedLEO(lt->path,path,par->opt) )
+    {
+	FreeString(lt->path);
+	lt->path = STRDUP(path);
     }
 }
 
@@ -1363,6 +1402,10 @@ void SetTextLT ( le_track_t *lt, const le_strpar_t *par, ccp text )
 	    SetFileLT(lt,&mypar,text);
 	    break;
 
+	case LTT_PATH:
+	    SetPathLT(lt,&mypar,text);
+	    break;
+
 	case LTT_NAME:
 	    SetNameLT(lt,&mypar,text);
 	    break;
@@ -1435,6 +1478,85 @@ ccp GetFileLT ( const le_track_t *lt, ccp return_on_empty )
     return lt && lt->track_status >= LTS_EXPORT && lt->file && *lt->file
 	? lt->file
 	: return_on_empty;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetPathL2 ( le_distrib_t *ld, const le_track_t *lt, le_options_t opt, ccp return_on_empty )
+{
+    ccp path = lt && lt->track_status >= LTS_EXPORT && lt->path && *lt->path
+	? lt->path
+	: return_on_empty;
+
+    char dname[PATH_MAX];
+    if ( lt && opt & LEO_AUTO_PATH )
+    {
+	le_strpar_t par = { .opt = opt };
+
+	if ( !IsOutputNameValidLEO(path,opt) && opt_track_source.used )
+	{
+	    ccp fname = GetFileLT(lt,0);
+	    if (IsOutputNameValidLEO(fname,opt))
+	    {
+		TransferMode_t tfer_mode;
+		ccp found = FindTrackFile(fname,&tfer_mode);
+		if (found)
+		{
+		    PRINT0("ld=%p, tfer_mode:%x, move:%x\n",ld,tfer_mode,tfer_mode & (TFMD_J_MOVE|TFMD_J_MOVE1));
+		    SetPathLT((le_track_t*)lt,&par,found);
+		    if ( ld && tfer_mode & (TFMD_J_MOVE|TFMD_J_MOVE1) )
+		    {
+			Insert_d(dname,sizeof(dname),found);
+			InsertStringField(&ld->remove_files,found,true);
+			InsertStringField(&ld->remove_files,dname,false);
+		    }
+		    else
+			FreeString(found);
+		    return lt->path;
+		}
+	    }
+
+	    char buf[20];
+	    snprintf(buf,sizeof(buf),"%03x",lt->track_slot);
+	    TransferMode_t tfer_mode;
+	    ccp found = FindTrackFile(buf,&tfer_mode);
+	    if (found)
+	    {
+		PRINT0("ld=%p, tfer_mode:%x, move:%x\n",ld,tfer_mode,tfer_mode & (TFMD_J_MOVE|TFMD_J_MOVE1));
+		SetPathLT((le_track_t*)lt,&par,found);
+		if ( ld && tfer_mode & (TFMD_J_MOVE|TFMD_J_MOVE1) )
+		{
+		    Insert_d(dname,sizeof(dname),found);
+		    InsertStringField(&ld->remove_files,found,true);
+		    InsertStringField(&ld->remove_files,dname,false);
+		}
+		else
+		    FreeString(found);
+		return lt->path;
+	    }
+	}
+
+	if (path)
+	{
+	    const int len = strlen(path);
+	    if ( len > 0 && path[len-1] == '/' )
+	    {
+		char newpath[PATH_MAX];
+		snprintf(newpath,sizeof(newpath),"%s%03x.szs",path,lt->track_slot);
+		SetPathLT((le_track_t*)lt,&par,newpath);
+		return lt->path;
+	    }
+	}
+    }
+
+    return path;
+}
+
+//-----------------------------------------------------------------------------
+
+ccp GetPathLT ( const le_track_t *lt, le_options_t opt, ccp return_on_empty )
+{
+    return GetPathL2(0,lt,opt,return_on_empty);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1536,6 +1658,7 @@ ccp GetTextOptLT ( const le_track_t *lt, le_options_t opt, ccp return_on_empty )
 	case LTT_IDENT_D: return GetIdentLT(lt,true, false,return_on_empty);
 
 	case LTT_FILE:    return GetFileLT(lt,return_on_empty);
+	case LTT_PATH:    return GetPathLT(lt,opt,return_on_empty);
 	case LTT_NAME:    return GetNameLT(lt,return_on_empty);
 	case LTT_XNAME:   return GetXNameLT(lt,return_on_empty);
 	case LTT_XNAME2:  return GetXName2LT(lt,return_on_empty);
@@ -1579,6 +1702,7 @@ ccp * GetPtrOptLT ( const le_track_t *lt, le_options_t opt, bool allow_d )
 
 	case LTT_IDENT:   return (ccp*)&lt->lti[0].ident;
 	case LTT_FILE:    return (ccp*)&lt->file;
+	case LTT_PATH:    return (ccp*)&lt->path;
 	case LTT_NAME:    return (ccp*)&lt->name;
 	case LTT_XNAME:   return (ccp*)&lt->xname;
 
@@ -1710,6 +1834,14 @@ ccp QuoteFileLT ( const le_track_t *lt, ccp return_on_empty )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+ccp QuotePathLT ( const le_track_t *lt, le_options_t opt, ccp return_on_empty )
+{
+    ccp res = GetPathLT(lt,opt,return_on_empty);
+    return QuoteStringCircS(res,EmptyQuote,CHMD__MODERN);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 ccp QuoteNameLT ( const le_track_t *lt, ccp return_on_empty )
 {
     ccp res = GetNameLT(lt,return_on_empty);
@@ -1781,6 +1913,7 @@ ccp QuoteTextOptLT ( const le_track_t *lt, le_options_t opt, ccp return_on_empty
 	case LTT_XNAME:   return QuoteXNameLT(lt,return_on_empty); break;
 	case LTT_XNAME2:  return QuoteXName2LT(lt,return_on_empty); break;
 	case LTT_FILE:    return QuoteFileLT(lt,return_on_empty); break;
+	case LTT_PATH:    return QuotePathLT(lt,opt,return_on_empty); break;
 
 	default:
 	 #if LE_STRING_LIST_ENABLED
@@ -1812,6 +1945,7 @@ void InitializeLD ( le_distrib_t *ld )
     InitializeLECUP(&ld->cup_battle,BMG_MAX_BCUP,BMG_BCUP_TRACKS);
     InitializeLECUP(&ld->cup_versus,BMG_MAX_RCUP,BMG_RCUP_TRACKS);
 
+    InitializeStringField(&ld->remove_files);
     InitializeParamField(&ld->dis_param);
     ld->dis_param.free_data = true;
 
@@ -1824,6 +1958,14 @@ void ResetLD ( le_distrib_t *ld )
 {
     if (ld)
     {
+	ccp *ptr = ld->remove_files.field, *end;
+	for ( end = ptr + ld->remove_files.used; ptr < end; ptr++ )
+	{
+	    PRINT0("RM %s\n",*ptr);
+	    unlink(*ptr);
+	}
+	ResetStringField(&ld->remove_files);
+
 	ResetArchLD(ld);
 	ResetTracksAndCupsLD(ld);
 	ResetParamField(&ld->dis_param);
@@ -1875,9 +2017,10 @@ void AutoSetupLD ( le_distrib_t *ld, le_auto_setup_t auto_setup )
 {
     if (!ld)
 	return;
-
     ld->auto_setup = auto_setup;
     for ( int slot = MKW_TRACK_BEG; slot < MKW_ARENA_END; slot++ )
+	DefineTrackLD(ld,slot,true);
+    for ( int slot = MKW_EXTRA_BEG; slot < MKW_EXTRA_END; slot++ )
 	DefineTrackLD(ld,slot,true);
     for ( int slot = MKW_LE_RANDOM_BEG; slot < MKW_LE_RANDOM_END; slot++ )
 	DefineTrackLD(ld,slot,true);
@@ -2084,6 +2227,14 @@ void CheckTracksLD ( const le_distrib_t *ld )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+void DefineExtraTracksLD ( le_distrib_t *ld )
+{
+    for ( int slot = MKW_EXTRA_BEG; slot < MKW_EXTRA_END; slot++ )
+	DefineTrackLD(ld,slot,false);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void DefineRandomTracksLD ( le_distrib_t *ld )
 {
     for ( int slot = MKW_LE_RANDOM_BEG; slot < MKW_LE_RANDOM_END; slot++ )
@@ -2099,8 +2250,8 @@ le_track_t * GetTrackLD ( le_distrib_t *ld, int slot )
 
     le_track_t *lt = ld->tlist + slot;
 
-    // random slots are defined automatically on access
-    if ( lt->track_status < LTS_ACTIVE && IsLecodeRandom(slot) )
+    // extra && random slots are defined automatically on access
+    if ( lt->track_status < LTS_ACTIVE && ( IsMkwExtra(slot) || IsLecodeRandom(slot) ))
 	DefineTrackLD(ld,slot,false);
 
     return lt->track_status < LTS_ACTIVE ? 0 : lt;
@@ -2165,6 +2316,13 @@ le_track_t * DefineTrackLD ( le_distrib_t *ld, int slot, bool mark_export )
 	    lt->track_type	= LTTY_RANDOM|LTTY_TRACK|LTTY_ARENA;
 	    if ( ld->auto_setup & LAS_RANDOM )
 		SetupLecodeRandomTrackLT(lt,slot);
+	}
+	else if ( IsMkwExtra(slot) )
+	{
+	    lt->track_status	= LTS_ACTIVE;
+	    lt->track_type	= LTTY_EXTRA;
+	    if ( ld->auto_setup & LAS_EXTRA )
+		SetupMkwExtraTrackLT(lt,slot);
 	}
 	else
 	{
@@ -2510,6 +2668,8 @@ void ScanRefSTLD
 	IDX_NAME_D,
 	IDX_XNAME,
 	IDX_XNAME_D,
+	IDX_PATH,
+	IDX_PATH_D,
 	IDX__N
     };
 
@@ -2560,6 +2720,7 @@ void ScanRefSTLD
 	if ( n > IDX_SHA1_D  )	SetIdentOptLT(lt,xstring(buf,sizeof(buf),src[IDX_SHA1_D]), 1,1,ld->spar.opt );
 	if ( n > IDX_IDENT_D )	SetIdentOptLT(lt,xstring(buf,sizeof(buf),src[IDX_IDENT_D]),1,0,ld->spar.opt );
 	if ( n > IDX_FILE  )	SetFileLT (lt,&ld->spar,xstring(buf,sizeof(buf),src[IDX_FILE] ) );
+	if ( n > IDX_PATH  )	SetPathLT (lt,&ld->spar,xstring(buf,sizeof(buf),src[IDX_PATH] ) );
 	if ( n > IDX_NAME  )	SetNameLT (lt,&ld->spar,xstring(buf,sizeof(buf),src[IDX_NAME] ) );
 	if ( n > IDX_XNAME )	SetXNameLT(lt,&ld->spar,xstring(buf,sizeof(buf),src[IDX_XNAME]) );
 
@@ -2708,7 +2869,7 @@ bool ScanSha1LineLD
     int pi, le_flags = -1;
     char buf[300];
     int valid_sha1 = false;
-    sha1_size_t bin;
+    sha1_size_hash_t bin;
     enum { P_TYPE, P_FLAGS, P_LEFLAGS, P_SHA1, P_TSLOT, P_CUP, P_NAME };
 
     for ( pi = P_TYPE; pi <= P_NAME; pi++ )
@@ -2968,7 +3129,7 @@ static enumError ScanLeDefTRACKS
 	return ERR_MISSING_PARAM;
 
     enum { C_SLOT, C_IGNORE_SLOT, C_TRACK,
-		C_LAPS, C_SPEED, C_IDENT, C_FILE, C_NAME, C_XNAME,
+		C_LAPS, C_SPEED, C_IDENT, C_FILE, C_PATH, C_NAME, C_XNAME,
 		C_LIST, C_STD_ARENAS, C_STD_VERSUS };
     enum { O_CURRENT = 0x100, O_STRING = 0x200 };
 
@@ -2983,6 +3144,7 @@ static enumError ScanLeDefTRACKS
 
 	{ C_IDENT,	"IDENT",		0,		O_STRING },
 	{ C_FILE,	"FILE",			0,		O_STRING },
+	{ C_PATH,	"PATH",			0,		O_STRING },
 	{ C_NAME,	"NAME",			0,		O_STRING },
 	{ C_XNAME,	"XNAME",		0,		O_STRING },
 
@@ -3147,6 +3309,10 @@ static enumError ScanLeDefTRACKS
 
 	 case C_FILE:
 	    SetFileLT(current_lt,&spar,string_par.str);
+	    break;
+
+	 case C_PATH:
+	    SetPathLT(current_lt,&spar,string_par.str);
 	    break;
 
 	 case C_NAME:
@@ -3966,6 +4132,7 @@ le_track_arch_t * GetNextArchLD ( le_distrib_t *ld )
     return ta;
 }
 
+//
 ///////////////////////////////////////////////////////////////////////////////
 
 enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
@@ -3999,7 +4166,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 	    ScanOptTrackSource(".",1,opt_szs_mode);
 
 	err = ERR_OK;
-	le_track_arch_t *ta= GetNextArchLD(ld);
+	le_track_arch_t *ta = GetNextArchLD(ld);
 	ta->lt.lap_count    = as.lap_count;
 	ta->lt.speed_factor = as.speed_factor;
 
@@ -4047,6 +4214,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 
 	StringCopySM(buf,sizeof(buf),spf.f_name.ptr,spf.f_name.len);
 	SetFileLT(&ta->lt,&spar,buf);
+	SetPathLT(&ta->lt,&spar,raw->fname);
 
 	mem_t list[]	= { spf.boost, spf.game, spf.name, spf.extra };
 	mem_src_t msrc	= { .src = list, .n_src = sizeof(list)/sizeof(*list) };
@@ -4092,6 +4260,8 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
     ResetSZS(&szs);
     return err;
 }
+
+// setfilelt ->file
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4394,6 +4564,7 @@ void ImportCtcodeLD ( le_distrib_t *ld, const ctcode_t *ctcode )
 	lt->music	= GetMkwMusicSlot(slot);
     }
 
+    DefineExtraTracksLD(ld);
     DefineRandomTracksLD(ld);
 
 
@@ -4538,8 +4709,8 @@ void ImportCtcodeLD ( le_distrib_t *ld, const ctcode_t *ctcode )
 	if (lt)
 	{
 	    printf("%2d %3d %x %x %2d %04x %3d %s\n",
-		lt->track_slot, lt->cup_slot, 
-		lt->track_status, lt->track_type, 
+		lt->track_slot, lt->cup_slot,
+		lt->track_status, lt->track_type,
 		lt->property, lt->music, lt->flags,
 		lt->name );
 	}
@@ -4686,6 +4857,7 @@ enumError ImportRawDataLD
 			raw->fname);
 	    break;
 
+	 //case FF_FTA:
 	 default:
 	    err = ERROR0(ERR_INVALID_DATA,
 			"Need LE-CODE compatible file, but file format is %s: %s",
@@ -4906,7 +5078,7 @@ bool ExportAnaLD ( const le_distrib_t *ld, le_analyze_t *ana )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
-#if 0 
+#if 0
 
 bool ExportCtCodeLD ( const le_distrib_t *ld, ctcode_t *ctc )
 {
@@ -5162,8 +5334,9 @@ enumError CreateRefLD ( FILE *f, le_distrib_t *ld, bool add_strings )
 	fprintf(f,"# Active output filter: %s\r\n",filter);
 
     fprintf(f,
-	"#> track_slot|type|orig|cup_slot|cup_slot_name|property|music|flags|hidden|laps|speed|sha1|sha1_d|%s\r\n",
-	add_strings ? "ident|ident_d|file|file_d|name|name_d|xname|xname_d|" : "" );
+	"@CONTENT=track_slot|type|orig|cup_slot|cup_slot_name|property|music|flags|hidden|laps|speed|sha1|sha1_d|%s\r\n"
+	"#-----\r\n",
+	add_strings ? "ident|ident_d|file|file_d|name|name_d|xname|xname_d|path|path_d|" : "" );
 
     const bool no_d = ( ld->spar.opt & LEO_NO_D_FILES ) != 0;
     int count = 0;
@@ -5185,24 +5358,27 @@ enumError CreateRefLD ( FILE *f, le_distrib_t *ld, bool add_strings )
 
 	if (add_strings)
 	{
-	    exmem_t id1	= EscapeStringPipeCircS(GetIdentLT(lt,0,false,0));
-	    exmem_t id2	= EscapeStringPipeCircS( no_d ? 0 : GetIdentLT(lt,1,false,0) );
+	    exmem_t id1		= EscapeStringPipeCircS(GetIdentLT(lt,0,false,0));
+	    exmem_t id2		= EscapeStringPipeCircS( no_d ? 0 : GetIdentLT(lt,1,false,0) );
 	    exmem_t file	= EscapeStringPipeCircS(GetFileLT(lt,0));
 	    exmem_t name	= EscapeStringPipeCircS(GetNameLT(lt,0));
 	    exmem_t xname	= EscapeStringPipeCircS(GetXNameLT(lt,0));
+	    exmem_t path	= EscapeStringPipeCircS(GetPathLT(lt,0,0));
 
-	    fprintf(f,"%s|%s|%s||%s||%s||\r\n",
+	    fprintf(f,"%s|%s|%s||%s||%s||%s||\r\n",
 		id1.data.ptr,
 		id2.data.ptr,
 		file.data.ptr,
 		name.data.ptr,
-		xname.data.ptr );
+		xname.data.ptr,
+		path.data.ptr  );
 
 	    FreeExMem(&id1);
 	    FreeExMem(&id2);
 	    FreeExMem(&file);
 	    FreeExMem(&name);
 	    FreeExMem(&xname);
+	    FreeExMem(&path);
 	}
 	else
 	    fputs("\r\n",f);
@@ -5642,6 +5818,7 @@ static void print_ledef_track
 
     print_ledef_text(f,ld,max_len,"ident",GetIdentLT(lt,false,true,0));
     print_ledef_text(f,ld,max_len,"file",GetFileLT(lt,0));
+    print_ledef_text(f,ld,max_len,"path",GetPathLT(lt,ld->spar.opt,0));
     print_ledef_text(f,ld,max_len,"name",GetNameLT(lt,0));
     print_ledef_text(f,ld,max_len,"xname",GetXNameLT(lt,0));
 
@@ -6195,7 +6372,7 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	{
 	    dest = StringCopyE(dest,bufend,":wiimm\n");
 	    continue;
-	} 
+	}
 
 	dest = snprintfE(dest,bufend,"%u-",cup_index+1);
 
@@ -6260,7 +6437,7 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	}
     }
 
-    FREE(buf);    
+    FREE(buf);
     return err;
 }
 
@@ -6610,7 +6787,7 @@ static TrackClassIndex_t get_track_class_index ( const le_track_t *lt )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt ) 
+enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 {
     if (!lop)
 	return ERR_MISSING_PARAM;
@@ -6907,11 +7084,11 @@ enumError CreateReportLD ( ld_out_param_t *lop, mem_t mem_opt )
 
 	//-- output duplicates
 
-	if ( opt & O_TRACKS ) 
+	if ( opt & O_TRACKS )
 	    report_duplicates(lop,0,"track","tracks",have_dup_track,track_count,s1ref_max1_track);
-	if ( opt & O_FAMILIES ) 
+	if ( opt & O_FAMILIES )
 	    report_duplicates(lop,1,"family","families",have_dup_family,family_count,s1ref_max1_family);
-	if ( opt & O_CLANS ) 
+	if ( opt & O_CLANS )
 	    report_duplicates(lop,2,"clan","clans",have_dup_clan,clan_count,s1ref_max1_clan);
 
 
@@ -7050,7 +7227,7 @@ enumError PatchLD ( le_distrib_t *ld, mem_t mem_opt, StringField_t *filelist )
 	int count = 0;
 	int stat = IterateFilesSZS(&szs,patch_ld,&count,0,0);
 	MARK_USED(stat,count);
-	
+
 	ResetSZS(&szs);
 	if ( fname != *ptr )
 	    FreeString(fname);
@@ -7686,6 +7863,267 @@ enumError CreateDistribLD ( FILE *f, le_distrib_t *ld, bool use_xname )
     fputs(text_distrib_tracks_cr,f);
     CreateSha1LD(f,ld,use_xname,false);
     fputs("\r\n",f);
+
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+static enumError close_lta ( lta_manager_t *lm )
+{
+    enumError err = ERR_OK;
+    if ( lm->base_slot >= 0 && lm->F.f )
+    {
+	const int n_slots = lm->last_slot + 1 - lm->base_slot;
+	const uint node_size = ALIGN32( n_slots * sizeof(lta_node_t), opt_align_lta );
+
+	lta_header_t head =
+	{
+	    .magic	= hton64(LTA_MAGIC_NUM),
+	    .version	= htonl(LTA_VERSION),
+	    .head_size	= htonl(sizeof(lta_header_t)),
+	    .file_size	= htonl(lm->data_offset+node_size),
+	    .node_off	= htonl(lm->data_offset),
+	    .node_size	= htonl(sizeof(lta_node_t)),
+	    .base_slot	= htonl(lm->base_slot),
+	    .n_slots	= htonl(n_slots),
+	};
+	WriteFileAt(&lm->F,&lm->current_offset,0,&head,sizeof(head));
+
+	write_be32n((u32*)lm->node,(u32*)lm->node,sizeof(lm->node)/4);
+	WriteFileAt(&lm->F,&lm->current_offset,lm->data_offset,lm->node,node_size);
+	lm->data_offset += node_size;
+
+	SetFileSize(&lm->F,&lm->current_offset,lm->data_offset);
+
+	if ( verbose >= 0 )
+	{
+	    CloseFile(&lm->F,0);
+	    fprintf(stdlog,
+		    "%sCreated LTA:%s (%s), slots %u..%u (%u std, %u _d, %u LFL), %s\n",
+		    verbose >= 1 ? "   > " : "   - ",
+		    lm->F.fname,
+		    PrintSize1000(0,0,lm->data_offset,0),
+		    lm->base_slot, lm->last_slot,
+		    lm->std_count, lm->d_count, lm->lfl_count,
+		    PrintTimerNSec6(0,0,GetTimerNSec()-lm->start_nsec,0) );
+	    fflush(stdlog);
+	}
+    }
+
+
+    //--- reset data
+
+    ResetFile(&lm->F,0);
+    ResetEML(&lm->stored_szs);
+    ResetEML(&lm->stored_lfl);
+
+    lm->start_nsec	= GetTimerNSec();
+    lm->base_slot	= -1;
+    lm->last_slot	= 0;
+    lm->std_count	= 0;
+    lm->d_count		= 0;
+    lm->lfl_count	= 0;
+
+    memset(lm->node,0,sizeof(lm->node));
+    return err;
+}
+
+//-----------------------------------------------------------------------------
+
+static void load_file_lta
+(
+    lta_manager_t	*lm,	// lta manager
+    lta_node_record_t	*rec,	// record to process
+    ccp			fname,	// file name
+    bool		is_d	// TRUE: is _d file
+)
+{
+    DASSERT(lm);
+    DASSERT(rec);
+    DASSERT(path);
+
+    const uint fsize = rec->szs_size;
+    if (!fsize)
+	return;
+
+    if ( lm->buf_size < fsize )
+    {
+	FREE(lm->buf);
+	lm->buf = MALLOC(fsize);
+	lm->buf_size = fsize;
+    }
+
+    if (!LoadFILE(fname,0,0,lm->buf,fsize,0,0,false))
+    {
+	if (lm->rm_source)
+	    InsertStringField(&lm->ld->remove_files,fname,false);
+
+	sha1_size_b64_t sha1_szs;
+	CreateSS64(lm->buf,fsize,sha1_szs);
+
+	bool old_found;
+	exmem_key_t *eml_szs = FindInsertEML(&lm->stored_szs,sha1_szs,CPM_COPY,&old_found);
+	if (old_found)
+	{
+	    *rec = *(lta_node_record_t*)eml_szs->data.data.ptr;
+	    return;
+	}
+
+	if (is_d)
+	    lm->d_count++;
+	else
+	    lm->std_count++;
+
+	rec->szs_off = lm->data_offset;
+	WriteFileAt(&lm->F,&lm->current_offset,lm->data_offset,lm->buf,fsize);
+	lm->data_offset += ALIGN32(fsize,opt_align_lta);
+
+	szs_file_t szs;
+	AssignSZS(&szs,true,lm->buf,fsize,false,FF_UNKNOWN,fname);
+	CollectCommonFilesSZS(&szs,true,SORT_NONE);
+	CreateLFL(&szs,0,true,true); // sorting is defined here
+	PRINT0("LFL: %p %zu\n",szs.data,szs.size);
+	if (szs.size)
+	{
+	    sha1_size_b64_t sha1_lfl;
+	    CreateSS64(szs.data,szs.size,sha1_lfl);
+	    bool old_found;
+	    exmem_key_t *eml_lfl = FindInsertEML(&lm->stored_lfl,sha1_lfl,CPM_COPY,&old_found);
+	    if (old_found)
+	    {
+		lta_node_par_t *temp = (lta_node_par_t*)eml_lfl->data.data.ptr;
+		rec->lfl_off  = temp->offset;
+		rec->lfl_size = temp->size;
+	    }
+	    else
+	    {
+		rec->lfl_off  = lm->data_offset;
+		rec->lfl_size = szs.size;
+		WriteFileAt(&lm->F,&lm->current_offset,lm->data_offset,szs.data,szs.size);
+		lm->data_offset += ALIGN32(szs.size,opt_align_lta);
+		lm->lfl_count++;
+
+		lta_node_par_t par = { .offset = rec->lfl_off, .size = rec->lfl_size };
+		eml_lfl->data = ExMemDup(&par,sizeof(par));
+	    }
+
+	    szs.fname = 0;
+	    ResetSZS(&szs);
+	}
+	eml_szs->data = ExMemDup(rec,sizeof(*rec));
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, bool rm_source )
+{
+    if ( !ld || !destdir )
+	return ERR_MISSING_PARAM;
+
+    char tname[30], path[PATH_MAX];
+    lta_manager_t lm =
+    {
+	.ld		= ld,
+	.destdir	= destdir,
+	.rm_source	= rm_source,
+	.base_slot	= -1,
+    };
+    close_lta(&lm); // initialize more vars
+
+
+    //--- optimization: find last used slot
+
+    for ( int slot = ld->tlist_used -1 ; slot >= 0; slot-- )
+    {
+	le_track_t *lt = GetTrackLD(ld,slot);
+	if (!IsActiveLT(lt))
+	    continue;
+
+	ccp fname = GetPathL2(ld,lt,ld->spar.opt,0);
+	if (!fname)
+	    continue;
+
+	struct stat st;
+	if ( stat(fname,&st) || !S_ISREG(st.st_mode) )
+	    continue;
+
+	lm.distrib_end_slot = slot + 1;
+	PRINT0("distrib_end_slot = %d\n",lm.distrib_end_slot);
+	break;
+    }
+
+
+    //--- main loop
+
+    for ( int slot = 0; slot < lm.distrib_end_slot; slot++ )
+    {
+     restart:;
+	le_track_t *lt = GetTrackLD(ld,slot);
+	if (!IsActiveLT(lt))
+	    continue;
+
+	ccp fname = GetPathL2(ld,lt,ld->spar.opt,0);
+	if (!fname)
+	    continue;
+
+	struct stat st;
+	if ( stat(fname,&st) || !S_ISREG(st.st_mode) )
+	    continue;
+
+	if ( slot >= lm.base_slot + LTA_MAX_NODES )
+	    close_lta(&lm);
+
+	if ( lm.base_slot < 0 )
+	{
+	    lm.base_slot = slot;
+	    lm.max_slots = lm.distrib_end_slot - lm.base_slot;
+	    if ( lm.max_slots > LTA_MAX_NODES )
+		 lm.max_slots = LTA_MAX_NODES;
+	    PRINT0("last_slot=%d, distrib_last_slot=%d => max_slots=%d\n",lm->last_slot,lm->distrib_last_slot,max_slots);
+	    lm.data_offset = ALIGN32(sizeof(lta_header_t),opt_align_lta);
+
+	    snprintf(tname,sizeof(tname),"tracks-%u",++lm.track_index);
+	    PathCatBufPPE(path,sizeof(path),lm.destdir,tname,".lta");
+	    enumError err = CreateFileOpt(&lm.F,true,path,false,0);
+	    if (err)
+		return err;
+	}
+
+	const uint saved_data_offset = lm.data_offset;
+	lta_node_t node = { .std.szs_size = st.st_size };
+	load_file_lta(&lm,&node.std,fname,false);
+
+
+	//--- _d file
+
+	Insert_d(path,sizeof(path),fname);
+	const bool have_d = !stat(path,&st) && S_ISREG(st.st_mode);
+	if (have_d)
+	{
+	    node.d.szs_size = st.st_size;
+	    load_file_lta(&lm,&node.d,path,true);
+	}
+
+	if (!node.d.szs_off)
+	    node.d = node.std;
+
+	const uint node_size = ALIGN32( ( slot - lm.base_slot + 1 ) * sizeof(lta_node_t), opt_align_lta );
+	if ( lm.data_offset + node_size > LTA_MAX_SIZE )
+	{
+	    lm.data_offset = saved_data_offset;
+	    close_lta(&lm);
+	    goto restart;
+	}
+
+	lm.node[ slot - lm.base_slot ] = node;
+	lm.last_slot = slot;
+    }
+    close_lta(&lm);
+    FREE(lm.buf);
 
     return ERR_OK;
 }

@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.36a
+VERSION_NUM		= 2.37a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -142,7 +142,7 @@ DEFINES1	+= -DLARGE_FILES -D_FILE_OFFSET_BITS=64
 DEFINES1	+= -DWSZST			# compile szs tools (switch for shared sources)
 DEFINES1	+= -DDEBUG_ASSERT		# enable ASSERTions in release version too
 DEFINES1	+= -DEXTENDED_ERRORS=1		# enable extended error messages (function,line,file)
-DEFINES1	+= -DUIOPT_INDEX_SIZE=320	# define max number of options (default 0x100)
+DEFINES1	+= -DUIOPT_INDEX_SIZE=330	# define max number of options (default 0x100)
 
 CFLAGS		+= $(DCLIB_CFLAGS)
 CFLAGS		+= -std=gnu99 -fomit-frame-pointer -fno-strict-aliasing -funroll-loops
