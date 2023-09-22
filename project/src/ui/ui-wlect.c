@@ -591,6 +591,21 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Disables UTF-8 support for filenames."
     },
 
+    {	OPT_CACHE, false, false, false, false, true, 0, "cache",
+	"dir",
+	"Define a directory for an SZS cache. The cache is used to generate"
+	" LTA files when new compression is forced. Option --remove-dest is"
+	" set automatically to protect cache integrity.\n"
+	"  Background: Loading a compressed SZS and content verification is"
+	" much faster than compressing a file."
+    },
+
+    {	OPT_LOG_CACHE, false, false, false, false, false, 0, "log-cache",
+	"file",
+	"Define a file to log chache activities. Use '-' to log to stdout or"
+	" stderr. The file is openend in append-mode."
+    },
+
     {	OPT_LT_COND_BIT, false, false, false, false, false, 0, "lt-cond-bit",
 	"bitnum",
 	"Set LEX/TEST parameter COND-BIT to this integer value. Use -1 to"
@@ -684,7 +699,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 89
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 91
 
 };
 
@@ -918,6 +933,9 @@ static const struct option OptionLong[] =
 	{ "no-utf-8",		0, 0, GO_NO_UTF_8 },
 	 { "no-utf8",		0, 0, GO_NO_UTF_8 },
 	 { "noutf8",		0, 0, GO_NO_UTF_8 },
+	{ "cache",		1, 0, GO_CACHE },
+	{ "log-cache",		1, 0, GO_LOG_CACHE },
+	 { "logcache",		1, 0, GO_LOG_CACHE },
 	{ "lt-clear",		0, 0, GO_LT_CLEAR },
 	 { "ltclear",		0, 0, GO_LT_CLEAR },
 	{ "lt-online",		1, 0, GO_LT_ONLINE },
@@ -1084,48 +1102,50 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x094   */	OPT_NO_ECHO,
 	/* 0x095   */	OPT_UTF_8,
 	/* 0x096   */	OPT_NO_UTF_8,
-	/* 0x097   */	OPT_LT_CLEAR,
-	/* 0x098   */	OPT_LT_ONLINE,
-	/* 0x099   */	OPT_LT_N_PLAYERS,
-	/* 0x09a   */	OPT_LT_COND_BIT,
-	/* 0x09b   */	OPT_LT_GAME_MODE,
-	/* 0x09c   */	OPT_LT_ENGINE,
-	/* 0x09d   */	OPT_LT_RANDOM,
-	/* 0x09e   */	OPT_LEX_PURGE,
-	/* 0x09f   */	OPT_LEX_RM_FEAT,
-	/* 0x0a0   */	OPT_FORCE,
-	/* 0x0a1   */	OPT_REPAIR_MAGICS,
-	/* 0x0a2   */	OPT_CREATE_DISTRIB,
-	/* 0x0a3   */	OPT_OLD,
-	/* 0x0a4   */	OPT_STD,
-	/* 0x0a5   */	OPT_NEW,
-	/* 0x0a6   */	OPT_EXTRACT,
-	/* 0x0a7   */	OPT_LE_DEFINE,
-	/* 0x0a8   */	OPT_LE_ARENA,
-	/* 0x0a9   */	OPT_LPAR,
-	/* 0x0aa   */	OPT_ALIAS,
-	/* 0x0ab   */	OPT_ENGINE,
-	/* 0x0ac   */	OPT_200CC,
-	/* 0x0ad   */	OPT_PERFMON,
-	/* 0x0ae   */	OPT_CUSTOM_TT,
-	/* 0x0af   */	OPT_XPFLAGS,
-	/* 0x0b0   */	OPT_SPEEDOMETER,
-	/* 0x0b1   */	OPT_DEBUG,
-	/* 0x0b2   */	OPT_TRACK_DIR,
-	/* 0x0b3   */	OPT_COPY_TRACKS,
-	/* 0x0b4   */	OPT_MOVE_TRACKS,
-	/* 0x0b5   */	OPT_MOVE1_TRACKS,
-	/* 0x0b6   */	OPT_LINK_TRACKS,
-	/* 0x0b7   */	OPT_SZS_MODE,
-	/* 0x0b8   */	OPT_LOAD_BMG,
-	/* 0x0b9   */	OPT_PATCH_BMG,
-	/* 0x0ba   */	OPT_MACRO_BMG,
-	/* 0x0bb   */	OPT_PATCH_NAMES,
-	/* 0x0bc   */	OPT_ORDER_BY,
-	/* 0x0bd   */	OPT_ORDER_ALL,
-	/* 0x0be   */	OPT_NUMBER,
-	/* 0x0bf   */	OPT_SECTIONS,
-	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x097   */	OPT_CACHE,
+	/* 0x098   */	OPT_LOG_CACHE,
+	/* 0x099   */	OPT_LT_CLEAR,
+	/* 0x09a   */	OPT_LT_ONLINE,
+	/* 0x09b   */	OPT_LT_N_PLAYERS,
+	/* 0x09c   */	OPT_LT_COND_BIT,
+	/* 0x09d   */	OPT_LT_GAME_MODE,
+	/* 0x09e   */	OPT_LT_ENGINE,
+	/* 0x09f   */	OPT_LT_RANDOM,
+	/* 0x0a0   */	OPT_LEX_PURGE,
+	/* 0x0a1   */	OPT_LEX_RM_FEAT,
+	/* 0x0a2   */	OPT_FORCE,
+	/* 0x0a3   */	OPT_REPAIR_MAGICS,
+	/* 0x0a4   */	OPT_CREATE_DISTRIB,
+	/* 0x0a5   */	OPT_OLD,
+	/* 0x0a6   */	OPT_STD,
+	/* 0x0a7   */	OPT_NEW,
+	/* 0x0a8   */	OPT_EXTRACT,
+	/* 0x0a9   */	OPT_LE_DEFINE,
+	/* 0x0aa   */	OPT_LE_ARENA,
+	/* 0x0ab   */	OPT_LPAR,
+	/* 0x0ac   */	OPT_ALIAS,
+	/* 0x0ad   */	OPT_ENGINE,
+	/* 0x0ae   */	OPT_200CC,
+	/* 0x0af   */	OPT_PERFMON,
+	/* 0x0b0   */	OPT_CUSTOM_TT,
+	/* 0x0b1   */	OPT_XPFLAGS,
+	/* 0x0b2   */	OPT_SPEEDOMETER,
+	/* 0x0b3   */	OPT_DEBUG,
+	/* 0x0b4   */	OPT_TRACK_DIR,
+	/* 0x0b5   */	OPT_COPY_TRACKS,
+	/* 0x0b6   */	OPT_MOVE_TRACKS,
+	/* 0x0b7   */	OPT_MOVE1_TRACKS,
+	/* 0x0b8   */	OPT_LINK_TRACKS,
+	/* 0x0b9   */	OPT_SZS_MODE,
+	/* 0x0ba   */	OPT_LOAD_BMG,
+	/* 0x0bb   */	OPT_PATCH_BMG,
+	/* 0x0bc   */	OPT_MACRO_BMG,
+	/* 0x0bd   */	OPT_PATCH_NAMES,
+	/* 0x0be   */	OPT_ORDER_BY,
+	/* 0x0bf   */	OPT_ORDER_ALL,
+	/* 0x0c0   */	OPT_NUMBER,
+	/* 0x0c1   */	OPT_SECTIONS,
+	/* 0x0c2   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0f0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1354,6 +1374,11 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_CHDIR,
 	OptionInfo + OPT_CONST,
 	OptionInfo + OPT_MAX_FILE_SIZE,
+
+	OptionInfo + OPT_NONE, // separator
+
+	OptionInfo + OPT_CACHE,
+	OptionInfo + OPT_LOG_CACHE,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -1807,6 +1832,8 @@ static const InfoOption_t * option_tab_cmd_DISTRIBUTION[] =
 {
 	OptionInfo + OPT_LOAD_PREFIX,
 	OptionInfo + OPT_LOAD_CATEGORY,
+	OptionInfo + OPT_CACHE,
+	OptionInfo + OPT_LOG_CACHE,
 	OptionInfo + OPT_PLUS,
 	OptionInfo + OPT_TRACK_DIR,
 	OptionInfo + OPT_COPY_TRACKS,
@@ -1923,7 +1950,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wlect [option]... command [option|parameter|file]...",
 	"Wiimms LE-CODE Tool : Manage the LE-CODE and LEX extensions.",
 	0,
-	34,
+	36,
 	option_tab_tool,
 	0
     },
@@ -2310,9 +2337,9 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	0,
 	"wlect TIMESTAMP [lecode_bin]...",
 	"Read each LE-CODE binary file and set creation time if exists and is"
-	" null with respect to others existing timestamps. Wildcards and pipe"
-	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
-	" details.",
+	" null with respect to others existing timestamps. Update the LE-CODE"
+	" signature too. Wildcards and pipe characters are parsed, see"
+	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
 	11,
 	option_tab_cmd_TIMESTAMP,
@@ -2345,7 +2372,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"CR",
 	"wlect CREATE [keyword] ...",
 	"Create a file and print it to standard output. Options --dest and"
-	" --DEST can forc another destination. The kind of file is defined by"
+	" --DEST can force another destination. The kind of file is defined by"
 	" KEYWORD. The command can create LEX files, a LPAR file or a track"
 	" listing.\n"
 	"  Use the command without keyword to get an extended description.",
@@ -2369,7 +2396,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" are parsed, see https://szs.wiimm.de/doc/wildcards for details.\n"
 	"  Use the command without keyword to get an extended description.",
 	0,
-	21,
+	23,
 	option_tab_cmd_DISTRIBUTION,
 	option_allowed_cmd_DISTRIBUTION
     },

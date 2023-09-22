@@ -308,6 +308,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(DistributionInfo_t)
 	SIZEOF_INFO_ENTRY(pack_header_t)
 	SIZEOF_INFO_ENTRY(pack_metric_t)
+	SIZEOF_INFO_ENTRY(check_cache_t)
 
     SIZEOF_INFO_TITLE("BREFF & BREFT")
 	SIZEOF_INFO_ENTRY(breff_root_head_t)
@@ -459,6 +460,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(le_binary_head_v4_t)
 	SIZEOF_INFO_ENTRY(le_binary_head_v5_34_t)
 	SIZEOF_INFO_ENTRY(le_binary_head_v5_38_t)
+	SIZEOF_INFO_ENTRY(le_binary_head_v5_44_t)
 	SIZEOF_INFO_ENTRY(le_binary_head_v5_t)
 	SIZEOF_INFO_ENTRY(le_binary_head_t)
 	SIZEOF_INFO_ENTRY(le_binary_param_t)
@@ -620,6 +622,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(szs_extract_t)
 	SIZEOF_INFO_ENTRY(raw_data_t)
 	SIZEOF_INFO_ENTRY(wbz_header_t)
+	SIZEOF_INFO_ENTRY(wlz_header_t)
 	SIZEOF_INFO_ENTRY(analyze_param_t)
 	SIZEOF_INFO_ENTRY(analyze_szs_t)
 	SIZEOF_INFO_ENTRY(file_type_t)
@@ -864,7 +867,7 @@ enumError cmd_ui_check()
 	    dur += GetTimerUSec();
 
 	    printf("%c%c "
-		,uc.is_ui       >= OFFON_ON ? 'U' : uc.is_ui	   > OFFON_OFF ? 'u' : '-' 
+		,uc.is_ui       >= OFFON_ON ? 'U' : uc.is_ui	   > OFFON_OFF ? 'u' : '-'
 		,uc.is_korean   >= OFFON_ON ? 'K' : uc.is_korean   > OFFON_OFF ? 'k' : '-'
 		);
 
@@ -3744,6 +3747,36 @@ static bool ScanByExtFF
 	return true;
     }
 
+    if ( !strcmp(point,"bz2") || !strcmp(point,"bzip2") )
+    {
+	*ff_arch  = FF_U8;
+	*ff_compr = FF_BZIP2;
+	return true;
+    }
+
+    if (!strcmp(point,"wlz"))
+    {
+	*ff_arch  = FF_WU8;
+	*ff_compr = FF_LZ;
+	return true;
+    }
+
+    if (!strcmp(point,"lzma"))
+    {
+	*ff_arch  = FF_U8;
+	*ff_compr = FF_LZMA;
+	return true;
+    }
+
+ #if 0 // [[xz+]]
+    if (!strcmp(point,"xz"))
+    {
+	*ff_arch  = FF_U8;
+	*ff_compr = FF_XZ;
+	return true;
+    }
+ #endif
+
     if (!strcmp(point,"u8"))
     {
 	*ff_arch = FF_U8;
@@ -3866,8 +3899,6 @@ static enumError patch_file_helper
 
 	char dest[PATH_MAX];
 	if ( opt_fform == FF_U8 || opt_fform == FF_WU8 )
-// [[lta]] [[2do]]
-// [[lfl]] [[2do]]
 	{
 	    SubstDest( dest, sizeof(dest), fname,
 		opt_dest && *opt_dest ? opt_dest : "\1P/\1N\1?T", "\1N\1?T",
@@ -3884,11 +3915,11 @@ static enumError patch_file_helper
 
 	//--- check dirty
 
-	const ccp dest_format = GetNameFF_SZScurrent(&szs);
+	file_format_t ff_file = was_compressed ? GetNewCompressionSZS(&szs) : szs.fform_file;
+	const ccp dest_format = GetNameFF(ff_file,szs.fform_current);
 	const bool src_dest_diff
 	    = strcmp(src_format,dest_format) || strcmp(dest,fname);
 
-//X	if ( !dirty && opt_norm )
 	if (!dirty)
 	    dirty = data.data.len != szs.size || memcmp(data.data.ptr,szs.data,szs.size);
 
@@ -3898,11 +3929,11 @@ static enumError patch_file_helper
 
 	//--- compression and SZS cache
 
-	if (dirty)
+	if ( dirty || src_dest_diff )
 	{
 	    if (was_compressed)
 	    {
-		CompressSZS(&szs,true);
+		CompressSZS(&szs,0,true);
 		FreeExMem(&orig);
 		orig = ExMemByS(szs.cdata,szs.csize);
 	    }
@@ -3955,7 +3986,7 @@ static enumError patch_file_helper
 	    fflush(stdlog);
 	}
 
-	LinkCacheRAW(szs.cache_fname,dest,orig.data.ptr,orig.data.len);
+	LinkCacheData(szs.cache_fname,dest,orig.data.ptr,orig.data.len);
     }
 
   abort:;
@@ -4165,7 +4196,7 @@ static enumError cmd_duplicate()
 	if (was_compressed)
 	{
 	    ClearCompressedSZS(&szs);
-	    CompressSZS(&szs,false);
+	    CompressSZS(&szs,0,false);
 	}
 
 	SaveSZS(&szs,fname,true,was_compressed);
@@ -4544,7 +4575,7 @@ static enumError cmd_compress()
 		if ( err <= ERR_WARNING && err != ERR_NOT_EXISTS )
 		{
 		    szs.dest_fname = dest;
-		    CompressSZS(&szs,true);
+		    CompressSZS(&szs,0,true);
 		    szs.dest_fname = 0;
 
 		    if ( szs.cache_used && (int)max_err < ERR_CACHE_USED && parallel_count <= 0 )
@@ -4562,7 +4593,7 @@ static enumError cmd_compress()
 					szs.csize, dest);
 		    }
 		    ResetFile(&F,opt_preserve);
-		    LinkCacheRAW(szs.cache_fname,dest,szs.cdata,szs.csize);
+		    LinkCacheData(szs.cache_fname,dest,szs.cdata,szs.csize);
 
 		    if ( !err && opt_remove_src )
 			RemoveSource(arg,dest,verbose>=0,testmode);
@@ -4969,7 +5000,7 @@ static enumError cmd_update()
 	    if (F.f)
 	    {
 		if (IsCompressedFF(szs.fform_file))
-		    CompressSZS(&szs,true);
+		    CompressSZS(&szs,0,true);
 		SetFileAttrib(&F.fatt,&szs.fatt,0);
 		const u8 *   data = szs.cdata ? szs.cdata : szs.data;
 		const size_t size = szs.cdata ? szs.csize : szs.size;
@@ -5020,7 +5051,6 @@ static enumError cmd_extract ( enumCommands mode )
     {
 	opt_recurse	= INT_MAX;
 	opt_decode	= false;
-	opt_avail_txt	= true;
 	basedir		= "common/";
     }
 
@@ -5876,12 +5906,16 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_YAZ1:		SetCompressionFF(0,FF_YAZ1); break;
 	case GO_XYZ:		SetCompressionFF(0,FF_XYZ); break;
 	case GO_BZ:		SetCompressionFF(0,FF_BZ); break;
+	case GO_BZIP2:		SetCompressionFF(0,FF_BZIP2); break;
+	case GO_LZ:		SetCompressionFF(0,FF_LZ); break;
+	case GO_LZMA:		SetCompressionFF(0,FF_LZMA); break;
 
 	case GO_U8:		SetCompressionFF(FF_U8,0); break;
 	case GO_SZS:		SetCompressionFF(FF_U8,FF_YAZ0); break;
 	case GO_WU8:		SetCompressionFF(FF_WU8,0); break;
 	case GO_XWU8:		SetCompressionFF(FF_WU8,FF_XYZ); break;
 	case GO_WBZ:		SetCompressionFF(FF_WU8,FF_BZ); break;
+	case GO_WLZ:		SetCompressionFF(FF_WU8,FF_LZ); break;
 	//case GO_LTA:		SetCompressionFF(FF_LTA,0); break;
 	case GO_LFL:		SetCompressionFF(FF_LFL,0); break;
 	//case GO_ARC:		SetCompressionFF(FF_RARC,0); break;
@@ -5929,6 +5963,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_FILTER_BMG:	filter_bmg = optarg; break;
 	case GO_LE_MENU:	opt_le_menu = true; break;
 	case GO_9LAPS:		opt_9laps = true; break;
+	case GO_UI_SOURCE:	opt_ui_source = optarg; break;
 	case GO_CUP_ICONS:	opt_cup_icons = optarg; break;
 	case GO_TITLE_SCREEN:	opt_title_screen = optarg; break;
 	case GO_AUTOADD_PATH:	DefineAutoAddPath(optarg); break;
@@ -5982,7 +6017,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_NO_BMG_COLORS:	opt_bmg_colors = 0; break;
 	case GO_BMG_COLORS:	opt_bmg_colors = 2; break;
 	case GO_NO_BMG_INLINE:	opt_bmg_inline_attrib = false; break;
-	case GO_CACHE:		opt_cache = optarg; break;
+	case GO_CACHE:		opt_cache = optarg; opt_remove_dest = true; break;
 	case GO_CNAME:		opt_cname = optarg; break;
 	case GO_LOG_CACHE:	opt_log_cache = optarg; break;
 	case GO_PARALLEL:	parallel_count++; break;
@@ -6017,7 +6052,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
     SetupKMP();
     SetupMDL();
 
-    // true until final version of 'post-patch-mkw.sh'
+    // [[cache]] p2=true until final version of 'post-patch-mkw.sh'
     SetupSZSCache(opt_cache,true);
 
     if (!err)

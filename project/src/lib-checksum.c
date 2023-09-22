@@ -175,6 +175,50 @@ void CreateSSChecksumDBBySZS ( char *buf, uint bufsize, const szs_file_t *szs )
 }
 
 ///////////////////////////////////////////////////////////////////////////////
+
+void CreateSSXChecksumDBByData ( char *buf, uint bufsize, cvp data, uint size, file_format_t ff )
+{
+    DASSERT(data||!size);
+    DASSERT(bufsize>CHECKSUM_DB_SIZE);
+
+    if (!data)
+	*buf = 0;
+    else
+    {
+	sha1_size_hash_t info;
+	SHA1(data,size,info.hash);
+	info.size = htonl(size);
+	CreateSSChecksumDB(buf,bufsize,&info);
+
+	if ( bufsize > CHECKSUM_DB_SIZE + 2 )
+	{
+	    ccp append = 0;
+	    switch((int)ff)
+	    {
+		case FF_YAZ0:  append = ".y"; break;
+		case FF_BZIP2: append = ".b"; break;
+		case FF_LZMA:  append = ".l"; break;
+	    }
+	    if (append)
+		memcpy(buf+CHECKSUM_DB_SIZE,append,3);
+	}
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void CreateSSXChecksumDBBySZS ( char *buf, uint bufsize, const szs_file_t *szs )
+{
+    DASSERT(buf);
+    DASSERT(bufsize>CHECKSUM_DB_SIZE);
+
+    if (szs)
+	CreateSSXChecksumDBByData(buf,bufsize,szs->data,szs->size,szs->fform_file);
+    else
+	*buf = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
 enumError GetSSByFile ( sha1_size_hash_t *ss, ccp path1, ccp path2 )
@@ -277,7 +321,7 @@ void LogCacheActivity ( ccp keyword, ccp format, ... )
     {
 	if (!opt_log_cache)
 	    return;
-	f = fopen(opt_log_cache,"a");
+	f = strcmp(opt_log_cache,"-") ? fopen(opt_log_cache,"a") : stdlog;
 	if (!f)
 	{
 	    ERROR1(ERR_CANT_CREATE,"Can't create log file: %s\n",opt_log_cache);
@@ -377,7 +421,7 @@ enumError LoadSZSCache(void)
 
     char fbuf[PATH_MAX], buf[PATH_MAX];
     ccp path = PathCatPP(fbuf,sizeof(fbuf),szs_cache_dir,SZS_CACHE_FNAME);
-    PRINT("LoadSZSCache() %s\n",path);
+    PRINT0("LoadSZSCache() %s\n",path);
 
     File_t F;
     enumError err = OpenFile(&F,true,path,FM_SILENT,0,0);
@@ -393,9 +437,9 @@ enumError LoadSZSCache(void)
     while (fgets(buf,sizeof(buf)-1,F.f))
     {
 	char *ptr = buf;
-	while ( *(uchar*)ptr <= ' ' )
+	while ( *ptr > 0 && *ptr <= ' ' )
 	    ptr++;
-	if ( *ptr == '#' || *ptr == '!' )
+	if ( *ptr == '#' || *ptr == '!' || !*ptr )
 	    continue;
 
 	if ( *ptr == '@' )
@@ -426,8 +470,6 @@ enumError LoadSZSCache(void)
 		*name = 0;
 		if (!strcmp(name_buf,"LAST-CACHE-SCAN"))
 		    szs_cache_last_scan = strtoul(ptr,0,10);
-	//	else if (!strcmp(name_buf,"APPEND"))
-	//	    szs_cache_last_append = strtoul(ptr,0,10);
 	    }
 	    continue;
 	}
@@ -437,16 +479,25 @@ enumError LoadSZSCache(void)
 	    len--;
 	ptr[len+1] = 0;
 
-	if ( len <= CHECKSUM_DB_SIZE || ptr[CHECKSUM_DB_SIZE] != ' ' )
+	char *fname = strchr(ptr,' ');
+	if (!fname)
 	    continue;
 
-	char *fname = ptr + CHECKSUM_DB_SIZE;
-	*fname++ = 0;
-	while ( *(uchar*)fname <= ' ' )
+	const uint cslen = fname - ptr;
+	if ( cslen != CHECKSUM_DB_SIZE && cslen != CHECKSUM_DB_SIZE+2 )
+	    continue;
+
+	while ( *fname > 0 && *fname <= ' ' )
 	    fname++;
+
+	char csum[CHECKSUM_DB_SIZE+3];
+	memcpy(csum,ptr,cslen);
+	csum[cslen] = 0;
+	if ( cslen == CHECKSUM_DB_SIZE )
+	    memcpy(csum+CHECKSUM_DB_SIZE,".y",3);
 	if (!*fname)
 	    continue;
-	StoreSZSCache(fname,ptr,false,0);
+	StoreSZSCache(fname,csum,false,0);
     }
 
     CloseFile(&F,0);
@@ -487,7 +538,7 @@ enumError SaveSZSCache ( bool force )
 
     char path_buf[PATH_MAX];
     ccp path = PathCatPP(path_buf,sizeof(path_buf),szs_cache_dir,SZS_CACHE_FNAME);
-    PRINT1("SaveSZSCache() N=%u, %s\n",szs_cache.used,path);
+    PRINT("SaveSZSCache() N=%u, %s\n",szs_cache.used,path);
 
     File_t F;
     enumError err = CreateFile(&F,true,path,FM_REMOVE);
@@ -550,7 +601,7 @@ enumError AppendSZSCache()
 
     char path_buf[PATH_MAX];
     ccp path = PathCatPP(path_buf,sizeof(path_buf),szs_cache_dir,SZS_CACHE_FNAME);
-    PRINT("SaveSZSCache() N=%u, %s\n",szs_cache.used,path);
+    PRINT("AppendSZSCache() N=%u, %s\n",szs_cache.used,path);
 
     File_t F;
     enumError err = CreateFile(&F,true,path,FM_APPEND);
@@ -585,7 +636,7 @@ ParamFieldItem_t * StoreSZSCache
     // return NULL or pointer to cache item
 
     ccp		fname,		// NULL or filename, only basename(fname) is used
-    ccp		checksum,	// DB checksum; if NULL: load file and calc checksum
+    ccp		checksum,	// DB checksum + ".x"; if NULL: load file and calc checksum
     bool	rename_file,	// true: rename existing file
     bool	*r_exists	// not NULL: store a status here
 				//	=> true: file result->data exists
@@ -608,10 +659,8 @@ ParamFieldItem_t * StoreSZSCache
     if (!*fname)
 	fname = 0;
 
-    PRINT("StoreSZSCache(%s,%s,%d,)\n",fname,checksum,rename_file);
-
     ccp path = 0;
-    char path_buf[PATH_MAX], oldpath_buf[PATH_MAX], checksum_buf[CHECKSUM_DB_SIZE+1];
+    char path_buf[PATH_MAX], oldpath_buf[PATH_MAX], checksum_buf[CHECKSUM_DB_SIZE+3];
 
     if (!checksum)
     {
@@ -619,7 +668,6 @@ ParamFieldItem_t * StoreSZSCache
 	    return 0;
 
 	path = PathCatPP(path_buf,sizeof(path_buf),szs_cache_dir,fname);
-	noPRINT(">> %s\n",path);
 
 	szs_file_t szs;
 	InitializeSZS(&szs);
@@ -630,15 +678,16 @@ ParamFieldItem_t * StoreSZSCache
 	    return 0;
 	}
 
-	CreateSSChecksumDBBySZS(checksum_buf,sizeof(checksum_buf),&szs);
-	ResetSZS(&szs);
+	CreateSSXChecksumDBBySZS(checksum_buf,sizeof(checksum_buf),&szs);
 	checksum = checksum_buf;
+	ResetSZS(&szs);
     }
 
     bool found;
     ParamFieldItem_t *it = FindInsertParamField(&szs_cache,checksum,false,0,&found);
     if ( !found && parallel_count > 0 )
 	it = FindInsertParamField(&szs_cache_append,checksum,false,0,&found);
+    PRINT0("N=%d, found[%s]=%d\n",szs_cache.used,checksum,found);
 
     if (found)
     {
@@ -657,7 +706,7 @@ ParamFieldItem_t * StoreSZSCache
 
 	if (!path)
 	    path = PathCatPP(path_buf,sizeof(path_buf),szs_cache_dir,fname);
-	PRINT("RENAME: %s -> %s\n",oldpath,path);
+	PRINT0("RENAME: %s -> %s\n",oldpath,path);
 	if (rename(oldpath,path))
 	    return it;
 
@@ -672,6 +721,150 @@ ParamFieldItem_t * StoreSZSCache
     }
     szs_cache_dirty = true;
     return it;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void ResetCheckCache ( check_cache_t *cc )
+{
+    if (cc)
+    {
+	ResetSZS(&cc->cache);
+	memset(cc,0,sizeof(*cc));
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void fix_ext ( char *buf, uint bufsize, ccp ext )
+{
+    char *point = strrchr(buf,'.');
+    if ( !point || strcmp(point,ext) )
+    {
+	if ( point && !strcmp(point,".szs") )
+	    *point = 0;
+	StringCat2S(buf,bufsize,buf,ext);
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+bool CheckSZSCache
+(
+    // returns true if file found in cache (same as cc->found)
+
+    check_cache_t	*cc,		// initialized by CheckSZSCache()
+    szs_file_t		*szs,		// related SZS file
+    cvp			data,		// data
+    uint		size,		// size of 'data'
+    file_format_t	fform,		// compression format
+    ccp			ext		// wanted file extension including leading '.'
+)
+{
+    ASSERT(cc);
+    ASSERT(szs);
+    ASSERT(ext);
+
+    memset(cc,0,sizeof(*cc));
+    cc->fform = fform;
+
+    LoadSZSCache();
+    CreateSSXChecksumDBByData(cc->csum,sizeof(cc->csum),data,size,fform);
+
+    ccp dest_fname;
+    if ( opt_cname && *opt_cname )
+    {
+	dest_fname = opt_cname;
+	opt_cname = 0;
+    }
+    else
+	dest_fname = szs->dest_fname ? szs->dest_fname : szs->fname;
+
+    char path[PATH_MAX];
+    StringCopyS(path,sizeof(path),dest_fname);
+    fix_ext(path,sizeof(path),ext);
+    dest_fname = path;
+
+    bool exists;
+    const ParamFieldItem_t *cit
+	= StoreSZSCache( dest_fname, cc->csum, true, &exists );
+//PRINT1("checklsum = %s, cit=%d, exists=%d\n",cc->csum,cit!=0,exists);
+
+    ccp cache_fname = 0;
+    if ( exists && cit )
+    {
+	cache_fname = PathAllocPP(szs_cache_dir,cit->data);
+//PRINT1("CACHE FOUND[%s]: %s\n",cit->key,cache_fname);
+
+	InitializeSZS(&cc->cache);
+
+	if ( !LoadSZS(&cc->cache,cache_fname,false,true,true)
+	    && cc->cache.cdata
+	    && cc->cache.csize
+	    && cc->cache.fform_file == fform )
+	{
+	    PRINT("CACHE LOADED, %zu bytes\n",cc->cache.csize);
+	    //HEXDUMP16(0,0,cc->cache.cdata,32);
+	    DecompressSZS(&cc->cache,false,0);
+	    if ( cc->cache.size == size && !memcmp(data,cc->cache.data,cc->cache.size))
+	    {
+		LogCacheActivity("USE","%s %s",cit->key,(ccp)cit->data);
+		FreeString(cache_fname);
+		return cc->found = true;
+	    }
+	}
+	else
+	    LogCacheActivity("!USE","%s %s",cit->key,(ccp)cit->data);
+	ResetSZS(&cc->cache);
+    }
+
+    if (cit)
+    {
+	if (cache_fname)
+	    StringCopyS(path,sizeof(path),cache_fname);
+	else
+	    PathCatPP(path,sizeof(path),szs_cache_dir,cit->data);
+	fix_ext(path,sizeof(path),ext);
+
+	FreeString(szs->cache_fname);
+	szs->cache_fname = STRDUP(path);
+//PRINT1("szs->cache_fname = %s\n",szs->cache_fname);
+    }
+
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool CheckSZSCacheSZS
+(
+    // returns true if file found in cache (same as cc->found)
+
+    szs_file_t		*szs,		// related SZS file
+    file_format_t	fform,		// compression format
+    ccp			ext,		// wanted file extension including leading '.'
+    bool		rm_uncompressed	// true: remove uncompressed data if cache is used
+)
+{
+    ASSERT(szs);
+    check_cache_t cc;
+    if (CheckSZSCache(&cc,szs,szs->data,szs->size,fform,ext))
+    {
+	FREE(szs->cdata);
+	szs->cdata = cc.cache.cdata;
+	szs->csize = cc.cache.csize;
+	szs->cache_used = true;
+	cc.cache.cdata = 0;
+	cc.cache.csize = 0;
+	ResetCheckCache(&cc);
+	if (rm_uncompressed)
+	    ClearUncompressedSZS(szs);
+	return true;
+    }
+
+    ResetCheckCache(&cc);
+    return false;
 }
 
 //

@@ -1068,7 +1068,7 @@ enumError ImportDistribLD ( le_distrib_t *ld, cvp data, uint size );
 enumError ImportDistribSTLD ( le_distrib_t *ld, ScanText_t *st );
 
 enumError CreateDistribLD ( FILE *f, le_distrib_t *ld, bool use_xname );
-enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, bool rm_source );
+enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt );
 
 //-----------------------------------------------------------------------------
 // lecode support

@@ -652,6 +652,13 @@ static enumError CreateGenericCupIconIMG
 	parlist = BehindMem(parlist,pipe?pipe+1:0);
 	PRINT0("%d+%d : %.*s\n",text.len,parlist.len,text.len,text.ptr);
 
+	if ( text.len == 3 && !memcmp(text.ptr,":64",3) )
+	{
+	    PRINT0(">>>>> width 64\n");
+	    par->force_width_64 = true;
+	    continue;
+	}
+
 	Image_t cupicon;
 	if ( text.len && *text.ptr == ':' )
 	{
@@ -815,27 +822,39 @@ enumError CreateGenericIMG
 		par->width, par->height, par->color );
 
     par->param = param;
+    enumError err;
     switch(par->cmd->id)
     {
 	case VICMD_BLANK:
 	    if (!par->width)  par->width = 1;
 	    if (!par->height) par->height = 1;
-	    return CreateIMG(img,false,par->width,par->height,par->color);
+	    err = CreateIMG(img,false,par->width,par->height,par->color);
+	    break;
 
 	case VICMD_TEXT:
-	    return CreateGenericTextIMG(par,img);
+	    err = CreateGenericTextIMG(par,img);
+	    break;
 
 	case VICMD_CUP_IMAGES:
-	    return CreateGenericCupImagesIMG(par,img);
+	    err = CreateGenericCupImagesIMG(par,img);
+	    break;
 
 	case VICMD_CUP_ICON:
-	    return CreateGenericCupIconIMG(par,img);
+	    err = CreateGenericCupIconIMG(par,img);
+	    break;
 
 	case VICMD_CUP_FILE:
-	    return CreateGenericCupFileIMG(par,img);
+	    err = CreateGenericCupFileIMG(par,img);
+	    break;
+
+	default:
+	    return ERR_NOT_EXISTS;
     }
 
-    return ERR_NOT_EXISTS;
+    if ( !err && par->force_width_64 )
+	ResizeIMG(img,false,img,64,0);
+
+    return err;
 }
 
 //

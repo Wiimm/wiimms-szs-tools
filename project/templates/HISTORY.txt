@@ -798,6 +798,28 @@ szs v2.36a r8834 - 2023-07-22
     - New LEX section DEV1: Define some track dependent developer modes.
 
 
+szs v2.37a r8863 - 2023-09-09
+
+ - Option --max-file-size=SIZE now accepts sizes up to 2 GiB. For LTA files
+   it is automatically set to 2 GiB.
+ - New file format: LTA = LE-CODE Track Archive.
+   Sometime in the future such archives will replace the individual track
+   files to save space (smaller file list) in LE-CODE distributions. In
+   addition, common files are to be managed so that the extraction of these
+   files by the distribution creator is no longer necessary.
+ - New file format: LFL = LE-CODE File List
+   The file format was developed to store the common files in LTA files in
+   a way that LE-CODE can use easily.
+ - wlect distrib:
+    - New string type 'PATH', which manages paths to the track files.
+    - New instructions LTA=DIRECTORY and LTA-RM=DIRECTORY, which will create
+      LE-CODE Track Archives.
+ - wszst XCOMMON: If at least 1 file is extracted, then file "avail.txt" is
+   created. This helps LE-CODE to detect extracted common files, because we
+   don't know how to detect directories by LE-CODE.
+ - New LPAR setting: USE-AVAIL-TXT.
+
+
 @@MODULE(last-history.txt)@@
 
 

@@ -63,6 +63,7 @@
 #include "lib-ledis.h"
 #include "lib-common.h"
 #include "lib-bzip2.h"
+#include "lib-lzma.h"
 #include "lib-checksum.h"
 #include "config.inc"
 
@@ -756,11 +757,15 @@ ccp GetNameFFv ( file_format_t ff1, file_format_t ff2, int version )
 
 ccp GetExtFF ( file_format_t ff1, file_format_t ff2 )
 {
-    if ( IsCompressedFF(ff1) && ff1 != FF_BZ2 )
+    if ( IsCompressedFF(ff1) && ff1 != FF_BZIP2 && ff1 != FF_LZMA )
     {
 	return ff1 == FF_BZ
-		? (  ff2 == FF_WU8 ? ".wbz" : ".bz" )
-		: (uint)ff2 < FF_N ? FileTypeTab[ff2].ext_compr : ".szs";
+		? ( ff2 == FF_WU8 ? ".wbz" : ".bz" )
+		: ff1 == FF_LZ
+		? ( ff2 == FF_WU8 ? ".wlz" : ".lz" )
+		: (uint)ff2 < FF_N
+		? FileTypeTab[ff2].ext_compr
+		: ".szs";
     }
 
     if ( ff1 <= FF_UNKNOWN || ff1 >= FF_N )
@@ -854,8 +859,11 @@ file_format_t GetByMagicFF
     const u8 *data8 = (u8*)data;
     if ( data_size >= 8 )
     {
-	if ( IsBZIP2(data,data_size) )
-	    return FF_BZ2;
+	if ( IsBZ   (data,data_size) >= 0 ) return FF_BZ;
+	if ( IsBZIP2(data,data_size) >= 0 ) return FF_BZIP2;
+	if ( IsLZ   (data,data_size) >= 0 ) return FF_LZ;
+	if ( IsLZMA (data,data_size) >= 0 ) return FF_LZMA;
+	if ( IsXZ   (data,data_size) >= 0 ) return FF_XZ;
 
 	const u64 magic64 = be64(data);
 	switch(magic64)
@@ -905,7 +913,8 @@ file_format_t GetByMagicFF
 	    case YAZ0_MAGIC_NUM:	return FF_YAZ0;
 	    case YAZ1_MAGIC_NUM:	return FF_YAZ1;
 	    case XYZ0_MAGIC_NUM:	return FF_XYZ;
-	    case BZ_MAGIC_NUM:		return FF_BZ;
+//	    case BZ_MAGIC_NUM:		return FF_BZ;
+//	    case LZ_MAGIC_NUM:		return FF_LZ;
 	    case GCH_MAGIC_NUM:		return FF_GCH;
 	    case WCH_MAGIC_NUM:		return FF_WCH;
 	    case WPF_MAGIC_NUM:		return FF_WPF;
@@ -2408,6 +2417,40 @@ s64 FindAutoAdd ( ccp fname, ccp ext, char *buf, uint buf_size )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			CompressManager_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError DecodeCompressManager
+(
+    CompressManager_t	*mgr	// manager data
+)
+{
+    DASSERT(mgr);
+    DASSERT(mgr->src_data);
+
+    if (!mgr->data)
+    {
+	mgr->size = 0;
+	switch ((int)mgr->fform)
+	{
+	    case FF_BZIP2:
+		return DecodeBZIP2(&mgr->data,&mgr->size,0,mgr->src_data,mgr->src_size);
+
+	    case FF_LZMA:
+		return DecodeLZMAsize(&mgr->data,&mgr->size,0,mgr->src_data,mgr->src_size);
+
+	    case FF_UNKNOWN:
+		mgr->data = MEMDUP(mgr->src_data,mgr->src_size);
+		mgr->size = mgr->src_size;
+		return ERR_OK;
+	}
+    }
+
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			file format atribs		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2458,18 +2501,6 @@ int GetVersionFF
 
     switch(fform)
     {
- #if 0
-	case FF_YAZ0:
-	case FF_XYZ:
-	    return 0;
-
-	case FF_YAZ1:
-	    return 1;
-
-	case FF_BZ:
-	    return ((u8*)data)[3] - 'a' + 1;
- #endif
-
 	case FF_BREFF:
 	case FF_BREFT:
 	    if ( data_size >= 0x08 )

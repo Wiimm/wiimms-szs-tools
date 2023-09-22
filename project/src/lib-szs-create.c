@@ -802,7 +802,7 @@ enumError CreateSZS
 		{
 		    const bool is_compressed = IsCompressedFF(setup_param2.fform_file);
 		    if (is_compressed)
-			CompressSZS(&szs,true);
+			CompressSZS(&szs,0,true);
 
 		    if ( depth < log_depth )
 			fprintf(stdlog,"%*s%sCREATE %s:%s\n",
@@ -949,7 +949,7 @@ enumError CreateSZS
     if ( !err && setup_param->compr_mode >= 0 )
     {
 	szs->dest_fname = dest_fname;
-	CompressSZS(szs,true);
+	CompressSZS(szs,0,true);
 	szs->dest_fname = 0;
     }
 
@@ -2086,7 +2086,7 @@ void AddSectionsLEX ( szs_file_t *szs, szs_norm_t *norm, const szs_have_t * have
     {
 	features_szs_t fs;
 	SetupFeaturesSZS(&fs,have,true);
-	//PRINT1("GetFeaturesStatusSZS()=%d\n",GetFeaturesStatusSZS(&fs));
+	PRINT0("GetFeaturesStatusSZS()=%d\n",GetFeaturesStatusSZS(&fs));
 	if ( GetFeaturesStatusSZS(&fs) > 1 )
 	    add_course_lex = true;
 	ResetFeaturesSZS(&fs);
@@ -2591,7 +2591,8 @@ static void patch_file
     struct szs_iterator_t *it,		// itarator data
     const void		*new_data,	// new data
     uint		new_size,	// size of 'new_data'
-    bool		move_data	// true: 'new_data' is alloced
+    bool		move_data,	// true: 'new_data' is alloced
+    bool		use_ui_source	// true: search file in directory det by --ui-source
 )
 {
     DASSERT(it);
@@ -2599,8 +2600,29 @@ static void patch_file
 
     szs_file_t *szs = it->szs;
     DASSERT(szs);
-    u8 *data = szs->data + it->off;
 
+    patch_szs_par_t *ppar = it->param;
+    DASSERT(ppar);
+
+    if ( use_ui_source && opt_ui_source )
+    {
+	u8 *fdata = 0;
+	size_t fsize;
+	enumError err = LoadFileAlloc(opt_ui_source,ppar->path,0, &fdata,&fsize, 0,2,0,false);
+	if (!err)
+	{
+	    PRINT0("patch_file(), use %s / %s\n",opt_ui_source,ppar->path);
+	    if (move_data)
+		FREE((void*)new_data);
+	    new_data = fdata;
+	    new_size = fsize;
+	    move_data = true;
+	}
+	else
+	    FREE(fdata);
+    }
+
+    u8 *data = szs->data + it->off;
     if ( it->size == new_size )
     {
 	if ( verbose >= 2 )
@@ -2622,8 +2644,6 @@ static void patch_file
 	it->size = file->size = new_size;
     }
 
-    patch_szs_par_t *ppar = it->param;
-    DASSERT(ppar);
     ppar->modified++;
 }
 
@@ -2639,12 +2659,12 @@ static void patch_le_menu ( struct szs_iterator_t *it )
 
     static const struct tab_t tab[] =
     {
-	{ "button/ctrl/Back.brctr",			&back_brctr_mgr },
-	{ "control/ctrl/CourseSelectCup.brctr",		&courseselectcup_brctr_mgr },
-	{ "button/ctrl/CupSelectCup.brctr",		&cupselectcup_brctr_mgr },
-	{ "demo/blyt/course_name.brlyt",		&course_name_brlyt_mgr },
 	{ "button/blyt/cup_icon_64x64_common.brlyt",	&cup_icon_64x64_common_brlyt_mgr },
+	{ "button/ctrl/Back.brctr",			&back_brctr_mgr },
+	{ "button/ctrl/CupSelectCup.brctr",		&cupselectcup_brctr_mgr },
 	{ "control/blyt/cup_icon_64x64_common.brlyt",	&cup_icon_64x64_common_brlyt_mgr },
+	{ "control/ctrl/CourseSelectCup.brctr",		&courseselectcup_brctr_mgr },
+	{ "demo/blyt/course_name.brlyt",		&course_name_brlyt_mgr },
 	{ "demo/timg/tt_hatena_64x64.tpl",		&tt_hatena_64x64_tpl_mgr },
 	{0,0}
     };
@@ -2658,7 +2678,7 @@ static void patch_le_menu ( struct szs_iterator_t *it )
 	{
 	    BZ2Manager_t *bm = ptr->bz2mgr;
 	    DecodeBZIP2Manager(bm);
-	    patch_file(it,bm->data,bm->size,false);
+	    patch_file(it,bm->data,bm->size,false,true);
 	    break;
 	}
     }
@@ -2688,9 +2708,9 @@ static void patch_9laps ( struct szs_iterator_t *it )
 
     struct tab_t
     {
-	uint		mode;
-	ccp		fname;
-	BZ2Manager_t	*bz2mgr;
+	uint			mode;
+	ccp			fname;
+	CompressManager_t	*cmgr;
     };
 
     static const struct tab_t tab[] =
@@ -2758,7 +2778,7 @@ static void patch_9laps ( struct szs_iterator_t *it )
 	PRINT0("%4x  %-35s %p  %s\n",ptr->mode,ptr->fname,ptr->bz2mgr,ppar->path);
 	if ( ptr->mode != M_ADD && !strcasecmp(ppar->path,ptr->fname) )
 	{
-	    BZ2Manager_t *bm = ptr->bz2mgr;
+	    CompressManager_t *cm = ptr->cmgr;
 	    bool patch = false;
 	    switch (ptr->mode)
 	    {
@@ -2788,13 +2808,13 @@ static void patch_9laps ( struct szs_iterator_t *it )
 		while ( ptr[1].mode == M_ADD )
 		{
 		    ptr++;
-		    bm = ptr->bz2mgr;
-		    if (bm)
+		    cm = ptr->cmgr;
+		    if (cm)
 		    {
 			PRINT0("9laps/add  %s\n",ptr->fname);
-			DecodeBZIP2Manager(bm);
+			DecodeCompressManager(cm);
 			add_missing_t am = { .szs = it->szs, .norm = &it->norm_create,
-					.data = (u8*)bm->data, .size = bm->size, .print_err = true };
+					.data = (u8*)cm->data, .size = cm->size, .print_err = true };
 			am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
 			AddMissingFile(ptr->fname,FF_TPL,&am);
 			it->job_create = true;
@@ -2806,23 +2826,23 @@ static void patch_9laps ( struct szs_iterator_t *it )
 		PRINT0("9laps/lang mode=%x, %s\n",ptr->mode,ptr->fname);
 		switch (it->ui_check.ui_lang)
 		{
-		 case 'E': if ( ptr->mode & ME ) patch = true; break;
-		 case 'F': if ( ptr->mode & MF ) patch = true; break;
-		 case 'G': if ( ptr->mode & MG ) patch = true; break;
-		 case 'I': if ( ptr->mode & MI ) patch = true; break;
-		 case 'J': if ( ptr->mode & MJ ) patch = true; break;
-		 case 'K': if ( ptr->mode & MK ) patch = true; break;
-		 case 'M': if ( ptr->mode & MM ) patch = true; break;
-		 case 'Q': if ( ptr->mode & MQ ) patch = true; break;
-		 case 'S': if ( ptr->mode & MS ) patch = true; break;
-		 case 'U': if ( ptr->mode & MU ) patch = true; break;
+		    case 'E': if ( ptr->mode & ME ) patch = true; break;
+		    case 'F': if ( ptr->mode & MF ) patch = true; break;
+		    case 'G': if ( ptr->mode & MG ) patch = true; break;
+		    case 'I': if ( ptr->mode & MI ) patch = true; break;
+		    case 'J': if ( ptr->mode & MJ ) patch = true; break;
+		    case 'K': if ( ptr->mode & MK ) patch = true; break;
+		    case 'M': if ( ptr->mode & MM ) patch = true; break;
+		    case 'Q': if ( ptr->mode & MQ ) patch = true; break;
+		    case 'S': if ( ptr->mode & MS ) patch = true; break;
+		    case 'U': if ( ptr->mode & MU ) patch = true; break;
 		}
 	    }
 
-	    if ( patch && bm )
+	    if ( patch && cm )
 	    {
-		DecodeBZIP2Manager(bm);
-		patch_file(it,bm->data,bm->size,false);
+		DecodeCompressManager(cm);
+		patch_file(it,cm->data,cm->size,false,true);
 		break;
 	    }
 	}
@@ -2843,7 +2863,7 @@ static void patch_title_screen ( struct szs_iterator_t *it )
     size_t size;
     LoadFileAlloc(opt_title_screen,base_name,0,&data,&size,0,2,0,false);
     if (data)
-	patch_file(it,data,size,true);
+	patch_file(it,data,size,true,false);
     else if (strstr(ppar->path,"/tt_title_screen_"))
     {
 	char path_buf[PATH_MAX];
@@ -2868,7 +2888,7 @@ static void patch_title_screen ( struct szs_iterator_t *it )
 		CreateRawTPL(&raw,&img);
 		if (raw.valid)
 		{
-		    patch_file(it,raw.data.ptr,raw.data.len,true);
+		    patch_file(it,raw.data.ptr,raw.data.len,true,false);
 		    raw.data.ptr = 0;
 		}
 		ResetRawTPL(&raw);
@@ -4446,7 +4466,6 @@ typedef struct extract_param_t
     bool		extract;	// true: extract subfiles
     bool		decode;		// true: store subfiles for decoding
     bool		mipmap;		// true: extract mipmaps too
-    bool		avail_txt;	// true: create file "avail.txt" if at least one file is extracted
     int			recurse_level;	// current recurse level
     int			indent;		// indention of log messages
     u32			align;		// found alignment
@@ -4650,15 +4669,6 @@ static int extract_func
 	CreateFileOpt(&F,true,pathptr,testmode,0);
 	if (F.f)
 	{
-	    if ( !ep->extract_count++ && ep->avail_txt )
-	    {
-		// first extract => write "avail.txt"
-		InsertStringField(&ep->exclude_list,"avail.txt",false);
-		char buf[20];
-		snprintf(buf,sizeof(buf),"%u\r\n",ep->extract_count);
-		SaveFile(ep->dest,"avail.txt",FM_OVERWRITE|FM_TOUCH,buf,strlen(buf),0);
-	    }
-
 	    SetFileAttrib(&F.fatt,&szs->fatt,0);
 	    size_t wstat = fwrite(subszs.data,1,subszs.size,F.f);
 	    enumError err = wstat != subszs.size ? ERR_WRITE_FAILED : ERR_OK;
@@ -5086,7 +5096,6 @@ enumError ExtractFilesSZS
     ep.decode		= opt_decode;
     ep.mipmap		= opt_mipmaps >= 0;
     ep.recurse_level	= recurse_level;
-    ep.avail_txt	= opt_avail_txt;
     ep.extract		= recurse_level < opt_recurse;
     ep.is_cutting	= is_cutting;
     ep.indent		= indent + 1;

@@ -1,23 +1,27 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Option --max-file-size=SIZE now accepts sizes up to 2 GiB. For LTA files
-   it is automatically set to 2 GiB.
- - New file format: LTA = LE-CODE Track Archive.
-   Sometime in the future such archives will replace the individual track
-   files to save space (smaller file list) in LE-CODE distributions. In
-   addition, common files are to be managed so that the extraction of these
-   files by the distribution creator is no longer necessary.
- - New file format: LFL = LE-CODE File List
-   The file format was developed to store the common files in LTA files in
-   a way that LE-CODE can use easily.
- - wlect distrib:
-    - New string type 'PATH', which manages paths to the track files.
-    - New instructions LTA=DIRECTORY and LTA-RM=DIRECTORY, which will create
-      LE-CODE Track Archives.
- - wszst XCOMMON: If at least 1 file is extracted, then file "avail.txt" is
-   created. This helps LE-CODE to detect extracted common files, because we
-   don't know how to detect directories by LE-CODE.
- - New LPAR setting: USE-AVAIL-TXT.
+ - Windows only: Updated 64 bit version of Cygwin to DLL 3.4.9 / 2023-09-06.
+ - Bug fix for wszst COPY: All format conversion options are now evaluated.
+ - Fixed a bug that caused distribution files to be read incorrectly.
+ - New compression formats:
+    LZ:   Read and create LZ compressed files. LZ is like YAZ0 and BZ, but
+          with LZMA compression.
+    LZMA: Read and create LZMA compressed files. Tracks compressed with LZMA
+          are approx 40% smaller than the YAZ0 compressed tracks.
+    XZ:   Detect XZ compressed files.
+ - Formats BZIP2, LZMA and XZ are compatible with external tools like 'bzip2',
+   'lzma' and 'xz'.
+ - Files compressed with BZ, BZIP2, LZ or LZMA are transparently decompressed.
+   This means that they can be processed by all commands.
+ - New options --lz, --lzma and --wlz to force compression with new formats.
+ - LTA: Optionally, the compression method for the track files can be forced.
+   Methods YAZ0, BZ, BZIP2, LZ and LZMA are available.
+ - LTA: Maximum number of supported slots increased from 1024 to 4096.
+ - wszst --cache=dir: Cache supports YAZ0, BZIP2 and LZMA compressed files now.
+ - wlect DISTRIB --cache=dir: Use the cache if creating an LTA file when new
+   compression is forced.
+ - wszst XCOMMON: File "avail.txt" is no longer created.
+ - Removed LPAR setting USE-AVAIL-TXT.
 
 ~ - KMP:STGI support for up to 255 laps.
 ~    - Option --kmp=MODES supports now settings 1LAP .. 15LAPS.

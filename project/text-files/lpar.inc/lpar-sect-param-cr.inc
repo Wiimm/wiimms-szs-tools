@@ -144,16 +144,6 @@ DEF-ONLINE-SEC	= %3u%s
 MIN-ONLINE-SEC	= %3u%s
 MAX-ONLINE-SEC	= %3u%s
 
-# At the moment, LE-CODE cannot find out whether a directory exists in the
-# file system. However, this is important for optimization when loading the
-# common files. If USE-AVAIL-TXT is set to 1, then LE-CODE looks for file
-# "Race/Common/###/avail.txt" to check the existence of the directory. If the
-# value is 0, the optimization is deactivated. Command "wszst xcommon" of the
-# current SZS tools creates this file. Therefore, the value should only be set
-# to 1 if file "avail.txt" was also created.
-
-USE-AVAIL-TXT	= %u
-
 #------------------------------------------------------------------------------
 
 # The following setting is for LE-CODE developers only.

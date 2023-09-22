@@ -57,7 +57,7 @@ WPATT_LONG		= Wiimms PAT Tool
 WSTRT_SHORT		= wstrt
 WSTRT_LONG		= Wiimms StaticR Tool
 
-VERSION_NUM		= 2.37a
+VERSION_NUM		= 2.38a
 BETA_VERSION		= 0
 			# 0:off  -1:"beta"  >0:"beta#"
 
@@ -161,9 +161,9 @@ endif
 ifeq ($(SYSTEM_LINUX),1)
  CFLAGS		+= -ffunction-sections -fdata-sections -Wno-gnu-variable-sized-type-not-at-end
  LDFLAGS	+= -Xlinker --gc-sections
+ LDFLAGS	+= -static-libgcc -z noexecstack
  #LDFLAGS	+= -Xlinker --print-gc-sections
  LIBS		+= -ltinfo
- LDFLAGS	+= -static-libgcc -z noexecstack
 endif
 
 ifeq ($(SYSTEM),cygwin)
@@ -272,16 +272,21 @@ TOBJ_wtest	= $(XOBJ_LIB)
 # sub libs
 
 # libbz2
-LIBBZ2_SRC	= $(shell echo src/libbz2/*.c)
-LIBBZ2_OBJ	= $(patsubst %.c,%.o,$(LIBBZ2_SRC))
+LIB_BZ2_SRC	= $(shell echo src/libbz2/*.c)
+LIB_BZ2_OBJ	= $(patsubst %.c,%.o,$(LIB_BZ2_SRC))
+
+# liblzma
+LIB_LZMA_SRC	= $(shell echo src/liblzma/*.c)
+LIB_LZMA_OBJ	= $(patsubst %.c,%.o,$(LIB_LZMA_SRC))
+LZMA_FLAGS	= -DZ7_ST=1
 
 ifneq ($(SYSTEM),mac)
   BZIP2_FLAGS	= -Wno-maybe-uninitialized
 endif
 
 # lib summary
-LIB_LIST	+= libbz2
-LIB_OBJECTS	+= $(LIBBZ2_OBJ)
+LIB_LIST	+= libbz2 liblzma
+LIB_OBJECTS	+= $(LIB_BZ2_OBJ) $(LIB_LZMA_OBJ)
 RM_FILES	+= $(foreach l,$(LIB_LIST),src/$(l)/*.{d,o})
 
 #-------------------------------------------------------------------------------
@@ -308,7 +313,7 @@ SZS_O		:= lib-std.o lib-file.o lib-numeric.o \
 		   lib-szs.o lib-checksum.o \
 		   lib-rarc.o lib-pack.o lib-rkc.o lib-brres.o lib-breff.o \
 		   file-type.o db-mkw.o lib-mkw.o lib-dol.o \
-		   sha1dgst.o sha1_one.o lib-bzip2.o \
+		   sha1dgst.o sha1_one.o lib-bzip2.o lib-lzma.o \
 		   $(DCLIB_O)
 
 # object groups
@@ -522,9 +527,13 @@ run-ui : gen-ui.c ui.h $(UI_TABS) $(UI_FILES) | gen-ui
 ###############################################################################
 # lib specific rules
 
-$(LIBBZ2_OBJ): %.o: %.c Makefile
+$(LIB_BZ2_OBJ): %.o: %.c Makefile
 	@printf "$(LOGFORMAT_CC)" object "$(subst src/libbz2/,,$@)" "$(MODE) [libbz2]"
 	@$(CC) $(CFLAGS) $(DEPFLAGS) $(BZIP2_FLAGS) $(DEFINES) -c $< -o $@
+
+$(LIB_LZMA_OBJ): %.o: %.c Makefile
+	@printf "$(LOGFORMAT_CC)" object "$(subst src/liblzma/,,$@)" "$(MODE) [lzma]"
+	@$(CC) $(CFLAGS) $(DEPFLAGS) $(LZMA_FLAGS) $(DEFINES) -c $< -o $@
 
 #
 ###############################################################################

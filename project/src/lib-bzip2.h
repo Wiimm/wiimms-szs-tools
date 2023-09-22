@@ -35,8 +35,8 @@
  *                                                                         *
  ***************************************************************************/
 
-#ifndef WIT_LIB_BZIP2_H
-#define WIT_LIB_BZIP2_H 1
+#ifndef SZS_LIB_BZIP2_H
+#define SZS_LIB_BZIP2_H 1
 #ifndef NO_BZIP2
 
 #define _GNU_SOURCE 1
@@ -69,10 +69,22 @@ typedef struct BZIP2_t
 ///////////////			  helpers			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-uint IsBZIP2
+int IsBZ
 (
     // returns
-    //	0:    not BZIP2 data
+    // -1:    not BZIP2 data
+    //  1..9: seems to be BZIP2 data; compression level is returned
+
+    cvp			data,		// NULL or data to investigate
+    uint		size		// size of 'data'
+);
+
+//-----------------------------------------------------------------------------
+
+int IsBZIP2
+(
+    // returns
+    // -1:    not BZIP2 data
     //  1..9: seems to be BZIP2 data; compression level is returned
 
     cvp			data,		// NULL or data to investigate
@@ -196,7 +208,8 @@ enumError EncodeBZIP2buf
     const void		*src,		// source buffer
     uint		src_size,	// size of source buffer
 
-    int			compr_level	// valid are 1..9 / 0: use default value
+    int			compr_level,	// valid are 1..9 / 0: use default value
+    bool		add_dec_size	// true: add decompressed size
 );
 
 //-----------------------------------------------------------------------------
@@ -204,9 +217,11 @@ enumError EncodeBZIP2buf
 enumError EncodeBZIP2
 (
     u8			**dest_ptr,	// result: store destination buffer addr
-    uint		*dest_written,	// store num bytes written to 'dest_ptr', never NULL
-    bool		use_iobuf,	// true: allow thhe usage of 'iobuf'
+    uint		*dest_written,	// store num bytes written to 'dest', never NULL
+
+    bool		use_iobuf,	// true: allow the usage of 'iobuf'
     uint		header_size,	// insert 'header_size' bytes before dest data
+    bool		add_dec_size,	// true: add decompressed size
 
     const void		*src,		// source buffer
     uint		src_size,	// size of source buffer
@@ -216,7 +231,7 @@ enumError EncodeBZIP2
 
 //-----------------------------------------------------------------------------
 
-enumError DecodeBZIP2stream
+enumError DecodeBZIP2bin
 (
     u8			**dest_ptr,	// result: store destination buffer addr
     uint		*dest_written,	// store num bytes written to 'dest_ptr', never NULL
@@ -233,7 +248,7 @@ enumError DecodeBZIP2part
     // decompress until dest buffer full or end of source reached
     // return ERR_WARNING for an incomplete decompression
 
-    void		*dest_buf,	// result: store rad data hers
+    void		*dest_buf,	// result: store read data here
     uint		dest_size,	// size of 'dest_buf'
     uint		*dest_written,	// store num bytes written to 'dest_ptr', never NULL
 
@@ -249,7 +264,7 @@ enumError DecodeBZIP2buf
     uint		dest_size,	// size of 'dest'
     uint		*dest_written,	// store num bytes written to 'dest_ptr', never NULL
 
-    const void		*src,		// source buffer
+    const void		*src,		// source buffer, first 4 bytes = dest size
     uint		src_size	// size of source buffer
 );
 
@@ -261,7 +276,7 @@ enumError DecodeBZIP2
     uint		*dest_written,	// store num bytes written to 'dest', never NULL
     uint		header_size,	// insert 'header_size' bytes before dest data
 
-    const void		*src,		// source buffer
+    const void		*src,		// source buffer, first 4 bytes = dest size
     uint		src_size	// size of source buffer
 );
 
@@ -402,5 +417,5 @@ uint SearchListBZ2S
 ///////////////////////////////////////////////////////////////////////////////
 
 #endif // !NO_BZIP2
-#endif // WIT_LIB_BZIP2_H 1
+#endif // SZS_LIB_BZIP2_H 1
 

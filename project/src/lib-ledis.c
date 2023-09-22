@@ -6261,9 +6261,6 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
     dest = StringCopyE(dest,bufend,":cup-icon=");
     char *cuplist = dest;
 
-    dest = StringCopyE(dest,bufend,":arrows\n");
-    enumError err = ERR_OK;
-
 
     //--- scan options
 
@@ -6280,6 +6277,8 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	O_GAME		= 0x0080,
 	O_XGAME		= 0x0100,
 	O_SPACE		= 0x0200,
+
+	O_64		= 0x0400,
 
 	O_CHARS		= 0x1000,
 	 O_M_CHARS	= 0xf000,
@@ -6301,6 +6300,9 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	{ O_GAME,		"GAME",		0,		0 },
 	{ O_XGAME,		"XGAME",	0,		0 },
 	{ O_SPACE,		"SPACE",	0,		0 },
+
+	{ O_64,			"64",		0,		O_64 },
+	{ 0,			"128",		0,		O_64 },
 
 	{  0*O_CHARS,		 "0",		0,		O_M_CHARS },
 	{  1*O_CHARS,		 "1",		0,		O_M_CHARS },
@@ -6338,6 +6340,12 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
     }
     if (!opt)
 	opt = O__DEFAULT;
+
+    if ( opt & O_64 )
+	dest = StringCopyE(dest,bufend,":64\n");
+
+    dest = StringCopyE(dest,bufend,":arrows\n");
+    enumError err = ERR_OK;
 
     int cup_index = 0;
     if ( opt & O_SWAPPED )
@@ -7759,6 +7767,7 @@ enumError ImportDistribLD ( le_distrib_t *ld, cvp data, uint size )
 
     ScanText_t st;
     SetupScanText(&st,data,size);
+    st.ignore_values = false;
     const enumError err = ImportDistribSTLD(ld,&st);
     ResetScanText(&st);
     return err;
@@ -7901,13 +7910,28 @@ static enumError close_lta ( lta_manager_t *lm )
 	if ( verbose >= 0 )
 	{
 	    CloseFile(&lm->F,0);
+	    char d_buf[20], lfl_buf[20], cache_buf[20], conv_buf[20], dup_buf[30];
+	    *d_buf = *lfl_buf = *conv_buf = *cache_buf = *dup_buf = 0;
+	    if (lm->d_count)
+		snprintf(d_buf,sizeof(d_buf),", %u _d",lm->d_count);
+	    if (lm->lfl_count)
+		snprintf(lfl_buf,sizeof(lfl_buf),", %u LFL",lm->lfl_count);
+	    if (lm->cache_count)
+		snprintf(cache_buf,sizeof(cache_buf),", %u cache",lm->cache_count);
+	    if (lm->convert_count)
+		snprintf(conv_buf,sizeof(conv_buf),", %u conv",lm->convert_count);
+	    if (lm->lfl_dup_count)
+		snprintf(dup_buf,sizeof(dup_buf),", %u+%u dup",lm->szs_dup_count,lm->lfl_dup_count);
+	    else if (lm->szs_dup_count)
+		snprintf(dup_buf,sizeof(dup_buf),", %u dup",lm->szs_dup_count);
+
 	    fprintf(stdlog,
-		    "%sCreated LTA:%s (%s), slots %u..%u (%u std, %u _d, %u LFL), %s\n",
+		    "%sCreated LTA:%s (%s), slots %u..%u (%u std%s%s%s%s%s), %s\n",
 		    verbose >= 1 ? "   > " : "   - ",
 		    lm->F.fname,
 		    PrintSize1000(0,0,lm->data_offset,0),
 		    lm->base_slot, lm->last_slot,
-		    lm->std_count, lm->d_count, lm->lfl_count,
+		    lm->std_count, d_buf, lfl_buf, cache_buf, conv_buf, dup_buf,
 		    PrintTimerNSec6(0,0,GetTimerNSec()-lm->start_nsec,0) );
 	    fflush(stdlog);
 	}
@@ -7926,6 +7950,10 @@ static enumError close_lta ( lta_manager_t *lm )
     lm->std_count	= 0;
     lm->d_count		= 0;
     lm->lfl_count	= 0;
+    lm->cache_count	= 0;
+    lm->convert_count	= 0;
+    lm->szs_dup_count	= 0;
+    lm->lfl_dup_count	= 0;
 
     memset(lm->node,0,sizeof(lm->node));
     return err;
@@ -7945,7 +7973,7 @@ static void load_file_lta
     DASSERT(rec);
     DASSERT(path);
 
-    const uint fsize = rec->szs_size;
+    uint fsize = rec->szs_size;
     if (!fsize)
 	return;
 
@@ -7956,20 +7984,42 @@ static void load_file_lta
 	lm->buf_size = fsize;
     }
 
-    if (!LoadFILE(fname,0,0,lm->buf,fsize,0,0,false))
+    u8 *fdata = lm->buf;
+    if (!LoadFILE(fname,0,0,fdata,fsize,0,0,false))
     {
 	if (lm->rm_source)
 	    InsertStringField(&lm->ld->remove_files,fname,false);
 
-	sha1_size_b64_t sha1_szs;
-	CreateSS64(lm->buf,fsize,sha1_szs);
+	szs_file_t szs;
+	AssignSZS(&szs,true,fdata,fsize,false,FF_UNKNOWN,fname);
+	PRINT0("data=%d,%zu, cdata=data=%d,%zu, ff=%s\n",
+		szs.data!=0, szs.size,szs.cdata!=0, szs.csize, GetNameFF_SZS(&szs) );
 
-	bool old_found;
-	exmem_key_t *eml_szs = FindInsertEML(&lm->stored_szs,sha1_szs,CPM_COPY,&old_found);
-	if (old_found)
+	if ( lm->force_ff != FF_UNKNOWN )
 	{
-	    *rec = *(lta_node_record_t*)eml_szs->data.data.ptr;
-	    return;
+	    if ( lm->force_ff != szs.fform_file )
+	    {
+		enumError err = CompressWith(&szs,COMPR_DEFAULT,false,lm->force_ff,FF_UNKNOWN);
+		if (szs.cdata)
+		{
+		    fdata = szs.cdata;
+		    fsize = szs.csize;
+		    if (szs.cache_used)
+			lm->cache_count++;
+		    else
+		    {
+			lm->convert_count++;
+			if ( !err && szs.cache_fname )
+			{
+			    File_t F;
+			    CreateFile(&F,true,szs.cache_fname,FM_SILENT|FM_REMOVE);
+			    if (F.f)
+				fwrite(fdata,1,fsize,F.f);
+			    ResetFile(&F,false);
+			}
+		    }
+		}
+	    }
 	}
 
 	if (is_d)
@@ -7977,12 +8027,23 @@ static void load_file_lta
 	else
 	    lm->std_count++;
 
+	sha1_size_b64_t sha1_szs;
+	CreateSS64(fdata,fsize,sha1_szs);
+
+	bool old_found;
+	exmem_key_t *eml_szs = FindInsertEML(&lm->stored_szs,sha1_szs,CPM_COPY,&old_found);
+	if (old_found)
+	{
+	    lm->szs_dup_count++;
+	    *rec = *(lta_node_record_t*)eml_szs->data.data.ptr;
+	    return;
+	}
+
 	rec->szs_off = lm->data_offset;
-	WriteFileAt(&lm->F,&lm->current_offset,lm->data_offset,lm->buf,fsize);
+	rec->szs_size = fsize;
+	WriteFileAt(&lm->F,&lm->current_offset,lm->data_offset,fdata,fsize);
 	lm->data_offset += ALIGN32(fsize,opt_align_lta);
 
-	szs_file_t szs;
-	AssignSZS(&szs,true,lm->buf,fsize,false,FF_UNKNOWN,fname);
 	CollectCommonFilesSZS(&szs,true,SORT_NONE);
 	CreateLFL(&szs,0,true,true); // sorting is defined here
 	PRINT0("LFL: %p %zu\n",szs.data,szs.size);
@@ -7994,6 +8055,7 @@ static void load_file_lta
 	    exmem_key_t *eml_lfl = FindInsertEML(&lm->stored_lfl,sha1_lfl,CPM_COPY,&old_found);
 	    if (old_found)
 	    {
+		lm->lfl_dup_count++;
 		lta_node_par_t *temp = (lta_node_par_t*)eml_lfl->data.data.ptr;
 		rec->lfl_off  = temp->offset;
 		rec->lfl_size = temp->size;
@@ -8011,28 +8073,82 @@ static void load_file_lta
 	    }
 
 	    szs.fname = 0;
-	    ResetSZS(&szs);
 	}
+	ResetSZS(&szs);
 	eml_szs->data = ExMemDup(rec,sizeof(*rec));
     }
 }
 
 //-----------------------------------------------------------------------------
 
-enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, bool rm_source )
+enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
 {
     if ( !ld || !destdir )
 	return ERR_MISSING_PARAM;
+
+    enum
+    {
+	O_YAZ		= 0x01,  // force FF_YAZ0  compression
+	O_BZ		= 0x02,  // force FF_BZ    compression
+	O_BZIP2		= 0x03,  // force FF_BZIP2 compression
+	O_LZ		= 0x04,  // force FF_LZ    compression
+	O_LZMA		= 0x05,  // force FF_LZMA  compression
+	 O_M_METHOD	= 0x07,  // mask for above
+
+	O_RM		= 0x08,
+
+	O_ALL		= 0x0f,
+	O_DEFAULT	= 0
+    };
+
+    static const KeywordTab_t keytab[] =
+    {
+	{ O_YAZ,		"YAZ0",		0,		O_M_METHOD },
+	{ O_BZ,			"BZ",		0,		O_M_METHOD },
+	{ O_BZIP2,		"BZIP2",	"BZ2",		O_M_METHOD },
+	{ O_LZ,			"LZ",		0,		O_M_METHOD },
+	{ O_LZMA,		"LZMA",		0,		O_M_METHOD },
+	{ O_RM,			"REMOVE",	"RM",		0 },
+	{0,0,0,0}
+    };
+
+    static file_format_t ff_tab[] =
+    {
+	FF_UNKNOWN,
+	FF_YAZ0,
+	FF_BZ,
+	FF_BZIP2,
+	FF_LZ,
+	FF_LZMA,
+    };
+
+    uint opt = 0;
+    if (mem_opt.len)
+    {
+	s64 res = ScanKeywordListP(0,mem_opt.ptr,mem_opt.len,O_DEFAULT,keytab);
+	if ( res < 0 )
+	    return ERR_SYNTAX;
+	if ( res >= 0 )
+	    opt = res;
+    }
+
+    PRINT0("opt:%x, dir=%s\n",opt,destdir);
+
+    //---------------
 
     char tname[30], path[PATH_MAX];
     lta_manager_t lm =
     {
 	.ld		= ld,
 	.destdir	= destdir,
-	.rm_source	= rm_source,
+	.rm_source	= (opt&O_RM) != 0,
+	.force_ff	= ff_tab[opt&O_M_METHOD],
 	.base_slot	= -1,
     };
     close_lta(&lm); // initialize more vars
+
+    if ( lm.force_ff != FF_UNKNOWN )
+	LoadSZSCache();
 
 
     //--- optimization: find last used slot

@@ -41,6 +41,7 @@
 #define _GNU_SOURCE 1
 
 #include "dclib-types.h"
+#include "lib-szs-file.h"
 #include "lib-ledis.h"
 #include "crypt.h"
 
@@ -67,6 +68,8 @@ void CreateSSChecksumBySZS	( char *buf, uint bufsize, const szs_file_t *szs );
 void CreateSSChecksumDB		( char *buf, uint bufsize, const sha1_size_hash_t *ss );
 void CreateSSChecksumDBByData	( char *buf, uint bufsize, cvp data, uint size );
 void CreateSSChecksumDBBySZS	( char *buf, uint bufsize, const szs_file_t *szs );
+void CreateSSXChecksumDBByData	( char *buf, uint bufsize, cvp data, uint size, file_format_t ff );
+void CreateSSXChecksumDBBySZS	( char *buf, uint bufsize, const szs_file_t *szs );
 
 enumError GetSSByFile ( sha1_size_hash_t *ss, ccp path1, ccp path2 );
 
@@ -109,6 +112,43 @@ ParamFieldItem_t * StoreSZSCache
     bool	rename_file,	// true: rename existing file
     bool	*r_exists	// not NULL: store a status here
 				//	=> true: file result->data exists
+);
+
+//-----------------------------------------------------------------------------
+// [[check_cache_t]]
+
+typedef struct check_cache_t
+{
+    file_format_t	fform;
+    bool		found;		// true, if file found in cache
+    char		csum[CHECKSUM_DB_SIZE+4];
+					// checksum with suffix
+    szs_file_t		cache;		// file loaded from cache, valid if found==true
+}
+check_cache_t;
+
+void ResetCheckCache ( check_cache_t *cc );
+
+bool CheckSZSCache
+(
+    // returns true if file found in cache (same as cc->found)
+
+    check_cache_t	*cc,		// initialized by CheckSZSCache()
+    szs_file_t		*szs,		// related SZS file
+    cvp			data,		// data
+    uint		size,		// size of 'data'
+    file_format_t	fform,		// compression format
+    ccp			ext		// wanted file extension including leading '.'
+);
+
+bool CheckSZSCacheSZS
+(
+    // returns true if file found in cache (same as cc->found)
+
+    szs_file_t		*szs,		// related SZS file
+    file_format_t	fform,		// compression format
+    ccp			ext,		// wanted file extension including leading '.'
+    bool		rm_uncompressed	// true: remove uncompressed data if cache is used
 );
 
 //

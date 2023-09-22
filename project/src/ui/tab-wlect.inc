@@ -169,6 +169,7 @@
 		    "wlect TIMESTAMP [lecode_bin]...",
 		"Read each LE-CODE binary file and set creation time if exists and is null"
 		" with respect to others existing timestamps."
+		" Update the LE-CODE signature too."
 		" " WILDCARDS_PIPE },
 
   { T_DEF_CMD,	"LPAR",		"LPAR",
@@ -184,7 +185,7 @@
   { T_DEF_CMD,	"CREATE",	"CREATE|CR",
 		    "wlect CREATE [keyword] ...",
 		"Create a file and print it to standard output."
-		" Options {--dest} and {--DEST} can forc another destination."
+		" Options {--dest} and {--DEST} can force another destination."
 		" The kind of file is defined by KEYWORD."
 		" The command can create LEX files, a LPAR file or a track listing."
 		"\n "
@@ -394,6 +395,20 @@
 		0, 0 /* copy of wszst */ },
 
   { H_OPT_G,	"NO_UTF_8",	"no-utf-8|no-utf8|noutf8",
+		0, 0 /* copy of wszst */ },
+
+  { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
+
+  { T_OPT_GP,	"CACHE",	"cache",
+		"dir",
+		"Define a directory for an SZS cache."
+		" The cache is used to generate LTA files when new compression is forced."
+		" Option {--remove-dest} is set automatically to protect cache integrity."
+		"\n "
+		" Background: Loading a compressed SZS and content verification"
+		" is much faster than compressing a file." },
+
+  { T_OPT_GP,	"LOG_CACHE",	"log-cache|logcache",
 		0, 0 /* copy of wszst */ },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
@@ -1003,6 +1018,8 @@
 
   { T_COPT,	"LOAD_PREFIX",	0,0,0 },
   { T_COPT,	"LOAD_CATEGORY",0,0,0 },
+  { T_COPT,	"CACHE",	0,0,0 },
+  { T_COPT,	"LOG_CACHE",	0,0,0 },
   { T_COPT,	"PLUS",		0,0,0 },
   { T_COPY_GRP,	"TRACK_COPY",	0,0,0 },
   { T_COPT,	"SZS_MODE",	0,0,0 },

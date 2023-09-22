@@ -1230,7 +1230,7 @@ static void SortItemsLEX
 
 static uint GetLexFeaturesSET1 ( const lex_element_t *elem, lex_t *lex )
 {
-    // if 'lex' not NULL: store additional data 
+    // if 'lex' not NULL: store additional data
 
     uint have_feat = 0;
     const uint size = ntohl(elem->size);
@@ -1304,7 +1304,7 @@ static uint GetLexFeaturesTEST ( const lex_element_t *elem )
 
 uint GetLexFeatures ( const lex_element_t *elem, lex_t *lex  )
 {
-    // if 'lex' not NULL: store additional data 
+    // if 'lex' not NULL: store additional data
 
     switch(ntohl(elem->magic))
     {
@@ -2790,7 +2790,7 @@ static enumError SaveTextLEX_RITP
 	u8   print_param;   // 0:never, 1:if not null, 2:always
 	char name[7];
     };
-    
+   
     static const struct mode_t mode_tab[] =
     {
 	{ 1, "OFF" },

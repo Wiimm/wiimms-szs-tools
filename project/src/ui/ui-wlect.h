@@ -136,6 +136,8 @@ typedef enum enumOptions
 	OPT_MAX_FILE_SIZE,
 	OPT_UTF_8,
 	OPT_NO_UTF_8,
+	OPT_CACHE,
+	OPT_LOG_CACHE,
 	OPT_LT_COND_BIT,
 	OPT_LT_GAME_MODE,
 	OPT_LT_ENGINE,
@@ -150,7 +152,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 89
+	OPT__N_TOTAL // == 91
 
 } enumOptions;
 
@@ -482,6 +484,8 @@ typedef enum enumGetOpt
 	GO_NO_ECHO,
 	GO_UTF_8,
 	GO_NO_UTF_8,
+	GO_CACHE,
+	GO_LOG_CACHE,
 	GO_LT_CLEAR,
 	GO_LT_ONLINE,
 	GO_LT_N_PLAYERS,

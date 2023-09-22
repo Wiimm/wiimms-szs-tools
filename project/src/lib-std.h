@@ -157,7 +157,9 @@ enum
     ERR_INVALID_FFORM	= ERU_ERROR1_02,
 
     ERR_BZIP2		= ERU_ERROR2_01,
-    ERR_PNG		= ERU_ERROR2_02,
+    ERR_LZMA		= ERU_ERROR2_02,
+    ERR_XZ		= ERU_ERROR2_03,
+    ERR_PNG		= ERU_ERROR2_04,
 };
 
 //-----------------------------------------------------------------------------
@@ -943,6 +945,34 @@ uint IsolateFilename
 bool IsAutoAddAvailable();
 void DefineAutoAddPath ( ccp path );
 s64  FindAutoAdd ( ccp fname, ccp ext, char *buf, uint buf_size );
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			CompressManager_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[CompressManager_t]]
+
+typedef struct CompressManager_t
+{
+    //--- source
+
+    file_format_t fform;	// file format of source
+    cvp		src_data;	// source data (BZIP2 or LZMA), never NULL
+    uint	src_size;	// size of 'src_data'
+
+    //--- decoded
+
+    u8		*data;		// NULL or data, alloced if not part of 'src_data'
+    uint	size;		// size of 'data'
+}
+CompressManager_t;
+
+//-----------------------------------------------------------------------------
+
+enumError DecodeCompressManager
+(
+    CompressManager_t	*mgr	// manager data
+);
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -2800,6 +2830,7 @@ extern bool		raw_mode;
 extern SortMode_t	opt_sort;
 extern bool		opt_le_menu;
 extern bool		opt_9laps;
+extern ccp		opt_ui_source;
 extern ccp		opt_cup_icons;
 extern ccp		opt_title_screen;
 extern u32		opt_max_file_size;
@@ -2814,7 +2845,6 @@ extern int		opt_recurse;
 extern int		opt_ext;
 extern bool		opt_decode;
 extern bool		opt_cut;
-extern bool		opt_avail_txt;		// only for internal use (no real option)
 extern bool		opt_cmpr_valid;
 extern u8		opt_cmpr_def[8];
 extern uint		opt_n_images;

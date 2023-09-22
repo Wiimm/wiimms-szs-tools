@@ -1685,6 +1685,13 @@
 		"Patch RACE*.szs files from directory .../Scene/UI/ to support 9 laps."
 		" It is based on https://wiki.tockdom.com/wiki/Lap_Texture_Fix v1.03." },
 
+  { T_OPT_CP,	"UI_SOURCE",	"ui-source|uisource",
+		"dir",
+		"This option affects options {--le-menu} and {--9laps}."
+		" If subfiles are to be exchanged in UI files,"
+		" the files are first searched for in the specified directory."
+		" The internal files are only used if the file was not found." },
+
   { T_OPT_CP,	"TITLE_SCREEN",	"title-screen|titlescreen",
 		"dir",
 		"Specify a directory from which to search and replace title screens."
@@ -1706,15 +1713,17 @@
 
   { T_OPT_GP,	"CACHE",	"cache",
 		"dir",
-		"Define a directory for a SZS cache."
-		" If creating a YAZ0 compressed file with standard compression (level 9),"
+		"Define a directory for an SZS cache."
+		" If creating a YAZ0, BZIP2 or LZMA compressed file"
+		" with standard compression (levels 9,9,6),"
 		" the cache is searched for the compressed version."
 		" File cache-content.txt is used as file list with hash values."
 		" If the cache file is not found or the content differ,"
 		" the file is (re-)created and exit status 2=differ is returned."
+		" Option {--remove-dest} is set automatically to protect cache integrity."
 		"\n "
 		" Background: Loading a compressed SZS and content verification"
-		" is much faster than YAZ compression."
+		" is much faster than compressing a file."
 		"\n "
 		" For legay reasons:"
 		" If parameter DIR is a file, it is split into directory and base name."
@@ -1730,6 +1739,7 @@
   { T_OPT_GP,	"LOG_CACHE",	"log-cache|logcache",
 		"file",
 		"Define a file to log chache activities."
+		" Use '-' to log to stdout or stderr."
 		" The file is openend in append-mode." },
 
   { T_OPT_G,	"PARALLEL",	"parallel",
@@ -2075,8 +2085,21 @@
 
   { T_OPT_G,	"BZ",		"bz",
 		0,
-		"If creating a compressed file,"
-		" force BZ compression (a BZIP2 variant)." },
+		"If creating a compressed file, force BZ compression"
+		" (a YAZ0 like file format with BZIP2 compression)." },
+
+  { T_OPT_G,	"BZIP2",	"bzip2|bz2",
+		0,
+		"If creating a compressed file, create a BZIP2 compatible file." },
+
+  { T_OPT_G,	"LZ",		"lz",
+		0,
+		"If creating a compressed file, force BZ compression"
+		" (a YAZ0 like file format with LZMA compression)." },
+
+  { T_OPT_G,	"LZMA",		"lzma",
+		0,
+		"If creating a compressed file, create a LZMA compatible file." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -2317,7 +2340,7 @@
 		"size",
 		"Define an align value for the sub files in all archives."
 		" This is a short cut for"
-		" {--align-u8=size --align-pack=size"
+		" {--align-u8=size {--align-lta=size --align-pack=size"
 		" --align-brres=size --align-breff=size --align-breft=size}." },
 
   { T_OPT_C,	"ENCODE_ALL",	"encode-all|encodeall|eall",
@@ -2417,6 +2440,12 @@
 		"Short cut for {--wu8 --bz}:"
 		" Create a WU8 archive, if possible,"
 		" and set the compression method to BZ." },
+
+  { T_OPT_C,	"WLZ",		"wlz",
+		0,
+		"Short cut for {--wu8 --lz}:"
+		" Create a WU8 archive, if possible,"
+		" and set the compression method to LZ." },
 
 #if 0
   { T_OPT_C,	"LTA",		"lta",
@@ -2674,6 +2703,7 @@
   { T_COPT,	"FILTER_BMG",	0,0,0 },
   { T_COPT,	"LE_MENU",	0,0,0 },
   { T_COPT,	"9LAPS",	0,0,0 },
+  { T_COPT,	"UI_SOURCE",	0,0,0 },
   { T_COPT,	"TITLE_SCREEN",	0,0,0 },
   { T_COPT,	"CUP_ICONS",	0,0,0 },
 
@@ -2701,9 +2731,13 @@
   { T_COPT,	"YAZ1",		0,0,0 },
   { H_COPT,	"XYZ",		0,0,0 },
   { T_COPT,	"BZ",		0,0,0 },
+  { T_COPT,	"BZIP2",	0,0,0 },
+  { T_COPT,	"LZ",		0,0,0 },
+  { T_COPT,	"LZMA",		0,0,0 },
   { T_COPT,	"SZS",		0,0,0 },
   { H_COPT,	"XWU8",		0,0,0 },
   { T_COPT,	"WBZ",		0,0,0 },
+  { T_COPT,	"WLZ",		0,0,0 },
 //  { T_COPT,	"LTA",		0,0,0 },
   { T_COPT,	"LFL",		0,0,0 },
 
@@ -2721,9 +2755,13 @@
   { T_COPT,	"YAZ1",		0,0,0 },
   { H_COPT,	"XYZ",		0,0,0 },
   { T_COPT,	"BZ",		0,0,0 },
+  { T_COPT,	"BZIP2",	0,0,0 },
+  { T_COPT,	"LZ",		0,0,0 },
+  { T_COPT,	"LZMA",		0,0,0 },
   { T_COPT,	"SZS",		0,0,0 },
   { H_COPT,	"XWU8",		0,0,0 },
   { T_COPT,	"WBZ",		0,0,0 },
+  { T_COPT,	"WLZ",		0,0,0 },
 //  { T_COPT,	"LTA",		0,0,0 },
   { T_COPT,	"LFL",		0,0,0 },
 

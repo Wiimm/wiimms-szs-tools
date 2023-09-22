@@ -344,7 +344,7 @@ typedef struct le_lpar_t
     u8	vs_textures;		// &1: enable texture hacks for versus, &2:alternable
     u8	block_textures;		// >0: enable blocking of recent texture hacks
     u8	staticr_points;		// >0: use points definied by StaticR.rel
-    u8	use_avail_txt;		// >0: use file "avail.txt" to detect dir "Race/Common/###/"
+    u8	use_avail_txt;		// [[obsolete]] >0: use file "avail.txt" to detect dir "Race/Common/###/"
 
     u8  debug_mode;		// debug mode
     u8  debug_predef[LEDEB__N_CONFIG];
@@ -549,23 +549,39 @@ typedef struct le_binary_head_v5_3c_t
 __attribute__ ((packed)) le_binary_head_v5_3c_t;
 
 //-----------------------------------------------------------------------------
+// [[le_binary_head_v5_44_t]]
 
-static inline bool IsBuildModeRelease ( char ch )
-	{ return ch == 'R' || ch == 'T'; }
+typedef struct le_binary_head_v5_44_t
+{
+ /*00*/  char	magic[4];	// LE_BINARY_MAGIC
+ /*04*/  u32	version;	// always 5 for v5
+ /*08*/  u32	build_number;	// current code version
+ /*0c*/  u32	base_address;	// memory address of binary (destination)
+ /*10*/  u32	entry_point;	// memory address (prolog function)
+ /*14*/  u32	file_size;	// size of complete file
+ /*18*/  u32	off_param;	// offset of LPAR section
+ /*1c*/  char	region;		// one of: P, E, J, K
+ /*1d*/  char	build_mode;	// one of: R (release), T (testcode), D (debug) or X (debug+testcode)
+ /*1e*/  u8	phase;		// >0: PHASE (usually 2)
+ /*1f*/  char	unknown_1f;
 
-static inline bool IsBuildModeDebug ( char ch )
-	{ return ch == 'D' || ch == 'X'; }
-
-static inline bool IsBuildModeTest ( char ch )
-	{ return ch == 'T' || ch == 'X'; }
-
-static inline bool IsBuildModeUnknown ( char ch )
-	{ return ch != 'R' || ch != 'T' || ch != 'D' || ch != 'X'; }
+ /*20*/  u32	szs_required;	// minimal encoded version number of szs-tools required to edit
+ /*24*/  u32	edit_version;	// >0: encoded version number of szs-tools, that did last edit
+ /*28*/	 u32	head_size;	// size of file header
+ /*2c*/	 u32	creation_time;	// unixtime of LE-CODE creation
+ /*30*/	 u32	edit_time;	// >0: unixtime of last LE-CODE edit
+ /*34*/  u32	szs_recommended;// recommended version number of szs-tools to manage LE binaries
+ /*38*/  u32	commit_time;	// unixtime of "git commit"
+ /*3c*/  u32	off_signature;	// offset of LE-CODE signature
+ /*40*/  u32	size_signature;	// size of buffer for LE-CODE signature
+ /*44*/
+}
+__attribute__ ((packed)) le_binary_head_v5_44_t;
 
 //-----------------------------------------------------------------------------
-// [[le_binary_head_v5_t]]
+// [[le_binary_head_v5_t]] [[new-le-header]]
 
-typedef le_binary_head_v5_3c_t le_binary_head_v5_t;
+typedef le_binary_head_v5_44_t le_binary_head_v5_t;
 
 //-----------------------------------------------------------------------------
 // [[le_binary_head_t]]
@@ -581,6 +597,23 @@ le_binary_head_t;
 u_sec_t GetCommitTimeLeHead ( const le_binary_head_t *head );
 u_sec_t GetCreateTimeLeHead ( const le_binary_head_t *head );
 u_sec_t GetRefTimeLeHead    ( const le_binary_head_t *head );
+
+// returns pointer to signature (.ptr) and size of buffer (.len)
+mem_t GetLecodeSignature ( const le_binary_head_t *head );
+
+//-----------------------------------------------------------------------------
+
+static inline bool IsBuildModeRelease ( char ch )
+	{ return ch == 'R' || ch == 'T'; }
+
+static inline bool IsBuildModeDebug ( char ch )
+	{ return ch == 'D' || ch == 'X'; }
+
+static inline bool IsBuildModeTest ( char ch )
+	{ return ch == 'T' || ch == 'X'; }
+
+static inline bool IsBuildModeUnknown ( char ch )
+	{ return ch != 'R' || ch != 'T' || ch != 'D' || ch != 'X'; }
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////

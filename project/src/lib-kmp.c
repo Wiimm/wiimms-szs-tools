@@ -181,7 +181,7 @@ enumError CompressWim0 ( kmp_wim0_t *w0 )
     }
 
     enumError err = EncodeBZIP2( &w0->bz2data, &w0->bz2size,
-				false, 0,
+				false, 0, false,
 				w0->data, w0->used, 9 );
 
     DASSERT( err || w0->bz2data );

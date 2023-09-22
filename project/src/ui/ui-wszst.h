@@ -101,6 +101,7 @@ typedef enum enumOptions
 	OPT_FILTER_BMG,
 	OPT_LE_MENU,
 	OPT_9LAPS,
+	OPT_UI_SOURCE,
 	OPT_TITLE_SCREEN,
 	OPT_CUP_ICONS,
 	OPT_NO_COPY,
@@ -176,6 +177,7 @@ typedef enum enumOptions
 	OPT_WU8,
 	OPT_XWU8,
 	OPT_WBZ,
+	OPT_WLZ,
 	OPT_LFL,
 	OPT_PACK,
 	OPT_BRRES,
@@ -202,7 +204,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 146
+	OPT__N_SPECIFIC, // == 148
 
 	//----- global options -----
 
@@ -277,6 +279,9 @@ typedef enum enumOptions
 	OPT_YAZ1,
 	OPT_XYZ,
 	OPT_BZ,
+	OPT_BZIP2,
+	OPT_LZ,
+	OPT_LZMA,
 	OPT_SH,
 	OPT_BASH,
 	OPT_JSON,
@@ -291,7 +296,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 230
+	OPT__N_TOTAL // == 235
 
 } enumOptions;
 
@@ -351,6 +356,7 @@ typedef enum enumOptions
 //	OB_FILTER_BMG		= 1llu << OPT_FILTER_BMG,
 //	OB_LE_MENU		= 1llu << OPT_LE_MENU,
 //	OB_9LAPS		= 1llu << OPT_9LAPS,
+//	OB_UI_SOURCE		= 1llu << OPT_UI_SOURCE,
 //	OB_TITLE_SCREEN		= 1llu << OPT_TITLE_SCREEN,
 //	OB_CUP_ICONS		= 1llu << OPT_CUP_ICONS,
 //	OB_NO_COPY		= 1llu << OPT_NO_COPY,
@@ -426,6 +432,7 @@ typedef enum enumOptions
 //	OB_WU8			= 1llu << OPT_WU8,
 //	OB_XWU8			= 1llu << OPT_XWU8,
 //	OB_WBZ			= 1llu << OPT_WBZ,
+//	OB_WLZ			= 1llu << OPT_WLZ,
 //	OB_LFL			= 1llu << OPT_LFL,
 //	OB_PACK			= 1llu << OPT_PACK,
 //	OB_BRRES		= 1llu << OPT_BRRES,
@@ -483,6 +490,7 @@ typedef enum enumOptions
 //				| OB_FILTER_BMG
 //				| OB_LE_MENU
 //				| OB_9LAPS
+//				| OB_UI_SOURCE
 //				| OB_TITLE_SCREEN
 //				| OB_CUP_ICONS,
 //
@@ -500,6 +508,7 @@ typedef enum enumOptions
 //				| OB_SZS
 //				| OB_XWU8
 //				| OB_WBZ
+//				| OB_WLZ
 //				| OB_LFL,
 //
 //	OB_GRP_FFORMAT2		= OB_U8
@@ -511,6 +520,7 @@ typedef enum enumOptions
 //				| OB_SZS
 //				| OB_XWU8
 //				| OB_WBZ
+//				| OB_WLZ
 //				| OB_LFL,
 //
 //	OB_GRP_SCRIPT		= OB_SECTIONS,
@@ -1316,6 +1326,7 @@ typedef enum enumGetOpt
 	GO_FILTER_BMG,
 	GO_LE_MENU,
 	GO_9LAPS,
+	GO_UI_SOURCE,
 	GO_TITLE_SCREEN,
 	GO_CUP_ICONS,
 	GO_NO_COPY,
@@ -1358,6 +1369,9 @@ typedef enum enumGetOpt
 	GO_YAZ1,
 	GO_XYZ,
 	GO_BZ,
+	GO_BZIP2,
+	GO_LZ,
+	GO_LZMA,
 	GO_SH,
 	GO_BASH,
 	GO_JSON,
@@ -1400,6 +1414,7 @@ typedef enum enumGetOpt
 	GO_WU8,
 	GO_XWU8,
 	GO_WBZ,
+	GO_WLZ,
 	GO_LFL,
 	GO_PACK,
 	GO_BRRES,

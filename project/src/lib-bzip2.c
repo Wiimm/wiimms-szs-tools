@@ -42,6 +42,7 @@
 #ifndef NO_BZIP2
   #include "libbz2/bzlib.h"
   #include "lib-bzip2.h"
+  #include "lib-szs.h"
 #endif
 
 //
@@ -49,10 +50,37 @@
 ///////////////			    BZIP2 helpers		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-uint IsBZIP2
+int IsBZ
 (
     // returns
-    //	0:    not BZIP2 data
+    // -1:    not BZIP2 data
+    //  1..9: seems to be BZIP2 data; compression level is returned
+
+    cvp			data,		// NULL or data to investigate
+    uint		size		// size of 'data'
+)
+{
+    const uint delta = sizeof(wbz_header_t)+sizeof(u32);
+    const u8 *d = data;
+    if ( !d
+	|| size < 0x20
+	|| memcmp(d,BZ_MAGIC,4)
+	|| memcmp(d+delta,"BZh",3)
+	|| memcmp(d+delta+4,"1AY&SY'",6) )
+    {
+	return -1;
+    }
+
+    const uint level = d[delta+3] - '0';
+    return level < 10 ? level : 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int IsBZIP2
+(
+    // returns
+    // -1:    not BZIP2 data
     //  1..9: seems to be BZIP2 data; compression level is returned
 
     cvp			data,		// NULL or data to investigate
@@ -61,7 +89,7 @@ uint IsBZIP2
 {
     const u8 *d = data;
     if ( !d || size < 10 || memcmp(d,"BZh",3) || memcmp(d+4,"1AY&SY'",6) )
-	return 0;
+	return -1;
 
     const uint level = d[3] - '0';
     return level < 10 ? level : 0;
@@ -334,7 +362,8 @@ enumError EncodeBZIP2buf
     const void		*src,		// source buffer
     uint		src_size,	// size of source buffer
 
-    int			compr_level	// valid are 1..9 / 0: use default value
+    int			compr_level,	// valid are 1..9 / 0: use default value
+    bool		add_dec_size	// true: add decompressed size
 )
 {
  #ifdef NO_BZIP2
@@ -353,17 +382,24 @@ enumError EncodeBZIP2buf
     compr_level = CalcCompressionLevelBZIP2(compr_level);
     PRINT("EncodeBZIP2buf() %u bytes, level = %u\n",src_size,compr_level);
 
-    *(u32*)dest = htonl(src_size);
-    *dest_written = dest_size - sizeof(u32);
-    int bzerror = BZ2_bzBuffToBuffCompress ( dest+sizeof(u32), dest_written,
+    *dest_written = dest_size;
+    if (add_dec_size)
+    {
+	*(u32*)dest = htonl(src_size);
+	dest += sizeof(u32);
+	*dest_written -= sizeof(u32);
+    }
+
+    int bzerror = BZ2_bzBuffToBuffCompress ( dest, dest_written,
 				(char*)src, src_size, compr_level, 0, 0 );
-    *dest_written += 4;
 
     if ( bzerror != BZ_OK )
 	return ERROR0(ERR_BZIP2,
 		"Error while compressing data.\n-> bzip2 error: %s\n",
 		GetMessageBZIP2(bzerror,"?") );
 
+    if (add_dec_size)
+	*dest_written += 4;
     return ERR_OK;
  #endif // !NO_BZIP2
 }
@@ -376,6 +412,7 @@ enumError EncodeBZIP2
     uint		*dest_written,	// store num bytes written to 'dest', never NULL
     bool		use_iobuf,	// true: allow the usage of 'iobuf'
     uint		header_size,	// insert 'header_size' bytes before dest data
+    bool		add_dec_size,	// true: add decompressed size
 
     const void		*src,		// source buffer
     uint		src_size,	// size of source buffer
@@ -402,7 +439,7 @@ enumError EncodeBZIP2
     }
 
     enumError err = EncodeBZIP2buf( dest, dest_size, dest_written,
-					src, src_size, compr_level );
+					src, src_size, compr_level, add_dec_size );
     if (err)
     {
 	FREE(dest_alloced);
@@ -430,7 +467,7 @@ enumError EncodeBZIP2
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError DecodeBZIP2stream
+enumError DecodeBZIP2bin
 (
     u8			**dest_ptr,	// result: store destination buffer addr
     uint		*dest_written,	// store num bytes written to 'dest', never NULL
@@ -459,9 +496,7 @@ enumError DecodeBZIP2stream
     memset(data,0,header_size);
     uint data_used = header_size;
 
-    bz_stream bzs;
-    memset(&bzs,0,sizeof(bzs));
-
+    bz_stream bzs = {0};
     int bz2err = BZ2_bzDecompressInit(&bzs,0,0);
     if ( bz2err != BZ_OK )
 	goto error;
@@ -509,7 +544,7 @@ enumError DecodeBZIP2part
     // decompress until dest buffer full or end of source reached
     // return ERR_WARNING for an incomplete decompression
 
-    void		*dest_buf,	// result: store rad data hers
+    void		*dest_buf,	// result: store read data here
     uint		dest_size,	// size of 'dest_buf'
     uint		*dest_written,	// store num bytes written to 'dest_ptr', never NULL
 
@@ -530,16 +565,14 @@ enumError DecodeBZIP2part
     return ERROR0(ERR_BZIP2,"BZIP2 compression not supported\n");
  #else // !NO_BZIP2
 
-    bz_stream bzs;
-    memset(&bzs,0,sizeof(bzs));
-
+    bz_stream bzs = {0};
     int bz2err = BZ2_bzDecompressInit(&bzs,0,0);
     if ( bz2err != BZ_OK )
 	goto error;
 
-    bzs.next_in = (char*)src;
-    bzs.avail_in = src_size;
-    bzs.next_out = (char*)dest_buf;
+    bzs.next_in   = (char*)src;
+    bzs.avail_in  = src_size;
+    bzs.next_out  = (char*)dest_buf;
     bzs.avail_out = dest_size;
 
     bz2err = BZ2_bzDecompress(&bzs);
@@ -566,7 +599,7 @@ enumError DecodeBZIP2buf
     uint		dest_size,	// size of 'dest'
     uint		*dest_written,	// store num bytes written to 'dest', never NULL
 
-    const void		*src,		// source buffer
+    const void		*src,		// source buffer, first 4 bytes = dest size
     uint		src_size	// size of source buffer
 )
 {
@@ -615,7 +648,7 @@ enumError DecodeBZIP2
     uint		*dest_written,	// store num bytes written to 'dest', never NULL
     uint		header_size,	// insert 'header_size' bytes before dest data
 
-    const void		*src,		// source buffer
+    const void		*src,		// source buffer, first 4 bytes = dest size
     uint		src_size	// size of source buffer
 )
 {
@@ -807,7 +840,7 @@ BZ2Status_t SearchBZ2S
 		}
 
 		src->status = BZ2S_T_FILE;
-		if (IsBZIP2(data,size))
+		if ( IsBZIP2(data,size) >= 0 )
 		{
 		    // seems to be bzip2 encoded
 		    if ( log_level >= SEA_LOG_FOUND )
@@ -817,7 +850,7 @@ BZ2Status_t SearchBZ2S
 
 		    u8 *bz2data = 0;
 		    uint bz2size;
-		    if (DecodeBZIP2stream(&bz2data,&bz2size,0,data,size))
+		    if (DecodeBZIP2bin(&bz2data,&bz2size,0,data,size))
 			FREE(bz2data);
 		    else
 		    {
@@ -827,6 +860,7 @@ BZ2Status_t SearchBZ2S
 			src->status |= BZ2S_F_BZIP2;
 		    }
 		}
+// [[lzma]] [[lz]] [[xz]]
 		else if ( log_level >= SEA_LOG_FOUND )
 		    fprintf(stdlog,"> READ: %s\n",path);
 
@@ -864,7 +898,7 @@ BZ2Status_t SearchBZ2S
 	uint size = src->src_size;
 
 	src->status = BZ2S_T_INTERN;
-	if ( size > 4 && IsBZIP2(data+4,size-4) )
+	if ( size > 4 && IsBZIP2(data+4,size-4) >= 0 )
 	{
 	    PRINT("     \e[36;1m==> BZIP2: %s\e[0m\n",src->fname);
 
@@ -879,6 +913,7 @@ BZ2Status_t SearchBZ2S
 		src->status |= BZ2S_F_BZIP2;
 	    }
 	}
+// [[lz]] [[lzma]] [[xz]]
 
 	if ( src->part_offset > 0 )
 	{

@@ -3564,7 +3564,7 @@ typedef struct KeyListParam_t
     // call back funtions, functions must set 'valid' and 'result'.
     KeywordListFuncArg	func_arg;	// NULL or function with raw argument.
     KeywordListFuncKey	func_key;	// NULL or function with normalized argument,
-					// called after successfull 'key_tab' scanning 
+					// called after successfull 'key_tab' scanning
     const void		*user_param;	// user defined parameter
 
     // Scan for integer numbers, if min_number < max_number

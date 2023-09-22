@@ -1360,6 +1360,13 @@
 	"Patch RACE*.szs files from directory .../Scene/UI/ to support 9 laps." \
 	" It is based on https://wiki.tockdom.com/wiki/Lap_Texture_Fix v1.03." )
 
+#:def_opt( "UI_SOURCE", "ui-source|uisource", "CP", \
+	"dir", \
+	"This option affects options {--le-menu} and {--9laps}. If subfiles" \
+	" are to be exchanged in UI files, the files are first searched for in" \
+	" the specified directory. The internal files are only used if the" \
+	" file was not found." )
+
 #:def_opt( "TITLE_SCREEN", "title-screen|titlescreen", "CP", \
 	"dir", \
 	"Specify a directory from which to search and replace title screens." \
@@ -1382,14 +1389,15 @@
 
 #:def_opt( "CACHE", "cache", "GP", \
 	"dir", \
-	"Define a directory for a SZS cache. If creating a YAZ0 compressed" \
-	" file with standard compression (level 9), the cache is searched for" \
-	" the compressed version. File cache-content.txt is used as file list" \
-	" with hash values. If the cache file is not found or the content" \
-	" differ, the file is (re-)created and exit status 2=differ is" \
-	" returned.\n" \
+	"Define a directory for an SZS cache. If creating a YAZ0, BZIP2 or" \
+	" LZMA compressed file with standard compression (levels 9,9,6), the" \
+	" cache is searched for the compressed version. File cache-content.txt" \
+	" is used as file list with hash values. If the cache file is not" \
+	" found or the content differ, the file is (re-)created and exit" \
+	" status 2=differ is returned. Option {--remove-dest} is set" \
+	" automatically to protect cache integrity.\n" \
 	"  Background: Loading a compressed SZS and content verification is" \
-	" much faster than YAZ compression.\n" \
+	" much faster than compressing a file.\n" \
 	"  For legay reasons: If parameter DIR is a file, it is split into" \
 	" directory and base name. The directory is used for the cache" \
 	" directory and the base name for option {--cname}, but only if" \
@@ -1403,8 +1411,8 @@
 
 #:def_opt( "LOG_CACHE", "log-cache|logcache", "GP", \
 	"file", \
-	"Define a file to log chache activities. The file is openend in" \
-	" append-mode." )
+	"Define a file to log chache activities. Use '-' to log to stdout or" \
+	" stderr. The file is openend in append-mode." )
 
 #:def_opt( "PARALLEL", "parallel", "G", \
 	"", \
@@ -1692,8 +1700,21 @@
 
 #:def_opt( "BZ", "bz", "G", \
 	"", \
-	"If creating a compressed file, force BZ compression (a BZIP2" \
-	" variant)." )
+	"If creating a compressed file, force BZ compression (a YAZ0 like file" \
+	" format with BZIP2 compression)." )
+
+#:def_opt( "BZIP2", "bzip2|bz2", "G", \
+	"", \
+	"If creating a compressed file, create a BZIP2 compatible file." )
+
+#:def_opt( "LZ", "lz", "G", \
+	"", \
+	"If creating a compressed file, force BZ compression (a YAZ0 like file" \
+	" format with LZMA compression)." )
+
+#:def_opt( "LZMA", "lzma", "G", \
+	"", \
+	"If creating a compressed file, create a LZMA compatible file." )
 
 #:def_opt( "SH", "sh", "G", \
 	"", \
@@ -1866,8 +1887,8 @@
 #:def_opt( "ALIGN", "align", "CP", \
 	"size", \
 	"Define an align value for the sub files in all archives. This is a" \
-	" short cut for {--align-u8=size --align-pack=size --align-brres=size" \
-	" --align-breff=size --align-breft=size}." )
+	" short cut for {--align-u8=size {--align-lta=size --align-pack=size" \
+	" --align-brres=size --align-breff=size --align-breft=size}." )
 
 #:def_opt( "ENCODE_ALL", "encode-all|encodeall|eall", "C", \
 	"", \
@@ -1950,6 +1971,11 @@
 	"", \
 	"Short cut for {--wu8 --bz}: Create a WU8 archive, if possible, and" \
 	" set the compression method to BZ." )
+
+#:def_opt( "WLZ", "wlz", "C", \
+	"", \
+	"Short cut for {--wu8 --lz}: Create a WU8 archive, if possible, and" \
+	" set the compression method to LZ." )
 
 #:def_opt( "LFL", "lfl", "C", \
 	"", \
@@ -2676,11 +2702,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "WLZ", \
 	"", \
 	"" )
 
@@ -2893,11 +2935,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_L", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_L", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_L", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "WLZ", \
 	"", \
 	"" )
 
@@ -3110,11 +3168,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LL", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LL", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_LL", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "WLZ", \
 	"", \
 	"" )
 
@@ -3327,11 +3401,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LLL", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LLL", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_LLL", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "WLZ", \
 	"", \
 	"" )
 
@@ -3544,11 +3634,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_A", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_A", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_A", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "WLZ", \
 	"", \
 	"" )
 
@@ -3761,11 +3867,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LA", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LA", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_LA", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "WLZ", \
 	"", \
 	"" )
 
@@ -3989,11 +4111,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "WLZ", \
 	"", \
 	"" )
 
@@ -4194,11 +4332,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_L", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_L", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST_L", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "WLZ", \
 	"", \
 	"" )
 
@@ -4399,11 +4553,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LL", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LL", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST_LL", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "WLZ", \
 	"", \
 	"" )
 
@@ -4604,11 +4774,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_A", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_A", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST_A", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "WLZ", \
 	"", \
 	"" )
 
@@ -4809,11 +4995,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LA", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LA", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST_LA", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "WLZ", \
 	"", \
 	"" )
 
@@ -5022,11 +5224,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "MEMORY", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "WLZ", \
 	"", \
 	"" )
 
@@ -5235,11 +5453,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY_A", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY_A", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "MEMORY_A", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "WLZ", \
 	"", \
 	"" )
 
@@ -5419,11 +5653,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUMP", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUMP", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "DUMP", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "WLZ", \
 	"", \
 	"" )
 
@@ -5620,11 +5870,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SHA1", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SHA1", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "SHA1", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "WLZ", \
 	"", \
 	"" )
 
@@ -6104,11 +6370,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DISTRIBUTION", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DISTRIBUTION", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "DISTRIBUTION", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "WLZ", \
 	"", \
 	"" )
 
@@ -6356,11 +6638,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CHECK", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "CHECK", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "WLZ", \
 	"", \
 	"" )
 
@@ -6681,6 +6979,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CHECK", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -6745,11 +7047,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SLOTS", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SLOTS", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "SLOTS", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "WLZ", \
 	"", \
 	"" )
 
@@ -7074,6 +7392,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SLOTS", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SLOTS", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -7209,11 +7531,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "NORMALIZE", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "NORMALIZE", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "NORMALIZE", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "WLZ", \
 	"", \
 	"" )
 
@@ -7469,6 +7807,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "NORMALIZE", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "NORMALIZE", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -7549,11 +7891,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PATCH", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "PATCH", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "WLZ", \
 	"", \
 	"" )
 
@@ -7813,6 +8171,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PATCH", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -7893,11 +8255,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COPY", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COPY", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "COPY", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "WLZ", \
 	"", \
 	"" )
 
@@ -8157,6 +8535,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COPY", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COPY", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -8241,11 +8623,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUPLICATE", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUPLICATE", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "WLZ", \
 	"", \
 	"" )
 
@@ -8502,6 +8900,10 @@
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "9LAPS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "UI_SOURCE", \
 	"", \
 	"" )
 
@@ -8778,11 +9180,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COMPRESS", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COMPRESS", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "COMPRESS", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "WLZ", \
 	"", \
 	"" )
 
@@ -9039,6 +9457,10 @@
 	"" )
 
 #:def_cmd_opt( "COMPRESS", "9LAPS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "UI_SOURCE", \
 	"", \
 	"" )
 
@@ -9347,6 +9769,10 @@
 	"" )
 
 #:def_cmd_opt( "DECOMPRESS", "9LAPS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DECOMPRESS", "UI_SOURCE", \
 	"", \
 	"" )
 
@@ -9675,6 +10101,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ENCODE", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ENCODE", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -9767,11 +10197,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "BZIP2", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "LZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "LZMA", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CREATE", "SZS", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "CREATE", "WBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "WLZ", \
 	"", \
 	"" )
 
@@ -10108,6 +10554,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CREATE", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -10409,6 +10859,10 @@
 	"" )
 
 #:def_cmd_opt( "UPDATE", "9LAPS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "UPDATE", "UI_SOURCE", \
 	"", \
 	"" )
 
@@ -10736,6 +11190,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "EXTRACT", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "EXTRACT", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -11057,6 +11515,10 @@
 	"" )
 
 #:def_cmd_opt( "XDECODE", "9LAPS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XDECODE", "UI_SOURCE", \
 	"", \
 	"" )
 
@@ -11384,6 +11846,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "XEXPORT", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "XEXPORT", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -11705,6 +12171,10 @@
 	"" )
 
 #:def_cmd_opt( "XALL", "9LAPS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "XALL", "UI_SOURCE", \
 	"", \
 	"" )
 
@@ -12351,6 +12821,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "KCL", "UI_SOURCE", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "KCL", "TITLE_SCREEN", \
 	"", \
 	"" )
@@ -12584,6 +13058,10 @@
 	"" )
 
 #:def_cmd_opt( "KMP", "9LAPS", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "KMP", "UI_SOURCE", \
 	"", \
 	"" )
 
@@ -21744,7 +22222,7 @@
 #:def_cmd( "CREATE", "CREATE|CR", \
 	"wlect CREATE [keyword] ...", \
 	"Create a file and print it to standard output. Options {--dest} and" \
-	" {--DEST} can forc another destination. The kind of file is defined" \
+	" {--DEST} can force another destination. The kind of file is defined" \
 	" by KEYWORD. The command can create LEX files, a LPAR file or a track" \
 	" listing.\n" \
 	"  Use the command without keyword to get an extended description." )
@@ -21986,6 +22464,19 @@
 	" larger files are ignored with a warning. The default unit is MiB and" \
 	" the default size is 100 MiB (2 GiB for LTA); that should be enough" \
 	" for standard usage." )
+
+#:def_opt( "CACHE", "cache", "GP", \
+	"dir", \
+	"Define a directory for an SZS cache. The cache is used to generate" \
+	" LTA files when new compression is forced. Option {--remove-dest} is" \
+	" set automatically to protect cache integrity.\n" \
+	"  Background: Loading a compressed SZS and content verification is" \
+	" much faster than compressing a file." )
+
+#:def_opt( "LOG_CACHE", "log-cache|logcache", "GP", \
+	"file", \
+	"Define a file to log chache activities. Use '-' to log to stdout or" \
+	" stderr. The file is openend in append-mode." )
 
 #:def_opt( "LT_CLEAR", "lt-clear|ltclear", "C", \
 	"", \
@@ -23160,6 +23651,14 @@
 	"" )
 
 #:def_cmd_opt( "DISTRIBUTION", "LOAD_CATEGORY", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "CACHE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "LOG_CACHE", \
 	"", \
 	"" )
 

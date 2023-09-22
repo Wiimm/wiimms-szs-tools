@@ -775,7 +775,7 @@ char * StringCat3LA ( ccp src1, int len1, ccp src2, int len2, ccp src3, int len3
 
 char * StringCatSep2A ( ccp sep, ccp src1, ccp src2 )
 {
-    mem_t mem = MemCatSep2A( MemByString0(sep), 
+    mem_t mem = MemCatSep2A( MemByString0(sep),
 			     MemByString0(src1),
 			     MemByString0(src2) );
     return (char*)mem.ptr;
@@ -794,7 +794,7 @@ char * StringCatSep3A ( ccp sep, ccp src1, ccp src2, ccp src3 )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-ccp StringCenterE 
+ccp StringCenterE
 (
     char		* buf,		// result buffer; if NULL, circ-buf is used
     ccp			buf_end,	// end of 'buf', NULL if buf==NULL
@@ -822,7 +822,7 @@ ccp StringCenterE
     {
 	buf = GetCircBuf(width+1);
 	buf_end = buf + width;
-    }    
+    }
     else
 	buf_end--;
 
@@ -3285,7 +3285,7 @@ uint InsertListArgManager
 	if ( move_arg && am->force_case == LOUP_AUTO )
 	    memcpy( dest, argv, argc*sizeof(*dest) );
 	else
-	    while ( argc-- > 0 ) 
+	    while ( argc-- > 0 )
 		dest = insert_arg_manager(am,dest,*argv++,move_arg);
     }
     return pos;
@@ -3573,7 +3573,7 @@ enumError ExpandAtArgManager
     }
 
     return max_err;
-}    
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4239,7 +4239,7 @@ uint GetMemSrcLen ( mem_t sep, const mem_src_t *src )
 exmem_t GetExmemDestBuf ( const exmem_dest_t * dest, uint len )
 {
     exmem_t res = { .data.len = len };
-    len++; // for additional 0-term 
+    len++; // for additional 0-term
 
     if (!dest)
 	goto malloc;
@@ -4274,7 +4274,7 @@ exmem_t ExMemCat
 {
     const uint total_size = GetMemSrcLen(sep,src);
     exmem_t res = GetExmemDestBuf(dest,total_size);
-    char *bufdest = (char*)res.data.ptr; 
+    char *bufdest = (char*)res.data.ptr;
 
     int n_src = GetMemSrcN(src);
     for ( const mem_t *ptr = src->src; n_src > 0; ptr++, n_src-- )
@@ -5783,7 +5783,7 @@ char * FindFirstWildcard ( mem_t str )
     if (!str.len)
 	return 0;
 
-    ccp end = str.ptr + str.len; 
+    ccp end = str.ptr + str.len;
     for ( ccp ptr = str.ptr; ptr < end; ptr++ )
 	if (strchr(PATTERN_WILDCARDS,*ptr))
 	    return (char*)ptr;

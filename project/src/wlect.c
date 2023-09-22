@@ -43,6 +43,8 @@
 #include "ui.h" // [[dclib]] wrapper
 #include "ui-wlect.c"
 
+#include <time.h>
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			definitions			///////////////
@@ -877,13 +879,27 @@ static enumError cmd_timestamp()
 	bool patched = false;
 	if ( !ana.creation_time && ana.header_vers >= 5 )
 	{
-	    u32 timestamp = reftime;
+	    time_t timestamp = reftime;
 	    if ( ana.edit_time && timestamp > ana.edit_time )
 		timestamp = ana.edit_time;
 	    if ( timestamp >= ana.commit_time )
 	    {
 		ana.head->v5.creation_time = htonl(timestamp);
 		patched = true;
+
+		mem_t sig = GetLecodeSignature((le_binary_head_t*)raw.data);
+		if (sig.ptr)
+		{
+		    char *equal = strrchr(sig.ptr,'=');
+		    if ( equal && equal > sig.ptr + 2 )
+		    {
+			equal -= 2;
+			const uint size = sig.len - ( equal - sig.ptr );
+			memset(equal,0,size);
+			struct tm *tm = gmtime(&timestamp);
+			strftime(equal,size,"%F %T",tm);
+		    }
+		}
 	    }
 	}
 
@@ -1469,10 +1485,11 @@ static void help_distrib ( enumError exit_code )
 		"Analyse the current distribution and print a report."
 		" Therefor count track and arena types and find duplicate names, tracks, families and clans."
 		"\r\r"
-		"  {heading|Syntax:} {syntax|REPORT '=' [OPTIONS] '=' FILE}"
+		"  {heading|Syntax:} {syntax|'REPORT' '=' FILE}\r"
+		"      {heading|or:} {syntax|'REPORT' '=' OPTIONS '=' FILE}"
 		"\r\r"
-		"{syntax|OPTIONS} is a comma separated list of keywords to select the kind of analysis."
-		" If no option is set, all are enabled."
+		"{syntax|OPTIONS} is a comma separated list of 0 or more keywords"
+		" to select the kind of analysis. If no option is set, all are enabled."
 		" To list by classes and to find duplicate tracks, families or clans,"
 		" the definition file must support SHA1 checksums"
 		" and a SHA1 reference file must be loaded."
@@ -1514,7 +1531,8 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|CUP-ICONS}:\t|"
 		"Create an image file with cup icons."
 		"\r\r"
-		"  {heading|Syntax:} {syntax|CUP-ICON '=' [OPTIONS] '=' FILE}"
+		"  {heading|Syntax:} {syntax|CUP-ICON '=' FILE}\r"
+		"      {heading|or:} {syntax|CUP-ICON '=' OPTIONS '=' FILE}"
 		"\r\r"
 		"If the output goes to a terminal, then use instruction {name|CUP-INFO} instead."
 		" To determine the file type, the file extension is analyzed."
@@ -1524,7 +1542,7 @@ static void help_distrib ( enumError exit_code )
 		" 5 characters of the name without a prefix, shown in blue at the bottom."
 		" If a name is wider than 128 pixels, than it is horizontal shrinked to 128 pixels."
 		"\r\r"
-		"{syntax|OPTIONS} is a comma separated list of keywords:\n"
+		"{syntax|OPTIONS} is a comma separated list of 0 or more keywords:\n"
 		"|[17,27]"
 		"\t{par|@varname}:\t|Use another predefined string instead of '{name|name}' as source."
 			" See section »{name|Processing Options: Storage}« for details.\n"
@@ -1653,7 +1671,22 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|LTA}:\t|"
 		"This instruction copies the track files to {name|LE-CODE Track Archives}"
 		" with name »{name|tracks-#.lta}« where »{name|#}« is an index from 1 to N."
-		" {hl|PARAMETER} specifies the destination directory."
+		"\r\r"
+		"  {heading|Syntax:} {syntax|'LTA' '=' DIRECTORY}\r"
+		"      {heading|or:} {syntax|'LTA' '=' OPTIONS '=' DIRECTORY}"
+		"\r\r"
+		"{syntax|OPTIONS} is a comma separated list of 0 or more keywords."
+
+		" The following options are available:"
+		"|[14,22]\n"
+		"\t{par|remove}:\t|Remove all used SZS source files at the very end.\n"
+		"\t{par|yaz0}:\t|Force YAZ0 compression for each track file.\n"
+		"\t{par|bz}:\t|Force BZ compression for each track file.\n"
+		"\t{par|bzip2}:\t|Force BZIP2 compression for each track file.\n"
+		"\t{par|lz}:\t|Force LZ compression for each track file.\n"
+		"\t{par|lzma}:\t|Force LZMA compression for each track file.\n"
+		"\n|[4,12,14,22]"
+		"\t\t|{hl|DIRECTORY} specifies the destination directory."
 		" Only files with valid member »{name|PATH}« are added to the archives."
 		" SZS files with unknown paths are searched in directories"
 		" defined by the options {opt|--copy-tracks}, {opt|--move-tracks},"
@@ -1661,12 +1694,14 @@ static void help_distrib ( enumError exit_code )
 		" Files with identical content are recognized"
 		" and the content is saved only once."
 		" Executing this instruction may take a little longer"
-		" as all track files need to be processed.\n"
+		" as all track files need to be processed."
+		" Much more time is required if compression is forced."
+		"\n"
 	"\n"
 
 	"\t{name|LTA-RM}:\t|"
-		"Same as »{name|LTA}«,"
-		" but remove all used SZS source files at the very end.\n"
+		"Same as »{cmd|LTA=remove=DIRECTORY}«."
+		" {warn|This command is deprecated.}\n"
 	"\n"
 
 
@@ -1976,7 +2011,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	#endif
 		C_LECODE, C_LECODE4, C_LPAR,
 		C_BMG, C_CUPICON, C_SEPARATOR, C_COPY, C_SPLIT, C_SUBST,
-		C_TRACKS, C_LTA,
+		C_TRACKS, C_LTA, C_LTA_RM,
 	#if LE_DIS_SORTTRACKS_ENABLED
 		C_SORT_TRACKS,
 	#endif
@@ -1995,7 +2030,6 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	O_PARAM_OPT1	= 0x01000, //
 	O_PARAM_OPT2	= 0x02000, // scan options before additional '='
 	O_PARAM_A	= 0x04000, // allow additonal arguments
-	O_PARAM_RM	= 0x08000, // remove source files
      #if LE_DIS_PATCH_ENABLED
 	O_FILE_LIST	= 0x10000, // create a file list by the final filename
      #endif
@@ -2049,8 +2083,9 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	{ C_SUBST,	"SUBST",		0,		O_PARAM_D|O_PARAM_A },
 
 	{ C_TRACKS,	"TRACKS",		0,		0  },
-	{ C_LTA,	"LTA",			0,		0  },
-	{ C_LTA,	"LTA-RM",		"LTARM",	O_PARAM_RM  },
+	{ C_LTA,	"LTA",			0,		O_PARAM_OPT2  },
+ // [[obsolete]] since 2023-09
+	{ C_LTA_RM,	"LTA-RM",		"LTARM",	0  },
      #if LE_DIS_SORTTRACKS_ENABLED
 	{ C_SORT_TRACKS,"SORT-TRACKS",		"SORTTRACKS",	O_PARAM_OPTSRC|O_PARAM_OPT1 },
      #endif
@@ -2202,7 +2237,8 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	case C_COPY:		err = CopyLD(ld,&par_dest,par_src,n_par_src); break;
 	case C_SPLIT:		err = SplitLD(ld,&par_dest,par_src,arg); break;
 	case C_SUBST:		err = SubstLD(ld,&par_dest,arg); break;
-	case C_LTA:		err = CreateTrackArchivesLD(ld,arg,cmd->opt>0); break;
+	case C_LTA:		err = CreateTrackArchivesLD(ld,arg,mem_opt); break;
+	case C_LTA_RM:		err = CreateTrackArchivesLD(ld,arg,MemByString("rm")); break;
 
      #if LE_DIS_SORTTRACKS_ENABLED
 	case C_SORT_TRACKS:	err = SortTracksLD(ld,&par_opt,mem_opt); break;
@@ -2440,6 +2476,7 @@ static enumError cmd_distrib()
     }
 
     ResetLD(&ld);
+    SaveSZSCache(false);
     ClosePager();
     return ProgInfo.max_error;
 }
@@ -2746,6 +2783,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_MOVE1_TRACKS:	err += ScanOptTrackSource(optarg,-1,TFMD_MOVE1); break;
 	case GO_LINK_TRACKS:	err += ScanOptTrackSource(optarg,-1,TFMD_LINK); break;
 	case GO_SZS_MODE:	err += ScanOptSzsMode(optarg); break;
+	case GO_CACHE:		opt_cache = optarg; opt_remove_dest = true; break;
+	case GO_LOG_CACHE:	opt_log_cache = optarg; break;
 
 	case GO_COMPLETE:	opt_complete = true; break;
 
@@ -2801,6 +2840,9 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
     NormalizeOptions( verbose > 3 && !is_env );
     SetupBMG(0);
     UsePatchingListBMG(&opt_load_bmg);
+
+    // [[cache]] p2=true until final version of 'post-patch-mkw.sh'
+    SetupSZSCache(opt_cache,true);
 
     return !err ? ERR_OK : ProgInfo.max_error ? ProgInfo.max_error : ERR_SYNTAX;
 }

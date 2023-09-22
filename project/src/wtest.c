@@ -4737,18 +4737,17 @@ PRINT1("Use LTA Cache %d.%d\n",slot,par_index);
     const lta_node_par_t *par = node.par + par_index;
     if ( par->size )
     {
-xBINGO;
 	ClearCacheLTA();
 	const int load_size = alignNumberUp(par->size,32);
 	fref.data = EGG__Heap__alloc(load_size,32,0);
 	fref.size = par->size;
 	const int stat = DVDReadPrio(fi,fref.data,load_size,par->offset,2);
-PRINT1("load_size=%d, stat=%d\n",load_size,stat);
+	PRINT0("load_size=%d, stat=%d\n",load_size,stat);
 	if ( stat != load_size )
 	    EGG__Heap__free(fref.data,0);
 	else
 	{
-PRINT1("Load LTA %d.%d\n",slot,par_index);
+	    PRINT0("Load LTA %d.%d\n",slot,par_index);
 	    lta_cache_data = fref;
 	    lta_cache_slot = slot;
 	    lta_cache_par_index = par_index;
@@ -4764,7 +4763,7 @@ lta_file_ref_t LoadFileLTA ( int slot, int par_index )
 {
     if ( lta_cache_slot == slot && lta_cache_par_index == par_index )
     {
-PRINT1("Use LTA Cache %d.%d\n",slot,par_index);
+	PRINT0("Use LTA Cache %d.%d\n",slot,par_index);
 	return lta_cache_data;
     }
 

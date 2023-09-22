@@ -508,7 +508,7 @@ ccp CreateSectionInfoLEX
 ccp CreateFeatureInfoLEX
 	( have_lex_feat_t special, bool add_value, ccp return_if_empty );
 
-// if 'lex' not NULL: store additional data 
+// if 'lex' not NULL: store additional data
 uint GetLexFeatures ( const lex_element_t *elem, lex_t *lex );
 
 static inline bool IsLexFF ( file_format_t fform )

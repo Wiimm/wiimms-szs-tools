@@ -57,6 +57,7 @@
 #include "lib-ctcode.h"
 #include "lib-common.h"
 #include "lib-bzip2.h"
+#include "lib-lzma.h"
 #include "dclib-utf8.h"
 #include "dclib-ui.h"
 #include "lib-mkw.h"
@@ -167,6 +168,7 @@ bool		raw_mode		= false;
 SortMode_t	opt_sort		= SORT_NONE;
 bool		opt_le_menu		= false;
 bool		opt_9laps		= false;
+ccp		opt_ui_source		= 0;
 ccp		opt_cup_icons		= 0;
 ccp		opt_title_screen	= 0;
 u32		opt_max_file_size	= 100*MiB;
@@ -181,7 +183,6 @@ int		opt_recurse		= -1;
 int		opt_ext			= 0;
 bool		opt_decode		= false;
 bool		opt_cut			= false;
-bool		opt_avail_txt		= false;
 bool		opt_cmpr_valid		= false;
 u8		opt_cmpr_def[8]		= { 0x00,0x00, 0x00,0x20, 0xff,0xff,0xff,0xff };
 uint		opt_n_images		= 0;
@@ -701,6 +702,8 @@ ccp LibGetErrorName ( int stat, ccp ret_not_found )
 	case ERR_INVALID_IFORM:		return "INVALID IMAGE FORMAT";
 	case ERR_INVALID_FFORM:		return "INVALID FILE FORMAT";
 	case ERR_BZIP2:			return "BZIP2 ERROR";
+	case ERR_LZMA:			return "LZMA ERROR";
+	case ERR_XZ:			return "XZ ERROR";
 	case ERR_PNG:			return "PNG ERROR";
     }
     return ret_not_found;
@@ -716,6 +719,8 @@ ccp LibGetErrorText ( int stat, ccp ret_not_found )
 	case ERR_INVALID_IFORM:		return "Invalid image format";
 	case ERR_INVALID_FFORM:		return "Invalid file format";
 	case ERR_BZIP2:			return "BZIP2 error";
+	case ERR_LZMA:			return "LZMA error";
+	case ERR_XZ:			return "XZ error";
 	case ERR_PNG:			return "PNG error";
     }
     return ret_not_found;
@@ -4169,13 +4174,17 @@ enumError cmd_filetype()
 		   "%.*s\n", max_len + 9, Minus300 );
     }
 
+    const int bufsize = 1200000; // >1MB for BZIP2
+    char *buf1 = MALLOC(bufsize);
+    char *buf2 = MALLOC(bufsize);
+    char bufstat[10];
+
     for ( int argi = 0; argi < plist.used; argi++ )
     {
 	ccp arg = plist.field[argi];
 
-	char buf1[CHECK_FILE_SIZE], buf2[CHECK_FILE_SIZE], bufstat[10];
 	FileAttrib_t fatt;
-	enumError err = LoadFILE(arg,0,0,buf1,sizeof(buf1),1,&fatt,false);
+	enumError err = LoadFILE(arg,0,0,buf1,bufsize,1,&fatt,false);
 	if ( err <= ERR_WARNING || !opt_ignore )
 	{
 	    file_format_t fform1;
@@ -4185,8 +4194,7 @@ enumError cmd_filetype()
 		fform1 = FF_DIRECTORY;
 	    }
 	    else
-// [[analyse-magic]]
-		fform1 = GetByMagicFF(buf1,sizeof(buf1),fatt.size);
+		fform1 = GetByMagicFF(buf1,bufsize,fatt.size);
 
 	    ccp stat1 = err > ERR_WARNING ? "-" : GetNameFF(0,fform1);
 	    ccp buf = buf1;
@@ -4204,16 +4212,15 @@ enumError cmd_filetype()
 		if (IsYazFF(fform1))
 		{
 		    if ( fform1 == FF_XYZ )
-			DecodeXYZ((u8*)buf1,(u8*)buf1,sizeof(buf1));
+			DecodeXYZ((u8*)buf1,(u8*)buf1,bufsize);
 
 		    fatt.size = be32(&((yaz0_header_t*)buf1)->uncompressed_size);
 		    DecompressYAZ( buf1 + sizeof(yaz0_header_t),
-					sizeof(buf1) - sizeof(yaz0_header_t),
-					buf2, sizeof(buf2),
+					bufsize - sizeof(yaz0_header_t),
+					buf2, bufsize,
 					&written, arg,
 					GetYazVersionFF(fform1), true, 0 );
-		    DASSERT( written <= sizeof(buf2) );
-// [[analyse-magic]]
+		    DASSERT( written <= bufsize );
 		    fform2 = GetByMagicFF(buf2,written,written);
 		    version = GetVersionFF(fform2,buf2,written,&suffix);
 		    stat2 = GetNameFF(0,fform2);
@@ -4223,9 +4230,8 @@ enumError cmd_filetype()
 		{
 		    load_full = true;
 		    wbz_header_t *wh = (wbz_header_t*)buf1;
-// [[analyse-magic]]
 		    const file_format_t ff_temp
-			= GetByMagicFF(wh->first_8,sizeof(wh->first_8),be32(wh->bz_data));
+			= GetByMagicFF(wh->first_8,sizeof(wh->first_8),be32(wh->cdata));
 		    stat2 = GetNameFF(0,ff_temp);
 		    version = GetVersionFF(ff_temp,wh->first_8,sizeof(wh->first_8),&suffix);
 		    if ( fatt.size >= 20 )
@@ -4238,16 +4244,56 @@ enumError cmd_filetype()
 			}
 		    }
 		}
-		else if ( fform1 == FF_BZ2 )
+		else if ( fform1 == FF_BZIP2 )
 		{
-		    snprintf(bufstat,sizeof(bufstat),"BZ2.%u",IsBZIP2(buf1,sizeof(buf1)));
+		    snprintf(bufstat,sizeof(bufstat),"BZIP2.%u",IsBZIP2(buf1,bufsize));
 		    stat1 = bufstat;
 
 		    uint wr;
-		    DecodeBZIP2part(buf2,sizeof(buf2),&wr,buf1,sizeof(buf1));
-// [[analyse-magic]]
+		    DecodeBZIP2part(buf2,bufsize,&wr,buf1,bufsize);
 		    fform2 = GetByMagicFF(buf2,wr,wr);
 		    stat2 = GetNameFF(0,fform2);
+		}
+		else if ( fform1 == FF_LZ )
+		{
+		    load_full = true;
+		    wlz_header_t *wh = (wlz_header_t*)buf1;
+		    const file_format_t ff_temp
+			= GetByMagicFF(wh->first_8,sizeof(wh->first_8),be32(wh->cdata));
+		    stat2 = GetNameFF(0,ff_temp);
+		    version = GetVersionFF(ff_temp,wh->first_8,sizeof(wh->first_8),&suffix);
+		    if ( fatt.size >= 20 )
+		    {
+//			uint compr = GetComprLevelLZMA(le32(buf1+sizeof(wlz_header_t)+sizeof(u32)+1));
+			const uint compr = IsLZ(buf1,bufsize);
+			if ( compr >= 1 && compr <= 9 )
+			{
+			    snprintf(bufstat,sizeof(bufstat),"%s.%u",stat1,compr);
+			    stat1 = bufstat;
+			}
+		    }
+		}
+		else if ( fform1 == FF_LZMA )
+		{
+		    const int level = IsLZMA(buf1,bufsize);
+		    if ( level >= 1 )
+		    {
+			snprintf(bufstat,sizeof(bufstat),"LZMA.%u",level);
+			stat1 = bufstat;
+		    }
+		    uint wr;
+		    DecodeLZMApart(buf2,bufsize,&wr,buf1,bufsize);
+		    fform2 = GetByMagicFF(buf2,wr,wr);
+		    stat2 = GetNameFF(0,fform2);
+		}
+		else if ( fform1 == FF_XZ )
+		{
+		    const int level = IsXZ(buf1,bufsize);
+		    if ( level >= 1 )
+		    {
+			snprintf(bufstat,sizeof(bufstat),"XZ.%u",level);
+			stat1 = bufstat;
+		    }
 		}
 		else if ( fform1 == FF_PORTDB )
 		{
@@ -4256,7 +4302,7 @@ enumError cmd_filetype()
 		    valid = VALID_UNKNOWN; // no further tests
 		}
 		else
-		    version = GetVersionFF(fform1,(u8*)buf1,sizeof(buf1),&suffix);
+		    version = GetVersionFF(fform1,(u8*)buf1,bufsize,&suffix);
 
 		if ( version >= 0 )
 		    snprintf(vbuf,sizeof(vbuf),"%6u%c", version, suffix ? suffix : ' ' );
@@ -4291,6 +4337,8 @@ enumError cmd_filetype()
 	putchar('\n');
 
     ResetStringField(&plist);
+    FREE(buf1);
+    FREE(buf2);
     return ERR_OK;
 }
 
@@ -4863,7 +4911,7 @@ enumError cmd_rawdump ( const data_tab_t *data_tab )
 	    u8  *temp_data;
 	    uint temp_size;
 	    enumError err = EncodeBZIP2( &temp_data, &temp_size, true,
-					0, data, size, compr );
+					0, false, data, size, compr );
 	    if ( !err && ( !bz_data || temp_size < bz_size ) )
 	    {
 		FREE(bz_data);

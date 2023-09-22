@@ -49,6 +49,7 @@
 #include "lib-breff.h"
 #include "lib-image.h"
 #include "lib-bzip2.h"
+#include "lib-lzma.h"
 #include "lib-checksum.h"
 #include "dclib-utf8.h"
 #include "crypt.h"
@@ -563,7 +564,7 @@ enumError SaveSZS
 
     if (compress)
     {
-	CompressSZS(szs,true);
+	CompressSZS(szs,0,true);
 	data = szs->cdata;
 	size = szs->csize;
     }
@@ -597,7 +598,7 @@ enumError SaveSZS
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void LinkCacheRAW
+void LinkCacheData
 (
     // link/copy only files with data!
 
@@ -609,12 +610,12 @@ void LinkCacheRAW
 {
     if ( cache_fname && src_fname && data && size )
     {
-	PRINT("LinkCacheRAW(%d,%u) %s -> %s\n",data!=0,size,src_fname,cache_fname);
+	PRINT("LinkCacheData(%d,%u) %s -> %s\n",data!=0,size,src_fname,cache_fname);
 	unlink(cache_fname);
-	if ( link(src_fname,cache_fname))
+	if (link(src_fname,cache_fname))
 	{
 	    File_t F;
-	    CreateFile(&F,false,cache_fname,FM_SILENT|FM_REMOVE);
+	    CreateFile(&F,true,cache_fname,FM_SILENT|FM_REMOVE);
 	    if (F.f)
 		fwrite(data,1,size,F.f);
 	    ResetFile(&F,false);
@@ -900,10 +901,16 @@ enumError DecompressSZS
     if ( !szs->csize || !szs->cdata || szs->data )
 	return ERR_OK;
 
-    u8 *cdata = szs->cdata;
-    if (!memcmp(cdata,BZ_MAGIC,4))
-	return DecompressBZ(szs,rm_compressed);
+    switch(szs->fform_file)
+    {
+	case FF_BZ:	return DecompressBZ(szs,rm_compressed);
+	case FF_BZIP2:	return DecompressBZIP2(szs,rm_compressed);
+	case FF_LZ:	return DecompressLZ(szs,rm_compressed);
+	case FF_LZMA:	return DecompressLZMA(szs,rm_compressed);
+	default: break;
+    }
 
+    u8 *cdata = szs->cdata;
     const yaz0_header_t *yaz0 = (yaz0_header_t*)cdata;
 
     if ( !memcmp(yaz0->magic,XYZ0_MAGIC,sizeof(yaz0->magic)) )
@@ -1031,6 +1038,7 @@ void ClearSpecialFilesSZS
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    YAZ helpers			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[yaz_res_t]]
 
 typedef struct yaz_res_t
 {
@@ -1040,6 +1048,7 @@ typedef struct yaz_res_t
 yaz_res_t;
 
 //-----------------------------------------------------------------------------
+// [[yaz_compr_t]]
 
 typedef struct yaz_compr_t
 {
@@ -1381,98 +1390,50 @@ static enumError BackTrackYAZ ( yaz_compr_t *yaz, uint max_depth )
 ///////////////			ClassicCompressYAZ()		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError ClassicCompressYAZ ( yaz_compr_t *yaz )
+enumError ClassicCompressYAZ ( yaz_compr_t *yaz, int compr )
 {
     DASSERT(yaz);
     SetupDestYAZ(yaz,0x40);
 
     //--- calc range
 
-    const u32 range = opt_fast
+    int fast = opt_fast;
+    if ( compr < 1 )
+	compr = opt_norm ? 9 : opt_compr;
+    else
+	fast = false;
+
+    const u32 range = fast
 			? 0x100
-			: opt_norm
-			    ? 0x1000
-			    : !opt_compr
-				? 0
-				: opt_compr < 9
-				    ? 0x10e0 * opt_compr / 9 - 0x0e0
-				    : 0x1000;
+			: !compr
+			? 0
+			: opt_compr < 9
+			? 0x10e0 * opt_compr / 9 - 0x0e0
+			: 0x1000;
 
 
     //--- load from cache?
 
     if ( range == 0x1000 && IsSZSCacheEnabled() && yaz->szs )
     {
-	ccp cache_fname = 0;
-	szs_file_t *szs = yaz->szs;
-	PRINT("ClassicCompressYAZ() - check cache for %s\n",szs->fname);
-	LoadSZSCache();
-	CreateSSChecksumDBByData(iobuf,sizeof(iobuf),yaz->src,yaz->src_len);
-
-	ccp dest_fname;
-	if ( opt_cname && *opt_cname )
+	check_cache_t cc;
+	if (CheckSZSCache(&cc,yaz->szs,yaz->src,yaz->src_len,FF_YAZ0,".szs"))
 	{
-	    dest_fname = opt_cname;
-	    opt_cname = 0;
+	    cc.cache.csize -= sizeof(yaz0_header_t);
+	    memmove(cc.cache.cdata,cc.cache.cdata+sizeof(yaz0_header_t),cc.cache.csize);
+
+	    yaz->dest_buf_size	= cc.cache.csize;
+	    yaz->dest_buf	= cc.cache.cdata;
+	    yaz->dest_ptr	=
+	    yaz->dest_end	= cc.cache.cdata + cc.cache.csize;
+	    yaz->szs->cache_used = true;
+
+	    cc.cache.cdata = 0;
+	    cc.cache.csize = 0;
+	    ResetCheckCache(&cc);
+	    return ERR_OK;
 	}
-	else
-	    dest_fname = szs->dest_fname ? szs->dest_fname : szs->fname;
-
-	bool exists;
-	const ParamFieldItem_t *it
-	    = StoreSZSCache( dest_fname, iobuf, true, &exists );
-	PRINT("checklsum = %s, it=%d, exists=%d\n",iobuf,it!=0,exists);
-	if ( exists && it )
-	{
-	    PRINT("CACHE FOUND: %s\n",(ccp)it->data);
-	    cache_fname = PathAllocPP(szs_cache_dir,it->data);
-
-	    szs_file_t cache;
-	    InitializeSZS(&cache);
-
-	    if ( !LoadSZS(&cache,cache_fname,false,true,true)
-		&& cache.cdata
-		&& cache.csize
-		&& cache.fform_file == FF_YAZ0 )
-	    {
-		PRINT("CACHE LOADED, %zu bytes\n",cache.csize);
-		//HEXDUMP16(0,0,cache.cdata,32);
-		DecompressSZS(&cache,false,0);
-		if ( cache.size == yaz->src_len
-			&& !memcmp(yaz->src,cache.data,cache.size))
-		{
-		    PRINT("CACHE USED\n");
-		    LogCacheActivity("USE","%s %s",it->key,(ccp)it->data);
-		    cache.csize -= sizeof(yaz0_header_t);
-		    memmove(cache.cdata,cache.cdata+sizeof(yaz0_header_t),cache.csize);
-
-		    yaz->dest_buf_size	= cache.csize;
-		    yaz->dest_buf	= cache.cdata;
-		    yaz->dest_ptr	=
-		    yaz->dest_end	= cache.cdata + cache.csize;
-		    szs->cache_used	= true;
-
-		    cache.cdata = 0;
-		    cache.csize = 0;
-		    ResetSZS(&cache);
-		    FreeString(cache_fname);
-		    return ERR_OK;
-		}
-	    }
-	    else
-		LogCacheActivity("!USE","%s %s",it->key,(ccp)it->data);
-	    ResetSZS(&cache);
-	}
-	else
-	    LogCacheActivity("MISS","%s",iobuf);
-
-	if (it)
-	{
-	    FreeString(szs->cache_fname);
-	    szs->cache_fname = cache_fname
-			? cache_fname : PathAllocPP(szs_cache_dir,it->data);
-	    PRINT("szs->cache_fname = %s\n",szs->cache_fname);
-	}
+	ResetCheckCache(&cc);
     }
 
 
@@ -1650,10 +1611,80 @@ enumError ClassicCompressYAZ ( yaz_compr_t *yaz )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			CompressWith()			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+bool IsCompressFF ( file_format_t ff )
+{
+    return ff == FF_YAZ0
+	|| ff == FF_YAZ1
+	|| ff == FF_XYZ
+	|| ff == FF_BZ
+	|| ff == FF_BZIP2
+	|| ff == FF_LZ
+	|| ff == FF_LZMA
+	;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CompressWith
+(
+    // returns ERR_WARNING for invalid ff, ERR_NOTHING_TO_DO if already compressed,
+    // or return value of compression function
+
+    szs_file_t	*szs,		// NULL or valid data
+    int		compr,		// compression level, default if COMPR_DEFAULT, auto if < 1
+    bool	rm_uncompr,	// remove uncompressed data after compression
+    file_format_t ff_compr,	// use this file format for compression
+    file_format_t ff_fallback	// fall back if 'ff_compr' is not valid
+)
+{
+    if (!szs)
+	return ERR_OK; // no data
+
+    if (!IsCompressFF(ff_compr))
+    {
+	if (!IsCompressFF(ff_fallback))
+	    return ERR_WARNING;
+	ff_compr = ff_fallback;
+    }
+
+    if (szs->cdata)
+    {
+	if ( szs->fform_file == ff_compr )
+	    return ERR_NOTHING_TO_DO;
+	DecompressSZS(szs,true,0);
+    }
+
+    if ( !szs->size || !szs->data )
+	return ERR_NO_SOURCE_FOUND; // no data to compress
+
+    switch(ff_compr)
+    {
+	case FF_BZ:	return CompressBZ   (szs,compr,rm_uncompr);
+	case FF_BZIP2:	return CompressBZIP2(szs,compr,rm_uncompr);
+	case FF_LZ:	return CompressLZ   (szs,compr,rm_uncompr);
+	case FF_LZMA:	return CompressLZMA (szs,compr,rm_uncompr);
+	default:	break;
+    }
+
+    return CompressYAZ(szs,compr,rm_uncompr);
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			SZS/YAZ compression		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError CompressSZS ( szs_file_t * szs, bool remove_uncompressed )
+file_format_t GetNewCompressionSZS ( szs_file_t * szs )
+{
+    return fform_compr_force ? fform_compr_force : szs->fform_file;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CompressSZS ( szs_file_t * szs, int compr, bool remove_uncompressed )
 {
     PRINT("CompressSZS(), compr=%d.%02d\n",
 		opt_compr_mode, opt_compr );
@@ -1661,14 +1692,23 @@ enumError CompressSZS ( szs_file_t * szs, bool remove_uncompressed )
     TRACE("CompressSZS(%p,%d)\n",szs,remove_uncompressed);
     DASSERT(szs);
 
-    if ( !szs->size || !szs->data || szs->cdata )
+    if ( !szs || !szs->size || !szs->data || szs->cdata )
 	return ERR_OK;
 
-    if ( fform_compr_force == FF_BZ
-	|| !fform_compr_force && szs->fform_file == FF_BZ )
-    {
-	return CompressBZ(szs,remove_uncompressed);
-    }
+    const file_format_t ff = GetNewCompressionSZS(szs);
+    return CompressWith(szs,compr,remove_uncompressed,ff,FF_YAZ0);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CompressYAZ ( szs_file_t * szs, int compr, bool remove_uncompressed )
+{
+    PRINT("CompressYAZ(), compr=%d.%02d\n",
+		opt_compr_mode, opt_compr );
+    DASSERT(szs);
+
+    if ( !szs->size || !szs->data || szs->cdata )
+	return ERR_OK;
 
 
     //--- setup yaz-control record
@@ -1684,10 +1724,17 @@ enumError CompressSZS ( szs_file_t * szs, bool remove_uncompressed )
     //--- compress data
 
     enumError err;
-    switch(opt_compr_mode)
+    if ( compr == COMPR_DEFAULT )
+	compr = 9;
+    if ( compr > 0 )
+	err = ClassicCompressYAZ(&yaz,compr);
+    else
     {
-      case 11:	err = BackTrackYAZ(&yaz,opt_compr); break; // back tracking
-      default:  err = ClassicCompressYAZ(&yaz);
+	switch(opt_compr_mode)
+	{
+	  case 11: err = BackTrackYAZ(&yaz,opt_compr); break; // back tracking
+	  default: err = ClassicCompressYAZ(&yaz,0);
+	}
     }
 
 
@@ -2051,7 +2098,7 @@ u8 * EncodeXYZ
 
 enumError DecompressBZ ( szs_file_t * szs, bool rm_compressed )
 {
-    TRACE("DecompressBZ(%p,%d)\n",szs,rm_compressed);
+    PRINT("DecompressBZ(%p,%d)\n",szs,rm_compressed);
     DASSERT(szs);
 
     if ( !szs->csize || !szs->cdata || szs->data )
@@ -2064,7 +2111,7 @@ enumError DecompressBZ ( szs_file_t * szs, bool rm_compressed )
     u8 *data;
     uint size;
     enumError err = DecodeBZIP2( &data, &size, 0,
-		wh->bz_data, szs->csize - sizeof(*wh) );
+		wh->cdata, szs->csize - sizeof(*wh) );
     if (err)
 	return err;
 
@@ -2084,22 +2131,24 @@ enumError DecompressBZ ( szs_file_t * szs, bool rm_compressed )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError CompressBZ ( szs_file_t * szs, bool remove_uncompressed )
+typedef struct c_bzip2_t
 {
-    PRINT("CompressBZ(%p,%d)\n",szs,remove_uncompressed);
-    DASSERT(szs);
+    enumError	err;
+    u8		*cdata;
+    uint	csize;
+}
+c_bzip2_t;
 
-    if ( !szs->size || !szs->data || szs->cdata )
-	return ERR_OK;
-
-    u8 *cdata;
-    uint csize;
+static c_bzip2_t get_compressed_bzip2 ( szs_file_t * szs, uint header_size, int compr )
+{
+    c_bzip2_t res = {0};
     const int max_compr = szs->size / 100000 + 1;
+    if ( compr == COMPR_DEFAULT )
+	compr = BZIP2_DEFAULT_COMPR;
 
-    if ( opt_norm || opt_compr_mode > 1 )
+    if ( compr < 1 && ( opt_norm || opt_compr_mode > 1 ))
     {
-	cdata = 0;
-	csize = UINT_MAX;
+	res.csize = UINT_MAX;
 
 	static int ctab[] = { 1, 9, 8, 2, 5, 0 }, *cptr;
 	int n = opt_norm ? 2 : opt_compr_mode;
@@ -2117,42 +2166,270 @@ enumError CompressBZ ( szs_file_t * szs, bool remove_uncompressed )
 	    u8  *temp_data;
 	    uint temp_size;
 	    enumError err = EncodeBZIP2( &temp_data, &temp_size, true,
-		    sizeof(wbz_header_t), szs->data, szs->size, compr );
+		    header_size, header_size>0, szs->data, szs->size, compr );
 	    if (err)
 		continue;
-	    if ( temp_size < csize )
+	    if ( temp_size < res.csize )
 	    {
 		PRINT("  => USE COMPRESSION %u\n",compr);
-		FREE(cdata);
-		cdata = temp_data;
-		csize = temp_size;
+		FREE(res.cdata);
+		res.cdata = temp_data;
+		res.csize = temp_size;
 	    }
 	    else
 		FREE(temp_data);
 	}
-	if (!cdata)
-	    return ERR_BZIP2;
+	if (!res.cdata)
+	    res.err = ERR_BZIP2;
     }
     else
     {
-	int compr = opt_compr_mode > 0 ? opt_compr : BZIP2_DEFAULT_COMPR;
+	if (!compr)
+	    compr = opt_compr_mode > 0 ? opt_compr : BZIP2_DEFAULT_COMPR;
 	if ( compr > max_compr )
 	     compr = max_compr;
 
-	PRINT("  => USE COMPRESSION %u/%u\n",compr,max_compr);
-	enumError err = EncodeBZIP2( &cdata, &csize, true,
-		    sizeof(wbz_header_t), szs->data, szs->size, compr );
+	PRINT0("  => USE COMPRESSION %u/%u\n",compr,max_compr);
+	enumError err = EncodeBZIP2( &res.cdata, &res.csize, true,
+		    header_size, header_size>0, szs->data, szs->size, compr );
 	if (err)
-	    return err;
+	    res.err = err;
     }
+    return res;
+}
 
-    szs->cdata = cdata;
-    szs->csize = csize;
+///////////////////////////////////////////////////////////////////////////////
 
-    wbz_header_t *wh = (wbz_header_t*)cdata;
+enumError CompressBZ ( szs_file_t * szs, int compr, bool remove_uncompressed )
+{
+    PRINT("CompressBZ(%p,%d,%d)\n",szs,compr,remove_uncompressed);
+    DASSERT(szs);
+
+    if ( !szs->size || !szs->data || szs->cdata )
+	return ERR_OK;
+
+    c_bzip2_t c  = get_compressed_bzip2(szs,sizeof(wbz_header_t),compr);
+    if (c.err)
+	return c.err;
+    szs->cdata = c.cdata;
+    szs->csize = c.csize;
+    //HexDump16(stdout,0,0,c.cdata,32);
+
+    wbz_header_t *wh = (wbz_header_t*)c.cdata;
     memcpy(wh->magic,BZ_MAGIC,sizeof(wh->magic));
     memcpy(wh->first_8,szs->data,sizeof(wh->first_8));
     szs->fform_file = FF_BZ;
+
+    ClearContainerSZS(szs);
+    if (remove_uncompressed)
+	ClearUncompressedSZS(szs);
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			  BZIP2 support			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError DecompressBZIP2 ( szs_file_t * szs, bool rm_compressed )
+{
+    PRINT("DecompressBZIP2(%p,%d)\n",szs,rm_compressed);
+    DASSERT(szs);
+
+    if ( !szs->csize || !szs->cdata || szs->data )
+	return ERR_OK;
+
+    u8 *data;
+    uint size;
+    enumError err = DecodeBZIP2bin(&data,&size,0,szs->cdata,szs->csize);
+    if (err)
+	return err;
+
+    szs->data = data;
+    szs->size = size;
+    szs->fform_arch = szs->fform_current = GetByMagicFF(data,size,size);
+    szs->ff_attrib  = GetAttribFF(szs->fform_arch);
+    szs->ff_version = GetVersionFF(szs->fform_arch,szs->data,szs->size,0);
+
+    ClearContainerSZS(szs);
+    if (rm_compressed)
+	ClearCompressedSZS(szs);
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CompressBZIP2 ( szs_file_t * szs, int compr, bool remove_uncompressed )
+{
+    PRINT("CompressBZIP2(%p,%d,%d)\n",szs,compr,remove_uncompressed);
+    DASSERT(szs);
+
+    if ( !szs->size || !szs->data || szs->cdata )
+	return ERR_OK;
+
+    if ( compr < 1 || compr == BZIP2_DEFAULT_COMPR )
+    {
+	if (CheckSZSCacheSZS(szs,FF_BZIP2,".bz2",remove_uncompressed))
+	    return ERR_OK;
+    }
+
+    c_bzip2_t c = get_compressed_bzip2(szs,0,compr);
+    if (c.err)
+	return c.err;
+    szs->cdata = c.cdata;
+    szs->csize = c.csize;
+    szs->fform_file = FF_BZIP2;
+    //HexDump16(stdout,0,0,c.cdata,32);
+
+    ClearContainerSZS(szs);
+    if (remove_uncompressed)
+	ClearUncompressedSZS(szs);
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			  LZ support			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError DecompressLZ ( szs_file_t * szs, bool rm_compressed )
+{
+    PRINT("DecompressLZ(%p,%d)\n",szs,rm_compressed);
+    DASSERT(szs);
+
+    if ( !szs->csize || !szs->cdata || szs->data )
+	return ERR_OK;
+
+    const wlz_header_t *wh = (wbz_header_t*)szs->cdata;
+    if (memcmp(wh->magic,LZ_MAGIC,sizeof(wh->magic)))
+	return ERROR0(ERR_INVALID_DATA,"Invalid LZ magic!\n");
+
+    u8 *data;
+    uint size;
+    const uint delta = sizeof(wbz_header_t) + sizeof(u32);
+    enumError err = DecodeLZMAbin( &data, &size, 0,
+		szs->cdata + delta, szs->csize - delta );
+    if (err)
+	return err;
+
+    szs->data = data;
+    szs->size = size;
+// [[analyse-magic]]
+    szs->fform_arch = szs->fform_current = GetByMagicFF(data,size,size);
+    szs->ff_attrib  = GetAttribFF(szs->fform_arch);
+// [[version-suffix]]
+    szs->ff_version = GetVersionFF(szs->fform_arch,szs->data,szs->size,0);
+
+    ClearContainerSZS(szs);
+    if (rm_compressed)
+	ClearCompressedSZS(szs);
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CompressLZ ( szs_file_t * szs, int compr, bool remove_uncompressed )
+{
+    PRINT("CompressLZ(%p,%d)\n",szs,remove_uncompressed);
+    DASSERT(szs);
+
+    if ( !szs->size || !szs->data || szs->cdata )
+	return ERR_OK;
+
+    if ( compr == COMPR_DEFAULT )
+	compr = LZMA_DEFAULT_COMPR;
+    else if (!compr)
+	compr = opt_compr_mode > 0 ? opt_compr : LZMA_DEFAULT_COMPR;
+    compr = CalcCompressionLevelLZMA(compr);
+    PRINT0("  => USE LZMA COMPRESSION %u\n",compr);
+
+    u8  *cdata;
+    uint csize;
+    enumError err = EncodeLZMA( &cdata, &csize, true,
+		    sizeof(wlz_header_t), true, szs->data, szs->size, compr );
+    if (err)
+	return err;
+    szs->cdata = cdata;
+    szs->csize = csize;
+
+    wlz_header_t *wh = (wlz_header_t*)cdata;
+    memcpy(wh->magic,LZ_MAGIC,sizeof(wh->magic));
+    memcpy(wh->first_8,szs->data,sizeof(wh->first_8));
+    szs->fform_file = FF_LZ;
+    //HexDump16(stdout,0,0,cdata,32);
+
+    ClearContainerSZS(szs);
+    if (remove_uncompressed)
+	ClearUncompressedSZS(szs);
+    return ERR_OK;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			  LZMA support			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+enumError DecompressLZMA ( szs_file_t * szs, bool rm_compressed )
+{
+    PRINT("DecompressLZMA(%p,%d)\n",szs,rm_compressed);
+    DASSERT(szs);
+
+    if ( !szs->csize || !szs->cdata || szs->data )
+	return ERR_OK;
+
+    u8 *data;
+    uint size;
+    enumError err = DecodeLZMAbin(&data,&size,0,szs->cdata,szs->csize);
+    if (err)
+	return err;
+
+    szs->data = data;
+    szs->size = size;
+    szs->fform_arch = szs->fform_current = GetByMagicFF(data,size,size);
+    szs->ff_attrib  = GetAttribFF(szs->fform_arch);
+    szs->ff_version = GetVersionFF(szs->fform_arch,szs->data,szs->size,0);
+
+    ClearContainerSZS(szs);
+    if (rm_compressed)
+	ClearCompressedSZS(szs);
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError CompressLZMA ( szs_file_t * szs, int compr, bool remove_uncompressed )
+{
+    PRINT("CompressLZMA(%p,%d)\n",szs,remove_uncompressed);
+    DASSERT(szs);
+
+    if ( !szs->size || !szs->data || szs->cdata )
+	return ERR_OK;
+
+    if ( compr == COMPR_DEFAULT )
+	compr = LZMA_DEFAULT_COMPR;
+    else if (!compr)
+	compr = opt_compr_mode > 0 ? opt_compr : LZMA_DEFAULT_COMPR;
+    compr = CalcCompressionLevelLZMA(compr);
+
+    PRINT0("  => USE LZMA COMPRESSION %u\n",compr);
+
+    if ( compr == LZMA_DEFAULT_COMPR
+	&& CheckSZSCacheSZS(szs,FF_LZMA,".lzma",remove_uncompressed))
+    {
+	return ERR_OK;
+    }
+
+    u8  *cdata;
+    uint csize;
+    enumError err = EncodeLZMA( &cdata, &csize, true,
+		    0, false, szs->data, szs->size, compr );
+
+    if (err)
+	return err;
+    szs->cdata = cdata;
+    szs->csize = csize;
+    szs->fform_file = FF_LZMA;
+    //HexDump16(stdout,0,0,cdata,32);
 
     ClearContainerSZS(szs);
     if (remove_uncompressed)
@@ -3156,7 +3433,7 @@ void UiCheck ( ui_check_t *uc, szs_file_t *szs )
 	if ( uc->ui_type == UIT_LANGUAGE )
 	{
 	    uc->ui_type = UIT_UNKNOWN;
-	    //PRINT1("NAME; %s\n",fname);
+	    PRINT0("NAME; %s\n",fname);
 	    for ( int idx = UIT__FIRST; idx <= UIT__LAST; idx++ )
 	    {
 		ccp tab = ui_type_name[idx];
@@ -3548,14 +3825,14 @@ int IterateFilesLFL
 	const lfl_node_t *node = (lfl_node_t*)(szs->data + offset);
 	StringCopyS(it->path,sizeof(it->path),node->file_name);
 	it->name	= it->path;
-	it->off		= offset + ntohl(node->data_offset); 
+	it->off		= offset + ntohl(node->data_offset);
 	it->size	= ntohl(node->data_size);
 	if (!it->size)
 	    break;
 	stat		= it->func_it(it,false);
 	it->index++;
 
-	offset += ntohl(node->next_offset); 
+	offset += ntohl(node->next_offset);
     }
 
     // reset param
@@ -3604,7 +3881,7 @@ enumError CreateLFL
 
 	ccp path	= fix_path_lfl(ptr->path,rm_common);
 	const uint size	= sizeof(lfl_node_t)
- 			+ ALIGN32(strlen(path)+1,4)
+			+ ALIGN32(strlen(path)+1,4)
 			+ ALIGN32(ptr->size,4);
 	if ( max_size < size )
 	    max_size = size;

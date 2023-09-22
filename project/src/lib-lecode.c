@@ -846,7 +846,7 @@ const mem_t GetLecodeLEREG ( le_region_t reg )
     if ( idx > LEREG__END )
 	return NullMem;
 
-    DecodeBZIP2Manager(&lecode4_bin_mgr);
+    DecodeCompressManager(&lecode4_bin_mgr);
     const u32 *poslist = (u32*)lecode4_bin_mgr.data;
     const u32 pos = ntohl(poslist[idx]);
     mem_t res;
@@ -1011,6 +1011,27 @@ u_sec_t GetRefTimeLeHead ( const le_binary_head_t *head )
 {
     const u_sec_t ref_time = GetCommitTimeLeHead(head);
     return ref_time ? ref_time : GetCreateTimeLeHead(head);
+}
+
+//-----------------------------------------------------------------------------
+
+// returns pointer to signature (.ptr) and size of buffer (.len)
+mem_t GetLecodeSignature ( const le_binary_head_t *head )
+{
+    const uint version = ntohl(head->v3.version);
+    if ( version >= 5 )
+    {
+	const uint head_size = ntohl(head->v5.head_size);
+	if ( head_size >= sizeof(le_binary_head_v5_44_t) )
+	{
+	    uint offset = ntohl(head->v5.off_signature);
+	    mem_t mem = { .ptr = (char*)head + offset, .len = ntohl(head->v5.size_signature) };
+	    return mem;
+	}
+    }
+
+    mem_t mem = {0,0};
+    return mem;
 }
 
 //
@@ -1328,7 +1349,6 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
     lp->vs_textures		&= LE_M_TEXTURE;
     lp->block_textures		= lp->block_textures > 0;
     lp->staticr_points		= lp->staticr_points > 0;
-    lp->use_avail_txt		= lp->use_avail_txt > 0;
     lp->developer_modes		= lp->developer_modes > 0;
 
     if ( build >= 37 )
@@ -1345,7 +1365,7 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
     lp->default_online_sec = MINMAX( lp->default_online_sec, LE_MIN_ONLINE_SEC, LE_MAX_ONLINE_SEC );
     if ( !lp->min_online_sec || lp->min_online_sec > lp->max_online_sec )
 	lp->min_online_sec = lp->max_online_sec = 0;
-    else 
+    else
     {
 	lp->min_online_sec = MINMAX( lp->min_online_sec, LE_MIN_ONLINE_SEC,  LE_MAX_ONLINE_SEC );
 	lp->max_online_sec = MINMAX( lp->max_online_sec, lp->min_online_sec, LE_MAX_ONLINE_SEC );
@@ -1449,8 +1469,6 @@ static void CopyLPAR2Data ( le_analyze_t * ana )
 	h->min_online_sec = htons(lp->min_online_sec);
     if ( offsetof(le_binpar_v1_t,max_online_sec) < ana->param_size )
 	h->max_online_sec = htons(lp->max_online_sec);
-    if ( offsetof(le_binpar_v1_t,use_avail_txt) < ana->param_size )
-	h->use_avail_txt = lp->use_avail_txt;
 
     if ( ana->param_size >= sizeof(le_binpar_v1_274_t)  )
     {
@@ -1622,7 +1640,6 @@ enumError WriteSectionLPAR
 		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
-		,lpar->use_avail_txt
 		,lpar->developer_modes
 		,lpar->dev_mode1
 		,lpar->dev_mode2
@@ -1656,7 +1673,6 @@ enumError WriteSectionLPAR
 	       "DEF-ONLINE-SEC	= %3u%s\r\n"
 	       "MIN-ONLINE-SEC	= %3u%s\r\n"
 	       "MAX-ONLINE-SEC	= %3u%s\r\n"
-	       "USE-AVAIL-TXT	= %u\r\n"
 	       "\r\n"
 	       "DEVELOPER-MODES	= %u\r\n"   // always last 4 settings
 	       "DEV-MODE1	= %u\r\n"
@@ -1684,7 +1700,6 @@ enumError WriteSectionLPAR
 		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
-		,lpar->use_avail_txt
 		,lpar->developer_modes
 		,lpar->dev_mode1
 		,lpar->dev_mode2
@@ -2175,12 +2190,6 @@ enumError AnalyzeLEBinary
 		    ana->lpar.dev_mode1		= p->dev_mode1;
 		    ana->lpar.dev_mode2		= p->dev_mode2;
 		    ana->lpar.dev_mode3		= p->dev_mode3;
-		}
-
-		if ( param_size >= sizeof(le_binpar_v1_275_t) )
-		{
-		    le_binpar_v1_275_t *p	= (le_binpar_v1_275_t*)(data+off_param);
-		    ana->lpar.use_avail_txt	= p->use_avail_txt;
 		}
 
 		// [[new-lpar]]
@@ -3132,11 +3141,6 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	fprintf(f,
 		"%*s" "Version:           %u, %c = %s\n"
 		"%*s" "Build:             %u, %c = %s\n"
-		"%*s" "Header size:       %8x/hex = %6u bytes\n"
-		"%*s" "Total size:        %8x/hex = %6u bytes\n"
-		"%*s" "Offset of LPAR:    %8x/hex\n"
-		"%*s" "Base address:      %8x/hex\n"
-		"%*s" "Entry point:       %8x/hex\n"
 		,indent,"", ntohl(h->version)
 			,h->region
 				,h->region == 'P' ? "PAL"
@@ -3151,6 +3155,19 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 				:h->build_mode == 'D' ? "Debug"
 				:h->build_mode == 'X' ? "Debug with test code"
 				: "?"
+		);
+
+	mem_t sig = GetLecodeSignature(ana->head);
+	if (sig.ptr)
+	    fprintf(f,
+		"%*s" "Signature:         %s\n", indent,"", sig.ptr );
+
+	fprintf(f,
+		"%*s" "Header size:       %8x/hex = %6u bytes\n"
+		"%*s" "Total size:        %8x/hex = %6u bytes\n"
+		"%*s" "Offset of LPAR:    %8x/hex\n"
+		"%*s" "Base address:      %8x/hex\n"
+		"%*s" "Entry point:       %8x/hex\n"
 		,indent,"", ana->header_size ,ana->header_size
 		,indent,"", ntohl(h->file_size), ntohl(h->file_size)
 		,indent,"", ntohl(h->off_param)
@@ -3362,10 +3379,6 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	if ( ana->param_size >= sizeof(le_binpar_v1_26a_t) )
 	    fprintf(f,"%*s" "Points by StaticR: %u = %sabled\n"
 		,indent,"", h->staticr_points, h->staticr_points ? "en" : "dis" );
-
-	if ( ana->param_size >= sizeof(le_binpar_v1_275_t) )
-	    fprintf(f,"%*s" "Use \"avail.txt\":%4u = %sabled\n",
-			indent,"", h->use_avail_txt, h->use_avail_txt ? "en" : "dis" );
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_270_t) )
 	{
@@ -4094,6 +4107,9 @@ static enumError ScanTextLPAR_PARAM
 
     //--- setup data
 
+    const double use_avail_txt0 = 123.987e12;
+    double use_avail_txt = use_avail_txt0;
+
     int limit_mode = -1;
     const ScanParam_t ptab[] =
     {
@@ -4124,8 +4140,11 @@ static enumError ScanTextLPAR_PARAM
 	{ "DEF-ONLINE-SEC",	SPM_U16, &lpar->default_online_sec },
 	{ "MIN-ONLINE-SEC",	SPM_U16, &lpar->min_online_sec },
 	{ "MAX-ONLINE-SEC",	SPM_U16, &lpar->max_online_sec },
+ #if 1
+	{ "USE-AVAIL-TXT",	SPM_DOUBLE_X,  &use_avail_txt }, // [[obsolete]] 2023-09
+ #else
 	{ "USE-AVAIL-TXT",	SPM_U8,  &lpar->use_avail_txt },
-
+ #endif
 	// [[new-lpar]]
 	{0}
     };
@@ -4142,6 +4161,11 @@ static enumError ScanTextLPAR_PARAM
 	ScanParamSI(si,ptab);
     }
     CheckLevelSI(si);
+
+    if ( !si->no_warn && use_avail_txt != use_avail_txt0 )
+	ERROR0(ERR_WARNING,
+		"Don't use deprecated LPAR setting USE-AVAIL-TXT: %s",
+		si->cur_file->name);
 
     if ( limit_mode >= 0 )
 	LimitToLparMode(lpar,limit_mode);

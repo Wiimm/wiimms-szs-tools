@@ -597,6 +597,7 @@ enumError ExportPNG
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			generic images			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[GenericImgParam_t]]
 
 typedef struct BZ2Manager_t BZ2Manager_t;
 
@@ -611,6 +612,7 @@ typedef struct GenericImgParam_t
     //--- analysis, setup by CreateGenericIMG()
 
     const KeywordTab_t	*cmd;		// selected command
+    bool		force_width_64;	// finally reduce image size to width of 64 pixles
     int			width;		// width of image
     int			height;		// height of image
     Color_t		color;		// default color
