@@ -344,7 +344,8 @@ typedef struct le_lpar_t
     u8	vs_textures;		// &1: enable texture hacks for versus, &2:alternable
     u8	block_textures;		// >0: enable blocking of recent texture hacks
     u8	staticr_points;		// >0: use points definied by StaticR.rel
-    u8	use_avail_txt;		// [[obsolete]] >0: use file "avail.txt" to detect dir "Race/Common/###/"
+    u8	use_avail_txt;		// unused: // >0: use file "avail.txt" to detect dir "Race/Common/###/"
+    u8 cup_icon_size;		// size of single cup icon, usually 128 (128x128)
 
     u8  debug_mode;		// debug mode
     u8  debug_predef[LEDEB__N_CONFIG];
@@ -1132,9 +1133,9 @@ __attribute__ ((packed)) le_binpar_v1_274_t;
 _Static_assert(sizeof(le_binpar_v1_274_t)==0x274,"le_binpar_v1_274_t");
 
 //-----------------------------------------------------------------------------
-// [[le_binpar_v1_275_t]]
+// [[le_binpar_v1_276_t]]
 
-typedef struct le_binpar_v1_275_t
+typedef struct le_binpar_v1_276_t
 {
  //--- le_binary_param_t
 
@@ -1218,21 +1219,25 @@ typedef struct le_binpar_v1_275_t
  /*273*/ u8   dev_mode3;		// Third developer mode
 
  //--- le_binpar_v1_275_t
-
+ // not longer used
  /*274*/ u8   use_avail_txt;		// >0: use file "avail.txt" to detect dir "Race/Common/###/"
+
+ //--- le_binpar_v1_276_t
+
+ /*275*/ u8   cup_icon_size;		// Size of single cup icon, usually 128 (128x128)
 
  //--- END
 
- /*275*/
+ /*276*/
 }
-__attribute__ ((packed)) le_binpar_v1_275_t;
+__attribute__ ((packed)) le_binpar_v1_276_t;
 
-_Static_assert(sizeof(le_binpar_v1_275_t)==0x275,"le_binpar_v1_275_t");
+_Static_assert(sizeof(le_binpar_v1_276_t)==0x276,"le_binpar_v1_276_t");
 
 //-----------------------------------------------------------------------------
 // [[le_binpar_v1_t]] [[new-lpar]]
 
-typedef struct le_binpar_v1_275_t le_binpar_v1_t;
+typedef struct le_binpar_v1_276_t le_binpar_v1_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////

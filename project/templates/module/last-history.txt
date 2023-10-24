@@ -1,27 +1,19 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Windows only: Updated 64 bit version of Cygwin to DLL 3.4.9 / 2023-09-06.
- - Bug fix for wszst COPY: All format conversion options are now evaluated.
- - Fixed a bug that caused distribution files to be read incorrectly.
- - New compression formats:
-    LZ:   Read and create LZ compressed files. LZ is like YAZ0 and BZ, but
-          with LZMA compression.
-    LZMA: Read and create LZMA compressed files. Tracks compressed with LZMA
-          are approx 40% smaller than the YAZ0 compressed tracks.
-    XZ:   Detect XZ compressed files.
- - Formats BZIP2, LZMA and XZ are compatible with external tools like 'bzip2',
-   'lzma' and 'xz'.
- - Files compressed with BZ, BZIP2, LZ or LZMA are transparently decompressed.
-   This means that they can be processed by all commands.
- - New options --lz, --lzma and --wlz to force compression with new formats.
- - LTA: Optionally, the compression method for the track files can be forced.
-   Methods YAZ0, BZ, BZIP2, LZ and LZMA are available.
- - LTA: Maximum number of supported slots increased from 1024 to 4096.
- - wszst --cache=dir: Cache supports YAZ0, BZIP2 and LZMA compressed files now.
- - wlect DISTRIB --cache=dir: Use the cache if creating an LTA file when new
-   compression is forced.
- - wszst XCOMMON: File "avail.txt" is no longer created.
- - Removed LPAR setting USE-AVAIL-TXT.
+ - Updated prefix database: Added DK, FK3D.
+ - wstrt PORT: Updated porting database.
+ - Option --cache=dir: Cache supports YAZ0, BZ (new), BZIP2, LZ (new) and LZMA
+   compressed files now.
+ - wlect distrib: New options for scanning track files. Both options make it
+   easier to import third-party distributions to create a distribution file:
+    - HEX2SLOT: If a filename of a track is a hex number with exact 3 digits,
+      then use it as slot number and force the slot for the track.
+    - NAME2SLOT: If a filename of a track is a known name like 'farm_course',
+      then use the related slot number and force the slot for the track.
+    - CT-SLOTS: The availability of slots for CT-CODE is examined.
+ - Support for cup icons with a size of 8x8 to 248x248 pixels in increments
+   of 8. Default is 128x128 pixels. 64x64 saves 75% storage space.
+ - New LEX section CTDN: Define settings for game mode countdown.
 
 ~ - KMP:STGI support for up to 255 laps.
 ~    - Option --kmp=MODES supports now settings 1LAP .. 15LAPS.

@@ -195,9 +195,11 @@ void CreateSSXChecksumDBByData ( char *buf, uint bufsize, cvp data, uint size, f
 	    ccp append = 0;
 	    switch((int)ff)
 	    {
-		case FF_YAZ0:  append = ".y"; break;
-		case FF_BZIP2: append = ".b"; break;
-		case FF_LZMA:  append = ".l"; break;
+		case FF_YAZ0:	append = ".y"; break;
+		case FF_BZ:	append = ".B"; break;
+		case FF_BZIP2:	append = ".b"; break;
+		case FF_LZ:	append = ".L"; break;
+		case FF_LZMA:	append = ".l"; break;
 	    }
 	    if (append)
 		memcpy(buf+CHECKSUM_DB_SIZE,append,3);

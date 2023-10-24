@@ -506,7 +506,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" sub-files 'button/timg/ct_icons.tpl' and as"
 	" 'control/timg/ct_icons.tpl' to files 'Channel.szs', 'MenuMulti.szs'"
 	" and 'MenuSingle.szs'. Both sub-files are always linked, so that"
-	" storage space is saved."
+	" storage space is saved. The usual size for each single icon is"
+	" 128x128. This can be changed by LPAR setting CUP-ICON-SIZE."
     },
 
     {	OPT_NO_COPY, false, false, false, false, false, 0, "no-copy",
@@ -1621,9 +1622,8 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_LT_CLEAR, false, false, false, false, false, 0, "lt-clear",
 	0,
-	"Clear LEX sections TEST and DEV1 and remove the section and"
-	" course.lex if empty. This option is executed before all other --lt-*"
-	" options."
+	"Clear LEX sections TEST and DEV1 and remove them and course.lex if"
+	" empty. This option is executed before all other --lt-* options."
     },
 
     {	OPT_LT_ONLINE, false, false, false, false, false, 0, "lt-online",
@@ -1700,19 +1700,19 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_CACHE, false, false, false, false, false, 0, "cache",
 	"dir",
-	"Define a directory for an SZS cache. If creating a YAZ0, BZIP2 or"
-	" LZMA compressed file with standard compression (levels 9,9,6), the"
-	" cache is searched for the compressed version. File cache-content.txt"
-	" is used as file list with hash values. If the cache file is not"
-	" found or the content differ, the file is (re-)created and exit"
-	" status 2=differ is returned. Option --remove-dest is set"
-	" automatically to protect cache integrity.\n"
-	"  Background: Loading a compressed SZS and content verification is"
-	" much faster than compressing a file.\n"
-	"  For legay reasons: If parameter DIR is a file, it is split into"
-	" directory and base name. The directory is used for the cache"
-	" directory and the base name for option --cname, but only if --cname"
-	" is not used."
+	"Define a directory for an SZS cache. If creating a YAZ0, BZ, BZIP2,"
+	" LZ or LZMA compressed file with standard compression (levels"
+	" 9,9,9,6,6), the cache is searched for the compressed version. File"
+	" cache-content.txt is used as file list with hash values. If the"
+	" cache file is not found or the content differ, the file is"
+	" (re-)created and exit status 2=differ is returned. Option"
+	" --remove-dest is set automatically to protect cache integrity.\n"
+	"  The idea behind the cache: Loading an SZS file and comparing the"
+	" decompressed content is clearly faster than compressing the file.\n"
+	"  For legay reasons: If parameter DIR is a file, the filename is"
+	" split into directory and base name. The directory is used for the"
+	" cache directory and the base name for option --cname, but only if"
+	" --cname is not used."
     },
 
     {	OPT_CNAME, false, false, false, false, false, 0, "cname",

@@ -35,7 +35,7 @@ typedef struct TrackInfo_t
     ccp		sound_n_fname;	// file name of normal sound
     ccp		sound_f_fname;	// file name of fast sound
 
-    u8		sha1[4][24];	// SHA1+size, compatible to sha1_size_hash_t
+    u8		sha1[4][24];	// SHA1+size, compatible to sha1_size_t
 				// ... ORIG, ORIG_D, NORM, NORM_D
 
 } TrackInfo_t;

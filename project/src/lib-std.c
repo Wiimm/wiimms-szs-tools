@@ -5514,6 +5514,56 @@ uint GetMkwMusicSlot ( uint tid )
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int FindTrackSlot ( ccp name, bool allow_arenas )
+{
+    int idx = ScanTrack(name);
+    if ( idx >= 0 )
+	return idx;
+
+    if (allow_arenas)
+    {
+	idx = ScanArena(name);
+	if ( idx >= 0 )
+	    return idx + MKW_ARENA_BEG;
+    }
+
+    return -1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+int FindArenaSlot ( ccp name, bool allow_tracks )
+{
+    int idx = ScanArena(name);
+    if ( idx >= 0 )
+	return idx + MKW_ARENA_BEG;
+
+    if (allow_tracks)
+    {
+	idx = ScanTrack(name);
+	if ( idx >= 0 )
+	    return idx;
+    }
+
+    return -1;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const TrackInfo_t * FindTrackInfo ( ccp name, bool allow_arenas )
+{
+    return GetTrackInfo(FindTrackSlot(name,allow_arenas));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const TrackInfo_t * FindArenaInfo ( ccp name, bool allow_tracks )
+{
+    return GetTrackInfo(FindArenaSlot(name,allow_tracks));
+}
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			apple only			///////////////

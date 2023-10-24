@@ -51,6 +51,25 @@ struct szs_have_t;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			lex_engine_class_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[lex_engine_class_t]]
+
+typedef enum lex_engine_class_t
+{
+    LEC_BATTLE,
+    LEC_50CC,
+    LEC_100CC,
+    LEC_150CC,
+    LEC_200CC,
+    LEC_300CC,	// >200cc
+
+    LEC__N
+}
+lex_engine_class_t;
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			features_szs_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[features_szs_t]]
@@ -109,16 +128,19 @@ typedef struct features_szs_t
     u8 lex_hide_pos;		// HAVELEXF_HIDE_POS
     u8 lex_start_item;		// HAVELEXF_START_ITEM
 
-    //--- since v2.35a
 
+    //--- since v2.35a
     u8 lex_apply_otl;		// HAVELEXF_APPLY_OTL
     u8 lex_sect_ritp;		// HAVELEXS_RIPT
     u8 lex_rnd_itph;		// HAVELEXF_RND_ITPH
 
-    // [[new-lex-sect+]]
-    //--- new files and features will be appended here
-
+    //--- since v2.36a
     u8 lex_sect_dev1;		// HAVELEXS_DEV1
+
+    //--- since v2.39a
+    u8 lex_sect_ctdn;		// HAVELEXS_CTDN
+
+    //--- [[new-lex-sect]] new files and features will be appended here
 }
 __attribute__ ((packed)) features_szs_t;
 
@@ -252,6 +274,7 @@ typedef enum have_lex_sect_t
     HAVELEXS_FEAT,
     HAVELEXS_RITP,
     HAVELEXS_DEV1,
+    HAVELEXS_CTDN,
     // [[new-lex-sect]]
     //--- add new elements here (order is important)
     HAVELEXS__N
@@ -289,6 +312,7 @@ typedef enum lex_stream_id
     LEXS_DEV1		= 0x44455631,	// "DEV1" primary developer settings
     LEXS_SET1		= 0x53455431,	// "SET1" primary settings
     LEXS_CANN		= 0x43414e4e,	// "CANN" cannon settings
+    LEXS_CTDN		= 0x4354444e,	// "CTDN" countdown settings
     LEXS_HIPT		= 0x48495054,	// "HIPT" hide position tracker
     LEXS_RITP		= 0x52495450,	// "RITP" random next links @KMP:ITPH
     LEXS_TEST		= 0x54455354,	// "TEST" settings for tests
@@ -360,6 +384,17 @@ typedef struct lex_set1_t
  // [[new-lex-set1]]
 }
 __attribute__ ((packed,aligned(4))) lex_set1_t;
+
+//-----------------------------------------------------------------------------
+// [[lex_ctdn_t]]
+
+typedef struct lex_ctdn_t
+{
+ /*00*/ u16	time_limit_sec[LEC__N];	// time limits in sec (6 values)
+ /*0c*/
+ // [[new-lex-ctdn]]
+}
+__attribute__ ((packed,aligned(4))) lex_ctdn_t;
 
 //-----------------------------------------------------------------------------
 // [[lex_hipt_rule_t]]
@@ -494,6 +529,7 @@ lex_item_t * AppendFeatLEX ( lex_t * lex, bool overwrite, const features_szs_t *
 lex_item_t * AppendDev1LEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendSet1LEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendCannLEX ( lex_t * lex, bool overwrite );
+lex_item_t * AppendCtdnLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendHiptLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendRitpLEX ( lex_t * lex, bool overwrite );
 lex_item_t * AppendTestLEX ( lex_t * lex, bool overwrite );
@@ -612,7 +648,7 @@ typedef struct lex_info_t
     lex_set1_t	test;		// data of section TEST
 
 
-    // data
+    //-- data
     float3	item_factor;	// 1.0 or copy of set1.item_factor
 
     // [[new-lex-sect]] [[new-lex-set1]]

@@ -1666,8 +1666,7 @@ bool NormalizeExSZS
 				.print_err = true };
 	    am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
 	    AddMissingFile("button/timg/ct_icons.tpl",FF_TPL,&am);
-//ALWAYS    if (opt_links)
-		am.link = am.last_subfile;
+	    am.link = am.last_subfile; // link always to save space
 	    AddMissingFile("control/timg/ct_icons.tpl",FF_TPL,&am);
 	}
     }
@@ -2812,7 +2811,7 @@ static void patch_9laps ( struct szs_iterator_t *it )
 		    if (cm)
 		    {
 			PRINT0("9laps/add  %s\n",ptr->fname);
-			DecodeCompressManager(cm);
+			DecompressManager(cm);
 			add_missing_t am = { .szs = it->szs, .norm = &it->norm_create,
 					.data = (u8*)cm->data, .size = cm->size, .print_err = true };
 			am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
@@ -2841,7 +2840,7 @@ static void patch_9laps ( struct szs_iterator_t *it )
 
 	    if ( patch && cm )
 	    {
-		DecodeCompressManager(cm);
+		DecompressManager(cm);
 		patch_file(it,cm->data,cm->size,false,true);
 		break;
 	    }

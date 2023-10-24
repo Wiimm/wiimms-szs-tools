@@ -6,9 +6,9 @@
 # Sort order: %u
 
 # This section defines various settings. New settings are placed at the end
-# end of the binary data. Unknown data is printed as hexdump, so no data is
-# lost even with old tools. A value of 0 means: Not defined/initialized,
-# replace the value by the default value (maybe 0 again).
+# of the binary data. Unknown data is printed as hexdump, so no data is lost
+# even with old tools. A value of 0 means: Not defined/initialized, replace
+# the value by the default value (maybe 0 again).
 
 #-------------------------
 

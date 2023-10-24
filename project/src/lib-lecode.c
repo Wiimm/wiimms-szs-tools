@@ -846,7 +846,7 @@ const mem_t GetLecodeLEREG ( le_region_t reg )
     if ( idx > LEREG__END )
 	return NullMem;
 
-    DecodeCompressManager(&lecode4_bin_mgr);
+    DecompressManager(&lecode4_bin_mgr);
     const u32 *poslist = (u32*)lecode4_bin_mgr.data;
     const u32 pos = ntohl(poslist[idx]);
     mem_t res;
@@ -1302,6 +1302,7 @@ void InitializeLPAR ( le_lpar_t *lpar, bool load_lpar )
     lpar->default_online_sec	= LE_DEF_ONLINE_SEC;
     lpar->min_online_sec	= LE_DEF_ONLINE_SEC;
     lpar->max_online_sec	= LE_MAX_WD_ONLINE_SEC;
+    lpar->cup_icon_size		= 128;
 
     // [[new-lpar]]
 
@@ -1371,6 +1372,10 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
 	lp->max_online_sec = MINMAX( lp->max_online_sec, lp->min_online_sec, LE_MAX_ONLINE_SEC );
     }
 
+    lp->cup_icon_size &= 0xf8;
+    if (!lp->cup_icon_size)
+	lp->cup_icon_size = 128;
+
     // [[new-lpar]]
 
  #if 0
@@ -1378,7 +1383,6 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
 	for ( int l = 0; l < LEDEB__N_LINE; l++ )
 	    lp->debug[c][l] &= LEDEB__ALL;
  #endif
-
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1477,6 +1481,9 @@ static void CopyLPAR2Data ( le_analyze_t * ana )
 	h->dev_mode2		= lp->dev_mode2;
 	h->dev_mode3		= lp->dev_mode3;
     }
+
+    if ( offsetof(le_binpar_v1_t,cup_icon_size) < ana->param_size )
+	h->cup_icon_size = lp->cup_icon_size;
 
     // [[new-lpar]]
 }
@@ -1640,10 +1647,11 @@ enumError WriteSectionLPAR
 		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
-		,lpar->developer_modes
-		,lpar->dev_mode1
-		,lpar->dev_mode2
-		,lpar->dev_mode3
+		,lpar->cup_icon_size
+		 ,lpar->developer_modes
+		 ,lpar->dev_mode1
+		 ,lpar->dev_mode2
+		 ,lpar->dev_mode3
 		);
     }
     else
@@ -1673,6 +1681,7 @@ enumError WriteSectionLPAR
 	       "DEF-ONLINE-SEC	= %3u%s\r\n"
 	       "MIN-ONLINE-SEC	= %3u%s\r\n"
 	       "MAX-ONLINE-SEC	= %3u%s\r\n"
+	       "CUP-ICON-SIZE	= %u\r\n"
 	       "\r\n"
 	       "DEVELOPER-MODES	= %u\r\n"   // always last 4 settings
 	       "DEV-MODE1	= %u\r\n"
@@ -1700,10 +1709,11 @@ enumError WriteSectionLPAR
 		,lpar->default_online_sec ,PrintHMS(0,0,lpar->default_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
-		,lpar->developer_modes
-		,lpar->dev_mode1
-		,lpar->dev_mode2
-		,lpar->dev_mode3
+		,lpar->cup_icon_size
+		 ,lpar->developer_modes
+		 ,lpar->dev_mode1
+		 ,lpar->dev_mode2
+		 ,lpar->dev_mode3
 		);
     }
 
@@ -2190,6 +2200,12 @@ enumError AnalyzeLEBinary
 		    ana->lpar.dev_mode1		= p->dev_mode1;
 		    ana->lpar.dev_mode2		= p->dev_mode2;
 		    ana->lpar.dev_mode3		= p->dev_mode3;
+		}
+
+		if ( param_size >= sizeof(le_binpar_v1_276_t) )
+		{
+		    le_binpar_v1_276_t *p	= (le_binpar_v1_276_t*)(data+off_param);
+		    ana->lpar.cup_icon_size	= p->cup_icon_size;
 		}
 
 		// [[new-lpar]]
@@ -3394,6 +3410,10 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		);
 	}
 
+	if ( ana->param_size >= sizeof(le_binpar_v1_276_t) )
+	    fprintf(f,"%*s" "Cup image size:    %u x %u pixels\n"
+		,indent,"", h->cup_icon_size, h->cup_icon_size );
+
 	// [[new-lpar]]
 
  #if 0 // for later use
@@ -4140,12 +4160,10 @@ static enumError ScanTextLPAR_PARAM
 	{ "DEF-ONLINE-SEC",	SPM_U16, &lpar->default_online_sec },
 	{ "MIN-ONLINE-SEC",	SPM_U16, &lpar->min_online_sec },
 	{ "MAX-ONLINE-SEC",	SPM_U16, &lpar->max_online_sec },
- #if 1
-	{ "USE-AVAIL-TXT",	SPM_DOUBLE_X,  &use_avail_txt }, // [[obsolete]] 2023-09
- #else
-	{ "USE-AVAIL-TXT",	SPM_U8,  &lpar->use_avail_txt },
- #endif
+	{ "CUP-ICON-SIZE",	SPM_U8,  &lpar->cup_icon_size },
 	// [[new-lpar]]
+
+	{ "USE-AVAIL-TXT",	SPM_DOUBLE_X,  &use_avail_txt }, // [[obsolete]] 2023-09
 	{0}
     };
 

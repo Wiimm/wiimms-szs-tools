@@ -82,6 +82,7 @@ typedef struct MkwTrackCategory_t
     u8   ban;
     char abbrev[7+1];
     char title[12+1];
+    char declared[9+1];
     char color[15+1];
 }
 MkwTrackCategory_t;

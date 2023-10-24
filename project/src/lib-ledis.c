@@ -175,11 +175,11 @@ static KeywordTab_t keywords_leo[] =
 	{ LTT_SHA1_D,		"D-SHA1",	"DSHA1",	LEO_LTT_SELECTOR },
 	{ LTT_IDENT,		"IDENT",	0,		LEO_LTT_SELECTOR },
 	{ LTT_IDENT_D,		"D-IDENT",	"DIDENT",	LEO_LTT_SELECTOR },
-	{ LTT_FILE,		"FILES",	0,		LEO_LTT_SELECTOR },
-	{ LTT_PATH,		"PATHS",	0,		LEO_LTT_SELECTOR },
-	{ LTT_NAME,		"NAMES",	0,		LEO_LTT_SELECTOR },
-	{ LTT_XNAME,		"XNAMES",	0,		LEO_LTT_SELECTOR },
-	{ LTT_XNAME2,		"X2NAMES",	0,		LEO_LTT_SELECTOR },
+	{ LTT_FILE,		"FILES",	"FILE",		LEO_LTT_SELECTOR },
+	{ LTT_PATH,		"PATHS",	"PATH",		LEO_LTT_SELECTOR },
+	{ LTT_NAME,		"NAMES",	"NAME",		LEO_LTT_SELECTOR },
+	{ LTT_XNAME,		"XNAMES",	"XNAME",	LEO_LTT_SELECTOR },
+	{ LTT_XNAME2,		"X2NAMES",	"X2NAME",	LEO_LTT_SELECTOR },
  #if LE_STRING_LIST_ENABLED
 	{ LTT_TEMP1,		"TEMP1",	0,		LEO_LTT_SELECTOR },
 	{ LTT_TEMP2,		"TEMP2",	0,		LEO_LTT_SELECTOR },
@@ -220,6 +220,9 @@ static KeywordTab_t keywords_leo[] =
 	{ LEO_IN_LECODE,	"IN-LECODE",	"INLECODE",	0 },
 	 { LEO_IN_LECODE,	"ILECODE",	0,		0 },
 	{ LEO_NO_SLOT,		"NO-SLOT",	"NOSLOT",	0 },
+	{ LEO_HEX2SLOT,		"HEX2SLOT",	0,		0 },
+	{ LEO_NAME2SLOT,	"NAME2SLOT",	0,		0 },
+	{ LEO_CT_SLOTS,		"CT-SLOTS",	"CTSLOTS",	0 },
 	{ LEO_BRIEF,		"BRIEF",	0,		0 },
 	{ LEO_AUTO_PATH,	"AUTO-PATH",	"AUTOPATH",	0 },
 
@@ -4126,6 +4129,7 @@ le_track_arch_t * GetNextArchLD ( le_distrib_t *ld )
 
     ta->lt.track_slot	= ld->arch_used++; // index of 'arch'
     ta->lt.track_status	= LTS_EXPORT;
+    ta->force_slot	= -1;
     ta->attr_order	= 1000;
     ta->plus_order	= 10000000;
     ta->game_order	= 10000000;
@@ -4140,8 +4144,47 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
     if ( !ld || !raw )
 	return ERR_MISSING_PARAM;
 
-    char buf[LE_TRACK_STRING_MAX+1];
+    char buf[LE_TRACK_STRING_MAX+1], fname_buf[LE_TRACK_STRING_MAX+1];
     exmem_dest_t exdest = { .buf = buf, .buf_size = sizeof(buf), .try_circ = true };
+
+// [[split-le-flags]]
+    split_filename_t spf;
+    AnalyseSPF(&spf,true,raw->fname,0,CPM_LINK,opt_plus);
+
+    int force_slot = -1;
+    if ( ld->spar.opt & (LEO_HEX2SLOT|LEO_NAME2SLOT) )
+    {
+	if (!spf.f_d.len)
+	{
+	    if ( ld->spar.opt & LEO_HEX2SLOT && spf.f_name.len == 3 )
+	    {
+		const uint slot = str2ul(spf.f_name.ptr,0,16);
+		snprintf(fname_buf,sizeof(fname_buf),"%03x",slot);
+		if (!strncasecmp(spf.f_name.ptr,fname_buf,3))
+		{
+		    PRINT0("HEX: %.3s\n",spf.f_name.ptr);
+		    force_slot = slot;
+		}
+	    }
+
+	    if ( ld->spar.opt & LEO_NAME2SLOT )
+	    {
+		StringCopySM(fname_buf,sizeof(fname_buf),spf.f_name.ptr,spf.f_name.len);
+		const int slot = FindTrackSlot(fname_buf,true);
+		if ( slot >= 0 )
+		{
+		    PRINT0("NAME: 0x%02x = %s\n",slot,fname_buf);
+		    force_slot = slot;
+		}
+	    }
+	}
+	
+	if ( !IsUsableXcodeSlot(force_slot,ld->spar.opt&LEO_CT_SLOTS) )
+	{
+	    ResetSPF(&spf);
+	    return ERR_JOB_IGNORED;
+	}
+    }
 
     szs_file_t szs;
     AssignSZS(&szs,true,raw->data,raw->data_size,false,raw->fform,raw->fname);
@@ -4151,10 +4194,6 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
     PRINT0("SHA1: %s, slots: r=%d a=%d m=%d\n",
 	as.sha1_szs,
 	as.slotinfo.race_slot, as.slotinfo.arena_slot, as.slotinfo.music_index );
-
-// [[split-le-flags]]
-    split_filename_t spf;
-    AnalyseSPF(&spf,true,raw->fname,0,CPM_LINK,opt_plus);
 
     enumError err = ERR_WARNING;
     if ( as.valid_track && !spf.f_d.len )
@@ -4169,6 +4208,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 	le_track_arch_t *ta = GetNextArchLD(ld);
 	ta->lt.lap_count    = as.lap_count;
 	ta->lt.speed_factor = as.speed_factor;
+	ta->force_slot	    = force_slot;
 
 	if (szs.is_arena)
 	{
@@ -4262,6 +4302,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 }
 
 // setfilelt ->file
+// lti
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4299,6 +4340,7 @@ bool CloseArchLD ( le_distrib_t *ld )
 {
     if ( !ld || !ld->arch )
 	return false;
+
 
     //-- manage groups
 
@@ -4368,10 +4410,16 @@ bool CloseArchLD ( le_distrib_t *ld )
     for ( ptr = order; *ptr; ptr++ )
     {
 	le_track_arch_t *ta = *ptr;
-	le_track_t *lt	= IsRandomLEFL(ta->lt.flags)
+	le_track_t *lt	= ta->force_slot >= 0
+			? DefineTrackLD(ld,ta->force_slot,false)
+			: IsRandomLEFL(ta->lt.flags)
 			? DefineGroupTrackLD(ld,ta->lt.track_type,true)
 			: DefineFreeTrackLD(ld,ta->lt.track_type,true);
+	if (!lt)
+	    continue;
+
 	ta->lt.track_slot = lt->track_slot;
+	ResetLT(lt);
 	*lt = ta->lt;
 
 	if (ta->group)
@@ -4414,6 +4462,28 @@ bool CloseArchLD ( le_distrib_t *ld )
     ResetArchLD(ld);
 
     return true;
+}
+
+//-----------------------------------------------------------------------------
+
+bool CloseArchLogLD ( le_distrib_t *ld )
+{
+    if (IsActiveArchLD(ld))
+    {
+	const u_nsec_t start_nsec = GetTimerNSec();
+
+	if ( verbose >= 1 )
+	    PrintDistribHead("Close Track Archive");
+
+	if ( CloseArchLD(ld) && verbose >= 2 )
+	{
+	    const u_nsec_t dur = GetTimerNSec() - start_nsec;
+	    fprintf(stdlog,"%s   >> Track archive closed in %s%s\n",
+		    collog->status, PrintTimerNSec6(0,0,dur,0), collog->reset );
+	}
+	return true;
+    }
+    return false;
 }
 
 //
@@ -4759,6 +4829,9 @@ enumError ImportRawDataLD
     {
 	if (!ld->is_initialized)
 	    InitializeLD(ld);
+
+	if ( raw->fform != FF_U8 )
+	    CloseArchLogLD(ld);
 
 	if ( logging >= 2 && raw->fname )
 	    fprintf(stdlog,"Import data to LD: %s\n",raw->fname);
@@ -5848,7 +5921,6 @@ static void print_ledef_track
 	    }
     }
  #endif
-
 }
 
 //-----------------------------------------------------------------------------
@@ -6278,11 +6350,14 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	O_XGAME		= 0x0100,
 	O_SPACE		= 0x0200,
 
-	O_64		= 0x0400,
-
 	O_CHARS		= 0x1000,
 	 O_M_CHARS	= 0xf000,
 	 O_S_CHARS	= 12,
+
+	O_PIXEL		= 0x010000,  // N(pixel) = ( (val&O_M_PIXEL) >> O_S_PIXEL ) * O_PIXEL_FACTOR
+	 O_M_PIXEL	= 0x1f0000,
+	 O_S_PIXEL	= 16,
+	 O_PIXEL_FACTOR	=  8,
 
 	O__DEFAULT	= 5*O_CHARS,
     };
@@ -6301,9 +6376,6 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	{ O_XGAME,		"XGAME",	0,		0 },
 	{ O_SPACE,		"SPACE",	0,		0 },
 
-	{ O_64,			"64",		0,		O_64 },
-	{ 0,			"128",		0,		O_64 },
-
 	{  0*O_CHARS,		 "0",		0,		O_M_CHARS },
 	{  1*O_CHARS,		 "1",		0,		O_M_CHARS },
 	{  2*O_CHARS,		 "2",		0,		O_M_CHARS },
@@ -6320,6 +6392,39 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	{ 13*O_CHARS,		"13",		0,		O_M_CHARS },
 	{ 14*O_CHARS,		"14",		0,		O_M_CHARS },
 	{ 15*O_CHARS,		"15",		0,		O_M_CHARS },
+
+	{  1*O_PIXEL,		"8PX",		0,		O_M_PIXEL },
+	{  2*O_PIXEL,		"16PX",		0,		O_M_PIXEL },
+	{  3*O_PIXEL,		"24PX",		0,		O_M_PIXEL },
+	{  4*O_PIXEL,		"32PX",		0,		O_M_PIXEL },
+	{  5*O_PIXEL,		"40PX",		0,		O_M_PIXEL },
+	{  6*O_PIXEL,		"48PX",		0,		O_M_PIXEL },
+	{  7*O_PIXEL,		"56PX",		0,		O_M_PIXEL },
+	{  8*O_PIXEL,		"64PX",		0,		O_M_PIXEL },
+	{  9*O_PIXEL,		"72PX",		0,		O_M_PIXEL },
+	{ 10*O_PIXEL,		"80PX",		0,		O_M_PIXEL },
+	{ 11*O_PIXEL,		"88PX",		0,		O_M_PIXEL },
+	{ 12*O_PIXEL,		"96PX",		0,		O_M_PIXEL },
+	{ 13*O_PIXEL,		"104PX",	0,		O_M_PIXEL },
+	{ 14*O_PIXEL,		"112PX",	0,		O_M_PIXEL },
+	{ 15*O_PIXEL,		"120PX",	0,		O_M_PIXEL },
+	{ 16*O_PIXEL,		"128PX",	0,		O_M_PIXEL },
+	{ 17*O_PIXEL,		"136PX",	0,		O_M_PIXEL },
+	{ 18*O_PIXEL,		"144PX",	0,		O_M_PIXEL },
+	{ 19*O_PIXEL,		"152PX",	0,		O_M_PIXEL },
+	{ 20*O_PIXEL,		"160PX",	0,		O_M_PIXEL },
+	{ 21*O_PIXEL,		"168PX",	0,		O_M_PIXEL },
+	{ 22*O_PIXEL,		"176PX",	0,		O_M_PIXEL },
+	{ 23*O_PIXEL,		"184PX",	0,		O_M_PIXEL },
+	{ 24*O_PIXEL,		"192PX",	0,		O_M_PIXEL },
+	{ 25*O_PIXEL,		"200PX",	0,		O_M_PIXEL },
+	{ 26*O_PIXEL,		"208PX",	0,		O_M_PIXEL },
+	{ 27*O_PIXEL,		"216PX",	0,		O_M_PIXEL },
+	{ 28*O_PIXEL,		"224PX",	0,		O_M_PIXEL },
+	{ 29*O_PIXEL,		"232PX",	0,		O_M_PIXEL },
+	{ 30*O_PIXEL,		"240PX",	0,		O_M_PIXEL },
+	{ 31*O_PIXEL,		"248PX",	0,		O_M_PIXEL },
+
 	{0,0,0,0}
     };
 
@@ -6341,8 +6446,9 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
     if (!opt)
 	opt = O__DEFAULT;
 
-    if ( opt & O_64 )
-	dest = StringCopyE(dest,bufend,":64\n");
+    const uint pix = (( opt & O_M_PIXEL ) >> O_S_PIXEL ) * O_PIXEL_FACTOR;
+    if ( pix && pix != 128 )
+	dest = snprintfE(dest,bufend,":%upx\n",pix);
 
     dest = StringCopyE(dest,bufend,":arrows\n");
     enumError err = ERR_OK;
@@ -8799,6 +8905,24 @@ void ScanOptLeDefine ( ccp arg )
 	AppendStringField(&le_define_list,arg,false);
 }
 
+
+///////////////////////////////////////////////////////////////////////////////
+
+void PrintDistribHead ( ccp format, ... )
+{
+    if (stdlog)
+    {
+	char buf[500];
+	va_list arg;
+	va_start(arg,format);
+	vsnprintf(buf,sizeof(buf),format,arg);
+	va_end(arg);
+
+	ASSERT(collog);
+	fprintf(stdlog,"%s▼ %s%s\n",collog->caption,buf,collog->reset);
+	fflush(stdlog);
+    }
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 

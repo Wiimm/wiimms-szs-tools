@@ -568,13 +568,41 @@ static enumError CreateGenericCupImagesIMG
     DASSERT(par);
     DASSERT(img);
 
-    enum { I_ARROWS, I_ORIG, I_SWAPPED, I_WIIMM };
+    enum
+    {	I_ARROWS,
+	I_ORIG,
+	I_SWAPPED,
+	I_WIIMM,
+
+	I_PIXEL		= 0x10,  // N(pixel) = ( ( VAL & I_M_PIXEL ) >> I_S_PIXEL ) * 8 + 8
+	 I_M_PIXEL	= 0xf0,
+	 I_S_PIXEL	= 4,
+    };
+
     static const KeywordTab_t keytab[] =
     {
 	{ I_ARROWS,	"ARROWS",	0,		0 },
 	{ I_ORIG,	"ORIGINAL",	0,		0 },
 	{ I_SWAPPED,	"SWAPPED",	0,		0 },
 	{ I_WIIMM,	"WIIMM",	0,		0 },
+
+	{  0*I_PIXEL,		"8PIXELS",	0,		I_M_PIXEL },
+	{  1*I_PIXEL,		"16PIXELS",	0,		I_M_PIXEL },
+	{  2*I_PIXEL,		"24PIXELS",	0,		I_M_PIXEL },
+	{  3*I_PIXEL,		"32PIXELS",	0,		I_M_PIXEL },
+	{  4*I_PIXEL,		"40PIXELS",	0,		I_M_PIXEL },
+	{  5*I_PIXEL,		"48PIXELS",	0,		I_M_PIXEL },
+	{  6*I_PIXEL,		"56PIXELS",	0,		I_M_PIXEL },
+	{  7*I_PIXEL,		"64PIXELS",	0,		I_M_PIXEL },
+	{  8*I_PIXEL,		"72PIXELS",	0,		I_M_PIXEL },
+	{  9*I_PIXEL,		"80PIXELS",	0,		I_M_PIXEL },
+	{ 10*I_PIXEL,		"88PIXELS",	0,		I_M_PIXEL },
+	{ 11*I_PIXEL,		"96PIXELS",	0,		I_M_PIXEL },
+	{ 12*I_PIXEL,		"104PIXELS",	0,		I_M_PIXEL },
+	{ 13*I_PIXEL,		"112PIXELS",	0,		I_M_PIXEL },
+	{ 14*I_PIXEL,		"120PIXELS",	0,		I_M_PIXEL },
+	{ 15*I_PIXEL,		"128PIXELS",	0,		I_M_PIXEL },
+
 	{0,0,0,0},
     };
 
@@ -652,11 +680,10 @@ static enumError CreateGenericCupIconIMG
 	parlist = BehindMem(parlist,pipe?pipe+1:0);
 	PRINT0("%d+%d : %.*s\n",text.len,parlist.len,text.len,text.ptr);
 
-	if ( text.len == 3 && !memcmp(text.ptr,":64",3) )
+	if ( text.len > 2 && *text.ptr == ':' && !memcmp(text.ptr+text.len-2,"px",2) )
 	{
-	    PRINT0(">>>>> width 64\n");
-	    par->force_width_64 = true;
-	    continue;
+	    par->force_width = str2ul(text.ptr+1,0,10);
+	    PRINT0(">>>>> width %u\n",par->force_width);
 	}
 
 	Image_t cupicon;
@@ -851,8 +878,8 @@ enumError CreateGenericIMG
 	    return ERR_NOT_EXISTS;
     }
 
-    if ( !err && par->force_width_64 )
-	ResizeIMG(img,false,img,64,0);
+    if ( !err && par->force_width != 128 )
+	ResizeIMG(img,false,img,par->force_width,0);
 
     return err;
 }
@@ -1363,7 +1390,7 @@ enumError SaveTPL
     Image_t		*src_img,	// pointer to valid source img
     FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
-    bool		overwrite	// true: force overwriting
+    bool		overwrite	// true: allow overwriting
 )
 {
     DASSERT(src_img);

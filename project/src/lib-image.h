@@ -386,8 +386,8 @@ typedef struct tpl_raw_t
 {
     bool		valid;		// 'data' is valid
     mem_t		data;	        // raw data, alloced
-    int			n_image;	// number of images including mainn image
-    struct mipmap_info_t *mmi;		// 'n_images' info recored, alloced
+    int			n_image;	// number of images including main image
+    struct mipmap_info_t *mmi;		// 'n_images' info records, alloced
     const endian_func_t *endian;	// endian functions
 }
 tpl_raw_t;
@@ -407,7 +407,7 @@ enumError SaveTPL
     Image_t		*src_img,	// pointer to valid source img
     FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
-    bool		overwrite	// true: force overwriting
+    bool		overwrite	// true: allow overwriting
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -612,7 +612,7 @@ typedef struct GenericImgParam_t
     //--- analysis, setup by CreateGenericIMG()
 
     const KeywordTab_t	*cmd;		// selected command
-    bool		force_width_64;	// finally reduce image size to width of 64 pixles
+    int			force_width;	// !=128: finally resize image size to width given 
     int			width;		// width of image
     int			height;		// height of image
     Color_t		color;		// default color

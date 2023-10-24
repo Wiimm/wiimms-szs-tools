@@ -161,6 +161,7 @@ static const feature_var_t lex_section_list[] =
     DEF_VAR( 0,HAVELEXS_DEV1,		lex_sect_dev1,	"LEX section DEV1" ),
     DEF_VAR( 0,HAVELEXS_SET1,		lex_sect_set1,	"LEX section SET1" ),
     DEF_VAR( 0,HAVELEXS_CANN,		lex_sect_cann,	"LEX section CANN" ),
+    DEF_VAR( 0,HAVELEXS_CTDN,		lex_sect_ctdn,	"LEX section CTDN" ),
     DEF_VAR( 0,HAVELEXS_HIPT,		lex_sect_hipt,	"LEX section HIPT" ),
     DEF_VAR( 0,HAVELEXS_RITP,		lex_sect_ritp,	"LEX section RITP" ),
 
@@ -573,6 +574,7 @@ const features_szs_t * GetFeaturesModes()
 	m.lex_sect_dev1		=							  FZM_SECTION;
 	m.lex_sect_set1		=	       FZM_GAMEPLAY | FZM_M_TYPE | FZM_ONLINE   | FZM_SECTION;
 	m.lex_sect_cann		=	       FZM_GAMEPLAY | FZM_M_TYPE | FZM_M_WHERE  | FZM_SECTION;
+	m.lex_sect_ctdn		=							  FZM_SECTION;
 	m.lex_sect_hipt		= FZM_VISUAL		    | FZM_M_TYPE | no_timetrial | FZM_SECTION;
 	m.lex_sect_ritp		=	       FZM_GAMEPLAY | FZM_M_TYPE | no_timetrial | FZM_SECTION;
 
@@ -916,6 +918,65 @@ static bool IsActiveLEXElement_SET1 ( const lex_set1_t *set1 )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+static void FixLEXElement_CTDN ( lex_ctdn_t *ctdn )
+{
+    DASSERT(ctdn);
+    
+    u16 tlimit[LEC__N];
+    be16n(tlimit,ctdn->time_limit_sec,LEC__N);
+    
+    if (!tlimit[LEC_150CC])
+	tlimit[LEC_150CC] = 150;
+    for ( int i = LEC_150CC - 1; i >= 0; i-- )
+	if (!tlimit[i])
+	    tlimit[i] = tlimit[i+1];
+    for ( int i = LEC_150CC+1; i < LEC__N; i++ )
+	if (!tlimit[i])
+	    tlimit[i] = tlimit[i-1];
+
+    write_be16n(ctdn->time_limit_sec,tlimit,LEC__N);
+    // [[new-lex-ctdn]]
+}
+
+//-----------------------------------------------------------------------------
+
+static void FixLEXItem_CTDN
+(
+    lex_t		* lex,		// LEX data structure
+    lex_item_t		* item		// item to fix
+)
+{
+    DASSERT(lex);
+    DASSERT(item);
+    DASSERT( ntohl(item->elem.size) >= sizeof(lex_ctdn_t) );
+
+    lex_ctdn_t *ctdn = (lex_ctdn_t*)item->elem.data;
+    FixLEXElement_CTDN(ctdn);
+}
+
+//-----------------------------------------------------------------------------
+
+static void ClearLEXElement_CTDN ( lex_ctdn_t *ctdn )
+{
+    DASSERT(ctdn);
+    memset(ctdn,0,sizeof(*ctdn));
+    FixLEXElement_CTDN(ctdn);
+}
+
+//-----------------------------------------------------------------------------
+
+static bool IsActiveLEXElement_CTDN ( const lex_ctdn_t *ctdn )
+{
+    DASSERT(ctdn);
+    lex_ctdn_t empty, test = *ctdn;
+    ClearLEXElement_CTDN(&empty);
+    FixLEXElement_CTDN(&test);
+    return memcmp(&empty,&test,sizeof(empty)) != 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
+
 // [[new-lex-sect]] upto 4 functions, see SET1 above
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1121,6 +1182,12 @@ static lex_item_t * AppendElementLEX
 		size4 = ALIGN32(sizeof(lex_set1_t),4);
 	    break;
 
+	case LEXS_CTDN:
+	    fix_func = FixLEXItem_CTDN;
+	    if ( size4 < sizeof(lex_ctdn_t) )
+		size4 = ALIGN32(sizeof(lex_ctdn_t),4);
+	    break;
+
 	// [[new-lex-sect]]
 
 	case LEXS_TEST:
@@ -1311,6 +1378,7 @@ uint GetLexFeatures ( const lex_element_t *elem, lex_t *lex  )
 	//case LEXS_DEV1: return GetLexFeaturesDEV1(elem,lex); // will never have features
 	case LEXS_SET1: return GetLexFeaturesSET1(elem,lex);
 	case LEXS_CANN: return GetLexFeaturesCANN(elem);
+//X	case LEXS_CTDN: return GetLexFeaturesCTDN(elem);
 	case LEXS_HIPT: return GetLexFeaturesHIPT(elem);
 	case LEXS_RITP: return GetLexFeaturesRITP(elem);
 	case LEXS_TEST: return GetLexFeaturesTEST(elem);
@@ -1371,6 +1439,7 @@ const have_lex_info_t have_lex_sect_info[HAVELEXS__N] =
     { LEXS_FEAT, "features",	2 },				// HAVELEXS_FEAT
     { LEXS_RITP, "rnditph",	sizeof(lex_ritp_rule_t) },	// HAVELEXS_RITP
     { LEXS_DEV1, "dev1",	1 },				// HAVELEXS_DEV1
+    { LEXS_CTDN, "countdown",	0 },				// HAVELEXS_CTDN
     //--- add new sections here (order is important)
     // [[new-lex-sect]]
 };
@@ -1453,6 +1522,9 @@ void UpdateLEX ( lex_t * lex, bool add_missing, bool add_test )
 	//--- CANN
 	AppendCannLEX(lex,false);
 
+	//--- CTDN
+	AppendCtdnLEX(lex,false);
+
 	//--- HIPT
 	AppendHiptLEX(lex,false);
 
@@ -1487,8 +1559,7 @@ lex_item_t * AppendFeatLEX
 
 lex_item_t * AppendDev1LEX ( lex_t * lex, bool overwrite )
 {
-    lex_dev1_t dev1;
-    memset(&dev1,0,sizeof(dev1));
+    lex_dev1_t dev1 = {0};
     // AppendElementLEX() does call FixLEXItem_DEV1()
     return AppendElementLEX(lex,LEXS_DEV1,&dev1,sizeof(dev1),overwrite);
 }
@@ -1497,8 +1568,7 @@ lex_item_t * AppendDev1LEX ( lex_t * lex, bool overwrite )
 
 lex_item_t * AppendSet1LEX ( lex_t * lex, bool overwrite )
 {
-    lex_set1_t set1;
-    memset(&set1,0,sizeof(set1));
+    lex_set1_t set1 = {0};
     // AppendElementLEX() does call FixLEXItem_SET1()
     return AppendElementLEX(lex,LEXS_SET1,&set1,sizeof(set1),overwrite);
 }
@@ -1509,6 +1579,15 @@ lex_item_t * AppendCannLEX ( lex_t * lex, bool overwrite )
 {
     return AppendElementLEX( lex, LEXS_CANN, CannonDataLEX,
 				sizeof(CannonDataLEX), overwrite );
+}
+
+//-----------------------------------------------------------------------------
+
+lex_item_t * AppendCtdnLEX ( lex_t * lex, bool overwrite )
+{
+    lex_ctdn_t ctdn = {0};
+    // AppendElementLEX() does call FixLEXItem_CTDN()
+    return AppendElementLEX(lex,LEXS_CTDN,&ctdn,sizeof(ctdn),overwrite);
 }
 
 //-----------------------------------------------------------------------------
@@ -1734,6 +1813,7 @@ typedef enum lex_section_id
     LID_DEVELOP1,
     LID_SETTINGS1,
     LID_CANNON,
+    LID_COUNTDOWN,
     LID_HIDE_PT,
     LID_RND_ITPH,
     LID_TEST,
@@ -1757,6 +1837,7 @@ static const KeywordTab_t lex_section_name[] =
     { LID_DEVELOP1,	"DEV1",		"Developer settings",		0 },
     { LID_SETTINGS1,	"SET1",		"Primary settings",		0 },
     { LID_CANNON,	"CANN",		"Cannon settings",		0 },
+    { LID_COUNTDOWN,	"CTDN",		"Countdown settings",		0 },
     { LID_HIDE_PT,	"HIPT",		"Hide position tracker",	0 },
     { LID_RND_ITPH,	"RITP",		"Random next-links @KMP:ITPH",	0 },
     { LID_TEST,		"TEST",		"Test case",			0 },
@@ -2038,6 +2119,63 @@ static enumError ScanLEXElement_CANN
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static enumError ScanLEXElement_CTDN
+(
+    lex_t		* lex,		// KMP data structure
+    ScanInfo_t		* si		// valid data
+)
+{
+    DASSERT(lex);
+    DASSERT(si);
+    TRACE("ScanLEXElement_CTDN()\n");
+
+
+    //--- setup data
+
+    lex_ctdn_t ctdn = {0};
+
+    ScanParam_t ptab[] =
+    {
+	{ "TIME-LIMIT-BATTLE",	SPM_U16_BE,	ctdn.time_limit_sec + LEC_BATTLE },
+	{ "TIME-LIMIT-50CC",	SPM_U16_BE,	ctdn.time_limit_sec + LEC_50CC },
+	{ "TIME-LIMIT-100CC",	SPM_U16_BE,	ctdn.time_limit_sec + LEC_100CC },
+	{ "TIME-LIMIT-150CC",	SPM_U16_BE,	ctdn.time_limit_sec + LEC_150CC },
+	{ "TIME-LIMIT-200CC",	SPM_U16_BE,	ctdn.time_limit_sec + LEC_200CC },
+	{ "TIME-LIMIT-300CC",	SPM_U16_BE,	ctdn.time_limit_sec + LEC_300CC },
+	{0}
+    };
+
+    char fb_buf[1000];
+    FastBuf_t *fb = InitializeFastBuf(fb_buf,sizeof(fb_buf));
+    AppendFastBuf(fb,&ctdn,sizeof(ctdn));
+
+
+    //--- main loop
+
+    for(;;)
+    {
+	char ch = NextCharSI(si,true);
+	if ( !ch || ch == '[' )
+	    break;
+
+	if ( ch == '@' )
+	    ScanParamSI(si,ptab);
+	else
+	    ScanHexlineSI(si,fb,true);
+    }
+    CheckLevelSI(si);
+
+    FixLEXElement_CTDN(&ctdn);
+    memcpy(fb->buf,&ctdn,sizeof(ctdn));
+    //HexDump16(stderr,0,0,fb->buf,fb->ptr-fb->buf);
+    AppendElementLEX(lex,LEXS_CTDN,fb->buf,fb->ptr-fb->buf,true);
+
+    ResetFastBuf(fb);
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 static enumError ScanLEXElement_HIPT
 (
     lex_t		* lex,		// KMP data structure
@@ -2282,6 +2420,10 @@ enumError ScanTextLEX
 
 	     case LID_CANNON:
 		err = ScanLEXElement_CANN(lex,&si);
+		break;
+
+	     case LID_COUNTDOWN:
+		err = ScanLEXElement_CTDN(lex,&si);
 		break;
 
 	     case LID_HIDE_PT:
@@ -2693,6 +2835,73 @@ static enumError SaveTextLEX_SET1
 
 ///////////////////////////////////////////////////////////////////////////////
 
+static enumError SaveTextLEX_CTDN
+(
+    FILE		* f,		// file to write
+    const lex_t		* lex,		// pointer to valid LEX
+    lex_item_t		* item		// item to save
+)
+{
+    DASSERT(f);
+    DASSERT(lex);
+    DASSERT(item);
+
+    const uint size = ntohl(item->elem.size);
+    noPRINT("SaveTextLEX_CTDN(), size=%u\n",size);
+    DASSERT( size >= sizeof(lex_ctdn_t) );
+    if ( size < sizeof(lex_ctdn_t))
+	return ERR_OK;
+
+    const u8 *data = item->elem.data;
+    const lex_ctdn_t *ctdn = (lex_ctdn_t*)data;
+
+    const uint cc050 = be16( ctdn->time_limit_sec + LEC_50CC  );
+    const uint cc100 = be16( ctdn->time_limit_sec + LEC_100CC );
+    const uint cc150 = be16( ctdn->time_limit_sec + LEC_150CC );
+    const uint cc200 = be16( ctdn->time_limit_sec + LEC_200CC );
+    const uint cc300 = be16( ctdn->time_limit_sec + LEC_300CC );
+
+    if ( brief_count || export_count )
+	fprintf(f,
+		"%s[CTDN]\r\n\r\n"
+		"@TIME-LIMIT-50CC  = %3u\r\n"
+		"@TIME-LIMIT-100CC = %3u\r\n"
+		"@TIME-LIMIT-150CC = %3u\r\n"
+		"@TIME-LIMIT-200CC = %3u\r\n"
+		"@TIME-LIMIT-300CC = %3u\r\n"
+		"\r\n"
+		,section_sep
+		,cc050
+		,cc100
+		,cc150
+		,cc200
+		,cc300
+		// [[new-lex-ctdn]]
+		);
+    else
+	fprintf(f,text_lex_elem_ctdn_cr
+		,item->sort_order
+		,cc050, PrintHMS(0,0,cc050,1," # ","")
+		,cc100, PrintHMS(0,0,cc100,1," # ","")
+		,cc150, PrintHMS(0,0,cc150,1," # ","")
+		,cc200, PrintHMS(0,0,cc200,1," # ","")
+		,cc300, PrintHMS(0,0,cc300,1," # ","")
+		// [[new-lex-ctdn]]
+		);
+
+    if ( size > sizeof(lex_ctdn_t) )
+    {
+	fputs("\r\n# Hex dump for unknown settings:\r\n",f);
+	HexDump(f,0,sizeof(lex_ctdn_t),5,16,
+		item->elem.data + sizeof(lex_ctdn_t),
+		size - sizeof(lex_ctdn_t) );
+    }
+
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 static enumError SaveTextLEX_CANN
 (
     FILE		* f,		// file to write
@@ -2994,6 +3203,7 @@ enumError SaveTextLEX
 	    case LEXS_DEV1: err = SaveTextLEX_DEV1(F.f,lex,s); break;
 	    case LEXS_SET1: err = SaveTextLEX_SET1(F.f,lex,s); break;
 	    case LEXS_CANN: err = SaveTextLEX_CANN(F.f,lex,s); break;
+	    case LEXS_CTDN: err = SaveTextLEX_CTDN(F.f,lex,s); break;
 	    case LEXS_HIPT: err = SaveTextLEX_HIPT(F.f,lex,s); break;
 	    case LEXS_RITP: err = SaveTextLEX_RITP(F.f,lex,s); break;
 	    case LEXS_TEST: err = SaveTextLEX_TEST(F.f,lex,s); break;
@@ -3454,16 +3664,24 @@ bool PurgeLEX ( lex_t * lex )
 	    break;
 
 	 case LEXS_DEV1:
-	    remove = !IsActiveLEXElement_DEV1((lex_dev1_t*)data);
+	    remove = size == sizeof(lex_dev1_t)
+			&& !IsActiveLEXElement_DEV1((lex_dev1_t*)data);
 	    break;
 
 	 case LEXS_SET1:
-	    remove = !IsActiveLEXElement_SET1((lex_set1_t*)data);
+	    remove = size == sizeof(lex_set1_t)
+			&& !IsActiveLEXElement_SET1((lex_set1_t*)data);
 	    break;
 
 	 case LEXS_CANN:
-	    remove = size <= sizeof(CannonDataLEX)
-		  && !memcmp(data,&CannonDataLEX,size);
+	    remove = size < sizeof(CannonDataLEX)
+			|| size == sizeof(CannonDataLEX)
+			&& !memcmp(data,&CannonDataLEX,sizeof(CannonDataLEX));
+	    break;
+
+	 case LEXS_CTDN:
+	    remove = size == sizeof(lex_ctdn_t)
+			&& !IsActiveLEXElement_CTDN((lex_ctdn_t*)data);
 	    break;
 
 	 case LEXS_HIPT:
@@ -3477,7 +3695,8 @@ bool PurgeLEX ( lex_t * lex )
         // [[new-lex-sect]]
 
 	 case LEXS_TEST:
-	    remove = !IsActiveLEXElement_TEST((lex_test_t*)data);
+	    remove = size == sizeof(lex_test_t)
+			&& !IsActiveLEXElement_TEST((lex_test_t*)data);
 	    break;
 
 	 default:

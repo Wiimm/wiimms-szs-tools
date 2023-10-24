@@ -41,6 +41,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	0,
 	"Nin.",
 	"Nintendo",
+	"Nintendo",
 	"b_cyan",
     };
 
@@ -57,6 +58,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	0x20,
 	0,
 	"Tex.",
+	"Texture",
 	"Texture",
 	"green",
     };
@@ -75,6 +77,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	0,
 	"temp+",
 	"Temp-Allow",
+	"Texture",
 	"green",
     };
 
@@ -92,6 +95,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	1,
 	"temp−",
 	"Temp-Deny",
+	"Texture",
 	"b_yellow",
     };
 
@@ -109,6 +113,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	2,
 	"Deny",
 	"Deny",
+	"Texture",
 	"b_yellow",
     };
 
@@ -126,6 +131,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	5,
 	"Cheat",
 	"Cheat",
+	"Texture",
 	"b_red",
     };
 
@@ -141,6 +147,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	"e",
 	0x20,
 	3,
+	"Edit",
 	"Edit",
 	"Edit",
 	"b_orange_yellow",
@@ -160,6 +167,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	3,
 	"Model",
 	"Model",
+	"Edit",
 	"b_orange",
     };
 
@@ -177,6 +185,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	5,
 	"Cht+Ed",
 	"Cheat+Edit",
+	"Edit",
 	"b_red",
     };
 
@@ -194,6 +203,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	4,
 	"Unkn.",
 	"Unknown",
+	"Unknown",
 	"b_magenta",
     };
 
@@ -209,6 +219,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	"C",
 	6,
 	4,
+	"Custom",
 	"Custom",
 	"Custom",
 	"cyan_blue",
@@ -228,6 +239,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	4,
 	"H+S",
 	"Hide+Seek",
+	"Hide+Seek",
 	"grey5",
     };
 
@@ -245,6 +257,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	4,
 	"H+S.ct",
 	"Hide+Seek.ct",
+	"Hide+Seek",
 	"grey7",
     };
 
@@ -261,6 +274,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	0x20,
 	4,
 	"Mis",
+	"Mission",
 	"Mission",
 	"grey5",
     };
@@ -279,6 +293,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	4,
 	"Mis.ct",
 	"Mission.ct",
+	"Mission",
 	"grey7",
     };
 
@@ -295,6 +310,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
 	0,
 	4,
 	"-?-",
+	"(invalid)",
 	"(invalid)",
 	"fail",
     };

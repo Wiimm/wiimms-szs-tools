@@ -405,8 +405,8 @@
 		" The cache is used to generate LTA files when new compression is forced."
 		" Option {--remove-dest} is set automatically to protect cache integrity."
 		"\n "
-		" Background: Loading a compressed SZS and content verification"
-		" is much faster than compressing a file." },
+		" The idea behind the cache: Loading an SZS file and comparing the"
+		" decompressed content is clearly faster than compressing the file." },
 
   { T_OPT_GP,	"LOG_CACHE",	"log-cache|logcache",
 		0, 0 /* copy of wszst */ },

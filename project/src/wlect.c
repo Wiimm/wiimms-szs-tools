@@ -978,6 +978,8 @@ static void help_create ( enumError exit_code )
 		"Create a LEX text file with section »SET1« only.\n"
 	"\t{name|CANNONS}:\t|"
 		"Create a LEX text file with section »CANN« only.\n"
+	"\t{name|CTDN} || {name|COUNTDOWN}:\n\t\t|"
+		"Create a LEX text file with section »CTDN« only.\n"
 	"\t{name|HIPT}:\t|"
 		"Create a LEX text file with section »HIPT« only.\n"
 	"\t{name|TEST}:\t|"
@@ -1037,12 +1039,12 @@ static enumError cmd_create()
     //--- data
 
     enum { C_HELP,
-		C_LEX, C_FEATURES, C_DEV1, C_SET1, C_CANNON, C_HIDE_PT, C_RND_ITPH, C_TEST,
+		C_LEX, C_FEATURES, C_DEV1, C_SET1, C_CANNON, C_COUNTDOWN, C_HIDE_PT, C_RND_ITPH, C_TEST,
 		C_LPAR, C_LEDEF, C_PREFIX, C_CATEGORY,
 		C_LEINFO,
     };
 
-    // [[lex-new-sect]]
+    // [[new-lex-sect]]
 
     static const KeywordTab_t tab[] =
     {
@@ -1055,6 +1057,7 @@ static enumError cmd_create()
 	{ C_DEV1,	"DEV1",		0,		0 },
 	{ C_SET1,	"SET1",		0,		0 },
 	{ C_CANNON,	"CANNONS",	0,		0 },
+	{ C_COUNTDOWN,	"CTDN",		"COUNTDOWN",	0 },
 	{ C_HIDE_PT,	"HIPT",		0,		0 },
 	{ C_RND_ITPH,	"RITP ",	0,		0 },
 	{ C_TEST,	"TEST",		0,		0 },
@@ -1108,6 +1111,7 @@ static enumError cmd_create()
      case C_DEV1:
      case C_SET1:
      case C_CANNON:
+     case C_COUNTDOWN:
      case C_HIDE_PT:
      case C_RND_ITPH:
 	{
@@ -1119,6 +1123,7 @@ static enumError cmd_create()
 	      case C_DEV1:	AppendDev1LEX(&lex,false); break;
 	      case C_SET1:	AppendSet1LEX(&lex,false); break;
 	      case C_CANNON:	AppendCannLEX(&lex,false); break;
+	      case C_COUNTDOWN:	AppendCtdnLEX(&lex,false); break;
 	      case C_HIDE_PT:	AppendHiptLEX(&lex,false); break;
 	      case C_RND_ITPH:	AppendRitpLEX(&lex,false); break;
 	    }
@@ -1127,7 +1132,7 @@ static enumError cmd_create()
 	}
 	break;
 
-    // [[lex-new-sect]]
+    // [[new-lex-sect]]
 
      case C_TEST:
 	{
@@ -1679,7 +1684,8 @@ static void help_distrib ( enumError exit_code )
 
 		" The following options are available:"
 		"|[14,22]\n"
-		"\t{par|remove}:\t|Remove all used SZS source files at the very end.\n"
+		"\t{par|remove}:\t|Remove all used SZS source files at the very end."
+		" »{par|rm}« is s short cut.\n"
 		"\t{par|yaz0}:\t|Force YAZ0 compression for each track file.\n"
 		"\t{par|bz}:\t|Force BZ compression for each track file.\n"
 		"\t{par|bzip2}:\t|Force BZIP2 compression for each track file.\n"
@@ -1926,6 +1932,30 @@ static void help_distrib ( enumError exit_code )
 	"\t{name|/NO-SLOT}:\t|"
 		"Switch option {name|NO-SLOT} off.\n"
 	"\n"
+	"\t{name|HEX2SLOT}:\t|"
+		"If a filename of a track is a hex number with exact 3 digits,"
+		" then use it as slot number and force the slot for the track."
+		" If the slot is not defined or not available, or it is a _d track,"
+		" then the track is ignored.\n"
+	"\t{name|/HEX2SLOT}:\t|"
+		"Switch option {name|HEX2SLOT} off.\n"
+	"\n"
+	"\t{name|NAME2SLOT}:\t|"
+		"If a filename of a track is a known name like »{name|farm_course}«,"
+		" then use the related slot number and force the slot for the track."
+		" If the slot is not defined or not available, or it is a _d track,"
+		" then the track is ignored.\n"
+	"\t{name|/NAME2SLOT}:\t|"
+		"Switch option {name|NAME2SLOT} off.\n"
+	"\n"
+	"\t{name|CT-SLOTS}:\t|"
+		"Options {name|HEX2SLOT} and {name|NAME2SLOT}:"
+		" The availability of a slot for LE-CODE is usually examined."
+		" If this option is set, the availability for CT-CODE is examined."
+		" {name|CTSLOTS} is a short cut for this keyword.\n"
+	"\t{name|/CT-SLOTS}:\t|"
+		"Switch option {name|CT-SLOT} off.\n"
+	"\n"
 	"\t{name|BRIEF}:\t|"
 		"When creating text files, detailed descriptions are suppressed."
 		" The default is based on the global options {opt|--no-header} and {opt|--brief}.\n"
@@ -1979,29 +2009,9 @@ static void help_distrib ( enumError exit_code )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static void PrintHead ( ccp format, ... )
-	__attribute__ ((__format__(__printf__,1,2)));
-
-static void PrintHead ( ccp format, ... )
-{
-    if (stdlog)
-    {
-	char buf[500];
-	va_list arg;
-	va_start(arg,format);
-	vsnprintf(buf,sizeof(buf),format,arg);
-	va_end(arg);
-
-	ASSERT(collog);
-	fprintf(stdlog,"%s▼ %s%s\n",collog->caption,buf,collog->reset);
-	fflush(stdlog);
-    }
-}
-
-///////////////////////////////////////////////////////////////////////////////
-
 static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * arg )
 {
+    CloseArchLogLD(ld);
     u_nsec_t start_nsec = GetTimerNSec();
 
     enum {	C_NAMES, C_INFO, C_RATING, C_LEINFO, C_SHA1, C_DISTRIB,
@@ -2121,7 +2131,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     const KeywordTab_t *cmd = ScanKeyword(&cmd_stat,mode,tab);
     if (!cmd)
     {
-	PrintHead("Instruction: %s = %s",mode,arg);
+	PrintDistribHead("Instruction: %s = %s",mode,arg);
 	PrintKeywordError(tab,mode,cmd_stat,0,"instruction");
 	hint_exit(ERR_SYNTAX);
     }
@@ -2130,7 +2140,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
     //--- start
 
     if ( verbose >= 1 )
-	PrintHead("Instruction %s: %s",cmd->name1,arg);
+	PrintDistribHead("Instruction %s: %s",cmd->name1,arg);
 
     u_nsec_t temp_nsec = GetTimerNSec();
     if ( CloseArchLD(ld) && verbose >= 2 )
@@ -2262,7 +2272,7 @@ static enumError cmd_distrib_instruction ( le_distrib_t *ld, ccp mode, char * ar
 	    cmd = ScanKeyword(&cmd_stat,arg,tracks_tab);
 	    if (!cmd)
 	    {
-		PrintHead("Instruction: %s = %s",mode,arg);
+		PrintDistribHead("Instruction: %s = %s",mode,arg);
 		PrintKeywordError(tab,arg,cmd_stat,0,"TRACKS keyword");
 		hint_exit(ERR_SYNTAX);
 	    }
@@ -2426,7 +2436,7 @@ static enumError cmd_distrib()
 	if ( *arg == '+' )
 	{
 	    if ( verbose >= 1 )
-		PrintHead("Scan options: %s",arg);
+		PrintDistribHead("Scan options: %s",arg);
 	    ScanOptionsLSP(&ld.spar,arg+1,"Filter option");
 	    if ( ld.spar.opt & LEO_HELP )
 		help_distrib(ERR_OK);
@@ -2464,7 +2474,7 @@ static enumError cmd_distrib()
 	}
 
 	if ( verbose >= 1 )
-	    PrintHead("Read file(s): %s",arg);
+	    PrintDistribHead("Read file(s): %s",arg);
 	const u_nsec_t start_nsec = GetTimerNSec();
 	ImportFileLD(&ld,arg,true,false);
 	if ( verbose >= 2 )

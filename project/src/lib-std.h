@@ -969,7 +969,7 @@ CompressManager_t;
 
 //-----------------------------------------------------------------------------
 
-enumError DecodeCompressManager
+enumError DecompressManager
 (
     CompressManager_t	*mgr	// manager data
 );
@@ -2709,6 +2709,14 @@ static inline ccp PrintU16M1 ( u16 num )
 {
     return num == M1(num) ? "-1" : PrintCircBuf("%u",num);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+int FindTrackSlot ( ccp name, bool allow_arenas );
+int FindArenaSlot ( ccp name, bool allow_tracks );
+
+const TrackInfo_t * FindTrackInfo ( ccp name, bool allow_arenas );
+const TrackInfo_t * FindArenaInfo ( ccp name, bool allow_tracks );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

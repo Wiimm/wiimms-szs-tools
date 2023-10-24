@@ -142,7 +142,7 @@ static inline bool IsMkwTrack ( uint tid )
 	{ return tid < MKW_TRACK_END; }
 
 static inline bool IsLecodeTrack ( uint tid )
-	{ return tid < MKW_TRACK_END || tid >= MKW_LE_SLOT_BEG; }
+	{ return tid < MKW_TRACK_END || tid >= MKW_LE_SLOT_BEG && tid < MKW_LE_SLOT_END; }
 
 static inline bool IsMkwArena ( uint tid )
 	{ return tid >= MKW_ARENA_BEG && tid < MKW_ARENA_END; }
@@ -168,6 +168,16 @@ static inline bool IsValidLecodeSlot ( uint tid )
 		|| tid >= MKW_EXTRA_BEG && tid < MKW_EXTRA_END
 		|| tid >= MKW_LE_SLOT_BEG && tid < MKW_LE_SLOT_END
 		|| tid >= MKW_LE_RANDOM_BEG && tid < MKW_LE_RANDOM_END; }
+
+static inline bool IsUsableLecodeSlot ( uint tid )
+	{ return tid < MKW_ARENA_END
+		|| tid >= MKW_LE_SLOT_BEG && tid < MKW_LE_SLOT_END; }
+
+static inline bool IsUsableCtcodeSlot ( uint tid )
+	{ return tid < 0x42 || tid >= 0x44 && tid < 0xff; }
+
+// if !is_ctcode, then use IsUsableLecodeSlot(), otherwise use IsUsableCtcodeSlot()
+bool IsUsableXcodeSlot ( uint tid, int is_ctcode );
 
 static inline bool IsMkwSpecial ( uint tid )
 	{ return tid >= MKW_SPECIAL_BEG && tid < MKW_SPECIAL_END; }

@@ -2420,7 +2420,7 @@ s64 FindAutoAdd ( ccp fname, ccp ext, char *buf, uint buf_size )
 ///////////////			CompressManager_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError DecodeCompressManager
+enumError DecompressManager
 (
     CompressManager_t	*mgr	// manager data
 )
@@ -4246,7 +4246,7 @@ const mkw_prefix_t * GetPrefixTable(void)
 {
     if (!current_prefix_tab)
     {
-	DecodeBZIP2Manager(&prefix_inc_mgr);
+	DecompressManager(&prefix_inc_mgr);
 	DefinePrefixTable(prefix_inc_mgr.data,prefix_inc_mgr.size);
     }
 

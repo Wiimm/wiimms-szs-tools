@@ -321,23 +321,26 @@ typedef enum le_options_t
 
     LEO_IN_LECODE	= 0x00100000,  // import lecode binary
     LEO_NO_SLOT		= 0x00200000,  // suppress 'SLOT <num>' if creating a LE-DEF file.
-    LEO_BRIEF		= 0x00400000,  // suppress descriptions
-    LEO_AUTO_PATH	= 0x00800000,  // enable auto paths
+    LEO_HEX2SLOT	= 0x00400000,  // if reading an szs of format '%03x.*', use it to force slot
+    LEO_NAME2SLOT	= 0x00800000,  // if reading an szs, use its filename to force number
+    LEO_CT_SLOTS	= 0x01000000,  // LEO_HEX2SLOT,LEO_NAME2SLOT: check for ct-code slots
+    LEO_BRIEF		= 0x02000000,  // suppress descriptions
+    LEO_AUTO_PATH	= 0x04000000,  // enable auto paths
 
 
     //-- special signals
 
-    LEO_CUT_ALL		= 0x01000000,  // cut all
-    LEO_CUT_STD		= 0x02000000,  // cut for standard distribution.
-    LEO_CUT_CTCODE	= 0x04000000,  // cut for CT-CODE distribution.
+    LEO_CUT_ALL		= 0x08000000,  // cut all
+    LEO_CUT_STD		= 0x10000000,  // cut for standard distribution.
+    LEO_CUT_CTCODE	= 0x20000000,  // cut for CT-CODE distribution.
      LEO_M_CUT		= LEO_CUT_ALL | LEO_CUT_STD | LEO_CUT_CTCODE,
 
-    LEO_HELP		= 0x08000000,  // print help and exit
+    LEO_HELP		= 0x40000000,  // print help and exit
 
 
     //-- misc
 
-    LEO__ALL		= 0x07ffffff,
+    LEO__ALL		= 0x1fffffff,
     LEO__DEFAULT	= LTT__DEFAULT | LEO_OVERWRITE | LEO_OUT_DUMMY | LEO_AUTO_PATH,
     LEO__SRC		= LEO_LTT_SELECTOR | LEO_IN_ALL,
     LEO__DEST		= LEO_LTT_SELECTOR | LEO_OUT_ALL | LEO_M_OUTPUT | LEO_M_HOW,
@@ -667,13 +670,14 @@ typedef struct le_track_arch_t
     le_group_t		group;		// group id
 // [[mtcat]]
 
-    // all string alloced
+    // all strings are alloced
 
     ccp			name_order;	// relevant name for order
     ccp			version;	// version
 
     // order := attr_order plus_order name_order game_order
 
+    int			force_slot;	// ≥0: force slot
     int			attr_order;	// order by attribute, default=1000
     int			plus_order;	// order by plus prefix
     int			game_order;	// order by game prefix
@@ -872,6 +876,10 @@ void ResetArchLD ( le_distrib_t *ld );
 le_track_arch_t * GetNextArchLD ( le_distrib_t *ld );
 enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw );
 bool CloseArchLD ( le_distrib_t *ld );  // return true on activity
+bool CloseArchLogLD ( le_distrib_t *ld ); // return true on activity
+
+static inline bool IsActiveArchLD ( le_distrib_t *ld )
+	{ return ld && ld->arch; }
 
 //-----------------------------------------------------------------------------
 
@@ -1177,6 +1185,9 @@ void ScanSlotTranslation
 ///////////////////////////////////////////////////////////////////////////////
 
 void ScanOptLeDefine ( ccp arg );
+
+void PrintDistribHead ( ccp format, ... )
+	__attribute__ ((__format__(__printf__,1,2)));
 
 //
 ///////////////////////////////////////////////////////////////////////////////

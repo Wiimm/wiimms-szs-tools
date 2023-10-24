@@ -2208,6 +2208,12 @@ enumError CompressBZ ( szs_file_t * szs, int compr, bool remove_uncompressed )
     if ( !szs->size || !szs->data || szs->cdata )
 	return ERR_OK;
 
+    if ( compr < 1 || compr == BZIP2_DEFAULT_COMPR )
+    {
+	if (CheckSZSCacheSZS(szs,FF_BZ,".bz",remove_uncompressed))
+	    return ERR_OK;
+    }
+
     c_bzip2_t c  = get_compressed_bzip2(szs,sizeof(wbz_header_t),compr);
     if (c.err)
 	return c.err;
@@ -2341,7 +2347,13 @@ enumError CompressLZ ( szs_file_t * szs, int compr, bool remove_uncompressed )
     else if (!compr)
 	compr = opt_compr_mode > 0 ? opt_compr : LZMA_DEFAULT_COMPR;
     compr = CalcCompressionLevelLZMA(compr);
-    PRINT0("  => USE LZMA COMPRESSION %u\n",compr);
+    PRINT0("  => USE LZ COMPRESSION %u\n",compr);
+
+    if ( compr == LZMA_DEFAULT_COMPR
+	&& CheckSZSCacheSZS(szs,FF_LZ,".lz",remove_uncompressed))
+    {
+	return ERR_OK;
+    }
 
     u8  *cdata;
     uint csize;
@@ -2410,7 +2422,6 @@ enumError CompressLZMA ( szs_file_t * szs, int compr, bool remove_uncompressed )
     else if (!compr)
 	compr = opt_compr_mode > 0 ? opt_compr : LZMA_DEFAULT_COMPR;
     compr = CalcCompressionLevelLZMA(compr);
-
     PRINT0("  => USE LZMA COMPRESSION %u\n",compr);
 
     if ( compr == LZMA_DEFAULT_COMPR
