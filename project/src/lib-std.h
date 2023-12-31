@@ -177,6 +177,7 @@ void PrintHelpColor ( const struct InfoUI_t * iu );
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			compatibility			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+// [[compatible_t]]
 
 typedef enum compatible_t
 {
@@ -186,6 +187,7 @@ typedef enum compatible_t
     COMPAT_1_44,	// new BMG escapes + attributes	=> opt_bmg_old_escapes = true
     COMPAT_1_46,	// KMP flags			=> opt_kmp_flags = false;
     COMPAT_2_08,	// BMG slots and sections	=> opt_bmg_use_* = false
+    COMPAT_2_40,	// BMG @?, new syntax		=> opt_bmg_use_new_cond = false
     COMPAT_CURRENT,	// current version
 
     COMPAT__N		// number of elements of 'compatible_info'
@@ -193,12 +195,13 @@ typedef enum compatible_t
 compatible_t;
 
 //-----------------------------------------------------------------------------
+// [[compatible_info_t]]
 
 typedef struct compatible_info_t
 {
     compatible_t compatible;	// selector
     u32		revision;	// revision number
-    char	version[8];	// version string of format "1.23" of "1.23a"
+    char	version[8];	// version string of format "1.23" or "1.23a"
 }
 compatible_info_t;
 

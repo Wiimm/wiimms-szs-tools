@@ -1,19 +1,15 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Updated prefix database: Added DK, FK3D.
- - wstrt PORT: Updated porting database.
- - Option --cache=dir: Cache supports YAZ0, BZ (new), BZIP2, LZ (new) and LZMA
-   compressed files now.
- - wlect distrib: New options for scanning track files. Both options make it
-   easier to import third-party distributions to create a distribution file:
-    - HEX2SLOT: If a filename of a track is a hex number with exact 3 digits,
-      then use it as slot number and force the slot for the track.
-    - NAME2SLOT: If a filename of a track is a known name like 'farm_course',
-      then use the related slot number and force the slot for the track.
-    - CT-SLOTS: The availability of slots for CT-CODE is examined.
- - Support for cup icons with a size of 8x8 to 248x248 pixels in increments
-   of 8. Default is 128x128 pixels. 64x64 saves 75% storage space.
- - New LEX section CTDN: Define settings for game mode countdown.
+ - Updated prefix database: Added AEPP, FFPS, FNaF1..FNaF4, GDL, GM, LTR.
+ - Support of command "@? !MID" in BMG text files.
+ - wkmpt DIFF: The 16-bit value at offset 6 in all KMP section headers is now
+   also compared.
+ - The output of wszst distribution and wlect distrib distrib= have been
+   rearranged so that the most important information about the distribution
+   is now at the beginning of the file. @REFERENCE-NAME has been removed.
+ - wstrt --add-lecode: A new LE-CODE starter has been implemented to avoid
+   multiple linking when using additional REL files.
+ - New option: wstrt --add-old-lecode: Add the old LE-CODE starter.
 
 ~ - KMP:STGI support for up to 255 laps.
 ~    - Option --kmp=MODES supports now settings 1LAP .. 15LAPS.

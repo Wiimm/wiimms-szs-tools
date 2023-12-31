@@ -46,10 +46,6 @@
 #include <stddef.h>
 #include <float.h>
 
-///////////////////////////////////////////////////////////////////////////////
-
-#define SECT_NAME(s) kmp_section_name[s].name1
-
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    KMP action log		///////////////
@@ -2644,7 +2640,7 @@ static void scan_kmp_ph
     //--- assign group names
 
     PRINT("scan_kmp_ph(%s), ac:%x,%x, battle=%d\n",
-		SECT_NAME(sect_ph), ph->ac_mode, ph->ac_flags, kmp->battle_mode);
+		KMP_SECT_NAME(sect_ph), ph->ac_mode, ph->ac_flags, kmp->battle_mode);
     RenameGroupKMP(kmp,sect_ph,ph->gname, ph->ac_mode == KMP_AC_DISPATCH );
 }
 

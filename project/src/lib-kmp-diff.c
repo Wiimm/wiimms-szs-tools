@@ -135,6 +135,28 @@ static void print_hex16 ( uint n, const u16 *u1, const u16 *u2 )
     }
 }
 
+///////////////////////////////////////////////////////////////////////////////
+
+static uint diff_kmp_value
+(
+    kmp_t	* kmp1,		// first kmp to compare
+    kmp_t	* kmp2,		// second kmp tp compare
+    kmp_entry_t	sect,		// KMP section
+    uint	verbose		// 0:quiet, 1:summary only, 2:full report
+)
+{ 
+    const u16 value1 = kmp1->value[sect];
+    const u16 value2 = kmp2->value[sect];
+    if ( value1 != value2 )
+    {
+	if ( verbose > 0 )
+	    printf("%s%s: Unused 16-bit header value at offset 6 differ: Have %#x and %#x.%s\n",
+		    colout->COL_WARN, KMP_SECT_NAME(sect), value1, value2, colout->reset );
+	return 1;
+    }
+    return 0;
+}
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////		ph: helper for CKPH, ENPH, ITPH		///////////////
@@ -287,6 +309,13 @@ static uint diff_ph_si ( const section_info_t *si )
     DASSERT(si->kmp2);
 
     uint diff_count = 0;
+    if (diff_kmp_value(si->kmp1,si->kmp2,si->sect,si->verbose))
+    {
+	if (!verbose)
+	    return 1;
+	diff_count++;
+    }
+
     List_t *l1 = si->kmp1->dlist + si->sect;
     List_t *l2 = si->kmp2->dlist + si->sect;
 
@@ -526,6 +555,13 @@ static uint diff_pt_si ( const section_info_t *si )
     DASSERT(si->kmp2);
 
     uint diff_count = 0;
+    if (diff_kmp_value(si->kmp1,si->kmp2,si->sect,si->verbose))
+    {
+	if (!verbose)
+	    return 1;
+	diff_count++;
+    }
+
     List_t *l1 = si->kmp1->dlist + si->sect;
     List_t *l2 = si->kmp2->dlist + si->sect;
 
@@ -764,6 +800,13 @@ static uint diff_pt2_si ( const section_info_t *si )
     DASSERT(si->kmp2);
 
     uint diff_count = 0;
+    if (diff_kmp_value(si->kmp1,si->kmp2,si->sect,si->verbose))
+    {
+	if (!verbose)
+	    return 1;
+	diff_count++;
+    }
+
     List_t *l1 = si->kmp1->dlist + si->sect;
     List_t *l2 = si->kmp2->dlist + si->sect;
 
@@ -1033,6 +1076,13 @@ static uint diff_KMP_AREA
     DASSERT(kmp2);
 
     uint diff_count = 0;
+    if (diff_kmp_value(kmp1,kmp2,KMP_AREA,verbose))
+    {
+	if (!verbose)
+	    return 1;
+	diff_count++;
+    }
+
     List_t *l1 = kmp1->dlist + KMP_AREA;
     List_t *l2 = kmp2->dlist + KMP_AREA;
 
@@ -1332,6 +1382,31 @@ static uint diff_KMP_CAME
     List_t *l1 = kmp1->dlist + KMP_CAME;
     List_t *l2 = kmp2->dlist + KMP_CAME;
 
+    u16 value1 = kmp1->value[KMP_CAME];
+    u16 value2 = kmp2->value[KMP_CAME];
+    if ( value1 != value2 )
+    {
+	for ( int vi = 0; vi < 2; vi++ )
+	{
+	    const u8 v1 = value1 & 0xff;
+	    const u8 v2 = value2 & 0xff;
+	    if ( v1 != v2 )
+	    {
+		if (!verbose)
+		    return 1;
+		printf("%sCAME: Index of %s camera differ: Have %u and %u.%s\n",
+			    colout->COL_WARN,
+			    vi ? "opening" : "selection",
+			    v1, v2, colout->reset );
+		if (verbose==1)
+		    return 1;
+		diff_count++;
+	    }
+	    value1 >>= 8;
+	    value2 >>= 8;
+	}
+    }
+
     if ( l1->used != l2->used )
     {
 	if (!verbose)
@@ -1590,6 +1665,13 @@ static uint diff_KMP_CKPT
     DASSERT(kmp2);
 
     uint diff_count = 0;
+    if (diff_kmp_value(kmp1,kmp2,KMP_CKPT,verbose))
+    {
+	if (!verbose)
+	    return 1;
+	diff_count++;
+    }
+
     List_t *l1 = kmp1->dlist + KMP_CKPT;
     List_t *l2 = kmp2->dlist + KMP_CKPT;
 
@@ -1718,7 +1800,6 @@ static uint diff_KMP_CNPT
 {
     DASSERT(kmp1);
     DASSERT(kmp2);
-
     section_info_t si = {KMP_CNPT,kmp1,kmp2,verbose,"CNPT","cannon"};
     return diff_pt2_si(&si);
 }
@@ -1952,6 +2033,13 @@ static uint diff_KMP_GOBJ
     DASSERT(kmp2);
 
     uint diff_count = 0;
+    if (diff_kmp_value(kmp1,kmp2,KMP_GOBJ,verbose))
+    {
+	if (!verbose)
+	    return 1;
+	diff_count++;
+    }
+
     List_t *l1 = kmp1->dlist + KMP_GOBJ;
     List_t *l2 = kmp2->dlist + KMP_GOBJ;
 
@@ -2241,6 +2329,13 @@ static uint diff_KMP_KTPT
     DASSERT(kmp2);
 
     uint diff_count = 0;
+    if (diff_kmp_value(kmp1,kmp2,KMP_KTPT,verbose))
+    {
+	if (!verbose)
+	    return 1;
+	diff_count++;
+    }
+
     List_t *l1 = kmp1->dlist + KMP_KTPT;
     List_t *l2 = kmp2->dlist + KMP_KTPT;
 
@@ -2626,6 +2721,13 @@ static uint diff_KMP_STGI
     DASSERT(kmp2);
 
     uint diff_count = 0;
+    if (diff_kmp_value(kmp1,kmp2,KMP_STGI,verbose))
+    {
+	if (!verbose)
+	    return 1;
+	diff_count++;
+    }
+
     List_t *l1 = kmp1->dlist + KMP_STGI;
     List_t *l2 = kmp2->dlist + KMP_STGI;
 

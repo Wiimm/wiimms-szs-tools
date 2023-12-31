@@ -147,9 +147,10 @@ MAX-ONLINE-SEC	= %3u%s
 # The next parameter sets the size of a cup icon in pixels between 8x8 and
 # 248x248 in increments of 8. The usual size is 128x128 pixels. Larger values
 # hardly bring any advantages, small values can save a lot of space.
-# Recommendations: 96x96 (56%%) should be used for 500 cups and 64x64 (25%%) for
-# 800 cups and more. The image with the cup icons, which is loaded with the
-# --cup-icons option, for example, must have the appropriate size.
+# Recommendations: 96x96 (saves 44%% space) should be used for >500 cups and
+# 64x64 (saves 75%% space) for >800 cups and more. The image with the cup
+# icons, which is loaded with the --cup-icons option, for example, must have
+# the appropriate size.
 
 CUP-ICON-SIZE	= %u
 

@@ -768,6 +768,7 @@ const compatible_info_t compatible_info[COMPAT__N] =
     { COMPAT_1_44,	6558, "1.44" },
     { COMPAT_1_46,	6614, "1.46" },
     { COMPAT_2_08,	7961, "2.08" },
+    { COMPAT_2_40,	8910, "2.40" },
     { COMPAT_CURRENT, REVISION_NUM, VERSION_NUM }
 };
 

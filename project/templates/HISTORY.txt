@@ -846,6 +846,24 @@ szs v2.38a r8889 - 2023-09-22
  - Removed LPAR setting USE-AVAIL-TXT.
 
 
+szs v2.39a r8904 - 2023-10-24
+
+ - Updated prefix database: Added DK, FK3D.
+ - wstrt PORT: Updated porting database.
+ - Option --cache=dir: Cache supports YAZ0, BZ (new), BZIP2, LZ (new) and LZMA
+   compressed files now.
+ - wlect distrib: New options for scanning track files. Both options make it
+   easier to import third-party distributions to create a distribution file:
+    - HEX2SLOT: If a filename of a track is a hex number with exact 3 digits,
+      then use it as slot number and force the slot for the track.
+    - NAME2SLOT: If a filename of a track is a known name like 'farm_course',
+      then use the related slot number and force the slot for the track.
+    - CT-SLOTS: The availability of slots for CT-CODE is examined.
+ - Support for cup icons with a size of 8x8 to 248x248 pixels in increments
+   of 8. Default is 128x128 pixels. 64x64 saves 75% storage space.
+ - New LEX section CTDN: Define settings for game mode countdown.
+
+
 @@MODULE(last-history.txt)@@
 
 

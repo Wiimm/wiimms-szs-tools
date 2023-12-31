@@ -54,6 +54,7 @@ typedef struct st_mysql_field	st_mysql_field;
 
 struct MySql_t;
 
+// [[LogLevelMYSQL]]
 typedef enum LogLevelMYSQL
 {
     MYLL_SILENT,
@@ -135,6 +136,7 @@ typedef struct MySql_t
     //--- database definitions, strings are alloced
 
     ccp			server;		// server
+    uint		port;		// port
     ccp			user;		// user
     ccp			password;	// password
     ccp			database;	// database name
@@ -184,16 +186,30 @@ extern const SaveRestoreTab_t SRT_Mysql[];
 void InitializeMYSQL ( MySql_t *my );
 void ResetMYSQL ( MySql_t *my );
 enumError OpenMYSQL ( MySql_t *my, uint loglevel );
+enumError OpenMYSQL4 ( MySql_t *my, uint loglevel ); // IPv4 only, deprecated
 void CloseMYSQL ( MySql_t *my );
 
-void DefineDatabase
+void DefineDatabase5
+(
+    MySql_t	*my,		// valid struct
+    ccp		server,		// NULL or server name
+    uint	port,		// 0 or server port
+    ccp		user,		// NULL or user name
+    ccp		password,	// NULL or user password
+    ccp		database	// NULL or name of database
+);
+
+static inline void DefineDatabase
 (
     MySql_t	*my,		// valid struct
     ccp		server,		// NULL or server name
     ccp		user,		// NULL or user name
     ccp		password,	// NULL or user password
     ccp		database	// NULL or name of database
-);
+)
+{
+    DefineDatabase5(my,server,0,user,password,database);
+}
 
 void DefineDatabasePrefix
 (

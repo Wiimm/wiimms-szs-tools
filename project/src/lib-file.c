@@ -2181,21 +2181,21 @@ void PrintConfig ( FILE *f, const config_t *config, bool verbose )
     {
 	fprintf(f,
 		"\nConfiguration:\n"
-		"  config file:    %s\n"
+		"  Config file:    %s\n"
 		,config->config_file ? config->config_file : ""
 		);
 	if (verbose)
 	    fprintf(f,
-		"  base path:      %s\n"
-		"  install path:   %s\n"
-		"  install config: %s\n"
+		"  Base path:      %s\n"
+		"  Install path:   %s\n"
+		"  Install config: %s\n"
 		,config->base_path
 		,config->install_path
 		,config->install_config
 		);
 	fprintf(f,
-		"  share path:     %s\n"
-		"  auto-add path:  %s\n"
+		"  Share path:     %s\n"
+		"  Auto-add path:  %s\n"
 		,config->share_path
 		,config->autoadd_path
 		);

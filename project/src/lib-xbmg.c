@@ -117,6 +117,7 @@ void SetupBMG ( ccp opt_filter_bmg )
  #endif
     opt_bmg_use_slots		= true;
     opt_bmg_use_raw_sections	= true;
+    opt_bmg_use_new_cond	= true;
 
     if (opt_align)
 	opt_bmg_align = ALIGN32(opt_align,4);
@@ -127,6 +128,11 @@ void SetupBMG ( ccp opt_filter_bmg )
 
 
     //--- compatibility settings
+
+    if ( compatible < COMPAT_2_40 || compatible == COMPAT_CURRENT ) // [[obsolete]] COMPAT_CURRENT 2023-11
+    {
+	opt_bmg_use_new_cond	 = false;
+    }
 
     if ( compatible < COMPAT_2_08 )
     {

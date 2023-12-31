@@ -486,8 +486,8 @@ static enumError CreateGenericTextIMG
     DASSERT(par);
     DASSERT(img);
 
-    static char search[]  = "ÄÖÜàáâäèéíñóôúüß "; // NBSP (0xa0) at end of string
-    static char replace[] = "AOUaaaaeeinoouus ";
+    static char search[]  = "ÄÖÜàáâäèéíñóôúüßτ "; // NBSP (0xa0) at end of string
+    static char replace[] = "AOUaaaaeeinoouusT ";
     static u32 codelist[sizeof(replace)] = {0};
 
     if (!codelist[0])
@@ -586,22 +586,22 @@ static enumError CreateGenericCupImagesIMG
 	{ I_SWAPPED,	"SWAPPED",	0,		0 },
 	{ I_WIIMM,	"WIIMM",	0,		0 },
 
-	{  0*I_PIXEL,		"8PIXELS",	0,		I_M_PIXEL },
-	{  1*I_PIXEL,		"16PIXELS",	0,		I_M_PIXEL },
-	{  2*I_PIXEL,		"24PIXELS",	0,		I_M_PIXEL },
-	{  3*I_PIXEL,		"32PIXELS",	0,		I_M_PIXEL },
-	{  4*I_PIXEL,		"40PIXELS",	0,		I_M_PIXEL },
-	{  5*I_PIXEL,		"48PIXELS",	0,		I_M_PIXEL },
-	{  6*I_PIXEL,		"56PIXELS",	0,		I_M_PIXEL },
-	{  7*I_PIXEL,		"64PIXELS",	0,		I_M_PIXEL },
-	{  8*I_PIXEL,		"72PIXELS",	0,		I_M_PIXEL },
-	{  9*I_PIXEL,		"80PIXELS",	0,		I_M_PIXEL },
-	{ 10*I_PIXEL,		"88PIXELS",	0,		I_M_PIXEL },
-	{ 11*I_PIXEL,		"96PIXELS",	0,		I_M_PIXEL },
-	{ 12*I_PIXEL,		"104PIXELS",	0,		I_M_PIXEL },
-	{ 13*I_PIXEL,		"112PIXELS",	0,		I_M_PIXEL },
-	{ 14*I_PIXEL,		"120PIXELS",	0,		I_M_PIXEL },
-	{ 15*I_PIXEL,		"128PIXELS",	0,		I_M_PIXEL },
+	{  0*I_PIXEL,	"8PIXELS",	0,		I_M_PIXEL },
+	{  1*I_PIXEL,	"16PIXELS",	0,		I_M_PIXEL },
+	{  2*I_PIXEL,	"24PIXELS",	0,		I_M_PIXEL },
+	{  3*I_PIXEL,	"32PIXELS",	0,		I_M_PIXEL },
+	{  4*I_PIXEL,	"40PIXELS",	0,		I_M_PIXEL },
+	{  5*I_PIXEL,	"48PIXELS",	0,		I_M_PIXEL },
+	{  6*I_PIXEL,	"56PIXELS",	0,		I_M_PIXEL },
+	{  7*I_PIXEL,	"64PIXELS",	0,		I_M_PIXEL },
+	{  8*I_PIXEL,	"72PIXELS",	0,		I_M_PIXEL },
+	{  9*I_PIXEL,	"80PIXELS",	0,		I_M_PIXEL },
+	{ 10*I_PIXEL,	"88PIXELS",	0,		I_M_PIXEL },
+	{ 11*I_PIXEL,	"96PIXELS",	0,		I_M_PIXEL },
+	{ 12*I_PIXEL,	"104PIXELS",	0,		I_M_PIXEL },
+	{ 13*I_PIXEL,	"112PIXELS",	0,		I_M_PIXEL },
+	{ 14*I_PIXEL,	"120PIXELS",	0,		I_M_PIXEL },
+	{ 15*I_PIXEL,	"128PIXELS",	0,		I_M_PIXEL },
 
 	{0,0,0,0},
     };

@@ -244,6 +244,7 @@ extern uint		opt_bmg_max_recurse;	// max recurse depth
 extern bool		opt_bmg_allow_print;	// true: allow '$' to print a log message
 extern bool		opt_bmg_use_slots;	// true: use predifined slots
 extern bool		opt_bmg_use_raw_sections;// true: use raw sections
+extern bool		opt_bmg_use_new_cond;	// true: use new @? conditions on output
 
 //-----------------------------------------------------------------------------
 
@@ -667,6 +668,29 @@ bmg_raw_section_t * CreateRawSectionBMG	( bmg_t *bmg, cvp magic );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			struct bmg_item_cond_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[bmg_item_cond_t]]
+
+typedef struct bmg_item_cond_t	// [[2do]] not used yet
+{
+    bool	active;		// true: condition is active
+    bool	not;		// true: check if 'mid' does not exists
+    u32		mid;		// message id to check
+}
+bmg_item_cond_t;
+
+//-----------------------------------------------------------------------------
+
+bool CheckItemCondBMG ( const bmg_t *bmg, bmg_item_cond_t cond );
+
+static inline void ClearItemCondBMG ( bmg_item_cond_t *cond )
+	{ memset(cond,0,sizeof(*cond)); }
+
+void ClearItemCondCacheBMG(void);
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct bmg_item_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[bmg_item_t]]
@@ -674,7 +698,8 @@ bmg_raw_section_t * CreateRawSectionBMG	( bmg_t *bmg, cvp magic );
 typedef struct bmg_item_t
 {
     u32		mid;			// message ID
-    u32		cond;			// >0: message 'cond' must be defined
+    bmg_item_cond_t
+		cond;			// condition
     bmg_slot_t	slot;			// BMG_NO_PREDEF_SLOT or predifined slot
 
     u16		attrib_used;		// used size of 'attrib'
@@ -701,7 +726,7 @@ static inline bool isSpecialEntryBMG ( const u16 *text )
 
 //-----------------------------------------------------------------------------
 
-void FreeItemBMG( bmg_item_t * bi );
+void FreeItemBMG ( bmg_item_t * bi );
 
 void AssignItemTextBMG
 (
@@ -811,7 +836,8 @@ typedef struct bmg_t
     bool		have_predef_slots;	// temporary, set by HavePredifinedSlots()
     bool		use_slots;		// init by opt_bmg_use_slots
     bool		use_raw_sections;	// init by opt_bmg_use_raw_sections
-    u32			active_cond;		// active condition (for text output)
+
+    bmg_item_cond_t	active_cond;		// active condition (for text output)
 
     //--- raw data, created by CreateRawBMG()
 

@@ -86,6 +86,7 @@ uint		opt_bmg_max_recurse	= 10;	// max recurse depth
 bool		opt_bmg_allow_print	= 0;	// true: allow '$' to print a log message
 bool		opt_bmg_use_slots	= 0;	// true: use predifined slots
 bool		opt_bmg_use_raw_sections= 0;	// true: use raw sections
+bool		opt_bmg_use_new_cond	= 1;	// true: use new @? conditions on output
 
 //-----------------------------------------------------------------------------
 
@@ -1503,6 +1504,40 @@ static void copy_param
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			struct bmg_item_cond_t		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+const bmg_t	*item_cond_cache_bmg	= 0;
+u32		item_cond_cache_mid	= 0;
+bool		item_cond_cache_found	= false;
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ClearItemCondCacheBMG(void)
+{
+    item_cond_cache_bmg = 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool CheckItemCondBMG ( const bmg_t *bmg, bmg_item_cond_t cond )
+{
+    DASSERT(bmg);
+    if (!cond.active)
+	return true;
+
+    if ( bmg != item_cond_cache_bmg || cond.mid != item_cond_cache_mid )
+    {
+	item_cond_cache_bmg	= bmg;
+	item_cond_cache_mid	= cond.mid;
+	item_cond_cache_found	= FindItemBMG(bmg,cond.mid) != 0;
+    }
+
+    return cond.not ? !item_cond_cache_found : item_cond_cache_found;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			struct bmg_item_t		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -2562,8 +2597,7 @@ enumError ScanTextBMG ( bmg_t * bmg )
 // [[xbuf]]
     char xbuf[2*BMG_MSG_BUF_SIZE];
     enumError err_stat = ERR_OK;
-    u32 cond = 0;
-
+    bmg_item_cond_t cond;
     ParamField_t assign;
     InitializeParamField(&assign);
     assign.free_data = true;
@@ -2600,13 +2634,32 @@ enumError ScanTextBMG ( bmg_t * bmg )
 
 	    if ( *start == '?' )
 	    {
-		// SYNTAX/IF: '@?' MID_COND
+		// SYNTAX/IF:
+		//	'@? -'
+		//	'@?' ['='|'!'] MID_COND
 
+		ClearItemCondBMG(&cond);
+		start = GetNext(start+1,ptr);
+		if ( *start == '-' )
+		    continue;
+		char op = 0;
+		if ( *start == '=' || *start == '!' )
+		    op = *start++;
 		u32 mid;
-		ScanMidBMG(bmg,&mid,0,0,start+1,end,(char**)&start);
-		if ( ptr >= end )
-		    break;
-		cond = mid;
+		ScanMidBMG(bmg,&mid,0,0,start,end,(char**)&start);
+		switch(op)
+		{
+		    case 0:
+			if (!mid)
+			    continue;
+			break;
+
+		    case '!':
+			cond.not = true;
+			break;
+		}
+		cond.active = true;
+		cond.mid = mid;
 		continue;
 	    }
 
@@ -3775,10 +3828,25 @@ static void print_message
     DASSERT(bmg);
     DASSERT(bi);
 
-    if ( bmg->active_cond != bi->cond )
+    if (memcmp(&bmg->active_cond,&bi->cond,sizeof(bmg->active_cond)))
     {
 	bmg->active_cond = bi->cond;
-	fprintf(f,"@? %x\n",bmg->active_cond);
+	if (opt_bmg_use_new_cond)
+	{
+	    if ( bi->cond.active )
+		fprintf(f,"@? %c%x\n", bi->cond.not ? '!' : '=', bi->cond.mid );
+	    else
+		fprintf(f,"@? -\n");
+	}
+	else
+	{
+	    if ( bi->cond.active )
+		fprintf(f,"@? %s%x\n",
+		    bi->cond.not ? "!" : bi->cond.mid ? "" : "=",
+		    bi->cond.mid );
+	    else
+		fprintf(f,"@? 0\n");
+	}
     }
 
     ccp slot;
@@ -3955,7 +4023,6 @@ enumError SaveTextFileBMG
     // use DOS/Windows line format -> unix can handle it ;)
 
     DASSERT(bmg);
-    bmg->active_cond = 0;
 
     enum { BRIEF_ALL, BRIEF_NO_SYNTAX, BRIEF_NO_COMMENT, BRIEF_NO_MAGIC };
 
@@ -3963,6 +4030,8 @@ enumError SaveTextFileBMG
     memset(already_printed,0,sizeof(already_printed));
     char mid_name[10], abuf[BMG_ATTRIB_BUF_SIZE];
 
+    ClearItemCondCacheBMG();
+    ClearItemCondBMG(&bmg->active_cond);
 
     static ccp param_announce =
 	"# All parameters begin with '@'. Unknown parameters are ignored on scanning.\r\n";
@@ -5191,6 +5260,7 @@ bool PatchReplaceBMG
 
     DASSERT(dest);
     DASSERT(src);
+    ClearItemCondCacheBMG();
     copy_param(dest,src);
 
     bmg_item_t * dptr = dest->item;
@@ -5212,8 +5282,9 @@ bool PatchReplaceBMG
 	    break;
 
 	if ( sptr->mid == mid
-		&& !IsItemEqualBMG(dptr,sptr)
-		&& ( !sptr->cond || FindItemBMG(dest,sptr->cond) ) )
+	   && !IsItemEqualBMG(dptr,sptr)
+	   && CheckItemCondBMG(dest,sptr->cond)
+	   )
 	{
 	    FreeItemBMG(dptr);
 	    DASSERT( dptr->mid == sptr->mid );
@@ -5245,6 +5316,7 @@ bool PatchInsertBMG
 
     DASSERT(dest);
     DASSERT(src);
+    ClearItemCondCacheBMG();
     copy_param(dest,src);
 
     const bmg_item_t * sptr = src->item;
@@ -5253,7 +5325,7 @@ bool PatchInsertBMG
     bool dirty = false;
     for ( ; sptr < send; sptr++ )
     {
-	if ( sptr->cond && !FindItemBMG(dest,sptr->cond) )
+	if ( !CheckItemCondBMG(dest,sptr->cond) )
 	    continue;
 
 	bool old_item;
@@ -5291,6 +5363,7 @@ bool PatchOverwriteBMG
 
     DASSERT(dest);
     DASSERT(src);
+    ClearItemCondCacheBMG();
     copy_param(dest,src);
 
     const bmg_item_t * sptr = src->item;
@@ -5299,7 +5372,7 @@ bool PatchOverwriteBMG
     bool dirty = false;
     for ( ; sptr < send; sptr++ )
     {
-	if ( sptr->cond && !FindItemBMG(dest,sptr->cond) )
+	if ( !CheckItemCondBMG(dest,sptr->cond) )
 	    continue;
 
 	bool old_item;
@@ -5983,7 +6056,7 @@ bool PatchFillBMG
 	if ( !old_item || !dptr->len )
 	{
 	    const uint len
-		= snprintf(buf,sizeof(buf),"_A%u_",mid-ctb.arena_name1.beg);
+		= snprintf(buf,sizeof(buf),"_A%02u_",mid-ctb.arena_name1.beg+1);
 	    AssignItemTextBMG(dptr,buf,len);
 	    ResetAttribBMG(bmg,dptr);
 	    dirty = true;
@@ -6514,6 +6587,7 @@ const sizeof_info_t sizeof_info_bmg[] =
 	SIZEOF_INFO_ENTRY(bmg_sect_info_t)
 	SIZEOF_INFO_ENTRY(bmg_sect_list_t)
 	SIZEOF_INFO_ENTRY(bmg_raw_section_t)
+	SIZEOF_INFO_ENTRY(bmg_item_cond_t)
 	SIZEOF_INFO_ENTRY(bmg_item_t)
 	SIZEOF_INFO_ENTRY(bmg_t)
 	SIZEOF_INFO_ENTRY(bmg_create_t)

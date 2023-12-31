@@ -534,7 +534,11 @@
 
   { T_OPT_C,	"ADD_LECODE",	"add-lecode|addlecode",
 		0,
-		"Add LE-CODE starter to main.dol." },
+		"Add newest LE-CODE starter from 2023-12 to main.dol." },
+
+  { T_OPT_C,	"ADD_OLD_LECODE",	"add-old-lecode|addoldlecode",
+		0,
+		"Add old LE-CODE starter from 2019-01 to main.dol." },
 
   { T_OPT_C,	"ADD_CTCODE",	"add-ctcode|addctcode",
 		0,
@@ -1180,7 +1184,8 @@
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPT,	"CLEAN_DOL",	0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
-  { H_COPT,	"ADD_LECODE",	0,0,0 },
+  { T_COPT,	"ADD_LECODE",	0,0,0 },
+  { T_COPT,	"ADD_OLD_LECODE",0,0,0 },
   { T_COPT,	"ADD_CTCODE",	0,0,0 },
   { T_COPT,	"CT_DIR",	0,0,0 },
   { T_COPT,	"MOVE_D8",	0,0,0 },

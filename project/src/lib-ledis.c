@@ -7909,27 +7909,12 @@ enumError CreateDistribLD ( FILE *f, le_distrib_t *ld, bool use_xname )
     ccp uuid = GetParamFieldStr(&ld->dis_param,1,"UUID","");
     fprintf(f,text_distrib_head_cr
 
-	,GetParamFieldStr(&ld->dis_param,1,"COMMENT1","")
-	,GetParamFieldStr(&ld->dis_param,1,"COMMENT2","")
-	,GetParamFieldStr(&ld->dis_param,1,"COMMENT3","")
-	,GetParamFieldStr(&ld->dis_param,1,"COMMENT4","")
-	,GetParamFieldStr(&ld->dis_param,1,"COMMENT5","")
-
-	,GetParamFieldStr(&ld->dis_param,1,"USER-CT-WIIMM","")
-	,GetParamFieldStr(&ld->dis_param,1,"USER-WIIMMFI","")
-	,GetParamFieldStr(&ld->dis_param,1,"USER-CT-WIIKI","")
-	,GetParamFieldStr(&ld->dis_param,1,"USER-MISC","")
-	,GetParamFieldStr(&ld->dis_param,1,"MAIL","")
-	,GetParamFieldStr(&ld->dis_param,1,"NOTE-FOR-WIMMM","")
-
 	,GetParamFieldStr(&ld->dis_param,1,"NAME","?")
 	,GetParamFieldStr(&ld->dis_param,1,"VERSION","?")
 	,GetParamFieldStr(&ld->dis_param,1,"AUTHORS","?")
 	,GetParamFieldStr(&ld->dis_param,1,"RELEASE-DATE","")
-	,GetParamFieldStr(&ld->dis_param,1,"REFERENCE-NAME","")
 	,GetParamFieldStr(&ld->dis_param,1,"KEYWORDS","")
 	,GetParamFieldStr(&ld->dis_param,1,"PREDECESSOR","")
-
 	,GetParamFieldStr(&ld->dis_param,1,"WIIMMFI-REGION","")
 	,GetParamFieldStr(&ld->dis_param,1,"INFO-TEXT","")
 	,GetParamFieldStr(&ld->dis_param,1,"INFO-URL","")
@@ -7944,6 +7929,19 @@ enumError CreateDistribLD ( FILE *f, le_distrib_t *ld, bool use_xname )
 	,GetParamFieldIntMM(&ld->dis_param,1,"ENABLE-UPDATE",0,0,1)
 	,GetParamFieldIntMM(&ld->dis_param,1,"ENABLE-BOOST",0,0,1)
 
+	,GetParamFieldStr(&ld->dis_param,1,"COMMENT1","")
+	,GetParamFieldStr(&ld->dis_param,1,"COMMENT2","")
+	,GetParamFieldStr(&ld->dis_param,1,"COMMENT3","")
+	,GetParamFieldStr(&ld->dis_param,1,"COMMENT4","")
+	,GetParamFieldStr(&ld->dis_param,1,"COMMENT5","")
+
+	,GetParamFieldStr(&ld->dis_param,1,"USER-CT-WIIMM","")
+	,GetParamFieldStr(&ld->dis_param,1,"USER-WIIMMFI","")
+	,GetParamFieldStr(&ld->dis_param,1,"USER-CT-WIIKI","")
+	,GetParamFieldStr(&ld->dis_param,1,"USER-MISC","")
+	,GetParamFieldStr(&ld->dis_param,1,"MAIL","")
+	,GetParamFieldStr(&ld->dis_param,1,"NOTE-FOR-WIMMM","")
+
 	,uuid
 	,VERSION
 	,REVISION_NUM
@@ -7954,6 +7952,7 @@ enumError CreateDistribLD ( FILE *f, le_distrib_t *ld, bool use_xname )
 
     //--- mark some more params as 'used'
 
+    GetParamFieldStr(&ld->dis_param,1,"REFERENCE-NAME","");
     GetParamFieldStr(&ld->dis_param,1,"WSZST-VERSION","");
     GetParamFieldStr(&ld->dis_param,1,"WSZST-REVISION","");
 

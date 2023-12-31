@@ -642,6 +642,7 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 static const sizeof_info_t *sizeof_info_szs[] =
 {
     sizeof_info_szs_list,
+    sizeof_info_bmg,
     0
 };
 

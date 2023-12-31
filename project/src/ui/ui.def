@@ -26452,7 +26452,11 @@
 
 #:def_opt( "ADD_LECODE", "add-lecode|addlecode", "C", \
 	"", \
-	"Add LE-CODE starter to main.dol." )
+	"Add newest LE-CODE starter from 2023-12 to main.dol." )
+
+#:def_opt( "ADD_OLD_LECODE", "add-old-lecode|addoldlecode", "C", \
+	"", \
+	"Add old LE-CODE starter from 2019-01 to main.dol." )
 
 #:def_opt( "ADD_CTCODE", "add-ctcode|addctcode", "C", \
 	"", \
@@ -27541,6 +27545,14 @@
 	"" )
 
 #:def_cmd_opt( "PATCH", "MENO", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "ADD_LECODE", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "ADD_OLD_LECODE", \
 	"", \
 	"" )
 

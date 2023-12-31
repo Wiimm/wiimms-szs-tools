@@ -73,6 +73,7 @@ typedef enum enumOptions
 	OPT_PRESERVE,
 	OPT_IGNORE,
 	OPT_ADD_LECODE,
+	OPT_ADD_OLD_LECODE,
 	OPT_ADD_CTCODE,
 	OPT_MOVE_D8,
 	OPT_ADD_SECTION,
@@ -124,7 +125,7 @@ typedef enum enumOptions
 	OPT_WIDE,
 	OPT_BYTES,
 
-	OPT__N_SPECIFIC, // == 68
+	OPT__N_SPECIFIC, // == 69
 
 	//----- global options -----
 
@@ -184,7 +185,7 @@ typedef enum enumOptions
 	OPT_CLEAN_DOL,
 	OPT_CT_DIR,
 
-	OPT__N_TOTAL // == 123
+	OPT__N_TOTAL // == 124
 
 } enumOptions;
 
@@ -216,6 +217,7 @@ typedef enum enumOptions
 //	OB_PRESERVE		= 1llu << OPT_PRESERVE,
 //	OB_IGNORE		= 1llu << OPT_IGNORE,
 //	OB_ADD_LECODE		= 1llu << OPT_ADD_LECODE,
+//	OB_ADD_OLD_LECODE	= 1llu << OPT_ADD_OLD_LECODE,
 //	OB_ADD_CTCODE		= 1llu << OPT_ADD_CTCODE,
 //	OB_MOVE_D8		= 1llu << OPT_MOVE_D8,
 //	OB_ADD_SECTION		= 1llu << OPT_ADD_SECTION,
@@ -412,6 +414,7 @@ typedef enum enumOptions
 //				| OB_GRP_DEST
 //				| OB_GRP_PATCH
 //				| OB_ADD_LECODE
+//				| OB_ADD_OLD_LECODE
 //				| OB_ADD_CTCODE
 //				| OB_MOVE_D8
 //				| OB_ADD_SECTION
@@ -558,6 +561,7 @@ typedef enum enumGetOpt
 	GO_NUMBER,
 	GO_CLEAN_DOL,
 	GO_ADD_LECODE,
+	GO_ADD_OLD_LECODE,
 	GO_ADD_CTCODE,
 	GO_CT_DIR,
 	GO_MOVE_D8,

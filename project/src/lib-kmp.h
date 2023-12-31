@@ -291,6 +291,8 @@ typedef enum kmp_entry_t
 extern const uint kmp_entry_size[KMP_N_SECT+1];
 extern const KeywordTab_t kmp_section_name[];
 
+#define KMP_SECT_NAME(s) kmp_section_name[s].name1
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			kmp_file_*_t			///////////////

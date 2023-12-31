@@ -1653,6 +1653,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_POINTS:		err += ScanOptMkwPoints(optarg,false); break;
 	case GO_CHEAT:		err += ScanOptCheatRegion(optarg); break;
 	case GO_ADD_LECODE:	AppendStringField(&opt_wcode_list,"@LECODE",false); break;
+	case GO_ADD_OLD_LECODE:	AppendStringField(&opt_wcode_list,"@OLDLECODE",false); break;
 	case GO_ADD_CTCODE:	opt_add_ctcode = true; break;
 	case GO_CT_DIR:		AppendStringField(&ct_dir_list,optarg,false); break;
 	case GO_MOVE_D8:	opt_move_d8 = true; break;

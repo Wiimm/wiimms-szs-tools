@@ -4127,10 +4127,9 @@ static enumError ScanTextLPAR_PARAM
 
     //--- setup data
 
-    const double use_avail_txt0 = 123.987e12;
-    double use_avail_txt = use_avail_txt0;
-
+    DEFINE_VAR(use_avail_txt);
     int limit_mode = -1;
+
     const ScanParam_t ptab[] =
     {
 	{ "LIMIT-MODE",		SPM_INT, &limit_mode },
@@ -4163,7 +4162,7 @@ static enumError ScanTextLPAR_PARAM
 	{ "CUP-ICON-SIZE",	SPM_U8,  &lpar->cup_icon_size },
 	// [[new-lpar]]
 
-	{ "USE-AVAIL-TXT",	SPM_DOUBLE_X,  &use_avail_txt }, // [[obsolete]] 2023-09
+	{ "USE-AVAIL-TXT",	SPM_VAR,  &use_avail_txt }, // [[obsolete]] 2023-09
 	{0}
     };
 
@@ -4180,10 +4179,11 @@ static enumError ScanTextLPAR_PARAM
     }
     CheckLevelSI(si);
 
-    if ( !si->no_warn && use_avail_txt != use_avail_txt0 )
+    if ( !si->no_warn && use_avail_txt.mode != VAR_UNSET )
 	ERROR0(ERR_WARNING,
 		"Don't use deprecated LPAR setting USE-AVAIL-TXT: %s",
 		si->cur_file->name);
+    FreeV(&use_avail_txt);
 
     if ( limit_mode >= 0 )
 	LimitToLparMode(lpar,limit_mode);

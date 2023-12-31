@@ -18,45 +18,6 @@
 
 
 #------------------------------------------------------------------------------
-#			Comments for personal use
-#------------------------------------------------------------------------------
-
-# These first comments are for personal use and will not imported to ct.wiimm.de
-# and never visible for other persons. Use it as reminder for yourself.
-
-@COMMENT1 = %s
-@COMMENT2 = %s
-@COMMENT3 = %s
-@COMMENT4 = %s
-@COMMENT5 = %s
-
-#------------------------------------------------------------------------------
-#			Identify yourself! (private section)
-#------------------------------------------------------------------------------
-
-# The next parameters are used to identify you and to contact you on problems.
-# All data of this section will never be visible for other persons. It's no
-# problem to leave some or all parameters empty.
-
-# A wish for an user name @ ct.wiimm.de, if it ever supports a login.
-@USER-CT-WIIMM	= %s
-
-# Your current user name @ Wiimmfi (same as @ wii-hombrew.com).
-@USER-WIIMMFI	= %s
-
-# Your current user name @ CT-Wiiki (wiki.tockdom.com).
-@USER-CT-WIIKI	= %s
-
-# Other user names, format: service=name
-@USER-MISC	= %s
-
-# A space separated list of mail addresses:
-@MAIL		= %s
-
-# A note addressed to Wiimm
-@NOTE-FOR-WIMMM	= %s
-
-#------------------------------------------------------------------------------
 #			Distribution parameters
 #------------------------------------------------------------------------------
 
@@ -71,10 +32,6 @@
 
 # Date of first release in format yyyy-mm-dd
 @RELEASE-DATE	= %s
-
-# A name that is used for distribution references @CT-Wiiki.
-# Use @NAME if empty.
-@REFERENCE-NAME	= %s
 
 # Additional keywords for the search engine (optional).
 # The 4 parameters above are automatically scanned for keywords.
@@ -129,6 +86,45 @@
 # either the attribute 'boost' exists, or the first 5 characters of the track
 # name are 'boost'. The option is enabled by value '1'.
 @ENABLE-BOOST	= %d
+
+#------------------------------------------------------------------------------
+#			Comments for personal use
+#------------------------------------------------------------------------------
+
+# These first comments are for personal use and will not imported to ct.wiimm.de
+# and never visible for other persons. Use it as reminder for yourself.
+
+@COMMENT1 = %s
+@COMMENT2 = %s
+@COMMENT3 = %s
+@COMMENT4 = %s
+@COMMENT5 = %s
+
+#------------------------------------------------------------------------------
+#			Identify yourself! (private section)
+#------------------------------------------------------------------------------
+
+# The next parameters are used to identify you and to contact you on problems.
+# All data of this section will never be visible for other persons. It's no
+# problem to leave some or all parameters empty.
+
+# A wish for an user name @ ct.wiimm.de, if it ever supports a login.
+@USER-CT-WIIMM	= %s
+
+# Your current user name @ Wiimmfi (same as @ wii-hombrew.com).
+@USER-WIIMMFI	= %s
+
+# Your current user name @ CT-Wiiki (wiki.tockdom.com).
+@USER-CT-WIIKI	= %s
+
+# Other user names, format: service=name
+@USER-MISC	= %s
+
+# A space separated list of mail addresses:
+@MAIL		= %s
+
+# A note addressed to Wiimm
+@NOTE-FOR-WIMMM	= %s
 
 #------------------------------------------------------------------------------
 #		Automatically created parameters => DO NOT EDIT!

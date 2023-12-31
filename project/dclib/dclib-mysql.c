@@ -203,7 +203,7 @@ void ResetMYSQL ( MySql_t *my )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-enumError OpenMYSQL ( MySql_t *my, uint loglevel )
+enumError OpenMYSQL4 ( MySql_t *my, uint loglevel )
 {
     DASSERT(my);
     ClearStatusMYSQL(&my->status);
@@ -219,7 +219,7 @@ enumError OpenMYSQL ( MySql_t *my, uint loglevel )
     }
 
     NetworkHost_t host;
-    ResolveHost(&host,true,my->server,MYSQL_DEFAULT_PORT,false,true);
+    ResolveHost(&host,true,my->server,my->port?my->port:MYSQL_DEFAULT_PORT,false,true);
 
     PRINT("MYSQL CONNECT: %s:%u -> %s\n",
 		host.name, host.port, PrintIP4(0,0,host.ip4,host.port) );
@@ -253,7 +253,7 @@ enumError OpenMYSQL ( MySql_t *my, uint loglevel )
 	mysql_options(my->mysql,MYSQL_OPT_RECONNECT,&reconnect);
     }
 
-    noPRINT("connect(%p,%s,%s,%s,%s,%u,,)\n",
+    PRINT0("connect(%p,%s,%s,%s,%s,%u,,)\n",
 		my->mysql, host.name, my->user, my->password, my->database, host.port );
     MYSQL *stat = mysql_real_connect ( my->mysql, host.name,
 			my->user, my->password, my->database,
@@ -274,6 +274,76 @@ enumError OpenMYSQL ( MySql_t *my, uint loglevel )
     mysql_set_character_set(my->mysql,"utf8mb4");
     my->total_connect_count++;
     ResetHost(&host);
+    return ERR_OK;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError OpenMYSQL ( MySql_t *my, uint loglevel )
+{
+    DASSERT(my);
+    ClearStatusMYSQL(&my->status);
+
+    if (my->mysql)
+	return ERR_OK; // already connected
+
+    if ( !my || !my->server )
+    {
+	if ( loglevel >= MYLL_ERROR )
+	    ERROR0(ERR_MISSING_PARAM,"No MySql server defined.\n");
+	return ERR_MISSING_PARAM;
+    }
+
+    const uint port = my->port ? my->port : MYSQL_DEFAULT_PORT;
+    PRINT("MYSQL CONNECT: %s :%u\n", my->server, port );
+
+    static bool lib_init_done = false;
+    if (!lib_init_done)
+    {
+	noPRINT("mysql_library_init()\n");
+	if (mysql_library_init(0,NULL,NULL))
+	{
+	    if ( loglevel >= MYLL_ERROR )
+		ERROR0(ERR_DATABASE,"Can't initialize MySql library.\n");
+	    return ERR_DATABASE;
+	}
+	lib_init_done = true;
+    }
+
+    my->mysql = mysql_init(NULL);
+    //HEXDUMP16(0,0,my->mysql,sizeof(*my->mysql));
+    if (!my->mysql)
+    {
+	if ( loglevel >= MYLL_ERROR )
+	    ERROR0(ERR_DATABASE,"Can't initialize MySql data.\n");
+	return ERR_DATABASE;
+    }
+
+    if (my->auto_reconnect)
+    {
+	my_bool reconnect = 1;
+	mysql_options(my->mysql,MYSQL_OPT_RECONNECT,&reconnect);
+    }
+
+    PRINT0("connect(%p,%s,%s,%s,%s,%u,,)\n",
+		my->mysql, my->server, my->user, my->password, my->database, port );
+    MYSQL *stat = mysql_real_connect ( my->mysql, my->server,
+			my->user, my->password, my->database,
+			port, NULL, 0 );
+
+    if (!stat)
+    {
+	GetStatusMYSQL(&my->status,my->mysql);
+	if ( loglevel >= MYLL_ERROR )
+	    ERROR0(ERR_CANT_CONNECT,"Can't connect to %s port %u:\n-> %s\n",
+		my->server, port, my->status.message );
+	mysql_close(my->mysql);
+	my->mysql = 0;
+	return ERR_CANT_CONNECT;
+    }
+
+    mysql_set_character_set(my->mysql,"utf8mb4");
+    my->total_connect_count++;
     return ERR_OK;
 }
 
@@ -307,10 +377,11 @@ void CloseMYSQL ( MySql_t *my )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void DefineDatabase
+void DefineDatabase5
 (
     MySql_t	*my,		// valid struct
     ccp		server,		// NULL or server name
+    uint	port,		// 0 or server port
     ccp		user,		// NULL or user name
     ccp		password,	// NULL or user password
     ccp		database	// NULL or name of database
@@ -324,6 +395,9 @@ void DefineDatabase
 	FREE((char*)my->server);
 	my->server = STRDUP(server);
     }
+
+    if (port)
+	my->port = port;
 
     if (user)
     {

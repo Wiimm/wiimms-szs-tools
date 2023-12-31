@@ -1,8 +1,8 @@
 
-#######################################################################
-## This complete section is only informative and ignored on reading, ##
-## because it will be created while scanning the [%s] section.     ##
-#######################################################################
+################################################################################
+## This entire section is for informational purposes only and will be ignored ##
+## when reading. It is automatically generated after scanning section [%s]. ##
+################################################################################
 
 # values never used:
   # @REVISION        = %u
