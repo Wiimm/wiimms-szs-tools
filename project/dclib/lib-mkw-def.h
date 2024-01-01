@@ -11,7 +11,7 @@
  *                                                                      *
  *                     A library by Dirk Clemens                        *
  *                                                                      *
- *   Copyright (c) 2014-2023 by Dirk Clemens <develop@cle-mens.de>      *
+ *   Copyright (c) 2014-2024 by Dirk Clemens <develop@cle-mens.de>      *
  *                                                                      *
  ************************************************************************
  *                                                                      *

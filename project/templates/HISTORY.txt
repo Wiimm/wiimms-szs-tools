@@ -864,6 +864,20 @@ szs v2.39a r8904 - 2023-10-24
  - New LEX section CTDN: Define settings for game mode countdown.
 
 
+szs v2.40a r8917 - 2023-12-31
+
+ - Updated prefix database: Added AEPP, FFPS, FNaF1..FNaF4, GDL, GM, LTR.
+ - Support of command "@? !MID" in BMG text files.
+ - wkmpt DIFF: The 16-bit value at offset 6 in all KMP section headers is now
+   also compared.
+ - The output of wszst distribution and wlect distrib distrib= have been
+   rearranged so that the most important information about the distribution
+   is now at the beginning of the file. @REFERENCE-NAME has been removed.
+ - wstrt --add-lecode: A new LE-CODE starter has been implemented to avoid
+   multiple linking when using additional REL files.
+ - New option: wstrt --add-old-lecode: Add the old LE-CODE starter.
+
+
 @@MODULE(last-history.txt)@@
 
 

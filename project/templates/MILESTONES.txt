@@ -160,3 +160,6 @@ szs v2.28a
 szs v2.31a
  - Support of cup icons.
 
+szs v2.34a
+ - Support of wildcards.
+

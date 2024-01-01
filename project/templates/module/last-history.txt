@@ -1,16 +1,5 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Updated prefix database: Added AEPP, FFPS, FNaF1..FNaF4, GDL, GM, LTR.
- - Support of command "@? !MID" in BMG text files.
- - wkmpt DIFF: The 16-bit value at offset 6 in all KMP section headers is now
-   also compared.
- - The output of wszst distribution and wlect distrib distrib= have been
-   rearranged so that the most important information about the distribution
-   is now at the beginning of the file. @REFERENCE-NAME has been removed.
- - wstrt --add-lecode: A new LE-CODE starter has been implemented to avoid
-   multiple linking when using additional REL files.
- - New option: wstrt --add-old-lecode: Add the old LE-CODE starter.
-
 ~ - KMP:STGI support for up to 255 laps.
 ~    - Option --kmp=MODES supports now settings 1LAP .. 15LAPS.
 ~    - New option --n-laps=LAPS override --kmp=MODES and accept 1 to 255 laps.
