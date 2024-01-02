@@ -2444,6 +2444,7 @@ enumError DecompressManager
 		mgr->size = mgr->src_size;
 		return ERR_OK;
 	}
+	return ERR_ERROR;
     }
 
     return ERR_OK;

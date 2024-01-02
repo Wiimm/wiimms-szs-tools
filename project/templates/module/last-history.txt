@@ -1,5 +1,8 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
+ - Bug fix for option --add-lecode: Due to an implementation error, the option
+   was ignored.
+
 ~ - KMP:STGI support for up to 255 laps.
 ~    - Option --kmp=MODES supports now settings 1LAP .. 15LAPS.
 ~    - New option --n-laps=LAPS override --kmp=MODES and accept 1 to 255 laps.

@@ -4897,12 +4897,20 @@ enumError cmd_rawdump ( const data_tab_t *data_tab )
 
 	const u8 *data = dt->data;
 	uint size = dt->size;
-	if ( dt->mode & 1 )
+	if ( dt->mode & 2 )
+	{
+	    CompressManager_t *cm = (CompressManager_t*)data;
+	    DecompressManager(cm);
+	    data = cm->data;
+	    size = cm->size;
+	}
+	else if ( dt->mode & 1 )
 	    DecodeBZIP2((u8**)&data,&size,0,dt->data,dt->size);
 
 	printf("SAVE %7u = %6x  %x %s\n",size,size,dt->mode,dest);
 	SaveFILE(dest,0,true,data,size,0);
 
+ #if 0
 	u8  *bz_data = 0;
 	uint bz_size = 0, bz_compr = 0;
 	uint compr;
@@ -4931,7 +4939,7 @@ enumError cmd_rawdump ( const data_tab_t *data_tab )
 		bz_size, bz_size, dest, bz_compr, bz_size*100/size );
 	    SaveFILE(dest,0,true,bz_data,bz_size,0);
 	}
-
+ #endif
 	if ( data != dt->data )
 	    FREE((u8*)data);
     }
