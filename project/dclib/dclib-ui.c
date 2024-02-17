@@ -436,6 +436,50 @@ void DumpText
 		    }
 		    break;
 
+		case '\xc2':
+		    if (is_makedoc)
+		    {
+		     #if 1
+			uint code = 0;
+			switch (text[1])
+			{
+			    case '\xab': // «
+			    case '\xbb': // »
+				code = text[1];
+				break;
+			}
+
+			if (code)
+			{
+			    *dest++ = code;
+			    text += 2;
+			    break;
+			}
+		     #else
+			ccp str = 0;
+			switch (text[1])
+			{
+			    case '\xab': // «
+				str = "&raquo;";
+				break;
+
+			    case '\xbb': // »
+				str = "&laquo;";
+				break;
+			}
+
+			if (str)
+			{
+			    strcpy(dest,str);
+			    dest += strlen(str);
+			    text += 2;
+			    break;
+			}
+		     #endif
+		    }
+		    *dest++ = *text++;
+		    break;
+
 		case '@':
 		case '$':
 		    if (!is_makedoc)

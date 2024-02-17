@@ -48,7 +48,7 @@ MkwTrackCategory_t * GetMkwTrackCategory ( int id )
     static MkwTrackCategory_t id_MTCAT_TEXTURE =
     {
 	"Accepted texture hack",
-	"texture,texture2do",
+	"texture,texture2do,edit.allow",
 	0x000000,
 	0x20ffa0,
 	0,

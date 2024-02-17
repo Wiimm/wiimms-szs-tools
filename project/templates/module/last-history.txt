@@ -1,7 +1,37 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Bug fix for option --add-lecode: Due to an implementation error, the option
-   was ignored.
+ - Update to LE-CODE build 40.
+ - Updated prefix database: Added LEGO_Racers, Muppet_RM, POD, PP2WB, SR,
+   Spyro_1, Wii_U, Zelda_OoT, Zelda_TP, Zelda_WW.
+ - wszst ANALYSE prints attribute "license" if file "license.txt" is detected.
+ - File format LTA supports now an optional list with file extensions. The
+   idea is that tools show the correct file extensions without having to load
+   the entire LTA file for analysis.
+ - Command wlect DISTRIB:
+    - WU8, WBZ and WLZ files are accepted now.
+    - Support of new file type USE-LTA (redirection file for LE-CODE).
+      Instruction lta= of command wlect DISTRIB creates such a file with
+      filename lta.szs if option REDIR is set.
+    - The new processing options +PR0, +PR1 to +PR60 control the output of
+      progress messages.
+    - New options for instruction lta=: EXT, REDIR, PR0, PR1 .. PR60.
+ - Command wszst WILDCARDS supports options --sh and --bash to quote results.
+ - Command wstrt PATCH and option --add-section:
+    - GCT text files are now accepted now and converted to binary data if the
+      very first 4 characters are "#GCT".
+    - The memory map output with options -vv has been completely revised.
+ - Bug fix for commands wszst NORMALIZE and wszst PATCH: If the content has
+   not been changed, then the compression has not been checked. Therefore the
+   file was not always normalized.
+ - Bug fix for wszst PATCH: A copy to the non existing cache was created even
+   if --cache was not set.
+ - Implemented support for LE-CODE with 8192 tracks and 2048 cups. For this
+   purpose, the BMG messages for mkw-ana had to be moved to other areas.
+ - wlect dump: Warnings are issued if the tool can manage fewer LPAR settings
+   or fewer track slots than the LE-CODE image offers.
+ - New global option --le-04x: Use format %04x instead of %03x for LE-CODE
+   slots to enable uniform slot numbers if slots >4095 are used.
+ - New LPAR setting: SLOT-04X.
 
 ~ - KMP:STGI support for up to 255 laps.
 ~    - Option --kmp=MODES supports now settings 1LAP .. 15LAPS.

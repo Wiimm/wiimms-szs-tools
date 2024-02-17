@@ -261,6 +261,40 @@ bool IsSameD3 ( const double *a, const double *b, int bit_diff );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			progress helper			///////////////
+///////////////////////////////////////////////////////////////////////////////
+// [[progress_t]]
+
+// [[doxygen]]
+typedef struct progress_t
+{
+    // all times are set by GetTimerMSec()
+
+    u_msec_t	interval_msec;		// 0=off, >0: minimum distance between 2 logs
+    u_msec_t	start_msec;		// start time of progress
+    u_msec_t	last_log_msec;		// time of last log
+    uint	counter;		// current counter
+    uint	last_counter;		// count at last log
+}
+progress_t;
+
+//-----------------------------------------------------------------------------
+
+void StartProgress ( progress_t *pr, u_msec_t interval_msec );
+bool CheckProgress ( progress_t *pr );
+bool FinalProgress ( progress_t *pr );
+
+static inline void ResetProgress ( progress_t *pr )
+	{ DASSERT(pr); memset(pr,0,sizeof(*pr)); }
+
+static inline uint IncrementProgress ( progress_t *pr )
+	{ DASSERT(pr); return ++pr->counter; }
+
+static inline uint AddProgress ( progress_t *pr, uint add )
+	{ DASSERT(pr); return pr->counter += add; }
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			2D vector functions		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 

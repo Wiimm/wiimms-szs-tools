@@ -798,15 +798,15 @@
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0,
 		"Be quiet and print only error messages."
-		" Multiple usage is possible."
+		" Multiple use is possible. Previous use of --verbose is reverted."
 		" The impact is command dependent."
-		" In general: If set three times,"
-		" different file format warnings are suppressed." },
+		" If set at least three times,"
+		" almost all error messages will be suppressed." },
 
   { T_OPT_GM,	"VERBOSE",	"v|verbose",
 		0,
 		"Be verbose and print more progress information."
-		" Multiple usage is possible."
+		" Multiple use is possible. Previous use of --quiet is reverted."
 		" The impact is command dependent." },
 
   { T_OPT_GM,	"LOGGING",	"L|logging|log",
@@ -877,6 +877,11 @@
 		"Enable LE-CODE and CT-CODE support."
 		" The optional parameter is deprecated and ignored."
 		"\1 See https://szs.wiimm.de/opt/lecode for details." },
+
+  { T_OPT_G,	"LE_04X",	"le-04x|le04x",
+		0,
+		"Use format %04x instead of %03x for LE-CODE slots"
+		" to enable uniform slot numbers if slots >4095 are used." },
 
   { T_OPT_GP,	"LOAD_PREFIX",	"load-prefix|loadprefix",
 		"file",
@@ -1483,7 +1488,7 @@
   { T_OPT_GP,	"MDL",		"mdl",
 		"list",
 		"Set global options for MDL processing."
-		" To enable MDL patching, use option {--patch-file}"
+		" To enable MDL patching, use option {--patch-files}"
 		" and select BRRES files for patching."
 		"\n "
 		" Parameter @'list'@ is a comma separated list of keywords."
@@ -1515,7 +1520,7 @@
 		" @AUTO, SIMPLE, COMPLEX, BOTH, SILENT@ and @LOG@."
 		"\1 See https://szs.wiimm.de/opt/pat for details." },
 
-  { T_OPT_GP,	"PATCH_FILE",	"patch-file|patchfile|pfile",
+  { T_OPT_GP,	"PATCH_FILES",	"patch-files|patchfiles|pfiles",
 		"list",
 		"Define, which kind of KMP, KCL and BRRES/MDL files are objects"
 		" for patching. @--pfile@ is a short cut."
@@ -1526,7 +1531,7 @@
 		" and all other settings are untouched."
 		"\n "
 		" Keyword @DEFAULT@ resets the default settings (@TRACK,LOG@)"
-		" and @CLEAR@ disables all."
+		" and @NONE@ disables all."
 		" The other allowed keywords are:"
 		" @KMP, KCL, OTHER-KCL, ALL-KCL, MODEL, MAP, VRCORN,"
 		" OTHER-BRRES, ALL-BRRES, TRACK (=KMP,KCL,MODEL,MAP,VRCORN),"
@@ -2223,6 +2228,10 @@
 		"\1 Read https://szs.wiimm.de/opt/source for more details." },
 
 
+  { H_OPT_CP,	"ID_LIST",	"id-list|idlist",
+		"file",
+		"Set filename of a SHA1ID file." },
+
   { T_OPT_CP,	"REFERENCE",	"ref|reference",
 		"path",
 		"Define a reference SZS." },
@@ -2689,7 +2698,7 @@
   { T_COPT,	"MDL",		0,0,0 },
   { T_COPT,	"MINIMAP",	0,0,0 },
   { T_COPT,	"PAT",		0,0,0 },
-  { T_COPT,	"PATCH_FILE",	0,0,0 },
+  { T_COPT,	"PATCH_FILES",	0,0,0 },
   { T_COPT,	"LT_CLEAR",	0,0,0 },
   { T_COPT,	"LT_ONLINE",	0,0,0 },
   { T_COPT,	"LT_N_PLAYERS",	0,0,0 },
@@ -2966,6 +2975,12 @@
   { T_COPT,	"NO_WILDCARDS",	0,0,0 },
   { T_COPT,	"IN_ORDER",	0,0,0 },
   { T_COPT,	"IGNORE",	0,0,0 },
+  { T_COPT,	"SH",		0,0,
+	"Quote filenames for sh using '...'." },
+  { T_COPT,	"BASH",		0,0,
+	"Ignore --sh and quote filenames for bash using $$'...'."
+	" Use »eval var=($$(wszst wildcards --bash ...))«"
+	" to assign the result to a bash array."},
 
   //---------- COMMAND wszst TEST ----------
 
@@ -3379,6 +3394,7 @@
   { T_SEP_OPT,	0,0,0,0 },
   { T_COPY_GRP,	"SCRIPT",	0,0,0 },
   { T_SEP_OPT,	0,0,0,0 },
+  { T_COPT,	"ID_LIST",	0,0,0 },
   { T_COPT,	"REFERENCE",	0,0,0 },
   { T_COPT,	"DEST",		0,0,0 },
   { T_COPT,	"DEST2",	0,0,0 },

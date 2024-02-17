@@ -337,15 +337,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
-	"Be quiet and print only error messages. Multiple usage is possible."
-	" The impact is command dependent. In general: If set three times,"
-	" different file format warnings are suppressed."
+	"Be quiet and print only error messages. Multiple use is possible."
+	" Previous use of --verbose is reverted. The impact is command"
+	" dependent. If set at least three times, almost all error messages"
+	" will be suppressed."
     },
 
     {	OPT_VERBOSE, false, false, false, false, false, 'v', "verbose",
 	0,
-	"Be verbose and print more progress information. Multiple usage is"
-	" possible. The impact is command dependent."
+	"Be verbose and print more progress information. Multiple use is"
+	" possible. Previous use of --quiet is reverted. The impact is command"
+	" dependent."
     },
 
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
@@ -411,6 +413,12 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Enable LE-CODE and CT-CODE support. The optional parameter is"
 	" deprecated and ignored. See https://szs.wiimm.de/opt/lecode for"
 	" details."
+    },
+
+    {	OPT_LE_04X, false, false, false, false, false, 0, "le-04x",
+	0,
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform"
+	" slot numbers if slots >4095 are used."
     },
 
     {	OPT_CHDIR, false, false, false, false, false, 0, "chdir",
@@ -524,7 +532,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 62
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 63
 
 };
 
@@ -676,6 +684,8 @@ static const struct option OptionLong[] =
 	 { "ctcode",		0, 0, GO_CT_CODE },
 	{ "le-code",		2, 0, GO_LE_CODE },
 	 { "lecode",		2, 0, GO_LE_CODE },
+	{ "le-04x",		0, 0, GO_LE_04X },
+	 { "le04x",		0, 0, GO_LE_04X },
 	{ "chdir",		1, 0, GO_CHDIR },
 	{ "const",		1, 0, 'c' },
 	{ "long",		0, 0, 'l' },
@@ -818,29 +828,30 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x08a   */	OPT_NO_COLORS,
 	/* 0x08b   */	OPT_CT_CODE,
 	/* 0x08c   */	OPT_LE_CODE,
-	/* 0x08d   */	OPT_CHDIR,
-	/* 0x08e   */	OPT_NO_WILDCARDS,
-	/* 0x08f   */	OPT_IN_ORDER,
-	/* 0x090   */	OPT_UTF_8,
-	/* 0x091   */	OPT_NO_UTF_8,
-	/* 0x092   */	OPT_FORCE,
-	/* 0x093   */	OPT_REPAIR_MAGICS,
-	/* 0x094   */	OPT_OLD,
-	/* 0x095   */	OPT_STD,
-	/* 0x096   */	OPT_NEW,
-	/* 0x097   */	OPT_EXTRACT,
-	/* 0x098   */	OPT_NUMBER,
-	/* 0x099   */	OPT_MIPMAPS,
-	/* 0x09a   */	OPT_NO_MIPMAPS,
-	/* 0x09b   */	OPT_N_MIPMAPS,
-	/* 0x09c   */	OPT_MAX_MIPMAPS,
-	/* 0x09d   */	OPT_MIPMAP_SIZE,
-	/* 0x09e   */	OPT_FAST_MIPMAPS,
-	/* 0x09f   */	OPT_CMPR_DEFAULT,
-	/* 0x0a0   */	OPT_PRE_CONVERT,
-	/* 0x0a1   */	OPT_STRIP,
-	/* 0x0a2   */	OPT_SECTIONS,
-	/* 0x0a3   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,
+	/* 0x08d   */	OPT_LE_04X,
+	/* 0x08e   */	OPT_CHDIR,
+	/* 0x08f   */	OPT_NO_WILDCARDS,
+	/* 0x090   */	OPT_IN_ORDER,
+	/* 0x091   */	OPT_UTF_8,
+	/* 0x092   */	OPT_NO_UTF_8,
+	/* 0x093   */	OPT_FORCE,
+	/* 0x094   */	OPT_REPAIR_MAGICS,
+	/* 0x095   */	OPT_OLD,
+	/* 0x096   */	OPT_STD,
+	/* 0x097   */	OPT_NEW,
+	/* 0x098   */	OPT_EXTRACT,
+	/* 0x099   */	OPT_NUMBER,
+	/* 0x09a   */	OPT_MIPMAPS,
+	/* 0x09b   */	OPT_NO_MIPMAPS,
+	/* 0x09c   */	OPT_N_MIPMAPS,
+	/* 0x09d   */	OPT_MAX_MIPMAPS,
+	/* 0x09e   */	OPT_MIPMAP_SIZE,
+	/* 0x09f   */	OPT_FAST_MIPMAPS,
+	/* 0x0a0   */	OPT_CMPR_DEFAULT,
+	/* 0x0a1   */	OPT_PRE_CONVERT,
+	/* 0x0a2   */	OPT_STRIP,
+	/* 0x0a3   */	OPT_SECTIONS,
+	/* 0x0a4   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 
 	/* 0x0b0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -971,6 +982,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_NO_COLORS,
 	OptionInfo + OPT_CT_CODE,
 	OptionInfo + OPT_LE_CODE,
+	OptionInfo + OPT_LE_04X,
 	OptionInfo + OPT_CHDIR,
 	OptionInfo + OPT_CONST,
 	OptionInfo + OPT_MAX_FILE_SIZE,
@@ -1288,7 +1300,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms Image Tool : Extract and convert graphic images. The file"
 	" formats TPL, TEX, BTI, BREFT and PNG are supported.",
 	0,
-	26,
+	27,
 	option_tab_tool,
 	0
     },

@@ -112,7 +112,7 @@ enum mkw_consts_t // some constants
 	//--- LE-CODE extended slots
 
 	MKW_LE_SLOT_BEG		=   0x44,
-	MKW_LE_SLOT_END		= 0x1000,
+	MKW_LE_SLOT_END		= 0x2000,
 	MKW_N_LE_SLOT		= MKW_LE_SLOT_END - MKW_LE_SLOT_BEG,
 
 

@@ -283,9 +283,10 @@ typedef struct staticr_t
     dol_status_t	dol_status;		// data status (only DOL files)
     ccp			dol_info;		// NULL or pointer to a dol info
     u32			dol_info_flags;		// info flags for NAS by WCODE
-    bool		dol_info_flags_set;	// true, if DOF_ORIG already set
+    bool		dol_info_flags_set;	// TRUE: DOF_ORIG already set
     char		dol_flags[DPF__N+1];	// flags to patch patched_by
-    bool		dol_cleaned;		// TRUE if DOL was cleaned
+    bool		dol_cleaned;		// TRUE: DOL was cleaned
+    bool		gct_moved;		// TRUE: GCT will be moved
 
     //--- analyze data
 

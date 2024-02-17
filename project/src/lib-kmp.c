@@ -2042,7 +2042,7 @@ void InitializeKMP ( kmp_t * kmp )
     memset(kmp,0,sizeof(*kmp));
 
     kmp->fname = EmptyString;
-    kmp->nowarn_format = verbose <= -3;
+    kmp->nowarn_format = ErrorLogDisabled();
 
     uint sect;
     for ( sect = 0; sect < KMP_N_SECT; sect++ )
@@ -2428,7 +2428,7 @@ static const void * get_kmp_pointer
     uint max = ( (u8*)data + data_size - elem ) / kmp_entry_size[sect];
     if ( n > max )
     {
-	if ( verbose >= -2 )
+	if ( ErrorLogEnabled() )
 	    ERROR0(ERR_WARNING,
 		"Number of [%s] entries exceed file size (%u>%u): %s\n",
 		kmp_section_name[sect].name1, n, max, kmp->fname );
@@ -2468,7 +2468,7 @@ static uint test_unknown_sections
     const bool is_shrinked = hi.n_sect < KMP_N_SECT;
     if (res_shrinked)
 	*res_shrinked = is_shrinked;
-    if ( is_shrinked )
+    if ( is_shrinked && ErrorLogEnabled() )
 	ERROR0(ERR_WARNING,
 		"KMP: Is shrinked => some sections missed, some moved: %s\n",
 		fname );
@@ -3013,8 +3013,10 @@ enumError ScanKMP
 	default:
 	    if (init_kmp)
 		InitializeKMP(kmp);
-	    return ERROR0(ERR_INVALID_DATA,
-		"No KMP file: %s\n", kmp->fname ? kmp->fname : "?");
+	    if ( ErrorLogEnabled() )
+		ERROR0(ERR_INVALID_DATA,
+			"No KMP file: %s\n", kmp->fname ? kmp->fname : "?");
+	    return ERR_INVALID_DATA;
     }
 
     PRINT("BATTLE-MODE: %d [opt=%d,isa=%d]\n",

@@ -1521,6 +1521,42 @@ static CompressManager_t lecode_loader_kor_mgr
 
 static const u8 lecode_loader_pal_lzma[] = // lecode-loader-pal.bin
 {
+#if 0 // [[test]] [[test-loader]] : Wiimms edits of loading-code/cheat.S
+
+  // decompressed size: 0x218 = 536 bytes
+  0x00,0x00,0x02,0x18,
+
+  // LZMA.6 compressed data
+  0x5d,0x00,0x00,0x80, 0x00,0xff,0xff,0xff, 0xff,0xff,0xff,0xff, 0xff,0x00,0x00,0x34,
+  0x76,0x79,0x08,0xd6, 0x1e,0xd1,0x33,0x8d, 0x56,0x7b,0xa5,0x12, 0x82,0x89,0x76,0xe4,
+  0x0e,0xe0,0x82,0xa0, 0xd4,0x29,0x9f,0x79, 0x0f,0x17,0xc9,0xa3, 0xb3,0x30,0xf7,0xa2,
+  0x5a,0xb5,0x1f,0x11, 0x78,0x42,0x4c,0x7a, 0xc7,0xd0,0x5c,0xee, 0x8b,0xa4,0x3e,0xce,
+  0x12,0x57,0x5f,0x17, 0xc2,0x8a,0x59,0x74, 0xe5,0x70,0x85,0x30, 0xa6,0x3d,0xe1,0xf3,
+  0x74,0x9a,0x9c,0x35, 0x9f,0x2e,0xb4,0xac, 0x17,0x62,0xef,0xbe, 0x3d,0x7e,0x3a,0x6d,
+  0xa4,0x50,0x1c,0x55, 0xd1,0x1a,0xee,0x40, 0x3f,0x96,0xe3,0xf7, 0xe1,0x05,0x94,0x70,
+  0x36,0xc9,0x16,0x7c, 0x6e,0x45,0x38,0x51, 0x92,0x6f,0xe7,0xee, 0x8b,0x47,0x1f,0x94,
+  0x6d,0x23,0xd1,0x1b, 0x68,0x76,0x9b,0xdb, 0x03,0xa1,0xf4,0x6f, 0xb6,0x51,0x20,0x5b,
+  0xc7,0xae,0x16,0xc6, 0x02,0x16,0xb9,0x76, 0xad,0x90,0xbb,0x71, 0xca,0x67,0xfd,0x30,
+  0x9b,0x20,0x99,0xc2, 0x31,0x74,0x1c,0x3a, 0x69,0xf5,0x07,0x2a, 0x00,0xcc,0x03,0xc9,
+  0xa2,0xd6,0x94,0x48, 0xf5,0xe7,0x16,0x69, 0xd2,0x1b,0xb0,0xf6, 0x92,0xb3,0xc5,0x6d,
+  0x8a,0xba,0x21,0xd9, 0x37,0x25,0x6c,0x3e, 0x58,0xa1,0x3f,0x26, 0x92,0x32,0x31,0xd8,
+  0x25,0x5f,0x47,0x63, 0x04,0x95,0xd0,0xa5, 0xdf,0x2d,0x8d,0x9c, 0xd6,0xdb,0xe7,0xe8,
+  0xff,0xf9,0xed,0x09, 0x3f,0xde,0xce,0xe8, 0x0c,0xcd,0xa8,0xd1, 0x28,0xaf,0x12,0x2a,
+  0x8b,0xb0,0x2e,0x71, 0x06,0x9c,0x67,0xd0, 0x32,0x46,0x0f,0xc6, 0xc9,0x26,0x80,0xad,
+  0x26,0x0f,0x68,0x82, 0xd1,0xcb,0x53,0xfd, 0x23,0xb2,0xea,0xfc, 0x0d,0xc3,0x6c,0x99,
+  0x15,0x3b,0x4d,0x19, 0x0f,0x4e,0x40,0x7b, 0xbf,0xcc,0x6d,0x9d, 0xa7,0x0b,0xb4,0x26,
+  0x08,0x0f,0x2a,0x45, 0x39,0x5e,0xef,0x94, 0x4c,0xba,0xa6,0x36, 0xa7,0x8d,0x7c,0x91,
+  0xaa,0x90,0x86,0x1d, 0x59,0xe4,0x65,0x26, 0x90,0x4f,0x52,0x78, 0x71,0x10,0xe6,0xf4,
+  0x4e,0x34,0x19,0x9e, 0x65,0x52,0xe3,0x7a, 0x45,0xd5,0x68,0xee, 0x30,0x05,0xbe,0xdb,
+  0x70,0x75,0x2a,0x09, 0x9f,0x50,0xcc,0x48, 0x9a,0xaf,0xba,0x1a, 0x28,0x01,0xa3,0xd8,
+  0x76,0x15,0xd0,0x21, 0xa9,0xb9,0x6e,0x2b, 0x84,0x44,0xde,0xbc, 0x3b,0x7a,0x7c,0x66,
+  0xb0,0xec,0xff,0x9e, 0x9b,0x02,0x6f,0xf3, 0xd4,0xcd,0xec,0xb4, 0x2e,0x1e,0xb1,0x87,
+  0x33,0x5e,0x69,0x8c, 0xb0,0x85,0x77,0xca, 0x4d,0x6a,0x93,0x13, 0xea,0x4c,0xa6,0xf8,
+  0x68,0xc7,0xb2,0x63, 0x1e,0x69,0xdb,0x5f, 0x3c,0x5c,0x75,0x3c, 0x87,0x85,0xb6,0xa4,
+  0x37,0x0a,0xa5,0x1d, 0x50,0xb7,0x70,0xe2, 0x93,0x39,0xd0,0x96, 0xf8,0xdf,0x69,0x20,
+  0xe6,0xc1,0x72,0x98, 0x8f,0xd7,0xb4,0x52, 0x28,0xdf,0xfe,0xc8, 0x75,0x7c,
+  // 0x1be = 446 data bytes (84%)
+#else
   // decompressed size: 0x210 = 528 bytes
   0x00,0x00,0x02,0x10,
 
@@ -1554,6 +1590,7 @@ static const u8 lecode_loader_pal_lzma[] = // lecode-loader-pal.bin
   0x60,0x60,0x3f,0x60, 0x7e,0xcd,0x46,0x54, 0xd7,0xcf,0x96,0xa0, 0x76,0x1b,0x78,0xf3,
   0xf1,0x10,0x66,0xb4, 0x8b,0xd6,0x38,0xc3, 0xcd,0xd2,0xff,0xf9, 0x1e,0xe6,0x2f,     
   // 0x1bf = 447 data bytes (85%)
+#endif
 };
 
 static CompressManager_t lecode_loader_pal_mgr
@@ -5048,7 +5085,11 @@ static bool CleanDol ( staticr_t * str ) // return TRUE if dol data modified.
 
 #define GCT_ADDRESS	0x80001800u
 #define	GCT_MAX		0x80003000u
+#define	GCT_END_CHECK	0x80004000u
 #define GCT_MM_BASE	(GCT_ADDRESS-sizeof(gch_header_t))
+
+#define GCT_MOVE_ADDR	0x802c0000u
+#define GCT_MOVE_END	0x80377100u
 
 static MemMap_t gct_data_mem	= {0};	// memory map of GCT section
 static GrowBuffer_t gecko_data	= {0};
@@ -5556,6 +5597,7 @@ static enumError SetupCodeLoader
     }
 
     err = AddSectionHelper2(str,&dseg,data.ptr,dseg.size,fname);
+    str->gct_moved = true;
 
     //--- clean
 abort:
@@ -5798,7 +5840,7 @@ static enumError AddSectionHelper
     PRINT("N=%d, of=%08x\n",n_sect,off_end);
     if ( n_sect > 2
 	&& seg->addr + cheat_offset < 0x80002ff0
-	&& off_end >= 0x80003000 && off_end < 0x80004000 )
+	&& off_end >= GCT_MAX && off_end < GCT_END_CHECK )
     {
      #ifdef TEST0
 	{
@@ -5966,15 +6008,15 @@ static enumError AddSectionHelper
     //--- warn if overlapping 0x80003xxx
 
     if ( ch_type != CHT_NONE
-	&& ( seg->addr < 0x80004000 && off_end > 0x80003000 ))
+	&& ( seg->addr < GCT_END_CHECK && off_end > GCT_MAX ))
     {
 	if ( opt_gct_move >= OFFON_AUTO && cheat_offset >= 0x100 )
 	    goto use_loader;
 
 	FREE(new_data);
 	ERROR0(ERR_ERROR,
-	    "Cheat codes must not overlay 0x80003000..0x80004000: %s\n",
-			fname);
+	    "Cheat codes must not overlay %#x..%#x: %s\n",
+			GCT_MAX, GCT_END_CHECK, fname);
 	return ERR_WARNING;
     }
 
@@ -6144,9 +6186,9 @@ static enumError AddCheatCode
 	gct_data_mem.begin = GCT_ADDRESS;
 	MemMapItem_t *mi;
 	mi = InsertMemMap(&gct_data_mem,GCT_ADDRESS,mgr->size-sizeof(gch_header_t));
-	 StringCopyS(mi->info,sizeof(mi->info),"Code Handler");
+	 StringCopyS(mi->info,sizeof(mi->info),"Gecko Code Handler");
 	mi = InsertMemMap(&gct_data_mem,GCT_MM_BASE+mgr->size,8);
-	 StringCopyS(mi->info,sizeof(mi->info),"GCT magic");
+	 StringCopyS(mi->info,sizeof(mi->info),"GCT header");
 	if (!use_gct_loader)
 	{
 	    mi = InsertMemMap(&gct_data_mem,GCT_MAX,0);
@@ -6181,8 +6223,25 @@ static enumError AddCheatCode
 
     MemMapItem_t *mi
 	= InsertMemMap(&gct_data_mem,GCT_MM_BASE+gecko_data.used,code_size);
-    snprintf(mi->info,sizeof(mi->info),
-	    "%4u line%s of GCT file", code_size/8, code_size == 8 ? "" : "s" );
+    if ( fname && *fname )
+    {
+	const int space = sizeof(mi->info) - 1;
+	ccp fn = fname;
+	while ( strlen(fn) > space )
+	{
+	    ccp slash = strchr(fn,'/');
+	    if (!slash)
+		break;
+	    fn = slash + 1;
+	}
+	if ( strlen(fn) <= space - 6 )
+	    StringCat2S(mi->info,sizeof(mi->info),"File: ",fn);
+	else
+	    StringCopyS(mi->info,sizeof(mi->info),fn);
+    }
+    else
+	snprintf(mi->info,sizeof(mi->info),
+	    "%u line%s of GCT file", code_size/8, code_size == 8 ? "" : "s" );
 
     if ( opt_gct_scan_sep && opt_gct_sep && be32(code_data) != GCT_SEP_NUM1 )
     {
@@ -6222,7 +6281,7 @@ enumError AddWCodeFile ( staticr_t *str, ccp fname )
     else
 	err = ERROR0(ERR_WARNING,"Not a GCT file: %s\n",fname);
 
-    if(alloced)
+    if (alloced)
 	FREE(data);
     return err;
 }
@@ -6230,8 +6289,85 @@ enumError AddWCodeFile ( staticr_t *str, ccp fname )
 ///////////////////////////////////////////////////////////////////////////////
 
 #if HAVE_XSRC
- #include "xsrc/x-staticr.c"
+  #include "xsrc/x-staticr.c"
 #endif
+
+///////////////////////////////////////////////////////////////////////////////
+
+static exmem_t ConvertGctToBin
+(
+    // Returns an exmem_t struct.
+    // data.len is 0 on error
+    // Use FreeExMem(&result) to free possible alloced result.
+
+    cvp		src,			// NULL or source
+    int		src_len,		// size of 'src'. If -1: Use strlen(src)
+    bool	try_circ		// use circ-buffer, if result is small enough
+)
+{
+    if (!src)
+	return NullExMem;
+
+    if ( src_len < 0 )
+	src_len = strlen(src);
+    if (!src_len)
+	return NullExMem;
+
+    ccp ptr = src, end_src = ptr+src_len;
+
+    FastBuf_t code;
+    InitializeFastBuf(&code,sizeof(code));
+    AppendFastBuf(&code,"\0\xd0\xc0\xde\0\xd0\xc0\xde",8);
+
+    while ( ptr < end_src )
+    {
+	while ( ptr < end_src && (u8)*ptr <= ' ' )
+	    ptr++;
+
+	char *end;
+	const u32 n1 = strtoul(ptr,&end,16);
+	if ( end <= end_src && end == ptr + 8 )
+	{
+	    ptr = end;
+	    if ( ptr < end_src && *ptr == ' ' )
+	    {
+		ptr++;
+		const u32 n2 = strtoul(ptr,&end,16);
+		if ( end <= end_src && end == ptr + 8 )
+		{
+		    ptr = end;
+		    char *dest = GetSpaceFastBuf(&code,8);
+		    write_be32(dest,n1);
+		    write_be32(dest+4,n2);
+		}
+	    }
+	}
+	while ( ptr < end_src && *ptr != '\n' )
+	    ptr++;
+    }
+    
+    exmem_t res = {0};
+    const int len = GetFastBufLen(&code);
+    if ( len > 8 )
+    {
+	if ( try_circ && len <= CIRC_BUF_MAX_ALLOC )
+	{
+	    res.data.ptr = CopyCircBuf0(code.buf,len);
+	    res.is_circ_buf = true;
+	}
+	else
+	{
+	    res.data.ptr  = MEMDUP(code.buf,len);
+	    res.is_alloced = true;
+	}
+	res.data.len  = len;
+    }
+    else
+	res = NullExMem;
+
+    ResetFastBuf(&code);
+    return res;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -6258,10 +6394,25 @@ static uint AddSectionGCH
 	return 0;
 
 
-    //--- check for GCT
+    //--- check for GCT-TXT
 
 // [[analyse-magic]]
     const file_format_t fform = GetByMagicFF(gh_data,gh_size,gh_size);
+    if ( fform == FF_GCT_TXT )
+    {
+	exmem_t exm = ConvertGctToBin(gh_data,gh_size,true);
+	if (exm.data.len)
+	{
+	    HexDump16(stdlog,0,0, exm.data.ptr, exm.data.len < 64 ? exm.data.len : 64 );
+	    AddCheatCode((u8*)exm.data.ptr,exm.data.len,false,fname);
+	}
+	FreeExMem(&exm);
+	return 0;
+    }
+    
+
+    //--- check for GCT
+
     if ( fform == FF_GCT )
     {
 	AddCheatCode(gh_data,gh_size,false,fname);
@@ -6368,17 +6519,39 @@ static uint AddSectionsDOL
 	if (!get_min_addr)
 	{
 	    // terminate section and add it to dol
-	    MemMapItem_t *mi = InsertMemMap(&gct_data_mem,GCT_MM_BASE+gecko_data.used,8);
+	    u32 gct_end = GCT_MM_BASE+gecko_data.used;
+	    MemMapItem_t *mi = InsertMemMap(&gct_data_mem,gct_end,8);
 	    StringCopyS(mi->info,sizeof(mi->info),"GCT terminator");
+	    gct_end += 8;
+
+	    // insert max usage
+	    if ( gct_end < GCT_MAX )
+	    {
+		mi = InsertMemMap(&gct_data_mem,gct_end,GCT_MAX-gct_end);
+		StringCopyS(mi->info,sizeof(mi->info),"Unused available memory");
+	    }
+	    else if ( gct_end > GCT_MAX )
+	    {
+		mi = InsertMemMap(&gct_data_mem,GCT_MAX,gct_end-GCT_MAX);
+		StringCopyS(mi->info,sizeof(mi->info),"FAIL: Use of reserved memory");
+	    }
+	    else
+	    {
+		mi = InsertMemMap(&gct_data_mem,GCT_MAX,0);
+		StringCopyS(mi->info,sizeof(mi->info),"Start of unusable memory");
+	    }
 
 	    u64 term = hton64(GCT_TERM_NUM);
 	    InsertGrowBuffer(&gecko_data,&term,sizeof(term));
 	    count += AddSectionGCH(str,gecko_data.ptr,gecko_data.used,"GCT",false);
 
-	    if ( verbose > 1 || logging >= 2 )
+	    if ( verbose >= 2 || logging >= 2 )
 	    {
-		fputs("\n   Memory map of code handler and GCT files:\n",stdlog);
-		PrintMemMap(&gct_data_mem,stdlog,5,"part");
+		if (str->gct_moved)
+		    fputs("\n   Memory map of code handler and GCT files before moving data to heap:\n",stdlog);
+		else
+		    fputs("\n   Memory map of code handler and GCT files:\n",stdlog);
+		PrintMemMap(&gct_data_mem,stdlog,5,"part or source file");
 		fputc('\n',stdlog);
 	    }
 	}
@@ -6485,7 +6658,7 @@ static uint CreateSectionDOL
 	{
 	    sl->data = (u8*)&dh->sect_addr;
 	    if (!sect_addr)
-		sect_addr = 0x80004000 - RED_DOL_SIZE;
+		sect_addr = GCT_END_CHECK - RED_DOL_SIZE;
 	    dol_sect_addr   = sect_addr;
 	    dol_sect_offset = offset;
 	}
@@ -7633,7 +7806,7 @@ enumError DumpSTR
 	    {
 		ccp type = offset & 1 ? "TEXT" : "DATA";
 		offset &= ~1;
-		fprintf(f,"%*s%4u. %s %#9x : %#8x .. %#8x",
+		fprintf(f,"%*s%4u. %s %#10x : %#10x .. %#10x",
 			indent,"", s, type, size, offset, offset + size );
 		if (rinfo)
 		    fprintf(f," : %#10x .. %#10x\n",
@@ -7937,7 +8110,6 @@ const data_tab_t maindol_data_tab[] =
 	DEF_BZIP(codehandler)
 	DEF_BZIP(codehandleronly)
 
- #if HAVE_WIIMM_EXT
 	DEF_COMPRESS(old_lecode_loader_pal)
 	DEF_COMPRESS(old_lecode_loader_usa)
 	DEF_COMPRESS(old_lecode_loader_jap)
@@ -7947,7 +8119,6 @@ const data_tab_t maindol_data_tab[] =
 	DEF_COMPRESS(lecode_loader_usa)
 	DEF_COMPRESS(lecode_loader_jap)
 	DEF_COMPRESS(lecode_loader_kor)
- #endif
 
 	{0,0,0}
 };

@@ -471,15 +471,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
-	"Be quiet and print only error messages. Multiple usage is possible."
-	" The impact is command dependent. In general: If set three times,"
-	" different file format warnings are suppressed."
+	"Be quiet and print only error messages. Multiple use is possible."
+	" Previous use of --verbose is reverted. The impact is command"
+	" dependent. If set at least three times, almost all error messages"
+	" will be suppressed."
     },
 
     {	OPT_VERBOSE, false, false, false, false, false, 'v', "verbose",
 	0,
-	"Be verbose and print more progress information. Multiple usage is"
-	" possible. The impact is command dependent."
+	"Be verbose and print more progress information. Multiple use is"
+	" possible. Previous use of --quiet is reverted. The impact is command"
+	" dependent."
     },
 
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
@@ -545,6 +547,12 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Enable LE-CODE and CT-CODE support. The optional parameter is"
 	" deprecated and ignored. See https://szs.wiimm.de/opt/lecode for"
 	" details."
+    },
+
+    {	OPT_LE_04X, false, false, false, false, false, 0, "le-04x",
+	0,
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform"
+	" slot numbers if slots >4095 are used."
     },
 
     {	OPT_CHDIR, false, false, false, false, false, 0, "chdir",
@@ -709,7 +717,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 82
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 83
 
 };
 
@@ -1013,6 +1021,8 @@ static const struct option OptionLong[] =
 	 { "ctcode",		0, 0, GO_CT_CODE },
 	{ "le-code",		2, 0, GO_LE_CODE },
 	 { "lecode",		2, 0, GO_LE_CODE },
+	{ "le-04x",		0, 0, GO_LE_04X },
+	 { "le04x",		0, 0, GO_LE_04X },
 	{ "chdir",		1, 0, GO_CHDIR },
 	{ "const",		1, 0, 'c' },
 	{ "scale",		1, 0, GO_SCALE },
@@ -1171,50 +1181,51 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x08a   */	OPT_NO_COLORS,
 	/* 0x08b   */	OPT_CT_CODE,
 	/* 0x08c   */	OPT_LE_CODE,
-	/* 0x08d   */	OPT_CHDIR,
-	/* 0x08e   */	OPT_SCALE,
-	/* 0x08f   */	OPT_SHIFT,
-	/* 0x090   */	OPT_XSS,
-	/* 0x091   */	OPT_YSS,
-	/* 0x092   */	OPT_ZSS,
-	/* 0x093   */	OPT_ROT,
-	/* 0x094   */	OPT_XROT,
-	/* 0x095   */	OPT_YROT,
-	/* 0x096   */	OPT_ZROT,
-	/* 0x097   */	OPT_TRANSLATE,
-	/* 0x098   */	OPT_NULL,
-	/* 0x099   */	OPT_NEXT,
-	/* 0x09a   */	OPT_ASCALE,
-	/* 0x09b   */	OPT_AROT,
-	/* 0x09c   */	OPT_TFORM_SCRIPT,
-	/* 0x09d   */	OPT_KCL,
-	/* 0x09e   */	OPT_KCL_FLAG,
-	/* 0x09f   */	OPT_KCL_SCRIPT,
-	/* 0x0a0   */	OPT_TRI_AREA,
-	/* 0x0a1   */	OPT_TRI_HEIGHT,
-	/* 0x0a2   */	OPT_FLAG_FILE,
-	/* 0x0a3   */	OPT_XTRIDATA,
-	/* 0x0a4   */	OPT_SLOT,
-	/* 0x0a5   */	OPT_ID,
-	/* 0x0a6   */	OPT_BASE64,
-	/* 0x0a7   */	OPT_DB64,
-	/* 0x0a8   */	OPT_CODING,
-	/* 0x0a9   */	OPT_ROUND,
-	/* 0x0aa   */	OPT_NO_WILDCARDS,
-	/* 0x0ab   */	OPT_IN_ORDER,
-	/* 0x0ac   */	OPT_NO_ECHO,
-	/* 0x0ad   */	OPT_UTF_8,
-	/* 0x0ae   */	OPT_NO_UTF_8,
-	/* 0x0af   */	OPT_FORCE,
-	/* 0x0b0   */	OPT_REPAIR_MAGICS,
-	/* 0x0b1   */	OPT_TINY,
-	/* 0x0b2   */	OPT_OLD,
-	/* 0x0b3   */	OPT_STD,
-	/* 0x0b4   */	OPT_NEW,
-	/* 0x0b5   */	OPT_EXTRACT,
-	/* 0x0b6   */	OPT_NUMBER,
-	/* 0x0b7   */	OPT_SECTIONS,
-	/* 0x0b8   */	 0,0,0,0, 0,0,0,0, 
+	/* 0x08d   */	OPT_LE_04X,
+	/* 0x08e   */	OPT_CHDIR,
+	/* 0x08f   */	OPT_SCALE,
+	/* 0x090   */	OPT_SHIFT,
+	/* 0x091   */	OPT_XSS,
+	/* 0x092   */	OPT_YSS,
+	/* 0x093   */	OPT_ZSS,
+	/* 0x094   */	OPT_ROT,
+	/* 0x095   */	OPT_XROT,
+	/* 0x096   */	OPT_YROT,
+	/* 0x097   */	OPT_ZROT,
+	/* 0x098   */	OPT_TRANSLATE,
+	/* 0x099   */	OPT_NULL,
+	/* 0x09a   */	OPT_NEXT,
+	/* 0x09b   */	OPT_ASCALE,
+	/* 0x09c   */	OPT_AROT,
+	/* 0x09d   */	OPT_TFORM_SCRIPT,
+	/* 0x09e   */	OPT_KCL,
+	/* 0x09f   */	OPT_KCL_FLAG,
+	/* 0x0a0   */	OPT_KCL_SCRIPT,
+	/* 0x0a1   */	OPT_TRI_AREA,
+	/* 0x0a2   */	OPT_TRI_HEIGHT,
+	/* 0x0a3   */	OPT_FLAG_FILE,
+	/* 0x0a4   */	OPT_XTRIDATA,
+	/* 0x0a5   */	OPT_SLOT,
+	/* 0x0a6   */	OPT_ID,
+	/* 0x0a7   */	OPT_BASE64,
+	/* 0x0a8   */	OPT_DB64,
+	/* 0x0a9   */	OPT_CODING,
+	/* 0x0aa   */	OPT_ROUND,
+	/* 0x0ab   */	OPT_NO_WILDCARDS,
+	/* 0x0ac   */	OPT_IN_ORDER,
+	/* 0x0ad   */	OPT_NO_ECHO,
+	/* 0x0ae   */	OPT_UTF_8,
+	/* 0x0af   */	OPT_NO_UTF_8,
+	/* 0x0b0   */	OPT_FORCE,
+	/* 0x0b1   */	OPT_REPAIR_MAGICS,
+	/* 0x0b2   */	OPT_TINY,
+	/* 0x0b3   */	OPT_OLD,
+	/* 0x0b4   */	OPT_STD,
+	/* 0x0b5   */	OPT_NEW,
+	/* 0x0b6   */	OPT_EXTRACT,
+	/* 0x0b7   */	OPT_NUMBER,
+	/* 0x0b8   */	OPT_SECTIONS,
+	/* 0x0b9   */	 0,0,0,0, 0,0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1457,6 +1468,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_NO_COLORS,
 	OptionInfo + OPT_CT_CODE,
 	OptionInfo + OPT_LE_CODE,
+	OptionInfo + OPT_LE_04X,
 	OptionInfo + OPT_CHDIR,
 	OptionInfo + OPT_CONST,
 	OptionInfo + OPT_KCL,
@@ -2259,7 +2271,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms KCL Tool : Analyze, modify, export and create KCL and OBJ"
 	" files.",
 	0,
-	30,
+	31,
 	option_tab_tool,
 	0
     },

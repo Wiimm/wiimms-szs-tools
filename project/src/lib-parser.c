@@ -41,6 +41,171 @@
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			ScanParam_t helpers		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+bool GetScanParam
+(
+    Var_t *		dest,		// store value here
+    bool		init,		// true: initialize 'dest'
+    const ScanParam_t	* sp		// NULL or valid record to find value
+)
+{
+    DASSERT(dest);
+    DASSERT(sp);
+    if (init)
+	InitializeV(dest);
+    else
+	ResetV(dest);
+
+    switch(sp->mode)
+    {
+	case SPM_NONE:
+	    break;
+
+	case SPM_BOOL:
+	    dest->mode = VAR_INT;
+	    dest->i = *((bool*)sp->result);
+	    break;
+
+	case SPM_U8:
+	case SPM_S8:
+	    dest->mode = VAR_INT;
+	    dest->i = *((u8*)sp->result);
+	    break;
+
+	case SPM_U16:
+	case SPM_S16:
+	    dest->mode = VAR_INT;
+	    dest->i = *((u16*)sp->result);
+	    break;
+
+	case SPM_U32:
+	case SPM_S32:
+	    dest->mode = VAR_INT;
+	    dest->i = *((u32*)sp->result);
+	    break;
+
+	case SPM_U16_BE:
+	case SPM_S16_BE:
+	    dest->mode = VAR_INT;
+	    dest->i = ntohs(*((u16*)sp->result));
+	    break;
+
+	case SPM_U32_BE:
+	case SPM_S32_BE:
+	    dest->mode = VAR_INT;
+	    dest->i = ntohl(*((u32*)sp->result));
+	    break;
+
+	case SPM_INC:
+	case SPM_INT:
+	case SPM_UINT:
+	    dest->mode = VAR_INT;
+	    dest->i = *((uint*)sp->result);
+	    break;
+
+	case SPM_FLOAT:
+	    dest->mode = VAR_DOUBLE;
+	    dest->d = *((float*)sp->result);
+	    break;
+
+	case SPM_FLOAT_BE:
+	    dest->mode = VAR_DOUBLE;
+	    dest->d = bef4((float*)sp->result);
+	    break;
+
+	case SPM_DOUBLE:
+	    dest->mode = VAR_DOUBLE;
+	    dest->d = *((double*)sp->result);
+	    break;
+
+	case SPM_DOUBLE_X:
+	    return false;
+//	    ((double*)sp->result)[i] = GetXDoubleV(&val);
+//	    break;
+
+	case SPM_DOUBLE_Y:
+	    return false;
+//	    ((double*)sp->result)[i] = GetYDoubleV(&val);
+//	    break;
+
+	case SPM_DOUBLE_Z:
+	    return false;
+//	    ((double*)sp->result)[i] = GetZDoubleV(&val);
+//	    break;
+
+	case SPM_FLOAT3:
+	    return false;
+//	    ((float3*)sp->result)[i] = GetVectorFV(&val);
+//	    break;
+
+	case SPM_FLOAT3_BE:
+	    return false;
+//	    {
+//		float3 src = GetVectorFV(&val);
+//		float3 *dest = ((float3*)sp->result)+i;
+//		write_bef4(&dest->x,src.x);
+//		write_bef4(&dest->y,src.y);
+//		write_bef4(&dest->z,src.z);
+//	    }
+//	    break;
+
+	case SPM_VAR:
+	    return false;
+//	    AssignVar(((Var_t*)sp->result)+i,&val);
+//	    break;
+
+	case SPM_STRING:
+	    return false;
+//	    break;
+     }
+
+    return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void DefineScanParam
+(
+    VarMap_t		*vm,		// valid var list
+    ccp			prefix,		// NULL or prefix like "LPAR$"
+    const ScanParam_t	*sp		// valid record
+)
+{
+    if ( vm && sp && sp->name )
+    {
+	DEFINE_VAR(val);
+	if (GetScanParam(&val,false,sp))
+	{
+	    char name[VARNAME_SIZE+1];
+	    StringCat2S(name,sizeof(name),prefix,sp->name);
+	    for ( char *p = name; *p; p++ )
+		if ( *p == '-' )
+		    *p = '_';
+	    DefineVar(vm,name,&val);
+	}
+	FreeV(&val);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void DefineScanParamList
+(
+    VarMap_t		*vm,		// valid var list
+    ccp			prefix,		// NULL or prefix like "LPAR$"
+    const ScanParam_t	*sp		// NULL or list of parameters
+					// list ends with sp->name==NULL
+)
+{
+    if ( vm && sp )
+	while(sp->name)
+	    DefineScanParam(vm,prefix,sp++);
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			conversion helpers		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -1410,6 +1575,26 @@ Var_t * InsertVarMap
 
 ///////////////////////////////////////////////////////////////////////////////
 
+bool DefineVar
+(
+    VarMap_t		* vm,		// valid variable map
+    ccp			varname,	// name of variable
+    Var_t		*val		// value to assign
+)
+{
+    DASSERT(vm);
+    DASSERT(varname);
+    DASSERT(val);
+
+    bool found;
+    Var_t * var = InsertVarMap( vm, varname, false, 0, &found );
+    DASSERT(var);
+    MoveDataV(var,val);
+    return found;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 bool DefineIntVar
 (
     VarMap_t		* vm,		// valid variable map
@@ -1447,6 +1632,28 @@ bool DefineDoubleVar
     FreeV(var);
     var->mode = VAR_DOUBLE;
     var->d = value;
+    return found;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool DefineStringVar
+(
+    VarMap_t		* vm,		// valid variable map
+    ccp			varname,	// name of variable
+    ccp			value		// value to assign
+)
+{
+    DASSERT(vm);
+    DASSERT(varname);
+
+    bool found;
+    Var_t * var = InsertVarMap( vm, varname, false, 0, &found );
+    DASSERT(var);
+    FreeV(var);
+    var->mode = VAR_STRING;
+    var->str = value ? STRDUP(value) : (char*)EmptyString;
+    var->str_len = var->str_size = strlen(var->str);
     return found;
 }
 
@@ -3594,12 +3801,15 @@ enumError ScanAssignDoubleSI
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////
 
-enumError ScanParamSI
+enumError ScanParamDefSI
 (
     ScanInfo_t		* si,		// valid data
-    const ScanParam_t	* sp		// NULL or scan parameter
+    const ScanParam_t	* sp,		// NULL or scan parameter
 					// list ends with sp->name==NULL
+    VarMap_t		*vm,		// not NULL: define variable
+    ccp			prefix		// NULL or prefix like "LPAR$"
 )
 {
     DASSERT(si);
@@ -3670,6 +3880,7 @@ enumError ScanParamSI
 	    *sp->n_result = 0;
 
 	CheckEolSI(si);
+	DefineScanParam(vm,prefix,sp);
 	return ERR_OK;
     }
 
@@ -3677,8 +3888,13 @@ enumError ScanParamSI
 	sf->ptr++;
 
     if ( sp->mode == SPM_STRING ) // special case: STRING
-	return ConcatStringsSI(si,(char**)sp->result,0);
-
+    {
+	const enumError err = ConcatStringsSI(si,(char**)sp->result,0);
+	if (!err)
+	    DefineScanParam(vm,prefix,sp);
+	return err;
+    }
+    
     sf->disable_comma++;
 
     enumError max_err = ERR_OK;
@@ -3800,7 +4016,20 @@ enumError ScanParamSI
 
     sf->disable_comma--;
     CheckEolSI(si);
+    DefineScanParam(vm,prefix,sp);
     return max_err;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+enumError ScanParamSI
+(
+    ScanInfo_t		* si,		// valid data
+    const ScanParam_t	* sp		// NULL or scan parameter
+					// list ends with sp->name==NULL
+)
+{
+    return ScanParamDefSI(si,sp,0,0);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

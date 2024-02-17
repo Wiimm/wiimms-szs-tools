@@ -247,6 +247,9 @@
   { T_OPT_GO,	"LE_CODE",	"le-code|lecode",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_G,	"LE_04X",	"le-04x|le04x",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_G,	"OLD_SPINY",	"old-spiny|oldspiny",
 		0,
 		"Disable the new feature to hold a Spiny Shell at the tail."

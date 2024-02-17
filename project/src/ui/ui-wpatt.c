@@ -235,15 +235,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
-	"Be quiet and print only error messages. Multiple usage is possible."
-	" The impact is command dependent. In general: If set three times,"
-	" different file format warnings are suppressed."
+	"Be quiet and print only error messages. Multiple use is possible."
+	" Previous use of --verbose is reverted. The impact is command"
+	" dependent. If set at least three times, almost all error messages"
+	" will be suppressed."
     },
 
     {	OPT_VERBOSE, false, false, false, false, false, 'v', "verbose",
 	0,
-	"Be verbose and print more progress information. Multiple usage is"
-	" possible. The impact is command dependent."
+	"Be verbose and print more progress information. Multiple use is"
+	" possible. Previous use of --quiet is reverted. The impact is command"
+	" dependent."
     },
 
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
@@ -308,6 +310,12 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"[=param]",
 	"This option is completely ignored by wlect. It only exists due to"
 	" compatibility with the other tools."
+    },
+
+    {	OPT_LE_04X, false, false, false, false, false, 0, "le-04x",
+	0,
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform"
+	" slot numbers if slots >4095 are used."
     },
 
     {	OPT_CHDIR, false, false, false, false, false, 0, "chdir",
@@ -432,7 +440,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 55
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 56
 
 };
 
@@ -588,6 +596,8 @@ static const struct option OptionLong[] =
 	 { "ctcode",		0, 0, GO_CT_CODE },
 	{ "le-code",		2, 0, GO_LE_CODE },
 	 { "lecode",		2, 0, GO_LE_CODE },
+	{ "le-04x",		0, 0, GO_LE_04X },
+	 { "le04x",		0, 0, GO_LE_04X },
 	{ "chdir",		1, 0, GO_CHDIR },
 	{ "const",		1, 0, 'c' },
 	{ "round",		0, 0, GO_ROUND },
@@ -707,23 +717,24 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x08a   */	OPT_NO_COLORS,
 	/* 0x08b   */	OPT_CT_CODE,
 	/* 0x08c   */	OPT_LE_CODE,
-	/* 0x08d   */	OPT_CHDIR,
-	/* 0x08e   */	OPT_ROUND,
-	/* 0x08f   */	OPT_NO_WILDCARDS,
-	/* 0x090   */	OPT_IN_ORDER,
-	/* 0x091   */	OPT_NO_ECHO,
-	/* 0x092   */	OPT_PAT,
-	/* 0x093   */	OPT_UTF_8,
-	/* 0x094   */	OPT_NO_UTF_8,
-	/* 0x095   */	OPT_FORCE,
-	/* 0x096   */	OPT_REPAIR_MAGICS,
-	/* 0x097   */	OPT_OLD,
-	/* 0x098   */	OPT_STD,
-	/* 0x099   */	OPT_NEW,
-	/* 0x09a   */	OPT_EXTRACT,
-	/* 0x09b   */	OPT_NUMBER,
-	/* 0x09c   */	OPT_SECTIONS,
-	/* 0x09d   */	 0,0,0,
+	/* 0x08d   */	OPT_LE_04X,
+	/* 0x08e   */	OPT_CHDIR,
+	/* 0x08f   */	OPT_ROUND,
+	/* 0x090   */	OPT_NO_WILDCARDS,
+	/* 0x091   */	OPT_IN_ORDER,
+	/* 0x092   */	OPT_NO_ECHO,
+	/* 0x093   */	OPT_PAT,
+	/* 0x094   */	OPT_UTF_8,
+	/* 0x095   */	OPT_NO_UTF_8,
+	/* 0x096   */	OPT_FORCE,
+	/* 0x097   */	OPT_REPAIR_MAGICS,
+	/* 0x098   */	OPT_OLD,
+	/* 0x099   */	OPT_STD,
+	/* 0x09a   */	OPT_NEW,
+	/* 0x09b   */	OPT_EXTRACT,
+	/* 0x09c   */	OPT_NUMBER,
+	/* 0x09d   */	OPT_SECTIONS,
+	/* 0x09e   */	 0,0,
 	/* 0x0a0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0b0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -860,6 +871,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_NO_COLORS,
 	OptionInfo + OPT_CT_CODE,
 	OptionInfo + OPT_LE_CODE,
+	OptionInfo + OPT_LE_04X,
 	OptionInfo + OPT_CHDIR,
 	OptionInfo + OPT_CONST,
 	OptionInfo + OPT_MAX_FILE_SIZE,
@@ -1078,7 +1090,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"wpatt [option]... command [option|parameter|file]...",
 	"Wiimms PAT Tool : Decode raw PAT and encode text PAT files.",
 	0,
-	27,
+	28,
 	option_tab_tool,
 	0
     },

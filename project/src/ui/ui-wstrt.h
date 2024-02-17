@@ -73,6 +73,7 @@ typedef enum enumOptions
 	OPT_PRESERVE,
 	OPT_IGNORE,
 	OPT_ADD_LECODE,
+	OPT_ADDS_LECODE,
 	OPT_ADD_OLD_LECODE,
 	OPT_ADD_CTCODE,
 	OPT_MOVE_D8,
@@ -125,7 +126,7 @@ typedef enum enumOptions
 	OPT_WIDE,
 	OPT_BYTES,
 
-	OPT__N_SPECIFIC, // == 69
+	OPT__N_SPECIFIC, // == 70
 
 	//----- global options -----
 
@@ -150,6 +151,7 @@ typedef enum enumOptions
 	OPT_NO_COLORS,
 	OPT_CT_CODE,
 	OPT_LE_CODE,
+	OPT_LE_04X,
 	OPT_CHDIR,
 	OPT_CONST,
 	OPT_TRACKS,
@@ -185,7 +187,7 @@ typedef enum enumOptions
 	OPT_CLEAN_DOL,
 	OPT_CT_DIR,
 
-	OPT__N_TOTAL // == 124
+	OPT__N_TOTAL // == 126
 
 } enumOptions;
 
@@ -217,6 +219,7 @@ typedef enum enumOptions
 //	OB_PRESERVE		= 1llu << OPT_PRESERVE,
 //	OB_IGNORE		= 1llu << OPT_IGNORE,
 //	OB_ADD_LECODE		= 1llu << OPT_ADD_LECODE,
+//	OB_ADDS_LECODE		= 1llu << OPT_ADDS_LECODE,
 //	OB_ADD_OLD_LECODE	= 1llu << OPT_ADD_OLD_LECODE,
 //	OB_ADD_CTCODE		= 1llu << OPT_ADD_CTCODE,
 //	OB_MOVE_D8		= 1llu << OPT_MOVE_D8,
@@ -414,6 +417,7 @@ typedef enum enumOptions
 //				| OB_GRP_DEST
 //				| OB_GRP_PATCH
 //				| OB_ADD_LECODE
+//				| OB_ADDS_LECODE
 //				| OB_ADD_OLD_LECODE
 //				| OB_ADD_CTCODE
 //				| OB_MOVE_D8
@@ -527,6 +531,7 @@ typedef enum enumGetOpt
 	GO_NO_COLORS,
 	GO_CT_CODE,
 	GO_LE_CODE,
+	GO_LE_04X,
 	GO_CHDIR,
 	GO_NO_WILDCARDS,
 	GO_IN_ORDER,
@@ -561,6 +566,7 @@ typedef enum enumGetOpt
 	GO_NUMBER,
 	GO_CLEAN_DOL,
 	GO_ADD_LECODE,
+	GO_ADDS_LECODE,
 	GO_ADD_OLD_LECODE,
 	GO_ADD_CTCODE,
 	GO_CT_DIR,

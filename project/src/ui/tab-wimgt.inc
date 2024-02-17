@@ -223,6 +223,9 @@
   { T_OPT_GO,	"LE_CODE",	"le-code|lecode",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_G,	"LE_04X",	"le-04x|le04x",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GMP,	"CHDIR",	"chdir",
 		0, 0 /* copy of wszst */ },
 

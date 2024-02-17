@@ -118,6 +118,19 @@ void SetSource ( ccp source )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void SetIdList ( ccp source )
+{
+ #ifdef __CYGWIN__
+    opt_id_list = IsWindowsDriveSpec(source)
+		? AllocNormalizedFilenameCygwin(source,false)
+		: source;
+ #else
+    opt_id_list = source;
+ #endif
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void SetReference ( ccp source )
 {
  #ifdef __CYGWIN__
@@ -888,9 +901,11 @@ file_format_t GetByMagicFF
 	    case LE_REFERENCE_MAGIC8_NUM:	return FF_LEREF;
 	    case LE_STRINGS_MAGIC8_NUM:		return FF_LESTR;
 	    case LE_SHA1REF_MAGIC8_NUM:		return FF_SHA1REF;
+	    case LE_SHA1ID_MAGIC8_NUM:		return FF_SHA1ID;
 	    case LE_PREFIX_MAGIC8_NUM:		return FF_PREFIX;
 	    case LE_MTCAT_MAGIC8_NUM:		return FF_MTCAT;
 	    case LE_CT_SHA1_MAGIC8_NUM:		return FF_CT_SHA1;
+	    case USELTA_MAGIC_NUM:		return FF_USE_LTA;
 	    case LTA_MAGIC_NUM:			return FF_LTA;
 	}
     }
@@ -909,6 +924,8 @@ file_format_t GetByMagicFF
 	    case KMG_TEXT_MAGIC_NUM:	return FF_KMG_TXT;
 	    case KRT_TEXT_MAGIC_NUM:	return FF_KRT_TXT;
 	    case KRM_TEXT_MAGIC_NUM:	return FF_KRM_TXT;
+
+	    case GCTTXT_MAGIC_NUM:	return FF_GCT_TXT;
 
 	    case YAZ0_MAGIC_NUM:	return FF_YAZ0;
 	    case YAZ1_MAGIC_NUM:	return FF_YAZ1;
@@ -1786,7 +1803,7 @@ int disable_patch_on_load = 0;	// if >0: disable patching after loading
 
 static const KeywordTab_t opt_patch_tab[] =
 {
-  { 0,			"CLEAR",	"RESET",	PFILE_M_ALL | PFILE_F_HIDE },
+  { 0,			"NONE",		"CLEAR",	PFILE_M_ALL | PFILE_F_HIDE },
   { PFILE_M_DEFAULT,	"DEFAULT",	0,		PFILE_M_ALL | PFILE_F_HIDE },
   { PFILE_M_ALL,	"ALL",		0,		PFILE_M_ALL | PFILE_F_HIDE },
   { PFILE_F_LOG,	"LOG",		0,		0 },
@@ -1811,7 +1828,7 @@ static const KeywordTab_t opt_patch_tab[] =
 
 ///////////////////////////////////////////////////////////////////////////////
 
-int ScanOptPatchFile ( ccp arg )
+int ScanOptPatchFiles ( ccp arg )
 {
     if (!arg)
 	return 0;
@@ -2614,6 +2631,13 @@ bool IsByMagicBRSUB ( const void * data, uint data_size )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+bool CanBeTrackFF ( file_format_t ff )
+{
+    return (uint)ff < FF_N && FileTypeTab[ff].attrib & FFT_TRACK;
+}
+
+//-----------------------------------------------------------------------------
+
 bool IsArchiveFF ( file_format_t ff )
 {
     return (uint)ff < FF_N && FileTypeTab[ff].attrib & FFT_ARCHIVE;
@@ -2704,15 +2728,15 @@ file_format_t GetCompressedFF ( file_format_t ff )
 
 void SetCompressionFF
 (
-    file_format_t	ff_arch,	// if >0: set 'opt_fform'
-    file_format_t	ff_compr	// if >0: set 'fform_compr'
+    file_format_t	ff_arch,	// if >=0: set 'opt_fform'
+    file_format_t	ff_compr	// if >=0: set 'fform_compr'
 					//        and  'fform_compr_force'
 )
 {
-    if ( ff_arch > 0 )
+    if ( ff_arch >= 0 )
 	opt_fform = ff_arch;
 
-    if ( ff_compr > 0 )
+    if ( ff_compr >= 0 )
 	fform_compr = fform_compr_force = ff_compr;
 }
 
@@ -4256,7 +4280,7 @@ const mkw_prefix_t * GetPrefixTable(void)
 
 ///////////////////////////////////////////////////////////////////////////////
 
-const mkw_prefix_t * FindPrefix ( ccp pre, int pre_len, bool exact )
+const mkw_prefix_t * FindPrefix ( ccp pre, int pre_len )
 {
     if ( !pre || !*pre )
 	return 0;
@@ -4277,32 +4301,46 @@ const mkw_prefix_t * FindPrefix ( ccp pre, int pre_len, bool exact )
     if (!tab)
 	return 0;
 
-    for ( int i = 0; i < 2; i++ )
+    int beg = 0;
+    int end = current_prefix_tab_len - 1;
+    while ( beg <= end )
     {
-	int beg = 0;
-	int end = current_prefix_tab_len - 1;
-	while ( beg <= end )
-	{
-	    const uint idx = (beg+end)/2;
-	    const mkw_prefix_t *p = tab + idx;
-	    const int stat = strcmp(pre,p->prefix);
-	    if ( stat < 0 )
-		end = idx - 1 ;
-	    else if ( stat > 0 )
-		beg = idx + 1;
-	    else
-		return p;
-	}
-
-	if ( exact || i )
-	    return 0;
-
-	StringUpperS(pbuf,sizeof(pbuf),pre);
-	if (!strcmp(pbuf,pre))
-	    return 0;
-	pre = pbuf;
+	const uint idx = (beg+end)/2;
+	const mkw_prefix_t *p = tab + idx;
+	const int stat = strcmp(pre,p->prefix);
+	if ( stat < 0 )
+	    end = idx - 1 ;
+	else if ( stat > 0 )
+	    beg = idx + 1;
+	else
+	    return p;
     }
     return 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+const mkw_prefix_t * GetPrefix ( ccp name, int name_len )
+{
+    if (!name)
+	return 0;
+
+    if ( name_len < 0 )
+	name_len = strlen(name);
+    
+    ccp p1 = memchr(name,' ',name_len);
+    if (!p1)
+	return 0;
+
+    ccp p2 = memchr(p1+1,' ',name+name_len-p1-1);
+    if (p2)
+    {
+	const mkw_prefix_t *res = FindPrefix(name,p2-name);
+	if (res)
+	    return res;
+    }
+    
+    return FindPrefix(name,p1-name);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -5279,47 +5317,39 @@ void AnalyseSPF
 
     //--- game prefix
 
-    spf->game_order = 999999;
-    p1 = memchr(name,' ',nlen);
-    if (p1)
-    {
-	const mkw_prefix_t *pre1 = FindPrefix(name,p1-name,true);
 // [[mtcat]]
-	if (pre1)
+    spf->game_order = 999999;
+    const mkw_prefix_t *pre1 = GetPrefix(name,nlen);
+    if (pre1)
+    {
+	spf->game1.ptr	 = name;
+	spf->game1.len	 = strlen(pre1->prefix);
+	spf->game	 = spf->game1;
+	spf->game1_color = pre1->color;
+	spf->game_order	 = 1000 * pre1->order;
+	int add_game	 = 998;
+	name		+= strlen(pre1->prefix) + 1;
+	nlen		 = end - name;
+
+	if ( pre1->flags & MPF_PREFIX1 )
 	{
-	    spf->game1.ptr	= name;
-	    spf->game1.len	= p1 - name;
-	    spf->game		= spf->game1;
-	    spf->game1_color	= pre1->color;
-	    spf->game_order	= 1000 * pre1->order;
-	    int add_game	= 998;
-	    name		= p1+1;
-	    nlen		= end - name;
-
-	    if ( pre1->flags & MPF_PREFIX1 )
+	    const mkw_prefix_t *pre2 = GetPrefix(name,nlen);
+	    if ( pre2 && pre2->flags & MPF_PREFIX2 )
 	    {
-		p1 = memchr(name,' ',nlen);
-		if (p1)
-		{
-		    const mkw_prefix_t *pre2 = FindPrefix(name,p1-name,true);
-		    if ( pre2 && pre2->flags & MPF_PREFIX2 )
-		    {
-			spf->game2.ptr	 = name;
-			spf->game2.len	 = p1 - name;
-			spf->game.len	+= spf->game2.len + 1;
-			spf->game2_color = pre2->color;
-			name		 = p1+1;
-			nlen		 = end - name;
-			add_game	 = 2*pre2->order;
-		    }
-		}
+		spf->game2.ptr	 = name;
+		spf->game2.len	 = strlen(pre2->prefix);
+		spf->game.len	+= spf->game2.len + 1;
+		spf->game2_color = pre2->color;
+		name		+= strlen(pre1->prefix) + 1;
+		nlen		 = end - name;
+		add_game	 = 2*pre2->order;
 	    }
-	    spf->game_order += add_game;
-	    if (spf->boost.len)
-		spf->game_order++;
 	}
+	spf->game_order += add_game;
+	if (spf->boost.len)
+	    spf->game_order++;
     }
-
+    
 
     //--- finally we have the pure name
 

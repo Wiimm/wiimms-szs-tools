@@ -477,6 +477,76 @@ typedef int (*qsort_r_func)( const void *, const void *, void * );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			time & timer			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+
+//--- conversion factors
+
+#define SEC_PER_MIN	      60
+#define SEC_PER_HOUR	    3600
+#define SEC_PER_DAY	   86400
+#define SEC_PER_WEEK	  604800
+#define SEC_PER_MONTH	 2629746  // 365.2425 * SEC_PER_DAY / 12
+#define SEC_PER_QUARTER	 7889238  // 365.2425 * SEC_PER_DAY /  4
+#define SEC_PER_YEAR	31556952  // 365.2425 * SEC_PER_DAY
+
+#define MSEC_PER_SEC	1000ll
+#define MSEC_PER_MIN	 (MSEC_PER_SEC*SEC_PER_MIN)
+#define MSEC_PER_HOUR	 (MSEC_PER_SEC*SEC_PER_HOUR)
+#define MSEC_PER_DAY	 (MSEC_PER_SEC*SEC_PER_DAY)
+#define MSEC_PER_WEEK	 (MSEC_PER_SEC*SEC_PER_WEEK)
+#define MSEC_PER_MONTH	 (MSEC_PER_SEC*SEC_PER_MONTH)
+#define MSEC_PER_QUARTER (MSEC_PER_SEC*SEC_PER_QUARTER)
+#define MSEC_PER_YEAR	 (MSEC_PER_SEC*SEC_PER_YEAR)
+
+#define USEC_PER_MSEC	   1000ll
+#define USEC_PER_SEC	1000000ll
+#define USEC_PER_MIN	 (USEC_PER_SEC*SEC_PER_MIN)
+#define USEC_PER_HOUR	 (USEC_PER_SEC*SEC_PER_HOUR)
+#define USEC_PER_DAY	 (USEC_PER_SEC*SEC_PER_DAY)
+#define USEC_PER_WEEK	 (USEC_PER_SEC*SEC_PER_WEEK)
+#define USEC_PER_MONTH	 (USEC_PER_SEC*SEC_PER_MONTH)
+#define USEC_PER_QUARTER (USEC_PER_SEC*SEC_PER_QUARTER)
+#define USEC_PER_YEAR	 (USEC_PER_SEC*SEC_PER_YEAR)
+
+#define NSEC_PER_USEC	      1000ll
+#define NSEC_PER_MSEC	   1000000ll
+#define NSEC_PER_SEC	1000000000ll
+#define NSEC_PER_MIN	 (NSEC_PER_SEC*SEC_PER_MIN)
+#define NSEC_PER_HOUR	 (NSEC_PER_SEC*SEC_PER_HOUR)
+#define NSEC_PER_DAY	 (NSEC_PER_SEC*SEC_PER_DAY)
+#define NSEC_PER_WEEK	 (NSEC_PER_SEC*SEC_PER_WEEK)
+#define NSEC_PER_MONTH	 (NSEC_PER_SEC*SEC_PER_MONTH)
+#define NSEC_PER_QUARTER (NSEC_PER_SEC*SEC_PER_QUARTER)
+#define NSEC_PER_YEAR	 (NSEC_PER_SEC*SEC_PER_YEAR)
+
+
+//--- time types
+
+typedef uint u_sec_t;	// unsigned type to store time as seconds
+typedef int  s_sec_t;	//   signed type to store time as seconds
+typedef u64  u_msec_t;	// unsigned type to store time as milliseconds
+typedef s64  s_msec_t;	//   signed type to store time as milliseconds
+typedef u64  u_usec_t;	// unsigned type to store time as microseconds
+typedef s64  s_usec_t;	//   signed type to store time as microseconds
+typedef u64  u_nsec_t;	// unsigned type to store time as nanoseconds
+typedef s64  s_nsec_t;	//   signed type to store time as nanoseconds
+
+
+//--- max values time types
+
+#define S_SEC_MAX	S32_MAX
+#define U_SEC_MAX	U32_MAX
+#define S_MSEC_MAX	S64_MAX
+#define U_MSEC_MAX	U64_MAX
+#define S_USEC_MAX	S64_MAX
+#define U_USEC_MAX	U64_MAX
+#define S_NSEC_MAX	S64_MAX
+#define U_NSEC_MAX	U64_MAX
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////		    sockaddr + IPv* support		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[sockaddr_t]] [[sockaddr_in_t]]

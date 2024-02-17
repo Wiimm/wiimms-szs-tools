@@ -154,6 +154,14 @@ MAX-ONLINE-SEC	= %3u%s
 
 CUP-ICON-SIZE	= %u
 
+# Define the index format for slots. It is either "%%03x" (value 0) or "%%04x"
+# (value 1). Format "%%04x" ensures that all slots are displayed in the same
+# format (same number of characters). However, this is only relevant if a slot
+# ≥0x1000 (≥4096) is used. The distribution creator must ensure that the files
+# in ./Race/Course/ and directories in ./Race/Common/ are in the same format.
+
+SLOT-04X	= %u
+
 #------------------------------------------------------------------------------
 
 # The following setting is for LE-CODE developers only.

@@ -114,6 +114,7 @@ typedef enum enumOptions
 	OPT_NO_COLORS,
 	OPT_CT_CODE,
 	OPT_LE_CODE,
+	OPT_LE_04X,
 	OPT_CHDIR,
 	OPT_CONST,
 	OPT_MAX_FILE_SIZE,
@@ -130,7 +131,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 69
+	OPT__N_TOTAL // == 70
 
 } enumOptions;
 
@@ -407,6 +408,7 @@ typedef enum enumGetOpt
 	GO_NO_COLORS,
 	GO_CT_CODE,
 	GO_LE_CODE,
+	GO_LE_04X,
 	GO_CHDIR,
 	GO_NO_WILDCARDS,
 	GO_IN_ORDER,

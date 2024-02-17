@@ -777,6 +777,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
+	case GO_LE_04X:		lecode_04x = true; break;
 	case GO_OLD_SPINY:	old_spiny = true; break;
 	case GO_CRS1:		err += ScanOptCRS1(optarg); break;
 

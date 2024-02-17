@@ -261,6 +261,12 @@ void AnalyzeSZS
 		stgi->speed_mod = as->speed_mod;
 	    }
 
+	    as->ctid_list = GetCtIdByList(as->sha1_szs);
+	 #if 0 // test only SHA1 of unmodified file
+	    if ( !as->ctid_list && strcmp(as->sha1_szs,as->sha1_szs_norm) )
+		as->ctid_list = GetCtIdByList(as->sha1_szs_norm);
+	 #endif
+
 	    CheckFinishLine(&kmp,&as->kmp_finish);
 	    CheckWarnKMP(&kmp,&as->used_pos);
 	    szs->warn_bits |= kmp.warn_bits;
@@ -384,6 +390,11 @@ void AnalyzeSZS
 	ct_dest = StringCopyE(ct_dest,ct_end,",aiparam");
     }
 
+    if ( szs->have.szs[HAVESZS_LICENSE] > HFM_NONE )
+    {
+	ct_dest = StringCopyE(ct_dest,ct_end,",license");
+    }
+
 
     //--- scan KCL
 
@@ -472,10 +483,59 @@ void AnalyzeSZS
     if (szs->warn_bits)
 	ct_dest = StringCat2E(ct_dest,ct_end,",warn=",GetWarnSZSNames(szs->warn_bits,'+'));
 
+    const uint ctid = as->ctid_list ? as->ctid_list : as->ctid_attrib;
+    if (ctid)
+	ct_dest = snprintfE(ct_dest,ct_end,",id=%05u",ctid);
+
     szs->have.valid	= true;
     as->have		= szs->have;
     as->valid_track	= valid_track;
     as->duration_usec	= GetTimerUSec() - start_usec;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+uint GetCtIdByList ( sha1_hex_t sha1 )
+{
+    if ( strlen(sha1) != 40 || !opt_id_list )
+	return 0;
+
+    char search[42];
+    StringCat2S(search,sizeof(search),sha1,"|");
+
+    static char prev_search[42] = "";
+    static uint prev_id = 0;
+
+    if (!strcmp(search,prev_search))
+    {
+	PRINT0("search=%s, prev=%u\n",search,prev_id);
+	return prev_id;
+    }
+
+    PRINT0("search=%s\n",search);
+    strcpy(prev_search,search);
+    prev_id = 0;
+    
+    FILE *f = fopen(opt_id_list,"r");
+    if (!f)
+    {
+	ERROR1(ERR_CANT_OPEN,"Can't open id-list: %s\n",opt_id_list);
+	opt_id_list = 0;
+	return 0;
+    }
+
+    while (fgets(iobuf,sizeof(iobuf)-1,f))
+    {
+	if (!memcmp(iobuf,search,41))
+	{
+	    prev_id = strtoul(iobuf+41,0,10);
+	    PRINT0("... found=%u\n",prev_id);
+	    break;
+	}
+    }
+
+    fclose(f);
+    return prev_id;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -510,20 +570,23 @@ enumError ExecAnalyzeSZS ( analyze_param_t *ap )
 		ccp sep = strchr(ptr,',');
 		if (!sep)
 		    sep = end;
-		switch ( sep-ptr )
-		{
-		 case 4:
+		if (!memcmp(ptr,"id=",3))
+		    as.ctid_attrib = strtoul(ptr+3,0,10);
+		else
+		 switch ( sep-ptr )
+		 {
+		  case 4:
 		    if (!memcmp(ptr,"edit",4)) szs->have.attrib |= 1 << HAVEATT_EDIT;
 		    break;
 
-		 case 5:
+		  case 5:
 		    if (!memcmp(ptr,"cheat",5)) szs->have.attrib |= 1 << HAVEATT_CHEAT;
 		    break;
 
-		 case 7:
+		  case 7:
 		    if (!memcmp(ptr,"reverse",7)) szs->have.attrib |= 1 << HAVEATT_REVERSE;
 		    break;
-		}
+		 }
 		ptr = sep + 1;
 	    }
 	}
@@ -586,6 +649,7 @@ enumError ExecAnalyzeSZS ( analyze_param_t *ap )
 	"lex_features=\"%s\"\n"
 	"warn=\"%u=%s\"\n"
 	"have_common=%d\n"
+	"ct_id=\"%u %u %u\"\n"
 	"ct_attributes=\"%s\"\n"
 	"name_attributes=\"%.*s\"\n"
 
@@ -645,6 +709,8 @@ enumError ExecAnalyzeSZS ( analyze_param_t *ap )
 	,CreateFeatureInfoLEX(szs->have.lex_feat,true,"")
 	,szs->warn_bits,GetWarnSZSNames(szs->warn_bits,' ')
 	,as.have_common
+	,as.ctid_list ? as.ctid_list : as.ctid_attrib
+	,as.ctid_list,as.ctid_attrib
 	,as.ct_attrib+1
 	,name_attrib_len,name_attrib
 	);

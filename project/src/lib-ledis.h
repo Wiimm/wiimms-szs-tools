@@ -103,6 +103,9 @@
 #define LE_SHA1REF_MAGIC8_NUM	0x2353484131524546ull
 #define LE_SHA1REF_VERSION	2
 
+#define LE_SHA1ID_MAGIC8	"#SHA1ID1"
+#define LE_SHA1ID_MAGIC8_NUM	0x2353484131494431ull
+
 #define LE_PREFIX_MAGIC8	"#PREFIX1"
 #define LE_PREFIX_MAGIC8_NUM	0x2350524546495831ull
 
@@ -316,31 +319,42 @@ typedef enum le_options_t
     LEO_OUT_DUMMY	= 0x00080000,  // accept dummy names ("_abc") as valid (default)
      LEO_OUT_ALL	= LEO_OUT_EMPTY | LEO_OUT_MINUS | LEO_OUT_DUMMY,
 
+    //-- special signals
+
+    LEO_CUT_ALL		= 0x00100000,  // cut all
+    LEO_CUT_STD		= 0x00200000,  // cut for standard distribution.
+    LEO_CUT_CTCODE	= 0x00400000,  // cut for CT-CODE distribution.
+     LEO_M_CUT		= LEO_CUT_ALL | LEO_CUT_STD | LEO_CUT_CTCODE,
 
     //-- more options
 
-    LEO_IN_LECODE	= 0x00100000,  // import lecode binary
-    LEO_NO_SLOT		= 0x00200000,  // suppress 'SLOT <num>' if creating a LE-DEF file.
-    LEO_HEX2SLOT	= 0x00400000,  // if reading an szs of format '%03x.*', use it to force slot
-    LEO_NAME2SLOT	= 0x00800000,  // if reading an szs, use its filename to force number
-    LEO_CT_SLOTS	= 0x01000000,  // LEO_HEX2SLOT,LEO_NAME2SLOT: check for ct-code slots
-    LEO_BRIEF		= 0x02000000,  // suppress descriptions
-    LEO_AUTO_PATH	= 0x04000000,  // enable auto paths
+    LEO_PROGRESS0	= 0,
+    LEO_PROGRESS1	= 0x10000000,  // progress message approximately every 1 second
+    LEO_PROGRESS2	= 0x20000000,  // progress message approximately every 2 seconds
+    LEO_PROGRESS5	= 0x30000000,  // progress message approximately every 5 seconds
+    LEO_PROGRESS10	= 0x40000000,  // progress message approximately every 10 seconds
+    LEO_PROGRESS20	= 0x50000000,  // progress message approximately every 20 seconds
+    LEO_PROGRESS30	= 0x60000000,  // progress message approximately every 30 seconds
+    LEO_PROGRESS60	= 0x70000000,  // progress message approximately every 60 seconds
+     LEO_M_PROGRESS	= 0x70000000,  // mask for progress values
+     LEO_S_PROGRESS	= 28,	       // shift value to get 0..7
 
+    //-- more options
 
-    //-- special signals
+    LEO_IN_LECODE	= 0x000100000000ull,  // import lecode binary
+    LEO_NO_SLOT		= 0x000200000000ull,  // suppress 'SLOT <num>' if creating a LE-DEF file.
+    LEO_HEX2SLOT	= 0x000400000000ull,  // if reading an szs of format '%0[34}x.*', use it to force slot
+    LEO_NAME2SLOT	= 0x000800000000ull,  // if reading an szs, use its filename to force number
+    LEO_CT_SLOTS	= 0x001000000000ull,  // LEO_HEX2SLOT,LEO_NAME2SLOT: check for ct-code slots
+    LEO_BRIEF		= 0x002000000000ull,  // suppress descriptions
+    LEO_AUTO_PATH	= 0x004000000000ull,  // enable auto paths
 
-    LEO_CUT_ALL		= 0x08000000,  // cut all
-    LEO_CUT_STD		= 0x10000000,  // cut for standard distribution.
-    LEO_CUT_CTCODE	= 0x20000000,  // cut for CT-CODE distribution.
-     LEO_M_CUT		= LEO_CUT_ALL | LEO_CUT_STD | LEO_CUT_CTCODE,
-
-    LEO_HELP		= 0x40000000,  // print help and exit
+    LEO_HELP		= 0x008000000000ull,  // print help and exit
 
 
     //-- misc
 
-    LEO__ALL		= 0x1fffffff,
+    LEO__ALL		= 0x0f7f007fffffull,
     LEO__DEFAULT	= LTT__DEFAULT | LEO_OVERWRITE | LEO_OUT_DUMMY | LEO_AUTO_PATH,
     LEO__SRC		= LEO_LTT_SELECTOR | LEO_IN_ALL,
     LEO__DEST		= LEO_LTT_SELECTOR | LEO_OUT_ALL | LEO_M_OUTPUT | LEO_M_HOW,
@@ -353,6 +367,8 @@ extern le_options_t defaultLEO;
 le_options_t SetupDefaultLEO(void);
 
 le_options_t ScanLEO ( le_options_t current, ccp arg, ccp err_info );
+
+u_msec_t GetProgressMSecLEO ( le_options_t opt );
 
 bool IsInputNameValidLEO  ( ccp name, le_options_t opt );  // LEO_IN_EMPTY|LEO_IN_MINUS
 bool IsOutputNameValidLEO ( ccp name, le_options_t opt ); // LEO_OUT_EMPTY|LEO_OUT_MINUS
@@ -807,6 +823,11 @@ typedef struct le_distrib_t
 
     bool		is_pass2;		// true on pass2
     bool		second_ledef;		// true: don't clear tracks and cups
+
+    u_msec_t		show_progress;		// >0: show progress every # msec
+    u_msec_t		first_progress_msec;	// time of first progress message
+    u_msec_t		last_progress_msec;	// time of last progress message
+    uint		progress_count;		// number of processed objects
 }
 le_distrib_t;
 

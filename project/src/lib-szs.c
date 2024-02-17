@@ -73,6 +73,7 @@ const ccp have_szs_name[HAVESZS__N] =
     "minigame",		// HAVESZS_MINIGAME
     "aiparam_baa",	// HAVESZS_AIPARAM_BAA
     "aiparam_bas",	// HAVESZS_AIPARAM_BAS
+    "license",		// HAVESZS_LICENSE
 };
 
 const ccp have_szs_file[HAVESZS__N] =
@@ -87,6 +88,7 @@ const ccp have_szs_file[HAVESZS__N] =
     "common/minigame.kmg",		// HAVESZS_MINIGAME
     "AIParam/AIParam.baa",		// HAVESZS_AIPARAM_BAA
     "AIParam/AIParam.bas",		// HAVESZS_AIPARAM_BAS
+    "license.txt",			// HAVESZS_LICENSE
 };
 
 const file_format_t have_szs_fform[HAVESZS__N] =
@@ -101,6 +103,7 @@ const file_format_t have_szs_fform[HAVESZS__N] =
     FF_KMG,		// HAVESZS_MINIGAME
     FF_UNKNOWN,		// HAVESZS_AIPARAM_BAA
     FF_UNKNOWN,		// HAVESZS_AIPARAM_BAS
+    FF_UNKNOWN,		// HAVESZS_LICENSE
 };
 
 //
@@ -600,7 +603,7 @@ enumError SaveSZS
 
 void LinkCacheData
 (
-    // link/copy only files with data!
+    // link/copy only if opt_cache && data && size
 
     ccp			cache_fname,	// NULL or path to cache file
     ccp			src_fname,	// source filename
@@ -608,7 +611,7 @@ void LinkCacheData
     uint		size		// size of data
 )
 {
-    if ( cache_fname && src_fname && data && size )
+    if ( opt_cache && cache_fname && src_fname && data && size )
     {
 	PRINT("LinkCacheData(%d,%u) %s -> %s\n",data!=0,size,src_fname,cache_fname);
 	unlink(cache_fname);
@@ -2536,6 +2539,7 @@ int PrintFileSZS
 	const file_format_t fform
 		= AnalyseMagicByOpt(0,data,it->size,it->szs->size-it->off,
 					FF_UNKNOWN, it->path);
+	FixIteratorExtByFF(it,fform,fform);
 
 	char vers_buf[50];
 	PrintVersionSZS(vers_buf,sizeof(vers_buf),it);
@@ -3665,8 +3669,48 @@ int IterateFilesLTA
     // convert to local endian
     be32n( (u32*)&lta, (u32*)&lta, sizeof(lta_header_t)/4 );
 
-    const lta_node_t *src_node = (lta_node_t*)( szs->data + lta.node_off );
 
+    //----- load node list
+
+    const uint node_size = GetNodeListSizeLTA(&lta);
+    lta_node_t *node_buf = MALLOC(node_size);
+    enumError err = LoadFILE(szs->fname,0,lta.node_off,node_buf,node_size,0,0,false);
+    if (err)
+	return 1;
+    //be32n( (u32*)&node_buf, (u32*)&node_buf, node_size/4 );
+
+
+    //----- load ext list
+
+    char *ext_buf = 0, *ext_ptr = 0, *ext_end = 0;
+    if ( HaveExtLTA(&lta) && lta.ext_size )
+    {
+	ext_buf = MALLOC(lta.ext_size);
+	enumError err = LoadFILE(szs->fname,0,lta.ext_off,ext_buf,lta.ext_size,2,0,false);
+	PRINT0("LoadFILE(%s), err=%d\n",szs->fname,err);
+	if (!err)
+	{
+	    ext_ptr = ext_buf;
+	    ext_end = ext_buf + lta.ext_size;
+	}
+    }
+
+// [[%04x+]]
+    ccp format_szs, format_lfl, format_d_szs, format_d_lfl;
+    if ( lecode_04x || lta.base_slot + lta.n_slots >= 0x1000 )
+    {
+	format_szs   = "%04x.%s";
+	format_lfl   = "%04x.lfl";
+	format_d_szs = "%04x_d.%s";
+	format_d_lfl = "%04x_d.lfl";
+    }
+    else
+    {
+	format_szs   = "%03x.%s";
+	format_lfl   = "%03x.lfl";
+	format_d_szs = "%03x_d.%s";
+	format_d_lfl = "%03x_d.lfl";
+    }
 
     //----- main loop
 
@@ -3677,14 +3721,16 @@ int IterateFilesLTA
     int stat = 0;
     for ( uint rel_slot = 0; rel_slot < lta.n_slots && !stat; rel_slot++ )
     {
-	const uint slot = lta.base_slot + rel_slot;
-	lta_node_t node = src_node[rel_slot];
+	lta_node_t node;
 	// convert to local endian
-	be32n( (u32*)&node, (u32*)&node, sizeof(node)/4 );
+	be32n( (u32*)&node, (u32*)(node_buf+rel_slot), sizeof(node)/4 );
+	const uint slot = lta.base_slot + rel_slot;
 
 	if ( node.std.szs_size )
 	{
-	    snprintf(it->path,sizeof(it->path),"%03x.szs",slot);
+	    it->fix_extension = !( ext_ptr < ext_end && *ext_ptr );
+	    ccp ext	= it->fix_extension ? "x" : ext_ptr;
+	    snprintf(it->path,sizeof(it->path),format_szs,slot,ext);
 	    it->name	= it->path;
 	    it->off	= node.std.szs_off;
 	    it->size	= node.std.szs_size;
@@ -3692,9 +3738,13 @@ int IterateFilesLTA
 	    it->index++;
 	}
 
+	it->fix_extension = false;
+	if ( ext_ptr < ext_end )
+	    ext_ptr += strlen(ext_ptr)+1;
+
 	if ( !stat && node.std.lfl_size )
 	{
-	    snprintf(it->path,sizeof(it->path),"%03x.lfl",slot);
+	    snprintf(it->path,sizeof(it->path),format_lfl,slot);
 	    it->name	= it->path;
 	    it->off	= node.std.lfl_off;
 	    it->size	= node.std.lfl_size;
@@ -3704,7 +3754,9 @@ int IterateFilesLTA
 
 	if ( !stat && node.d.szs_size && node.d.szs_off != node.std.szs_off )
 	{
-	    snprintf(it->path,sizeof(it->path),"%03x_d.szs",slot);
+	    it->fix_extension = !( ext_ptr < ext_end && *ext_ptr );
+	    ccp ext	= it->fix_extension ? "x" : ext_ptr;
+	    snprintf(it->path,sizeof(it->path),format_d_szs,slot,ext);
 	    it->name	= it->path;
 	    it->off	= node.d.szs_off;
 	    it->size	= node.d.szs_size;
@@ -3712,9 +3764,13 @@ int IterateFilesLTA
 	    it->index++;
 	}
 
+	it->fix_extension = false;
+	if ( ext_ptr < ext_end )
+	    ext_ptr += strlen(ext_ptr)+1;
+
 	if ( !stat && node.d.lfl_size && node.d.lfl_off != node.std.lfl_off )
 	{
-	    snprintf(it->path,sizeof(it->path),"%03x_d.lfl",slot);
+	    snprintf(it->path,sizeof(it->path),format_d_lfl,slot);
 	    it->name	= it->path;
 	    it->off	= node.d.lfl_off;
 	    it->size	= node.d.lfl_size;
@@ -3723,13 +3779,27 @@ int IterateFilesLTA
 	}
     }
 
-    StringCopyS(it->path,sizeof(it->path),NODE_LIST_FILE);
-    it->name	= it->path;
-    it->off	= lta.node_off;
-    it->size	= lta.n_slots * sizeof(lta_node_t);
-    stat	= it->func_it(it,false);
+    if (!stat)
+    {
+	StringCopyS(it->path,sizeof(it->path),NODE_LIST_FILE);
+	it->name = it->path;
+	it->off  = lta.node_off;
+	it->size = lta.n_slots * sizeof(lta_node_t);
+	stat     = it->func_it(it,false);
+
+	if ( !stat && HaveExtLTA(&lta) )
+	{
+	    StringCopyS(it->path,sizeof(it->path),EXT_LIST_FILE);
+	    it->name = it->path;
+	    it->off  = lta.ext_off;
+	    it->size = lta.ext_size;
+	    stat     = it->func_it(it,false);
+	}
+    }
 
     // reset param
+    FREE(ext_buf);
+    FREE(node_buf);
     it->name = 0;
     it->no_dirs	= false;
     return stat;
@@ -3778,19 +3848,30 @@ bool DumpLTA
 	"%*s" "File size:    %10u = %#10x\n"
 	"%*s" "Node offset:  %10u = %#10x\n"
 	"%*s" "Node size:    %10u = %#10x\n"
-	"%*s" "Base slot:    %10u = %#10x\n"
-	"%*s" "Num of slots: %10u = %#10x\n"
-	"%*s" "Last slot:    %10u = %#10x\n"
 	,indent,"", (char*)&xhead->magic
 	,indent,"", head.version
 	,indent,"", head.head_size, head.head_size
 	,indent,"", head.file_size, head.file_size
 	,indent,"", head.node_off,  head.node_off
 	,indent,"", head.node_size, head.node_size
+	);
+
+    if (HaveExtLTA(&head))
+	printf(	"%*s" "Ext offset:   %10u = %#10x\n"
+		"%*s" "Ext size:     %10u = %#10x\n"
+		,indent,"", head.ext_off,  head.ext_off
+		,indent,"", head.ext_size, head.ext_size
+		);
+
+    printf(
+	"%*s" "Base slot:    %10u = %#10x\n"
+	"%*s" "Num of slots: %10u = %#10x\n"
+	"%*s" "Last slot:    %10u = %#10x\n"
 	,indent,"", head.base_slot, head.base_slot
 	,indent,"", head.n_slots,   head.n_slots
 	,indent,"", last_slot,      last_slot
 	);
+
     return true;
 }
 
@@ -4037,6 +4118,65 @@ szs_iterator_func GetIteratorFunction
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void FixIteratorExtByFF
+(
+    szs_iterator_t	*it,		// valid iterator data
+    file_format_t	fform_file,	// source file format
+    file_format_t	fform_arch	// (decompressed) archive format
+)
+{
+    if ( it && it->fix_extension )
+    {
+	it->fix_extension = false;
+	ccp ext = GetExtFF(fform_file,fform_arch);
+	if (!ext)
+	    ext = ".bin";
+
+	int plen = strlen(it->path);
+	ccp slash = strrchr(it->path,'/');
+	ccp point = strrchr(it->path,'.');
+	if ( point && ( !slash || point > slash ))
+	    plen = point - it->path;
+	if ( plen + strlen(ext) < sizeof(it->path) )
+	    StringCopyE(it->path+plen,it->path+sizeof(it->path),ext);
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+void FixIteratorExtByData
+(
+    szs_iterator_t	*it,		// valid iterator data
+    cvp			data,		// pointer to data
+    uint		size		// size of data
+)
+{
+    if ( it && it->fix_extension )
+    {
+	file_format_t ff = GetByMagicFF(data,size,size);
+	FixIteratorExtByFF(it,ff,ff);
+    }
+}
+
+//-----------------------------------------------------------------------------
+
+void FixIteratorExt
+(
+    szs_iterator_t	*it		// valid iterator data
+)
+{
+    if ( it && it->fix_extension )
+    {
+	const u8 * data = it->szs->data + it->off;
+	const file_format_t fform
+		= AnalyseMagicByOpt(0,data,it->size,it->szs->size-it->off,
+		    FF_UNKNOWN, it->path );
+	FixIteratorExtByFF(it,fform,fform);
+    }
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void * UpdateIteratorFF ( struct szs_iterator_t *it )
 {
     if (!it)
@@ -4067,7 +4207,7 @@ static int iterate_sort_files
     {
 	if ( it->off > it->szs->size || it->off + it->size > it->szs->size )
 	{
-	    if ( it->size != M1(it->size) && WARN_MODE & WARN_INVALID_OFFSET && verbose >= -2 )
+	    if ( it->size != M1(it->size) && WARN_MODE & WARN_INVALID_OFFSET && ErrorLogEnabled() )
 		ERROR0(ERR_WARNING,
 		    "Invalid offset [%x..%x, size=%zx] for subfile.\n"
 		    "=> File ignored: %s%s%s\n",
@@ -4141,7 +4281,7 @@ static int iterate_sub_files
     {
 	if ( it->off > it->szs->size || it->off + it->size > it->szs->size )
 	{
-	    if ( WARN_MODE & WARN_INVALID_OFFSET && verbose >= -2 )
+	    if ( WARN_MODE & WARN_INVALID_OFFSET && ErrorLogEnabled() )
 		ERROR0(ERR_WARNING,
 			"Invalid offset [%x..%x, size=%zx] for subfile.\n"
 			"=> File ignored: %s%s%s\n",
@@ -4894,7 +5034,7 @@ int CutFilesBRSUB
 	    {
 		if ( (u8*)bcut.eptr > max_eptr )
 		{
-		    if ( WARN_MODE & WARN_INVALID_OFFSET && verbose >= -2 )
+		    if ( WARN_MODE & WARN_INVALID_OFFSET && ErrorLogEnabled() )
 			ERROR0(ERR_WARNING,
 				"Invalid offset for BRSUB file => %u of %u entries ignored: %s%s%s\n",
 				bg_n_entry - cur_entry, bg_n_entry,

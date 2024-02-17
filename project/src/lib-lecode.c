@@ -79,7 +79,7 @@ ccp GetLecodeSupportWarning ( const le_analyze_t *ana )
     DASSERT(ana);
     return !( ana->valid & LE_HEAD_VALID )
 	? "LE-CODE file header is invalid"
-	: GetEncodedVersion() < ana->szs_required
+	: GetNumericVersion() < ana->szs_required
 	? PrintCircBuf("SZS Tools v%s or younger required",DecodeVersion(ana->szs_required))
 	: IsLecodeSupported(ana->valid)
 	? 0
@@ -120,6 +120,7 @@ int ScanOptTrackSource ( ccp arg, int arg_len, int mode )
 		&& !FindParamField(&opt_track_source,path)
 		)
 	    {
+// [[%04x-]]
 		PRINT("APPEND TRACK_SOURCE: 0x%03x %s\n",mode,path);
 		if (!opt_track_source.field)
 		    InitializeParamField(&opt_track_source);
@@ -1351,6 +1352,7 @@ static void NormalizeLPAR ( le_lpar_t * lp, int build )
     lp->block_textures		= lp->block_textures > 0;
     lp->staticr_points		= lp->staticr_points > 0;
     lp->developer_modes		= lp->developer_modes > 0;
+    lp->slot_04x		= lp->slot_04x > 0;
 
     if ( build >= 37 )
     {
@@ -1484,6 +1486,8 @@ static void CopyLPAR2Data ( le_analyze_t * ana )
 
     if ( offsetof(le_binpar_v1_t,cup_icon_size) < ana->param_size )
 	h->cup_icon_size = lp->cup_icon_size;
+    if ( offsetof(le_binpar_v1_t,slot_04x) < ana->param_size )
+	h->slot_04x = lp->slot_04x;
 
     // [[new-lpar]]
 }
@@ -1648,6 +1652,7 @@ enumError WriteSectionLPAR
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS,"  # ",0)
 		,lpar->cup_icon_size
+		,lpar->slot_04x
 		 ,lpar->developer_modes
 		 ,lpar->dev_mode1
 		 ,lpar->dev_mode2
@@ -1682,6 +1687,7 @@ enumError WriteSectionLPAR
 	       "MIN-ONLINE-SEC	= %3u%s\r\n"
 	       "MAX-ONLINE-SEC	= %3u%s\r\n"
 	       "CUP-ICON-SIZE	= %u\r\n"
+	       "SLOT-04X	= %u\r\n"
 	       "\r\n"
 	       "DEVELOPER-MODES	= %u\r\n"   // always last 4 settings
 	       "DEV-MODE1	= %u\r\n"
@@ -1710,6 +1716,7 @@ enumError WriteSectionLPAR
 		,lpar->min_online_sec ,PrintHMS(0,0,lpar->min_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->max_online_sec ,PrintHMS(0,0,lpar->max_online_sec,LE_VIEW_ONLINE_HMS," # ",0)
 		,lpar->cup_icon_size
+		,lpar->slot_04x
 		 ,lpar->developer_modes
 		 ,lpar->dev_mode1
 		 ,lpar->dev_mode2
@@ -2020,7 +2027,7 @@ enumError AnalyzeLEBinary
 	break;
     }
 
-    if ( GetEncodedVersion() >= ana->szs_required )
+    if ( GetNumericVersion() >= ana->szs_required )
 	    ana->valid |= LE_HEAD_VERSION;
 
     snprintf(ana->identifier,sizeof(ana->identifier),
@@ -2163,11 +2170,6 @@ enumError AnalyzeLEBinary
 		    ana->lpar.drag_blue_shell	= p->drag_blue_shell;
 		    ana->lpar.thcloud_frames	= ntohs(p->thcloud_frames);
 		}
-//		else
-//		{
-//		    ana->lpar.drag_blue_shell	=   1;
-//		    ana->lpar.thcloud_frames	= 300;
-//		}
 
 		if ( param_size >= sizeof(le_binpar_v1_269_t) )
 		{
@@ -2206,6 +2208,12 @@ enumError AnalyzeLEBinary
 		{
 		    le_binpar_v1_276_t *p	= (le_binpar_v1_276_t*)(data+off_param);
 		    ana->lpar.cup_icon_size	= p->cup_icon_size;
+		}
+
+		if ( param_size >= sizeof(le_binpar_v1_277_t) )
+		{
+		    le_binpar_v1_277_t *p	= (le_binpar_v1_277_t*)(data+off_param);
+		    ana->lpar.slot_04x		= p->slot_04x;
 		}
 
 		// [[new-lpar]]
@@ -2713,6 +2721,7 @@ static le_cup_track_t * DumpLECup
     if (warnings)
 	*warnings = 0;
 
+    ccp format = ana->n_slot < 0x1000 ? " %s%3x%s%s" : " %s%4x%s%s";
     uint tr;
     for ( tr = 0; tr < n_track; tr++ )
     {
@@ -2725,7 +2734,7 @@ static le_cup_track_t * DumpLECup
 	    default:		highlight = IsMkwSpecial(tid); break;
 	}
 
-	fprintf(f," %s%3x%s%s",
+	fprintf(f,format,
 		highlight ? col->info : "",
 		tid,
 		highlight ? col->reset : "",
@@ -2819,6 +2828,8 @@ static void DumpLETracks
 
     //--- battle cups
 
+    ccp format_cup = ana->n_cup_arena < 100 && ana->n_cup_track < 1000 ? "%*sCup %3u:" : "%*sCup %4u:"; 
+
     if ( ana->n_cup_arena && ana->cup_arena )
     {
 	fprintf(f,"\n%*s%s" "%u cup%s with %u battle arenas:%s\n",
@@ -2832,7 +2843,7 @@ static void DumpLETracks
 	{
 	    if ( cp[0] || cp[1] || cp[2] || cp[3] || cp[4] )
 	    {
-		fprintf(f,"%*s" "Cup %3u:",indent,"",cup);
+		fprintf(f,format_cup,indent,"",cup);
 		uint warnings;
 		DumpLECup(f,ana,cp,5,col,CHECK_ARENA,&warnings,done);
 		if (warnings)
@@ -2865,7 +2876,7 @@ static void DumpLETracks
 	{
 	    if ( cp[0] || cp[1] || cp[2] || cp[3] )
 	    {
-		fprintf(f,"%*s" "Cup %3u:",indent,"",cup);
+		fprintf(f,format_cup,indent,"",cup);
 		uint warnings;
 		DumpLECup(f,ana,cp,4,col,CHECK_TRACK,&warnings,done);
 		if (warnings)
@@ -3066,8 +3077,9 @@ static void DumpLEUsageMap
     {
 	if (!(slot&63))
 	{
-	     fprintf(f,"%s\n%*s%3x: ",col->reset,indent,"",slot);
-	     prev_col = 0;
+	    fprintf(f,"%s\n%*s",col->reset,indent,"");
+	    fprintf(f, max_view < 0x1000 ? "%3x: " : "%4x: ", slot );
+	    prev_col = 0;
 	}
 	else if (!(slot&7))
 	    fputc(' ',f);
@@ -3239,7 +3251,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 
 	    if (ana->szs_required)
 	    {
-		const bool valid = GetEncodedVersion() >= ana->szs_required;
+		const bool valid = GetNumericVersion() >= ana->szs_required;
 		fprintf(f,
 		    "%*s" "Required SZS:      v%-*s (%s%s%s)\n"
 		    ,indent,""
@@ -3251,7 +3263,7 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 
 	    if (ana->szs_recommended)
 	    {
-		const bool valid = GetEncodedVersion() >= ana->szs_recommended;
+		const bool valid = GetNumericVersion() >= ana->szs_recommended;
 		fprintf(f,
 		    "%*s" "Recommended SZS:   v%-*s (%s%s%s)\n"
 		    ,indent,""
@@ -3279,14 +3291,20 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
     {
 	const le_binary_param_t *h = ana->param;
 	DASSERT(h);
+	const uint lpar_size = ntohl(h->size);
 	fprintf(f,
 		"%*s%s" "Parameters (magic: %.4s):%s\n"
 		"%*s" "LPAR Version:      %u\n"
 		"%*s" "LPAR size:         %x/hex = %u bytes\n"
 		,indent-2,"", col.heading, h->magic, col.reset
 		,indent,"", ntohl(h->version)
-		,indent,"", ntohl(h->size), ntohl(h->size)
+		,indent,"", lpar_size, lpar_size
 		);
+
+	if ( sizeof(le_binpar_v1_t) < lpar_size )
+	    fprintf(f,"%*s" "  Supported size:  %s%zx/hex = %zu bytes   Warning!%s\n",
+		indent,"", col.warn,
+		sizeof(le_binpar_v1_t), sizeof(le_binpar_v1_t), col.reset );
     }
 
     switch (ana->param_vers)
@@ -3413,6 +3431,10 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	if ( ana->param_size >= sizeof(le_binpar_v1_276_t) )
 	    fprintf(f,"%*s" "Cup image size:    %u x %u pixels\n"
 		,indent,"", h->cup_icon_size, h->cup_icon_size );
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_277_t) )
+	    fprintf(f,"%*s" "Slot format:       %u = \"%%0%ux\"\n"
+		,indent,"", h->slot_04x, h->slot_04x ? 4 : 3 );
 
 	// [[new-lpar]]
 
@@ -3559,17 +3581,27 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		);
 
 	if ( ana->course_par )
+	{
 	    fprintf(f,
 		"%*s" "Course magic:      %s\n"
 		"%*s" "Total track slots: %4u / %4u%s\n"
-		"%*s" "Used racing slots: %4u / %4u\n"
-		"%*s" "Used battle slots: %4u / %4u\n"
 		,indent,"", ana->course_par->magic
 		,indent,"", ana->n_slot, ana->max_slot,
 			    ana->n_slot > ana->max_slot ? fail : ""
+		);
+
+	    if ( LE_CODE_MAX_TRACKS < ana->max_slot )
+		fprintf(f,
+			"%*s" "  Supported slots:%s%12u  Warning!%s\n",
+			indent,"", col.warn, LE_CODE_MAX_TRACKS, col.reset );
+
+	    fprintf(f,
+		"%*s" "Used racing slots: %4u / %4u\n"
+		"%*s" "Used battle slots: %4u / %4u\n"
 		,indent,"", ana->used_rslots, ana->max_rslots
 		,indent,"", ana->used_bslots, ana->max_bslots
 		);
+	}
     }
 
     if ( long_count > 0 )
@@ -3631,13 +3663,17 @@ void TransferTrackFile
 	    struct stat st;
 	    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
 	    {
-		snprintf(dest,sizeof(dest),"%s/%03x.szs",opt_track_dest,dest_slot);
+// [[%04x+]]
+		ccp format = lecode_04x ? "%s/%04x.szs" : "%s/%03x.szs";
+		snprintf(dest,sizeof(dest),format,opt_track_dest,dest_slot);
 		if (!TransferFile(log,dest,src,ptr->num|flags,0666))
 		{
 		    PathCatBufPPE(src,sizeof(src),ptr->key,src_name,"_d.szs");
 		    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
 		    {
-			snprintf(dest,sizeof(dest),"%s/%03x_d.szs",opt_track_dest,dest_slot);
+// [[%04x+]]
+			ccp format = lecode_04x ? "%s/%04x_d.szs" : "%s/%03x_d.szs";
+			snprintf(dest,sizeof(dest),format,opt_track_dest,dest_slot);
 			TransferFile(log,dest,src,ptr->num|flags,0666);
 		    }
 		}
@@ -3661,13 +3697,17 @@ void TransferTrackBySlot
 	flags &= TFMD_M_FLAGS;
 
 	char dest[PATH_MAX], src[PATH_MAX];
-	snprintf( dest, sizeof(dest), "%s/%03x.szs", opt_track_dest, dest_slot );
-	snprintf( src,  sizeof(src),  "%s/%03x.szs", opt_track_dest, src_slot  );
+// [[%04x+]] x2
+	ccp format = lecode_04x ? "%s/%04x.szs" : "%s/%03x.szs";
+	snprintf( dest, sizeof(dest), format, opt_track_dest, dest_slot );
+	snprintf( src,  sizeof(src),  format, opt_track_dest, src_slot  );
 
 	if (!TransferFile(log,dest,src,TFMD_LINK|flags,0666))
 	{
-	    snprintf( dest, sizeof(dest), "%s/%03x_d.szs", opt_track_dest, dest_slot );
-	    snprintf( src,  sizeof(src),  "%s/%03x_d.szs", opt_track_dest, src_slot  );
+// [[%04x+]] x2
+	    ccp format = lecode_04x ? "%s/%04x_d.szs" : "%s/%03x_d.szs";
+	    snprintf( dest, sizeof(dest), format, opt_track_dest, dest_slot );
+	    snprintf( src,  sizeof(src),  format, opt_track_dest, src_slot  );
 	    TransferFile(log,dest,src,TFMD_LINK|flags,0666);
 	}
     }
@@ -4100,7 +4140,7 @@ enumError PatchLECODE ( le_analyze_t * ana )
     if ( ana->header_vers >= 5 && memcmp(ana->data,saved,ana->data_size) )
     {
 	le_binary_head_v5_t *h5 = (le_binary_head_v5_t*)ana->data;
-	h5->edit_version = htonl(GetEncodedVersion());
+	h5->edit_version = htonl(GetNumericVersion());
 	h5->edit_time = htonl(GetTimeSec(false));
     }
 
@@ -4124,15 +4164,12 @@ static enumError ScanTextLPAR_PARAM
     DASSERT(si);
     PRINT(">> ScanTextLPAR_PARAM(pass=%u)\n",is_pass2+1);
 
-
     //--- setup data
 
-    DEFINE_VAR(use_avail_txt);
-    int limit_mode = -1;
-
+    lpar->new_limit_mode = -1;
     const ScanParam_t ptab[] =
     {
-	{ "LIMIT-MODE",		SPM_INT, &limit_mode },
+	{ "LIMIT-MODE",		SPM_INT, &lpar->new_limit_mode },
 	{ "DEVELOPER-MODES",	SPM_U8,  &lpar->developer_modes },
 	{ "DEV-MODE1",		SPM_U8,  &lpar->dev_mode1 },
 	{ "DEV-MODE2",		SPM_U8,  &lpar->dev_mode2 },
@@ -4160,11 +4197,13 @@ static enumError ScanTextLPAR_PARAM
 	{ "MIN-ONLINE-SEC",	SPM_U16, &lpar->min_online_sec },
 	{ "MAX-ONLINE-SEC",	SPM_U16, &lpar->max_online_sec },
 	{ "CUP-ICON-SIZE",	SPM_U8,  &lpar->cup_icon_size },
+	{ "SLOT-04X",		SPM_U8,  &lpar->slot_04x },
 	// [[new-lpar]]
 
-	{ "USE-AVAIL-TXT",	SPM_VAR,  &use_avail_txt }, // [[obsolete]] 2023-09
 	{0}
     };
+
+    DefineScanParamList(&si->gvar,"LPAR$",ptab);
 
 
     //--- main loop
@@ -4175,19 +4214,15 @@ static enumError ScanTextLPAR_PARAM
 	if ( !ch || ch == '[' )
 	    break;
 
-	ScanParamSI(si,ptab);
+	ScanParamDefSI(si,ptab,&si->gvar,"LPAR$");
     }
     CheckLevelSI(si);
 
-    if ( !si->no_warn && use_avail_txt.mode != VAR_UNSET )
-	ERROR0(ERR_WARNING,
-		"Don't use deprecated LPAR setting USE-AVAIL-TXT: %s",
-		si->cur_file->name);
-    FreeV(&use_avail_txt);
-
-    if ( limit_mode >= 0 )
-	LimitToLparMode(lpar,limit_mode);
-
+    if ( lpar->new_limit_mode >= 0 )
+    {
+	lpar->limit_mode = lpar->new_limit_mode;
+	LimitToLparMode(lpar,lpar->limit_mode);
+    }
     return ERR_OK;
 }
 

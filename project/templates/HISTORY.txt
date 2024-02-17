@@ -878,6 +878,12 @@ szs v2.40a r8917 - 2023-12-31
  - New option: wstrt --add-old-lecode: Add the old LE-CODE starter.
 
 
+szs v2.40b r8923 - 2024-01-02
+
+ - Bug fix for option --add-lecode: Due to an implementation error, the option
+   was ignored.
+
+
 @@MODULE(last-history.txt)@@
 
 

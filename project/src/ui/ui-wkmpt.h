@@ -131,6 +131,7 @@ typedef enum enumOptions
 	OPT_NO_COLORS,
 	OPT_CT_CODE,
 	OPT_LE_CODE,
+	OPT_LE_04X,
 	OPT_CHDIR,
 	OPT_CONST,
 	OPT_BATTLE,
@@ -161,7 +162,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 100
+	OPT__N_TOTAL // == 101
 
 } enumOptions;
 
@@ -503,6 +504,7 @@ typedef enum enumGetOpt
 	GO_NO_COLORS,
 	GO_CT_CODE,
 	GO_LE_CODE,
+	GO_LE_04X,
 	GO_CHDIR,
 	GO_SCALE,
 	GO_SHIFT,

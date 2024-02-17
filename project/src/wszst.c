@@ -1844,6 +1844,7 @@ static int list_func
 	}
     }
 
+    FixIteratorExt(it);
     const int indent = 2 * it->recurse_level;
 
     if ( long_count > 1 )
@@ -3881,8 +3882,11 @@ static enumError patch_file_helper
 	szs.allow_ext_data = true;
 
 	bool dirty = PatchSZS(&szs);
-	if (( opt_norm || need_norm || opt_auto_add || opt_cup_icons || dirty )
-		&& NormalizeSZS(&szs) )
+	//xBINGO;
+	PRINT0("dirty=%d, opt_norm=%d, need_norm=%d, opt_auto_add=%d, opt_cup_icons=%s\n",
+		dirty, opt_norm, need_norm, opt_auto_add, opt_cup_icons );
+
+	if (( opt_norm || need_norm || opt_auto_add || opt_cup_icons || dirty ) && NormalizeSZS(&szs) )
 	{
 	    dirty = true;
 	}
@@ -3924,6 +3928,14 @@ static enumError patch_file_helper
 
 	if (!dirty)
 	    dirty = data.data.len != szs.size || memcmp(data.data.ptr,szs.data,szs.size);
+
+	if ( !dirty && was_compressed )
+	{
+ 	    CompressSZS(&szs,0,true);
+	    dirty = orig.data.len != szs.csize || memcmp(orig.data.ptr,szs.cdata,szs.csize);
+	    FreeExMem(&orig);
+	    orig = ExMemByS(szs.cdata,szs.csize);
+	}
 
 	if ( !dirty && ( !src_dest_diff || opt_no_copy ) )
 	    goto abort;
@@ -5792,6 +5804,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
+	case GO_LE_04X:		lecode_04x = true; break;
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
 
@@ -5855,7 +5868,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_MDL:		err += ScanOptMdl(optarg); break;
 	case GO_MINIMAP:	break;
 	case GO_PAT:		err += ScanOptPat(optarg); break;
-	case GO_PATCH_FILE:	err += ScanOptPatchFile(optarg); break;
+	case GO_PATCH_FILES:	err += ScanOptPatchFiles(optarg); break;
 
 	case GO_KMG_LIMIT:	err += ScanOptKmgLimit(optarg); break;
 	case GO_KMG_COPY:	err += ScanOptKmgCopy(optarg); break;
@@ -5891,6 +5904,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 
 	case GO_ESC:		err += ScanEscapeChar(optarg) < 0; break;
 	case GO_SOURCE:		SetSource(optarg); break;
+	case GO_ID_LIST:	SetIdList(optarg); break;
 	case GO_REFERENCE:	SetReference(optarg); break;
 	case GO_DEST:		SetDest(optarg,false); break;
 	case GO_DEST2:		SetDest(optarg,true); break;
@@ -5904,27 +5918,27 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_IGNORE_SETUP:	opt_ignore_setup = true; break;
 	case GO_PURGE:		opt_purge = true; break;
 
-	case GO_YAZ0:		SetCompressionFF(0,FF_YAZ0); break;
-	case GO_YAZ1:		SetCompressionFF(0,FF_YAZ1); break;
-	case GO_XYZ:		SetCompressionFF(0,FF_XYZ); break;
-	case GO_BZ:		SetCompressionFF(0,FF_BZ); break;
-	case GO_BZIP2:		SetCompressionFF(0,FF_BZIP2); break;
-	case GO_LZ:		SetCompressionFF(0,FF_LZ); break;
-	case GO_LZMA:		SetCompressionFF(0,FF_LZMA); break;
+	case GO_YAZ0:		SetCompressionFF(FF_INVALID,FF_YAZ0); break;
+	case GO_YAZ1:		SetCompressionFF(FF_INVALID,FF_YAZ1); break;
+	case GO_XYZ:		SetCompressionFF(FF_INVALID,FF_XYZ); break;
+	case GO_BZ:		SetCompressionFF(FF_INVALID,FF_BZ); break;
+	case GO_BZIP2:		SetCompressionFF(FF_INVALID,FF_BZIP2); break;
+	case GO_LZ:		SetCompressionFF(FF_INVALID,FF_LZ); break;
+	case GO_LZMA:		SetCompressionFF(FF_INVALID,FF_LZMA); break;
 
-	case GO_U8:		SetCompressionFF(FF_U8,0); break;
+	case GO_U8:		SetCompressionFF(FF_U8,FF_INVALID); break;
 	case GO_SZS:		SetCompressionFF(FF_U8,FF_YAZ0); break;
-	case GO_WU8:		SetCompressionFF(FF_WU8,0); break;
+	case GO_WU8:		SetCompressionFF(FF_WU8,FF_INVALID); break;
 	case GO_XWU8:		SetCompressionFF(FF_WU8,FF_XYZ); break;
 	case GO_WBZ:		SetCompressionFF(FF_WU8,FF_BZ); break;
 	case GO_WLZ:		SetCompressionFF(FF_WU8,FF_LZ); break;
-	//case GO_LTA:		SetCompressionFF(FF_LTA,0); break;
-	case GO_LFL:		SetCompressionFF(FF_LFL,0); break;
-	//case GO_ARC:		SetCompressionFF(FF_RARC,0); break;
-	case GO_BRRES:		SetCompressionFF(FF_BRRES,0); break;
-	case GO_BREFF:		SetCompressionFF(FF_BREFF,0); break;
-	case GO_BREFT:		SetCompressionFF(FF_BREFT,0); break;
-	case GO_PACK:		SetCompressionFF(FF_PACK,0); break;
+	//case GO_LTA:		SetCompressionFF(FF_LTA,FF_INVALID); break;
+	case GO_LFL:		SetCompressionFF(FF_LFL,FF_INVALID); break;
+	//case GO_ARC:		SetCompressionFF(FF_RARC,FF_INVALID); break;
+	case GO_BRRES:		SetCompressionFF(FF_BRRES,FF_INVALID); break;
+	case GO_BREFF:		SetCompressionFF(FF_BREFF,FF_INVALID); break;
+	case GO_BREFT:		SetCompressionFF(FF_BREFT,FF_INVALID); break;
+	case GO_PACK:		SetCompressionFF(FF_PACK,FF_INVALID); break;
 
 	case GO_JSON:		script_fform = FF_JSON; break;
 	case GO_SH:		script_fform = FF_SH; break;
@@ -6267,6 +6281,7 @@ extern int main_wstrt ( int argc, char ** argv );
 extern int main_wrapper ( int argc, char ** argv );
 extern int main_getopt ( int argc, char ** argv );
 
+// [[wrapper_t]]
 typedef struct wrapper_t
 {
     uint	hide;	// 0:off, 1:hide, 2:is wrapper

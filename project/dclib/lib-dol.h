@@ -392,6 +392,10 @@ uint RemoveDolSections
 #define GCT_SEP_NUM1	0xf0000001u
 #define GCT_REG_OFFSET	8
 
+#define GCTTXT_MAGIC	 "#GCT"
+#define GCTTXT_MAGIC_NUM 0x23474354u
+
+
 ///////////////////////////////////////////////////////////////////////////////
 // [[gch_header_t]]
 

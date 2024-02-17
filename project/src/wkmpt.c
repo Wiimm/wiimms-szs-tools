@@ -828,7 +828,7 @@ static enumError diff_kmp ( ccp fname1, ccp fname2 )
 		{
 		    const int diff_verbose = verbose + 2;
 		    err = DiffKMP( &kmp1, &kmp2, diff_verbose < 0 ? 0 : diff_verbose );
-		    if ( verbose >= -2 && err == ERR_DIFFER )
+		    if ( ErrorLogEnabled() && err == ERR_DIFFER )
 			printf("KMP differ: %s : %s\n", kmp1.fname, kmp2.fname );
 		    else if ( verbose >= 0 && err == ERR_OK )
 			printf("KMP identical: %s : %s\n", kmp1.fname, kmp2.fname );
@@ -1611,6 +1611,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
+	case GO_LE_04X:		lecode_04x = true; break;
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
 

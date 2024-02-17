@@ -52,6 +52,8 @@
 #ifndef SZS_LIB_SZS_H
 #define SZS_LIB_SZS_H 1
 
+//#include <stddef.h>
+
 #include "lib-std.h"
 #include "lib-szs-file.h"
 #include "lib-object.h"
@@ -132,7 +134,10 @@ __attribute__ ((packed)) u8_node_t;
 #define LTA_VERSION		1
 #define LTA_DEFAULT_ALIGN	0x20
 #define LTA_MAX_SIZE		0x7fffffe0
-#define LTA_MAX_NODES		4096
+#define LTA_MAX_NODES		0x2000
+
+#define USELTA_MAGIC		"#USE-LTA"
+#define USELTA_MAGIC_NUM	0x235553452d4c5441ull
 
 //-----------------------------------------------------------------------------
 // [[lta_header_t]]
@@ -147,8 +152,21 @@ typedef struct lta_header_t
     be32_t	node_size;	// size of single node == sizeof(lta_node_t)
     be32_t	base_slot;	// first used slot
     be32_t	n_slots;	// number of used slots
+
+    // extension since v2.41a, 2024-01-22
+    be32_t	ext_off;	// offset of extension string list
+    be32_t	ext_size;	// size of extension string list
 }
 __attribute__ ((packed)) lta_header_t;
+
+//-------------------------
+
+static inline bool HaveExtLTA ( const lta_header_t *lta )
+{
+    return lta
+	&& lta->head_size >= offsetof(lta_header_t,ext_size) + sizeof(lta->ext_size)
+	&& lta->ext_size;
+}
 
 //-----------------------------------------------------------------------------
 // [[lta_node_index_t]]
@@ -207,6 +225,11 @@ typedef struct lta_node_t
 }
 __attribute__ ((packed)) lta_node_t;
 
+//-------------------------
+
+static inline uint GetNodeListSizeLTA ( const lta_header_t *lta )
+	{ return lta->n_slots * sizeof(lta_node_t); }
+
 //-----------------------------------------------------------------------------
 // [[lta_manager_t]]
 
@@ -214,7 +237,8 @@ typedef struct lta_manager_t
 {
     le_distrib_t *ld;			// current le_distrib_t
     ccp		destdir;		// destination directory
-    bool	rm_source;		// remove source SZS files
+    bool	rm_source;		// true: remove source SZS files
+    bool	append_ext;		// true: append extension list
     file_format_t force_ff;		// force file format id !=FF_UNKNOWN
     uint	track_index;		// current track index for "tracks-%u.lta"
     u_nsec_t	start_nsec;		// start time by GetTimerNSec();
@@ -226,7 +250,7 @@ typedef struct lta_manager_t
     int		base_slot;		// base slot of current LTA, only valid if >= 0
     int		last_slot;		// last used slot of current LTA
 
-    uint	data_offset;		// current data offset
+    size_t	data_offset;		// current data offset
     size_t	current_offset;		// return value of WriteFileAt()
 
     u8		*buf;			// temp buffer for files, alloced
@@ -242,7 +266,14 @@ typedef struct lta_manager_t
     uint	szs_dup_count;		// counter of SZS duplicates
     uint	lfl_dup_count;		// counter of LFL duplicates
 
-    lta_node_t node[LTA_MAX_NODES];	// nodes, local endian
+    u_msec_t	start_msec;		// start time, set by GetTimerMSec() 
+    u_msec_t	last_log_msec;		// last log time, set by GetTimerMSec()
+    u_msec_t	show_progress;		// >0: show progress counter every # ms
+    uint	progress_nodes;		// number of processed slots
+    uint	progress_tracks;	// number of processed tracks
+
+    FastBuf_t	ext;			// list with file extensions (without leading '.')
+    lta_node_t	node[LTA_MAX_NODES];	// nodes, local endian
 }
 lta_manager_t;
 
@@ -583,7 +614,7 @@ enumError SaveSZS
 
 void LinkCacheData
 (
-    // link/copy only files with data!
+    // link/copy only if opt_cache && data && size
 
     ccp			cache_fname,	// NULL or path to cache file
     ccp			src_fname,	// source filename
@@ -967,6 +998,7 @@ typedef struct szs_iterator_t
     bool		no_dirs;	// true: archive without directory support
     bool		is_dir;		// true: directory argument
     bool		has_subfiles;	// true: this file has enabled sub files
+    bool		fix_extension;	// true: call FixIteratorExtBy*()
     u16			fform;		// NULL or file format
     int			index;		// index of 'fst_item'
     int			depth;		// directory depth
@@ -1111,6 +1143,27 @@ static inline szs_subfile_t * AppendSubfileSZS
 {
     return InsertSubfileSZS(szs,~0,it,path);
 }
+
+///////////////////////////////////////////////////////////////////////////////
+
+void FixIteratorExtByFF
+(
+    szs_iterator_t	*it,		// valid iterator data
+    file_format_t	fform_file,	// source file format
+    file_format_t	fform_arch	// (decompressed) archive format
+);
+
+void FixIteratorExtByData
+(
+    szs_iterator_t	*it,		// valid iterator data
+    cvp			data,		// pointer to data
+    uint		size		// size of data
+);
+
+void FixIteratorExt
+(
+    szs_iterator_t	*it		// valid iterator data
+);
 
 //
 ///////////////////////////////////////////////////////////////////////////////

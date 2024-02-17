@@ -88,6 +88,7 @@
 #else
   #define LOG_SHA1(d,s,i)
 #endif
+#define LOG_SHA11(d,s,i) LogSHA1(__FUNCTION__,__FILE__,__LINE__,d,s,i)
 
 void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 
@@ -100,6 +101,7 @@ void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 #define CONFIG_FILE		"wiimms-szs-tools.conf"
 #define SZS_SETUP_FILE		"wszst-setup.txt"
 #define NODE_LIST_FILE		"node-list.bin"
+#define EXT_LIST_FILE		"ext-list.bin"
 #define CHECK_FILE_SIZE		0x800
 #define OPT_PNG_TYPE_CLASS	0x7fef0bff
 
@@ -173,6 +175,12 @@ static inline void ClosePager() { CloseStdoutToPager(); }
 struct InfoUI_t;
 void PrintHelpColor ( const struct InfoUI_t * iu );
 
+extern volatile int verbose;
+static inline bool ErrorLogDisabled()
+	{ return verbose <= -3; }
+static inline bool ErrorLogEnabled()
+	{ return verbose >= -2; }
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			compatibility			///////////////
@@ -216,7 +224,7 @@ char * PrintOptCompatible(void); // circ-buf
 
 //-----------------------------------------------------------------------------
 
-uint GetEncodedVersion(void);
+uint GetNumericVersion(void);
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -750,6 +758,7 @@ int GetVersionByMagic
 bool IsBRSUB		( file_format_t ff );
 bool IsByMagicBRSUB	( const void * data, uint data_size );
 
+bool CanBeTrackFF	( file_format_t ff );
 bool IsArchiveFF	( file_format_t ff );
 bool IsTextFF		( file_format_t ff );
 bool IsGeoHitKartFF	( file_format_t ff );
@@ -763,8 +772,8 @@ file_format_t GetCompressedFF	( file_format_t ff );
 
 void SetCompressionFF
 (
-    file_format_t	ff_arch,	// if >0: set 'opt_fform'
-    file_format_t	ff_compr	// if >0: set 'fform_compr'
+    file_format_t	ff_arch,	// if >=0: set 'opt_fform'
+    file_format_t	ff_compr	// if >=0: set 'fform_compr'
 					//        and  'fform_compr_force'
 );
 
@@ -1160,9 +1169,9 @@ typedef enum patch_file_t
 extern patch_file_t PATCH_FILE_MODE;	// = PFILE_M_DEFAULT|PFILE_F_DEFAULT
 extern int disable_patch_on_load;	// if >0: disable patching after loading
 
-int ScanOptPatchFile ( ccp arg );
-void SetPatchFileModeReadonly(); // switch to readonly default flags (silent),
-				 // if not set by user
+int ScanOptPatchFiles ( ccp arg );
+void SetPatchFileModeReadonly();	// switch to readonly default flags (silent),
+					// if not set by user
 
 uint PrintFileClassInfo ( char *buf, uint bufsize, patch_file_t mode );
 ccp GetFileClassInfo();
@@ -1782,6 +1791,7 @@ static inline uint GetStrIdxCountMIL ( const MemItem_t * mi )
 //-----------------------------------------------------------------------------
 
 void SetSource ( ccp source );
+void SetIdList ( ccp source );
 void SetReference ( ccp source );
 void SetDest ( ccp dest, bool mkdir );
 void CheckOptDest ( ccp default_dest, bool default_mkdir );
@@ -2268,7 +2278,10 @@ struct ScanText_t;
 const mkw_prefix_t * ScanPrefixTable ( struct ScanText_t *st );
 const mkw_prefix_t * DefinePrefixTable ( cvp source, uint len );
 const mkw_prefix_t * GetPrefixTable(void);
-const mkw_prefix_t * FindPrefix ( ccp pre, int pre_len, bool exact );
+
+// use strlen() if pre_len|name_len <0
+const mkw_prefix_t * FindPrefix ( ccp pre, int pre_len );
+const mkw_prefix_t * GetPrefix ( ccp name, int name_len );
 
 // if tab==0: Use GetPrefixTable()
 enumError SavePrefixTable   ( FILE *f,   const mkw_prefix_t * tab );
@@ -2753,7 +2766,7 @@ extern ccp		config_path;
 extern ccp		tool_name;
 extern ccp		std_share_path;
 extern ccp		share_path;
-extern volatile int	verbose;
+//extern volatile int	verbose;	    // see above
 extern volatile int	logging;
 extern volatile int	ext_errors;
 extern volatile int	log_timing;
@@ -2764,6 +2777,7 @@ extern bool		use_de;
 extern bool		ctcode_enabled;
 extern bool		lecode_enabled;
 extern uint		opt_ct_mode;		// calculated by ctcode_enabled & lecode_enabled
+extern bool		lecode_04x;
 extern int		testmode;
 extern int		force_count;
 extern uint		opt_tiny;
@@ -2775,6 +2789,7 @@ extern int		opt_route_options;
 extern OffOn_t		opt_wim0;
 extern ccp		opt_source;
 extern StringField_t	source_list;
+extern ccp		opt_id_list;
 extern ccp		opt_reference;
 extern ccp		opt_dest;
 extern bool		opt_mkdir;

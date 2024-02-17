@@ -301,9 +301,9 @@
 	"wszst IS-TEXTURE --reference reference [source]...", \
 	"Test each source to see if it's a texture hack versus a reference" \
 	" file. For each source, one human and machine readable status line is" \
-	" printed. It is either Â»-1=errÂ« on error, Â»1=yesÂ« for a texture" \
-	" hack, or Â»0=no LISTÂ« with a comma separated list of reasons." \
-	" $Wildcards$ and pipe characters are parsed.\n" \
+	" printed. It is either »-1=err« on error, »1=yes« for a texture hack," \
+	" or »0=no LIST« with a comma separated list of reasons. $Wildcards$" \
+	" and pipe characters are parsed.\n" \
 	"  At the moment KCL, KMP (see notes) and LEX are checked. KMP section" \
 	" CAME has been intentionally left out. Section ENPT is only checked" \
 	" if KCL contains a least one face of type force-recalculation." )
@@ -330,7 +330,7 @@
 	"  If file @RESULT@ exists, it is automatically added as last source" \
 	" to the list of option --source, but only if not already added. On" \
 	" scanning of file @result@, parameters are scanned too.\n" \
-	" See Â»welect DISTRIBUTIONÂ« for a new and alternative implementation" \
+	" See »welect DISTRIBUTION« for a new and alternative implementation" \
 	" of this." )
 
 #:def_cmd( "DIFF", "DIFF|CMP", \
@@ -370,11 +370,11 @@
 	"wszst IS_ARENA [source]...", \
 	"Analyse each track for its arena status and print a line with a" \
 	" status code and the track name. $Wildcards$ and pipe characters are" \
-	" parsed. The status code is: Â»-RACEÂ« for a racing track, Â»?MAYBEÂ«" \
-	" for likely an arena, Â»+ARENAÂ« for an arena, Â»+DISPATCHÂ« for an" \
-	" arena with dispatch points or any error hint beginning with an" \
-	" Â»!Â«. So the very first character (one of Â»!-?+Â«) can be used to" \
-	" distinguish the status class.\n" \
+	" parsed. The status code is: »-RACE« for a racing track, »?MAYBE« for" \
+	" likely an arena, »+ARENA« for an arena, »+DISPATCH« for an arena" \
+	" with dispatch points or any error hint beginning with an »!«. So the" \
+	" very first character (one of »!-?+«) can be used to distinguish the" \
+	" status class.\n" \
 	"  The exit status is >2 on error, 2 (DIFFER), if at least one file is" \
 	" a racing track, or 0 (OK), if all sources are arenas." )
 
@@ -623,14 +623,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging|log", "GM", \
 	"", \
@@ -687,6 +689,11 @@
 	"[=param]", \
 	"Enable LE-CODE and CT-CODE support. The optional parameter is" \
 	" deprecated and ignored." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "LOAD_PREFIX", "load-prefix|loadprefix", "GP", \
 	"file", \
@@ -1181,7 +1188,7 @@
 #:def_opt( "MDL", "mdl", "GP", \
 	"list", \
 	"Set global options for MDL processing. To enable MDL patching, use" \
-	" option {--patch-file} and select BRRES files for patching.\n" \
+	" option {--patch-files} and select BRRES files for patching.\n" \
 	"  Parameter @'list'@ is a comma separated list of keywords. A minus" \
 	" sign before a keyword disables a setting. Each occurrence of the" \
 	" option will only change entered settings and all other settings are" \
@@ -1203,7 +1210,7 @@
 	" all. The other allowed keywords are: @AUTO, SIMPLE, COMPLEX, BOTH," \
 	" SILENT@ and @LOG@." )
 
-#:def_opt( "PATCH_FILE", "patch-file|patchfile|pfile", "GP", \
+#:def_opt( "PATCH_FILES", "patch-files|patchfiles|pfiles", "GP", \
 	"list", \
 	"Define, which kind of KMP, KCL and BRRES/MDL files are objects for" \
 	" patching. @--pfile@ is a short cut.\n" \
@@ -1212,7 +1219,7 @@
 	" option will only change entered settings and all other settings are" \
 	" untouched.\n" \
 	"  Keyword @DEFAULT@ resets the default settings (@TRACK,LOG@) and" \
-	" @CLEAR@ disables all. The other allowed keywords are: @KMP, KCL," \
+	" @NONE@ disables all. The other allowed keywords are: @KMP, KCL," \
 	" OTHER-KCL, ALL-KCL, MODEL, MAP, VRCORN, OTHER-BRRES, ALL-BRRES," \
 	" TRACK (=KMP,KCL,MODEL,MAP,VRCORN), ALL, LOG@ and @LOG-ALL@." )
 
@@ -2250,6 +2257,16 @@
 #:def_cmd_opt( "WILDCARDS", "IGNORE", \
 	"", \
 	"" )
+
+#:def_cmd_opt( "WILDCARDS", "SH", \
+	"", \
+	"Quote filenames for sh using '...'." )
+
+#:def_cmd_opt( "WILDCARDS", "BASH", \
+	"", \
+	"Ignore --sh and quote filenames for bash using $$'...'. Use »eval" \
+	" var=($$(wszst wildcards --bash ...))« to assign the result to a bash" \
+	" array." )
 
 #:def_cmd_opt( "TEST", "VERBOSE", \
 	"", \
@@ -6110,6 +6127,10 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ANALYZE", "ID_LIST", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ANALYZE", "REFERENCE", \
 	"", \
 	"" )
@@ -6529,12 +6550,12 @@
 
 #:def_cmd_opt( "DISTRIBUTION", "SOURCE", \
 	"", \
-	"Define a text file for filename to slot translation. A Â»slot" \
-	" filenameÂ« list is expected. Use this option multiple times to" \
-	" define more than one source file. A definition of a later source" \
-	" overwrites previous definitions. The file @RESULT@ of the command" \
-	" line is appended automatically as last entry, if exists and not" \
-	" already included." )
+	"Define a text file for filename to slot translation. A »slot" \
+	" filename« list is expected. Use this option multiple times to define" \
+	" more than one source file. A definition of a later source overwrites" \
+	" previous definitions. The file @RESULT@ of the command line is" \
+	" appended automatically as last entry, if exists and not already" \
+	" included." )
 
 #:def_cmd_opt( "DIFF", "QUIET", \
 	"", \
@@ -6915,7 +6936,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "CHECK", "PATCH_FILE", \
+#:def_cmd_opt( "CHECK", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -7328,7 +7349,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "SLOTS", "PATCH_FILE", \
+#:def_cmd_opt( "SLOTS", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -7743,7 +7764,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "NORMALIZE", "PATCH_FILE", \
+#:def_cmd_opt( "NORMALIZE", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -8107,7 +8128,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "PATCH", "PATCH_FILE", \
+#:def_cmd_opt( "PATCH", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -8471,7 +8492,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "COPY", "PATCH_FILE", \
+#:def_cmd_opt( "COPY", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -8839,7 +8860,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "DUPLICATE", "PATCH_FILE", \
+#:def_cmd_opt( "DUPLICATE", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -9396,7 +9417,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "COMPRESS", "PATCH_FILE", \
+#:def_cmd_opt( "COMPRESS", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -9708,7 +9729,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "DECOMPRESS", "PATCH_FILE", \
+#:def_cmd_opt( "DECOMPRESS", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -10037,7 +10058,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "ENCODE", "PATCH_FILE", \
+#:def_cmd_opt( "ENCODE", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -10490,7 +10511,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "CREATE", "PATCH_FILE", \
+#:def_cmd_opt( "CREATE", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -10798,7 +10819,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "UPDATE", "PATCH_FILE", \
+#:def_cmd_opt( "UPDATE", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -11126,7 +11147,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "EXTRACT", "PATCH_FILE", \
+#:def_cmd_opt( "EXTRACT", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -11454,7 +11475,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "XDECODE", "PATCH_FILE", \
+#:def_cmd_opt( "XDECODE", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -11782,7 +11803,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "XEXPORT", "PATCH_FILE", \
+#:def_cmd_opt( "XEXPORT", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -12110,7 +12131,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "XALL", "PATCH_FILE", \
+#:def_cmd_opt( "XALL", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -12757,7 +12778,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "KCL", "PATCH_FILE", \
+#:def_cmd_opt( "KCL", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -12997,7 +13018,7 @@
 	"", \
 	"" )
 
-#:def_cmd_opt( "KMP", "PATCH_FILE", \
+#:def_cmd_opt( "KMP", "PATCH_FILES", \
 	"", \
 	"" )
 
@@ -13477,14 +13498,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -13541,6 +13564,11 @@
 	"[=param]", \
 	"Enable LE-CODE and CT-CODE support. The optional parameter is" \
 	" deprecated and ignored." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -14849,14 +14877,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -14913,6 +14943,11 @@
 	"[=param]", \
 	"Enable LE-CODE and CT-CODE support. The optional parameter is" \
 	" deprecated and ignored." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "OLD_SPINY", "old-spiny|oldspiny", "G", \
 	"", \
@@ -16314,14 +16349,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -16378,6 +16415,11 @@
 	"[=param]", \
 	"Enable LE-CODE and CT-CODE support. The optional parameter is" \
 	" deprecated and ignored." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -17429,14 +17471,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -17493,6 +17537,11 @@
 	"[=param]", \
 	"Enable LE-CODE and CT-CODE support. The optional parameter is" \
 	" deprecated and ignored." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -20098,14 +20147,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -20162,6 +20213,11 @@
 	"[=param]", \
 	"Enable LE-CODE and CT-CODE support. The optional parameter is" \
 	" deprecated and ignored." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -22310,14 +22366,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -22374,6 +22432,11 @@
 	"[=param]", \
 	"This option is completely ignored by wlect. It only exists due to" \
 	" compatibility with the other tools." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "LOAD_PREFIX", "load-prefix|loadprefix", "GP", \
 	"file", \
@@ -24087,14 +24150,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -24152,6 +24217,11 @@
 	"This option is completely ignored by wlect. It only exists due to" \
 	" compatibility with the other tools." )
 
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
+
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
 	"Set a new working directory for all following options, for all" \
@@ -24173,7 +24243,7 @@
 #:def_opt( "MDL", "mdl", "GP", \
 	"list", \
 	"Set global options for MDL processing. To enable MDL patching, use" \
-	" option {--patch-file} and select BRRES files for patching.\n" \
+	" option {--patch-files} and select BRRES files for patching.\n" \
 	"  Parameter @'list'@ is a comma separated list of keywords. A minus" \
 	" sign before a keyword disables a setting. Each occurrence of the" \
 	" option will only change entered settings and all other settings are" \
@@ -25447,14 +25517,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -25511,6 +25583,11 @@
 	"[=param]", \
 	"This option is completely ignored by wlect. It only exists due to" \
 	" compatibility with the other tools." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -26087,7 +26164,7 @@
 
 #:def_cmd( "PATCH", "PATCH", \
 	"wstrt PATCH [file]...", \
-	"Patch 'main.dol and 'StaticR.rel' files of Mario Kart Wii." \
+	"Patch 'main.dol' and 'StaticR.rel' files of Mario Kart Wii." \
 	" $Wildcards$ and pipe characters are parsed. No backup is made." )
 
 #:def_opt( "VERSION", "V|version", "G", \
@@ -26145,14 +26222,16 @@
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
-	"Be quiet and print only error messages. Multiple usage is possible." \
-	" The impact is command dependent. In general: If set three times," \
-	" different file format warnings are suppressed." )
+	"Be quiet and print only error messages. Multiple use is possible." \
+	" Previous use of --verbose is reverted. The impact is command" \
+	" dependent. If set at least three times, almost all error messages" \
+	" will be suppressed." )
 
 #:def_opt( "VERBOSE", "v|verbose", "GM", \
 	"", \
-	"Be verbose and print more progress information. Multiple usage is" \
-	" possible. The impact is command dependent." )
+	"Be verbose and print more progress information. Multiple use is" \
+	" possible. Previous use of --quiet is reverted. The impact is command" \
+	" dependent." )
 
 #:def_opt( "LOGGING", "L|logging", "GM", \
 	"", \
@@ -26209,6 +26288,11 @@
 	"[=param]", \
 	"This option is completely ignored by wlect. It only exists due to" \
 	" compatibility with the other tools." )
+
+#:def_opt( "LE_04X", "le-04x|le04x", "G", \
+	"", \
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform" \
+	" slot numbers if slots >4095 are used." )
 
 #:def_opt( "CHDIR", "chdir", "GMP", \
 	"dir", \
@@ -26487,12 +26571,12 @@
 #:def_opt( "ADD_SECTION", "add-section|addsection", "CP", \
 	"file", \
 	"Each option call adds the filename to an internal list. Each file" \
-	" must be of type GCT, GCH or WCH. All GCT files together are combined" \
-	" with an internal code handler to one section (like a GCH file). GCH" \
-	" and WCH define sections and patches. The defined sections are added" \
-	" and VBI hooks are optionally initialized. Use option {--force} to" \
-	" allow overlapped sections. Use option {--verbose} up to 2 times for" \
-	" a log.\n" \
+	" must be of type GCT, GCT-TXT, GCH or WCH. All GCT files together are" \
+	" combined with an internal code handler to one section (like a GCH" \
+	" file). GCH and WCH define sections and patches. The defined sections" \
+	" are added and VBI hooks are optionally initialized. Use option" \
+	" {--force} to allow overlapped sections. Use option {--verbose} up to" \
+	" 2 times for a log.\n" \
 	" If parameter FILE contains at least one wildcard (e.g. \"*.GCT\")," \
 	" then FILE is used as search pattern and all found files are added." \
 	" Quote FILE for this purpose. \n" \
@@ -26508,13 +26592,14 @@
 	" the heap smaller and move the cheat codes before the FST section.\n" \
 	"  Parameter MODE is optional. If set, OFF disables and ON enables" \
 	" this feature. For mode AUTO (default) this feature is enabled, if" \
-	" the cheat codes are too large or for internal reasons." )
+	" the cheat codes are too large (@end>0x80003000@) or for internal" \
+	" conflicts." )
 
 #:def_opt( "GCT_ADDR", "gct-addr|gctaddr", "CP", \
 	"address", \
 	"If {--gct-move} is active, a text section is created to manage the" \
 	" code handler. This section is only needed at start and is placed by" \
-	" default at address 0c802c0000 (part of BSS, good address for all 4" \
+	" default at address 0x802c0000 (part of BSS, good address for all 4" \
 	" regions). This option changes the start address of the section. If" \
 	" address is @0@ or invalid, then unused BSS space is searched." )
 
@@ -26530,7 +26615,7 @@
 	" This option is only relevant, if main.dol is patched for wiimmfi.de." \
 	" It is dedicated to custom distribution creators for test purposes." \
 	" If enabled, a user can load an own instance of Gecko Code Handler" \
-	" and cheat codes and can use them online. If disabled, pachcing for" \
+	" and cheat codes and can use them online. If disabled, patching for" \
 	" online modus is disabled if an alternative Gecko Code Handler is" \
 	" detected.\n" \
 	"  Parameter MODE is optional. If set, OFF disables and ON enables" \

@@ -1533,7 +1533,7 @@ static enumError cmd_patch()
 	    {
 		create = true;
 		if ( verbose >= 0 )
-		    printf("* File not modified, %scopy to: %s:%s\n",
+		    printf("* File not modified, %scopy it to: %s:%s\n",
 			testmode ? "would " : "",
 			GetNameFF(str.fform,0), dest_fname );
 	    }
@@ -1613,6 +1613,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
+	case GO_LE_04X:		lecode_04x = true; break;
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
 
@@ -1653,6 +1654,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_POINTS:		err += ScanOptMkwPoints(optarg,false); break;
 	case GO_CHEAT:		err += ScanOptCheatRegion(optarg); break;
 	case GO_ADD_LECODE:	AppendStringField(&opt_wcode_list,"@LECODE",false); break;
+	case GO_ADDS_LECODE:	AppendStringField(&opt_sect_list,"@LECODE",false); break;
 	case GO_ADD_OLD_LECODE:	AppendStringField(&opt_wcode_list,"@OLDLECODE",false); break;
 	case GO_ADD_CTCODE:	opt_add_ctcode = true; break;
 	case GO_CT_DIR:		AppendStringField(&ct_dir_list,optarg,false); break;

@@ -606,6 +606,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_DE:		use_de = true; break;
 	case GO_CT_CODE:	ctcode_enabled = true; break;
 	case GO_LE_CODE:	lecode_enabled = true; break; // optional argument ignored
+	case GO_LE_04X:		lecode_04x = true; break;
 	case GO_COLORS:		err += ScanOptColorize(0,optarg,0); break;
 	case GO_NO_COLORS:	opt_colorize = COLMD_OFF; break;
 

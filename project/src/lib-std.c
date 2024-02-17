@@ -91,6 +91,7 @@ bool		use_de			= false;
 bool		ctcode_enabled		= false;
 bool		lecode_enabled		= false;
 uint		opt_ct_mode		= 0;	// calculated by ctcode_enabled & lecode_enabled
+bool		lecode_04x		= false;
 int		testmode		= 0;
 int		force_count		= 0;
 uint		opt_tiny		= 0;
@@ -102,6 +103,7 @@ int		opt_route_options	= 0;
 OffOn_t		opt_wim0		= OFFON_AUTO;
 ccp		opt_source		= 0;
 StringField_t	source_list		= {0};
+ccp		opt_id_list		= 0;
 ccp		opt_reference		= 0;
 ccp		opt_dest		= 0;
 bool		opt_mkdir		= false;
@@ -340,7 +342,7 @@ void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info )
 	sha1_hex_t hex;
 	Sha1Bin2Hex(hex,hash);
 
-	fprintf(stderr,"%s %s(), %s @%u : [%u] %s\n",
+	fprintf(stderr,"SHA1: %s %s(), %s @%u : [%u] %s\n",
 		hex, func, file, line, size, info ? info : "" );
     }
 }
@@ -837,12 +839,12 @@ char * PrintOptCompatible()
 
 ///////////////////////////////////////////////////////////////////////////////
 
-uint GetEncodedVersion()
+uint GetNumericVersion()
 {
-    static uint code = 0;
-    if (!code)
-	code = EncodeVersion(VERSION);
-    return code;
+    static uint numeric = 0;
+    if (!numeric)
+	numeric = EncodeVersion(VERSION);
+    return numeric;
 }
 
 //
@@ -2621,8 +2623,24 @@ enumError cmd_wildcards ( int argc, char ** argv )
     StringField_t plist = {0};
     CollectExpandParam(&plist,first_param,-1,WM__DEFAULT);
 
-    for ( int argi = 0; argi < plist.used; argi++ )
-	printf("%s\n",plist.field[argi]);
+    if ( script_fform == FF_BASH || script_fform == FF_SH )
+    {
+	const CharMode_t mode = CHMD_UTF8 | CHMD_ESC
+			| ( script_fform == FF_BASH ? CHMD_BASH : CHMD_SH );
+	const char quote = script_fform == FF_BASH ? '$' : '\'';
+	for ( int argi = 0; argi < plist.used; argi++ )
+	{
+	    exmem_t esc = EscapeStringEx(plist.field[argi],-1,"","",mode,quote,true);
+	    printf("%s\n",esc.data.ptr);
+	    FreeExMem(&esc);
+	}
+    }
+    else
+    {
+	for ( int argi = 0; argi < plist.used; argi++ )
+	    printf("%s\n",plist.field[argi]);
+    }
+
     ResetStringField(&plist);
     return ERR_OK;
 }
@@ -4161,6 +4179,13 @@ enumError cmd_filetype()
 		 max_len = len;
 	}
 
+ #if 0
+	if ( long_count > 2 )
+	    printf("\n"
+		   "type    decomp    vers  valid file name\n"
+		   "%.*s\n", max_len + 40, Minus300 );
+	else
+ #endif
 	if ( long_count > 1 )
 	    printf("\n"
 		   "type    decomp    vers  valid file name\n"
@@ -4254,6 +4279,7 @@ enumError cmd_filetype()
 		    DecodeBZIP2part(buf2,bufsize,&wr,buf1,bufsize);
 		    fform2 = GetByMagicFF(buf2,wr,wr);
 		    stat2 = GetNameFF(0,fform2);
+		    load_full = true;
 		}
 		else if ( fform1 == FF_LZ )
 		{
@@ -4265,7 +4291,6 @@ enumError cmd_filetype()
 		    version = GetVersionFF(ff_temp,wh->first_8,sizeof(wh->first_8),&suffix);
 		    if ( fatt.size >= 20 )
 		    {
-//			uint compr = GetComprLevelLZMA(le32(buf1+sizeof(wlz_header_t)+sizeof(u32)+1));
 			const uint compr = IsLZ(buf1,bufsize);
 			if ( compr >= 1 && compr <= 9 )
 			{
@@ -4286,6 +4311,7 @@ enumError cmd_filetype()
 		    DecodeLZMApart(buf2,bufsize,&wr,buf1,bufsize);
 		    fform2 = GetByMagicFF(buf2,wr,wr);
 		    stat2 = GetNameFF(0,fform2);
+		    load_full = true;
 		}
 		else if ( fform1 == FF_XZ )
 		{
@@ -4323,7 +4349,14 @@ enumError cmd_filetype()
 			else
 			    valid = IsValid(buf,written,fatt.size,0,fform2,arg);
 		    }
-		    printf("%-7s %-7s %7s %-5s %s\n",
+ #if 0
+		    if ( long_count > 2 )
+			printf("%-7s %-7s %7s %-5s %s:%s\n",
+				stat1, stat2, vbuf, valid_text[valid],
+				GetNameFF(fform1,fform2), arg );
+		    else
+ #endif
+			printf("%-7s %-7s %7s %-5s %s\n",
 				stat1, stat2, vbuf, valid_text[valid], arg );
 		}
 		else
@@ -4470,6 +4503,7 @@ enumError cmd_fileattrib()
 	{
 	    case FFT_BRSUB|FFT_BRSUB2:	info = "bres-sub2"; break;
 	    case FFT_BRSUB:		info = "bres-sub"; break;
+	    case FFT_TRACK:		info = "track"; break;
 	    case FFT_EXTERNAL:		info = "external"; break;
 	    default:			info = "-"; break;
 	}

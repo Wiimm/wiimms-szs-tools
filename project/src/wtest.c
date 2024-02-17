@@ -4187,11 +4187,10 @@ static enumError test_test_prefix ( int argc, char ** argv )
 	    continue;
 	}
 
-	const mkw_prefix_t *key0 = FindPrefix(arg,-1,false);
-	const mkw_prefix_t *key1 = FindPrefix(arg,-1,true);
-	printf(" %d %d : %10.10s",key0!=0,key1!=0,arg);
-	if (key0)
-	    printf(" => %-8s %s\n",key0->prefix,key0->info);
+	const mkw_prefix_t *pre = GetPrefix(arg,-1);
+	printf(" %d : %-20.20s",pre!=0,arg);
+	if (pre)
+	    printf(" => %-8s | %s\n",pre->prefix,pre->info);
 	else
 	    putchar('\n');
     }
@@ -4281,7 +4280,7 @@ static enumError test_coded_version ( int argc, char ** argv )
 	    fw = len;
     }
 
-    uint code = GetEncodedVersion();
+    uint code = GetNumericVersion();
     printf("\n %-*s %10u  %s\n\n",fw+3,"Coded version:",code,DecodeVersion(code));
 
     for ( int i = 1; i < argc; i++ )
@@ -4728,7 +4727,7 @@ lta_file_ref_t ReadFileLTA ( DVDFileInfo *fi, const lta_info_t *info, int slot, 
 {
     if ( lta_cache_slot == slot && lta_cache_par_index == par_index )
     {
-PRINT1("Use LTA Cache %d.%d\n",slot,par_index);
+	PRINT1("Use LTA Cache %d.%d\n",slot,par_index);
 	return lta_cache_data;
     }
 

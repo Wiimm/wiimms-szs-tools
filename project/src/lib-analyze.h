@@ -98,12 +98,14 @@ typedef struct analyze_szs_t
     sha1_hex_t	sha1_vrcorn;		// SHA1 of vrcorn
     sha1_hex_t	sha1_minimap;		// SHA1 of minimap
 
-    //--- slots of orgiginal tracks: 0:none, 11.84:track 111..125:arena
+
+    //--- slots of original tracks: 0:none, 11..84:versus 111..125:arena
 
     u8		sha1_kmp_slot;
     u8		sha1_kmp_norm_slot;
     u8		sha1_kcl_slot;
     u8		sha1_minimap_slot;
+
 
     //--- sub files
 
@@ -113,6 +115,12 @@ typedef struct analyze_szs_t
     kmp_finish_t	kmp_finish;	// finish line
     kmp_usedpos_t	used_pos;	// used positions
     szs_have_t		have;		// complete have status, copy of szs_file_t::have
+
+
+    //--- ct id
+
+    uint		ctid_list;	// id by --id-list
+    uint		ctid_attrib;	// id by attribute
 
 
     //--- more stats
@@ -143,6 +151,8 @@ void AnalyzeSZS
     szs_file_t		*szs,		// SZS file to analysze
     ccp			fname		// NULL or fname for slot analysis
 );
+
+uint GetCtIdByList ( sha1_hex_t sha1 );
 
 //
 ///////////////////////////////////////////////////////////////////////////////

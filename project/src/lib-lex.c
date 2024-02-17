@@ -127,7 +127,7 @@ static const feature_var_t szs_feature_list[] =
     DEF_VAR( 0,HAVESZS_MINIGAME,	f_minigame,		"File common/minigame.kmg" ),
     DEF_VAR( 0,HAVESZS_AIPARAM_BAA,	f_aiparam_baa,		"File AIParam/AIParam.baa" ),
     DEF_VAR( 0,HAVESZS_AIPARAM_BAS,	f_aiparam_bas,		"File AIParam/AIParam.bas" ),
-
+    //skipped: HAVESZS_LICENSE
     {0,0,0,0,0}
 };
 

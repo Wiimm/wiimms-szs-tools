@@ -3191,9 +3191,8 @@ bool PatchSZS ( szs_file_t * szs )
 {
     DASSERT(szs);
     CalcHaveSZS(szs);
-
     const bool patch_lex = HaveActivePatchLEX();
- #ifdef TEST
+ #if defined(TEST)
     static int done = 0;
     if (!done++)
     {
@@ -4589,6 +4588,7 @@ static int extract_func
     szs_file_t subszs;
 // [[fname+]]
     InitializeSubSZS(&subszs,szs,it->off,it->size,FF_UNKNOWN,local_path,false);
+    FixIteratorExtByFF(it,subszs.fform_file,subszs.fform_arch);
 
     if ( verbose > 1 || testmode && !analyze_fname )
     {

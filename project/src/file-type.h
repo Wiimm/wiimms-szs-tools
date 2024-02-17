@@ -19,31 +19,32 @@
 // [[ff_attrib_t]]
 typedef enum ff_attrib_t
 {
-    FFT_VALID       = 0x0001,  // a valid file format
+    FFT_VALID       = 0x00001,  // a valid file format
 
-    FFT_COMPRESS    = 0x0002,  // is a compression format
-    FFT_ARCHIVE     = 0x0004,  // is a supported archive
-    FFT_GRAPHIC     = 0x0008,  // graphic image format
-    FFT_TEXT        = 0x0010,  // (decoded) text file
-     FFT_M_FTYPE    = 0x001e,  // mask of file types
+    FFT_COMPRESS    = 0x00002,  // is a compression format
+    FFT_ARCHIVE     = 0x00004,  // is a supported archive
+    FFT_GRAPHIC     = 0x00008,  // graphic image format
+    FFT_TEXT        = 0x00010,  // (decoded) text file
+     FFT_M_FTYPE    = 0x0001e,  // mask of file types
 
-    FFT_BRSUB       = 0x0020,  // is a BRRES sub file
-    FFT_BRSUB2      = 0x0040,  // have a scondary file structure like a BRSUB
-    FFT_EXTERNAL    = 0x0080,  // external file format
-     FFT_M_CLASS    = 0x00e0,  // mask of file classes
+    FFT_BRSUB       = 0x00020,  // is a BRRES sub file
+    FFT_BRSUB2      = 0x00040,  // have a scondary file structure like a BRSUB
+    FFT_EXTERNAL    = 0x00080,  // external file format
+    FFT_TRACK       = 0x00100,  // can be a track file
+     FFT_M_CLASS    = 0x001e0,  // mask of file classes
 
-    FFT_CREATE      = 0x0100,  // creation supported
-    FFT_EXTRACT     = 0x0200,  // extracting supported
-    FFT_CUT         = 0x0400,  // 'cut-files' supported
-    FFT_DECODE      = 0x0800,  // decoding supported
-    FFT_ENCODE      = 0x1000,  // encoding supported
-    FFT_PARSER      = 0x2000,  // parser support on encoding
-    FFT_PATCH       = 0x4000,  // patching of binaries
-    FFT_LINK        = 0x8000,  // hardlinks supported
-     FFT_M_SUPPORT  = 0xff00,  // mask of supported operations
+    FFT_CREATE      = 0x00200,  // creation supported
+    FFT_EXTRACT     = 0x00400,  // extracting supported
+    FFT_CUT         = 0x00800,  // 'cut-files' supported
+    FFT_DECODE      = 0x01000,  // decoding supported
+    FFT_ENCODE      = 0x02000,  // encoding supported
+    FFT_PARSER      = 0x04000,  // parser support on encoding
+    FFT_PATCH       = 0x08000,  // patching of binaries
+    FFT_LINK        = 0x10000,  // hardlinks supported
+     FFT_M_SUPPORT  = 0x1fe00,  // mask of supported operations
 
-    FFT_NONE        = 0x0000,  // none set
-    FFT_M_ALL       = 0xffff   // all flags of above
+    FFT_NONE        = 0x00000,  // none set
+    FFT_M_ALL       = 0x1ffff   // all flags of above
 
 } ff_attrib_t;
 
@@ -77,121 +78,124 @@ typedef enum file_format_t
 	FF_BREFT,	// 14
 	FF_RKC,		// 15
 	FF_PACK,	// 16
-	FF_LTA,		// 17
-	FF_LFL,		// 18
+	FF_USE_LTA,	// 17
+	FF_LTA,		// 18
+	FF_LFL,		// 19
 
-	FF_CHR,		// 19
-	FF_CLR,		// 20
-	FF_MDL,		// 21
-	FF_PAT,		// 22
-	FF_SCN,		// 23
-	FF_SHP,		// 24
-	FF_SRT,		// 25
-	FF_TEX,		// 26
+	FF_CHR,		// 20
+	FF_CLR,		// 21
+	FF_MDL,		// 22
+	FF_PAT,		// 23
+	FF_SCN,		// 24
+	FF_SHP,		// 25
+	FF_SRT,		// 26
+	FF_TEX,		// 27
 
-	FF_TEX_CT,	// 27
-	FF_CTDEF,	// 28
+	FF_TEX_CT,	// 28
+	FF_CTDEF,	// 29
 
-	FF_CT0_CODE,	// 29
-	FF_CT0_DATA,	// 30
-	FF_CT1_CODE,	// 31
-	FF_CT1_DATA,	// 32
+	FF_CT0_CODE,	// 30
+	FF_CT0_DATA,	// 31
+	FF_CT1_CODE,	// 32
+	FF_CT1_DATA,	// 33
 
-	FF_CUP1,	// 33
-	FF_CRS1,	// 34
-	FF_MOD1,	// 35
-	FF_MOD2,	// 36
-	FF_OVR1,	// 37
+	FF_CUP1,	// 34
+	FF_CRS1,	// 35
+	FF_MOD1,	// 36
+	FF_MOD2,	// 37
+	FF_OVR1,	// 38
 
-	FF_LE_BIN,	// 38
-	FF_LEX,		// 39
-	FF_LEX_TXT,	// 40
+	FF_LE_BIN,	// 39
+	FF_LEX,		// 40
+	FF_LEX_TXT,	// 41
 
-	FF_LPAR,	// 41
-	FF_LEDEF,	// 42
-	FF_LEDIS,	// 43
-	FF_LEREF,	// 44
-	FF_LESTR,	// 45
-	FF_SHA1REF,	// 46
-	FF_PREFIX,	// 47
-	FF_MTCAT,	// 48
-	FF_CT_SHA1,	// 49
+	FF_LPAR,	// 42
+	FF_LEDEF,	// 43
+	FF_LEDIS,	// 44
+	FF_LEREF,	// 45
+	FF_LESTR,	// 46
+	FF_SHA1REF,	// 47
+	FF_SHA1ID,	// 48
+	FF_PREFIX,	// 49
+	FF_MTCAT,	// 50
+	FF_CT_SHA1,	// 51
 
-	FF_MDL_TXT,	// 50
+	FF_MDL_TXT,	// 52
 
-	FF_PAT_TXT,	// 51
+	FF_PAT_TXT,	// 53
 
-	FF_TPL,		// 52
-	FF_BTI,		// 53
-	FF_BREFT_IMG,	// 54
+	FF_TPL,		// 54
+	FF_BTI,		// 55
+	FF_BREFT_IMG,	// 56
 
-	FF_BMG,		// 55
-	FF_BMG_TXT,	// 56
+	FF_BMG,		// 57
+	FF_BMG_TXT,	// 58
 
-	FF_KCL,		// 57
-	FF_KCL_TXT,	// 58
-	FF_WAV_OBJ,	// 59
-	FF_SKP_OBJ,	// 60
+	FF_KCL,		// 59
+	FF_KCL_TXT,	// 60
+	FF_WAV_OBJ,	// 61
+	FF_SKP_OBJ,	// 62
 
-	FF_KMP,		// 61
-	FF_KMP_TXT,	// 62
+	FF_KMP,		// 63
+	FF_KMP_TXT,	// 64
 
-	FF_ITEMSLT,	// 63
-	FF_ITEMSLT_TXT,	// 64
+	FF_ITEMSLT,	// 65
+	FF_ITEMSLT_TXT,	// 66
 
-	FF_KMG,		// 65
-	FF_KMG_TXT,	// 66
+	FF_KMG,		// 67
+	FF_KMG_TXT,	// 68
 
-	FF_KRM,		// 67
-	FF_KRM_TXT,	// 68
+	FF_KRM,		// 69
+	FF_KRM_TXT,	// 70
 
-	FF_KRT,		// 69
-	FF_KRT_TXT,	// 70
+	FF_KRT,		// 71
+	FF_KRT_TXT,	// 72
 
-	FF_OBJFLOW,	// 71
-	FF_OBJFLOW_TXT,	// 72
+	FF_OBJFLOW,	// 73
+	FF_OBJFLOW_TXT,	// 74
 
-	FF_GH_ITEM,	// 73
-	FF_GH_ITEM_TXT,	// 74
+	FF_GH_ITEM,	// 75
+	FF_GH_ITEM_TXT,	// 76
 
-	FF_GH_IOBJ,	// 75
-	FF_GH_IOBJ_TXT,	// 76
+	FF_GH_IOBJ,	// 77
+	FF_GH_IOBJ_TXT,	// 78
 
-	FF_GH_KART,	// 77
-	FF_GH_KART_TXT,	// 78
+	FF_GH_KART,	// 79
+	FF_GH_KART_TXT,	// 80
 
-	FF_GH_KOBJ,	// 79
-	FF_GH_KOBJ_TXT,	// 80
+	FF_GH_KOBJ,	// 81
+	FF_GH_KOBJ_TXT,	// 82
 
-	FF_DRIVER,	// 81
-	FF_VEHICLE,	// 82
+	FF_DRIVER,	// 83
+	FF_VEHICLE,	// 84
 
-	FF_BRASD,	// 83
-	FF_RKG,		// 84
-	FF_RKCO,	// 85
+	FF_BRASD,	// 85
+	FF_RKG,		// 86
+	FF_RKCO,	// 87
 
-	FF_STATICR,	// 86
-	FF_DOL,		// 87
+	FF_STATICR,	// 88
+	FF_DOL,		// 89
 
-	FF_GCT,		// 88
-	FF_GCH,		// 89
-	FF_WCH,		// 90
-	FF_WPF,		// 91
-	FF_XPF,		// 92
-	FF_DISTRIB,	// 93
+	FF_GCT,		// 90
+	FF_GCT_TXT,	// 91
+	FF_GCH,		// 92
+	FF_WCH,		// 93
+	FF_WPF,		// 94
+	FF_XPF,		// 95
+	FF_DISTRIB,	// 96
 
-	FF_PNG,		// 94
-	FF_PORTDB,	// 95
+	FF_PNG,		// 97
+	FF_PORTDB,	// 98
 
-	FF_TXT,		// 96
-	FF_SCRIPT,	// 97
-	FF_JSON,	// 98
-	FF_SH,		// 99
-	FF_BASH,	// 100
-	FF_PHP,		// 101
-	FF_MAKEDOC,	// 102
+	FF_TXT,		// 99
+	FF_SCRIPT,	// 100
+	FF_JSON,	// 101
+	FF_SH,		// 102
+	FF_BASH,	// 103
+	FF_PHP,		// 104
+	FF_MAKEDOC,	// 105
 
-	FF_DIRECTORY,	// 103
+	FF_DIRECTORY,	// 106
 
 	//--- number of elements
 

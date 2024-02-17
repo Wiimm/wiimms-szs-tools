@@ -959,8 +959,8 @@ typedef struct Var_t
 	double3 d3;		// double3 value for references
 	struct
 	{
-	    uint str_len;	// used length of 'str' (support of NULL bytes)
-	    uint str_size;	// alloced size of 'str', NULL term is not counting!
+	    uint str_len;	// used length of 'str' (support of \0 bytes)
+	    uint str_size;	// alloced size of 'str', \0 term is not counting!
 	    char *str;		// NULL or string (alloced)
 	};
 
@@ -1279,8 +1279,8 @@ typedef struct ScanInfo_t
     struct lex_t	* lex;		// for LEX scanning
     struct mdl_t	* mdl;		// for MDL scanning
     struct le_distrib_t	* ld;		// for LEDEF scanning
-
-} ScanInfo_t;
+}
+ScanInfo_t;
 
 //-----------------------------------------------------------------------------
 
@@ -1318,8 +1318,8 @@ typedef enum ScanParamMode
 
     SPM_STRING,		// result has type char*
     SPM_VAR,		// result has type Var_t
-
-}  ScanParamMode;
+}
+ScanParamMode;
 
 //-----------------------------------------------------------------------------
 // [[ScanParam_t]]
@@ -1334,6 +1334,30 @@ typedef struct ScanParam_t
     int			*n_result;	// not NULL: store number of read values
 
 } ScanParam_t;
+
+//-----------------------------------------------------------------------------
+
+bool GetScanParam
+(
+    Var_t *		dest,		// store value here
+    bool		init,		// true: initialize 'dest'
+    const ScanParam_t	* sp		// NULL or valid record to find value
+);
+
+void DefineScanParam
+(
+    VarMap_t		*vm,		// valid var list
+    ccp			prefix,		// NULL or prefix like "LPAR$"
+    const ScanParam_t	*sp		// valid record
+);
+
+void DefineScanParamList
+(
+    VarMap_t		*vm,		// valid var list
+    ccp			prefix,		// NULL or prefix like "LPAR$"
+    const ScanParam_t	*sp		// NULL or list of parameters
+					// list ends with sp->name==NULL
+);
 
 //
 ///////////////////////////////////////////////////////////////////////////////
@@ -1483,6 +1507,15 @@ Var_t * InsertVarMap
 
 //-----------------------------------------------------------------------------
 
+bool DefineVar
+(
+    VarMap_t		* vm,		// valid variable map
+    ccp			varname,	// name of variable
+    Var_t		*val		// value to assign
+);
+
+//-----------------------------------------------------------------------------
+
 bool DefineIntVar
 (
     VarMap_t		* vm,		// valid variable map
@@ -1501,9 +1534,18 @@ bool DefineDoubleVar
 
 //-----------------------------------------------------------------------------
 
+bool DefineStringVar
+(
+    VarMap_t		* vm,		// valid variable map
+    ccp			varname,	// name of variable
+    ccp			value		// value to assign
+);
+
+//-----------------------------------------------------------------------------
+
 const Var_t * FindConst
 (
-    ccp			varname	// variable name
+    ccp			varname		// variable name
 );
 
 //-----------------------------------------------------------------------------
@@ -2203,6 +2245,17 @@ enumError ScanAssignDoubleSI
 (
     ScanInfo_t		* si,		// valid data
     double		* value		// result: scanned value
+);
+
+//-----------------------------------------------------------------------------
+
+enumError ScanParamDefSI
+(
+    ScanInfo_t		* si,		// valid data
+    const ScanParam_t	* sp,		// NULL or scan parameter
+					// list ends with sp->name==NULL
+    VarMap_t		*vm,		// not NULL: define variable
+    ccp			prefix		// NULL or prefix like "LPAR$"
 );
 
 //-----------------------------------------------------------------------------

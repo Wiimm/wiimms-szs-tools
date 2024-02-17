@@ -64,9 +64,13 @@ void DefineParserVars ( VarMap_t * vm )
     NullVectorD.x = NullVectorD.y = NullVectorD.z = 0.0;
 
 
-    //--- setup '$NONE'
+    //--- setup süecial
 
     InsertVarMap(vm,"$NONE",false,0,0);
+    DefineStringVar(vm,"TOOL$NAME",tool_name);
+    DefineStringVar(vm,"TOOL$VERSION",BASE_VERSION);
+    //DefineStringVar(vm,"TOOL$XVERSION",VERSION);
+    DefineIntVar(vm,"TOOL$NUMVERSION",GetNumericVersion());
 
 
     //--- setup integer variables
@@ -96,6 +100,8 @@ void DefineParserVars ( VarMap_t * vm )
 	{ "TYPE$Y",		VAR_Y },
 	{ "TYPE$Z",		VAR_Z },
 
+	{ "TOOL$NUMTIME",	BINTIME },
+	//{ "TOOL$REVISION",	REVISION_NUM },
 	{ "REVISION$TOOL",	REVISION_NUM },
 	{ "REVISION$SETUP",	REVISION_NUM },
 	{ "REVISION$ACTIVE",	REVISION_NUM },

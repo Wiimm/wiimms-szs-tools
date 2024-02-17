@@ -1245,11 +1245,18 @@ uint GetEscapeLen
 )
 {
     const CharMode_t utf8	= char_mode & CHMD_UTF8;
+    const CharMode_t for_bash	= char_mode & CHMD_BASH;
+    const bool for_sh		= char_mode & CHMD_SH && !for_bash;
     const int esc_size		= char_mode & CHMD_ESC  ? 1 : 3;
     const int pipe_size		= char_mode & CHMD_PIPE ? 1 : 0;
 
     if ( !source || !*source )
 	return 0;
+
+    // force no-quotes for shell modes
+    if ( for_bash || for_sh )
+	quote = 0;
+
     ccp str = source;
     ccp end = src_len < 0 ? 0 : str + src_len;
 
@@ -1262,7 +1269,7 @@ uint GetEscapeLen
 	    case 0:
 		if (!end)
 		    return size;
-		size += 3;
+		size += for_sh ? -1 : 3;
 		break;
 
 	    case '\\':
@@ -1273,15 +1280,24 @@ uint GetEscapeLen
 	    case '\r':
 	    case '\t':
 	    case '\v':
-		size++;
+		if (!for_sh)
+		    size++;
 		break;
 
 	    case '\033':
-		size += esc_size;
+		if (!for_sh)
+		    size += esc_size;
 		break;
 
 	    case '|':
 		size += pipe_size;
+		break;
+
+	    case '\'':
+		if (for_bash)
+		    size += 1;
+		else if (for_sh)
+		    size += 4;
 		break;
 
 	    default:
@@ -1317,8 +1333,14 @@ char * PrintEscapedString
     DASSERT(buf_size>=10);
 
     const CharMode_t utf8	= char_mode & CHMD_UTF8;
+    const CharMode_t for_bash	= char_mode & CHMD_BASH;
+    const bool for_sh		= char_mode & CHMD_SH && !for_bash;
     const CharMode_t allow_e	= char_mode & CHMD_ESC;
     const CharMode_t esc_pipe	= char_mode & CHMD_PIPE;
+
+    // force no-quotes for shell modes
+    if ( for_bash || for_sh )
+	quote = 0;
 
     char *dest = buf;
     char *dest_end = dest + buf_size - 4;
@@ -1339,30 +1361,38 @@ char * PrintEscapedString
 		    str--;
 		    goto eos;
 		}
-		*dest++ = '\\';
-		*dest++ = 'x';
-		*dest++ = '0';
-		*dest++ = '0';
+		if (!for_sh)
+		{
+		    *dest++ = '\\';
+		    *dest++ = 'x';
+		    *dest++ = '0';
+		    *dest++ = '0';
+		}
 		break;
 
-	    case '\\': *dest++ = '\\'; *dest++ = '\\'; break;
-	    case '\a': *dest++ = '\\'; *dest++ = 'a'; break;
-	    case '\b': *dest++ = '\\'; *dest++ = 'b'; break;
-	    case '\f': *dest++ = '\\'; *dest++ = 'f'; break;
-	    case '\n': *dest++ = '\\'; *dest++ = 'n'; break;
-	    case '\r': *dest++ = '\\'; *dest++ = 'r'; break;
-	    case '\t': *dest++ = '\\'; *dest++ = 't'; break;
-	    case '\v': *dest++ = '\\'; *dest++ = 'v'; break;
+	    case '\\': if (!for_sh) *dest++ = '\\'; *dest++ = '\\'; break;
+	    case '\a': if (!for_sh) *dest++ = '\\'; *dest++ = 'a'; break;
+	    case '\b': if (!for_sh) *dest++ = '\\'; *dest++ = 'b'; break;
+	    case '\f': if (!for_sh) *dest++ = '\\'; *dest++ = 'f'; break;
+	    case '\n': if (!for_sh) *dest++ = '\\'; *dest++ = 'n'; break;
+	    case '\r': if (!for_sh) *dest++ = '\\'; *dest++ = 'r'; break;
+	    case '\t': if (!for_sh) *dest++ = '\\'; *dest++ = 't'; break;
+	    case '\v': if (!for_sh) *dest++ = '\\'; *dest++ = 'v'; break;
 
 	    case '\033':
-		*dest++ = '\\';
-		if (allow_e)
-		    *dest++ = 'e';
+		if (for_sh)
+		    *dest++ = '\033';
 		else
 		{
-		    *dest++ = 'x';
-		    *dest++ = '1';
-		    *dest++ = 'B';
+		    *dest++ = '\\';
+		    if (allow_e)
+			*dest++ = 'e';
+		    else
+		    {
+			*dest++ = 'x';
+			*dest++ = '1';
+			*dest++ = 'B';
+		    }
 		}
 		break;
 
@@ -1374,6 +1404,24 @@ char * PrintEscapedString
 		}
 		else
 		    *dest++ = '|';
+		break;
+
+	    case '\'':
+		if (for_bash)
+		{
+		    *dest++ = '\\';
+		    *dest++ = '\'';
+		}
+		else if (for_sh)
+		{
+		    *dest++ = '\'';
+		    *dest++ = '\"';
+		    *dest++ = '\'';
+		    *dest++ = '\"';
+		    *dest++ = '\'';
+		}
+		else
+		    *dest++ = '\'';
 		break;
 
 	    default:
@@ -9871,6 +9919,51 @@ char * PrintIP4ByMode
 	case CIP4_CLASS_B: return PrintIP4B(buf,buf_size,ip4,port);
 	default:	   return PrintIP4 (buf,buf_size,ip4,port);
     }
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
+///////////////			progress helper			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void StartProgress ( progress_t *pr, u_msec_t interval_msec )
+{
+    DASSERT(PR);
+    ResetProgress(pr);
+    pr->interval_msec = interval_msec;
+    pr->start_msec = GetTimerMSec();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool CheckProgress ( progress_t *pr )
+{
+    DASSERT(PR);
+    if ( pr->interval_msec > 0 && pr->counter != pr->last_counter )
+    {
+	const u_msec_t now = GetTimerMSec();
+	if ( now >= pr->last_log_msec + pr->interval_msec )
+	{
+	    pr->last_log_msec = now;
+	    pr->last_counter  = pr->counter;
+	    return true;
+	}
+    }
+    return false;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+bool FinalProgress ( progress_t *pr )
+{
+    DASSERT(PR);
+    if ( pr->interval_msec > 0 && pr->counter != pr->last_counter )
+    {
+	pr->last_log_msec = GetTimerMSec();
+	pr->last_counter  = pr->counter;
+	return true;
+    }
+    return false;
 }
 
 //

@@ -226,6 +226,15 @@ static KeywordTab_t keywords_leo[] =
 	{ LEO_BRIEF,		"BRIEF",	0,		0 },
 	{ LEO_AUTO_PATH,	"AUTO-PATH",	"AUTOPATH",	0 },
 
+	{ LEO_PROGRESS0,	"PR0",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS1,	"PR1",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS2,	"PR2",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS5,	"PR5",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS10,	"PR10",		"PROGRESS",	LEO_M_PROGRESS },
+	{ LEO_PROGRESS20,	"PR20",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS30,	"PR30",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS60,	"PR60",		0,		LEO_M_PROGRESS },
+
 	{ LEO_HELP,		"HELP",	    	"H",		0 },
 
 	{ LEO_CUT_ALL,		"CUT-ALL",	"CUTALL",	0 },
@@ -255,8 +264,25 @@ le_options_t ScanLEO ( le_options_t current, ccp arg, ccp err_info )
     keywords_leo[0].id = SetupDefaultLEO();
 
     s64 stat = ScanKeywordList(arg,keywords_leo,0,true,0,current,err_info,ERR_SYNTAX);
-    PRINT0("ScanLEO(%#05x,%s) => %#05x\n",current,arg,(le_options_t)stat);
+    PRINT0("ScanLEO(%#lx,%s) => %#llx, progress=%lld\n",current,arg,stat,GetProgressMSecLEO(stat));
     return stat != -1 ? stat : current;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+u_msec_t GetProgressMSecLEO ( le_options_t opt )
+{
+    switch ( (uint)opt & LEO_M_PROGRESS )
+    {
+	case LEO_PROGRESS1:  return  1000;
+	case LEO_PROGRESS2:  return  2000;
+	case LEO_PROGRESS5:  return  5000;
+	case LEO_PROGRESS10: return 10000;
+	case LEO_PROGRESS20: return 20000;
+	case LEO_PROGRESS30: return 30000;
+	case LEO_PROGRESS60: return 60000;
+    }
+    return 0;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1520,7 +1546,8 @@ ccp GetPathL2 ( le_distrib_t *ld, const le_track_t *lt, le_options_t opt, ccp re
 	    }
 
 	    char buf[20];
-	    snprintf(buf,sizeof(buf),"%03x",lt->track_slot);
+// [[%04x+]]
+	    snprintf(buf,sizeof(buf), lecode_04x ? "%04x" : "%03x", lt->track_slot );
 	    TransferMode_t tfer_mode;
 	    ccp found = FindTrackFile(buf,&tfer_mode);
 	    if (found)
@@ -1545,7 +1572,9 @@ ccp GetPathL2 ( le_distrib_t *ld, const le_track_t *lt, le_options_t opt, ccp re
 	    if ( len > 0 && path[len-1] == '/' )
 	    {
 		char newpath[PATH_MAX];
-		snprintf(newpath,sizeof(newpath),"%s%03x.szs",path,lt->track_slot);
+// [[%04x+]]
+		ccp format = lecode_04x ? "%s%04x.szs" : "%s%03x.szs";
+		snprintf(newpath,sizeof(newpath),format,path,lt->track_slot);
 		SetPathLT((le_track_t*)lt,&par,newpath);
 		return lt->path;
 	    }
@@ -4010,6 +4039,52 @@ void UpdateCupsLD ( le_distrib_t *ld )
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////		le_distrib_t: progress			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+void ClearProgressLD ( le_distrib_t *ld )
+{
+    DASSERT(ld);
+    ld->show_progress  = 0;
+    ld->progress_count = 0;
+    ld->first_progress_msec = ld->last_progress_msec = GetTimerMSec();
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void SetupProgressLD ( le_distrib_t *ld )
+{
+    DASSERT(ld);
+    ClearProgressLD(ld);
+
+    ld->show_progress = GetProgressMSecLEO(ld->spar.opt);
+    PRINT0("ld.show_progress = %lld\n",ld->show_progress);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+static void ShowProgressTracksLD ( le_distrib_t *ld, bool force )
+{
+    DASSERT(ld);
+    if ( ld->show_progress > 0 && ld->progress_count > 0 )
+    {
+	const u_msec_t now = GetTimerMSec();
+	if ( now >= ld->last_progress_msec + ld->show_progress
+		|| force && now >= ld->last_progress_msec + 1000 )
+	{
+	    ld->last_progress_msec = now;
+	    fprintf(stdlog,
+		    "%s%u file%s scanned in %llu seconds.\n",
+		    verbose >= 1 ? "   > " : "   - ",
+		    ld->progress_count, ld->progress_count == 1 ? "" : "s",
+		    ( now - ld->first_progress_msec ) / 1000 );
+	    fflush(stdlog);
+	}
+    }
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////		le_distrib_t: manage archive		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 // [[track-arch]]
@@ -4144,6 +4219,9 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
     if ( !ld || !raw )
 	return ERR_MISSING_PARAM;
 
+    ShowProgressTracksLD(ld,false);
+    ld->progress_count++;
+
     char buf[LE_TRACK_STRING_MAX+1], fname_buf[LE_TRACK_STRING_MAX+1];
     exmem_dest_t exdest = { .buf = buf, .buf_size = sizeof(buf), .try_circ = true };
 
@@ -4156,14 +4234,24 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
     {
 	if (!spf.f_d.len)
 	{
-	    if ( ld->spar.opt & LEO_HEX2SLOT && spf.f_name.len == 3 )
+	    if ( ld->spar.opt & LEO_HEX2SLOT && ( spf.f_name.len == 3 || spf.f_name.len == 4 ))
 	    {
 		const uint slot = str2ul(spf.f_name.ptr,0,16);
+// [[%04x+]]
 		snprintf(fname_buf,sizeof(fname_buf),"%03x",slot);
 		if (!strncasecmp(spf.f_name.ptr,fname_buf,3))
 		{
 		    PRINT0("HEX: %.3s\n",spf.f_name.ptr);
 		    force_slot = slot;
+		}
+		else
+		{
+		    snprintf(fname_buf,sizeof(fname_buf),"%04x",slot);
+		    if (!strncasecmp(spf.f_name.ptr,fname_buf,4))
+		    {
+			PRINT0("HEX: %.4s\n",spf.f_name.ptr);
+			force_slot = slot;
+		    }
 		}
 	    }
 
@@ -4178,7 +4266,7 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 		}
 	    }
 	}
-	
+
 	if ( !IsUsableXcodeSlot(force_slot,ld->spar.opt&LEO_CT_SLOTS) )
 	{
 	    ResetSPF(&spf);
@@ -4563,7 +4651,8 @@ void ImportAnaLD ( le_distrib_t *ld, const le_analyze_t *ana )
 	    if (ana->flags)	lt->flags    = ana->flags[slot];
 
 	    char name[30];
-	    snprintf(name,sizeof(name),"_%03x",slot);
+// [[%04x+]]
+	    snprintf(name,sizeof(name), lecode_04x ? "_%04x" : "_%03x", slot );
 	    SetNameLT(lt,0,name);
 	}
     }
@@ -4830,7 +4919,7 @@ enumError ImportRawDataLD
 	if (!ld->is_initialized)
 	    InitializeLD(ld);
 
-	if ( raw->fform != FF_U8 )
+	if ( raw->fform != FF_U8 && raw->fform != FF_WU8 )
 	    CloseArchLogLD(ld);
 
 	if ( logging >= 2 && raw->fname )
@@ -4908,6 +4997,7 @@ enumError ImportRawDataLD
 	    break;
 
 	 case FF_U8:
+	 case FF_WU8:
 	    err = AddToArchLD(ld,raw);
 	    break;
 
@@ -5001,9 +5091,12 @@ enumError ImportFileLD
 	    struct stat st;
 	    if ( use_wildcard && HaveWildcards(MemByString(fname)) && stat(fname,&st) )
 	    {
+		SetupProgressLD(ld);
 		PRINT0(" > SEARCH %s\n",fname);
 		struct search_t param = { .ld = ld };
 		SearchPaths(fname,0,WM__DEFAULT,search_func,&param);
+		ShowProgressTracksLD(ld,true);
+		ClearProgressLD(ld);
 		return param.count
 		    ? param.max_err
 		    : ERROR0(ERR_CANT_OPEN,"File not found: %s\n",fname);
@@ -7985,22 +8078,53 @@ enumError CreateDistribLD ( FILE *f, le_distrib_t *ld, bool use_xname )
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
+static void progress_lta ( lta_manager_t *lm, bool force )
+{
+    DASSERT(lm);
+    if ( lm->show_progress > 0 && lm->base_slot >= 0 )
+    {
+	const u_msec_t now = GetTimerMSec();
+	if ( now >= lm->last_log_msec + lm->show_progress
+		|| force && now >= lm->last_log_msec + 1000 )
+	{
+	    lm->last_log_msec = now;
+	    fprintf(stdlog,
+		    "%s%u node%s with %u track%s processed in %llu seconds.\n",
+		    verbose >= 1 ? "   > " : "   - ",
+		    lm->progress_nodes, lm->progress_nodes == 1 ? "" : "s",
+		    lm->progress_tracks, lm->progress_tracks == 1 ? "" : "s",
+		    ( now - lm->start_msec ) / 1000 );
+	    fflush(stdlog);
+	}
+    }
+}
+
+//-----------------------------------------------------------------------------
+
 static enumError close_lta ( lta_manager_t *lm )
 {
     enumError err = ERR_OK;
+
     if ( lm->base_slot >= 0 && lm->F.f )
     {
-	const int n_slots = lm->last_slot + 1 - lm->base_slot;
-	const uint node_size = ALIGN32( n_slots * sizeof(lta_node_t), opt_align_lta );
+	progress_lta(lm,true);
+
+	const int n_slots	= lm->last_slot + 1 - lm->base_slot;
+	const uint node_size	= ALIGN32( n_slots * sizeof(lta_node_t), opt_align_lta );
+	const uint ext_off	= lm->data_offset + node_size;
+	const uint ext_size	= lm->append_ext ? GetFastBufLen(&lm->ext) : 0;
+	const uint file_size	= ALIGN32( ext_off + ext_size, opt_align_lta );
 
 	lta_header_t head =
 	{
 	    .magic	= hton64(LTA_MAGIC_NUM),
 	    .version	= htonl(LTA_VERSION),
 	    .head_size	= htonl(sizeof(lta_header_t)),
-	    .file_size	= htonl(lm->data_offset+node_size),
+	    .file_size	= htonl(file_size),
 	    .node_off	= htonl(lm->data_offset),
 	    .node_size	= htonl(sizeof(lta_node_t)),
+	    .ext_off	= htonl(ext_off),
+	    .ext_size	= htonl(ext_size),
 	    .base_slot	= htonl(lm->base_slot),
 	    .n_slots	= htonl(n_slots),
 	};
@@ -8010,7 +8134,19 @@ static enumError close_lta ( lta_manager_t *lm )
 	WriteFileAt(&lm->F,&lm->current_offset,lm->data_offset,lm->node,node_size);
 	lm->data_offset += node_size;
 
-	SetFileSize(&lm->F,&lm->current_offset,lm->data_offset);
+	if (ext_size)
+	{
+	    WriteFileAt(&lm->F,&lm->current_offset,ext_off,lm->ext.buf,ext_size);
+	    lm->data_offset = ext_off + ext_size;
+	}
+
+	const int fill_size = file_size - lm->current_offset;
+	if ( fill_size > 0 )
+	{
+	    memset(lm->node,0,sizeof(lm->node)); // use as temporary buffer
+	    WriteFileAt(&lm->F,&lm->current_offset,lm->current_offset,lm->node,fill_size);
+	}
+	SetFileSize(&lm->F,&lm->current_offset,file_size);
 
 	if ( verbose >= 0 )
 	{
@@ -8045,6 +8181,7 @@ static enumError close_lta ( lta_manager_t *lm )
 
     //--- reset data
 
+    ResetFastBuf(&lm->ext);
     ResetFile(&lm->F,0);
     ResetEML(&lm->stored_szs);
     ResetEML(&lm->stored_lfl);
@@ -8059,6 +8196,11 @@ static enumError close_lta ( lta_manager_t *lm )
     lm->convert_count	= 0;
     lm->szs_dup_count	= 0;
     lm->lfl_dup_count	= 0;
+
+    lm->progress_nodes	= 0;
+    lm->progress_tracks	= 0;
+    lm->start_msec	=
+    lm->last_log_msec	= GetTimerMSec();
 
     memset(lm->node,0,sizeof(lm->node));
     return err;
@@ -8078,6 +8220,8 @@ static void load_file_lta
     DASSERT(rec);
     DASSERT(path);
 
+    progress_lta(lm,false);
+
     uint fsize = rec->szs_size;
     if (!fsize)
 	return;
@@ -8092,6 +8236,8 @@ static void load_file_lta
     u8 *fdata = lm->buf;
     if (!LoadFILE(fname,0,0,fdata,fsize,0,0,false))
     {
+	lm->progress_tracks++;
+
 	if (lm->rm_source)
 	    InsertStringField(&lm->ld->remove_files,fname,false);
 
@@ -8100,32 +8246,37 @@ static void load_file_lta
 	PRINT0("data=%d,%zu, cdata=data=%d,%zu, ff=%s\n",
 		szs.data!=0, szs.size,szs.cdata!=0, szs.csize, GetNameFF_SZS(&szs) );
 
-	if ( lm->force_ff != FF_UNKNOWN )
+	if ( lm->force_ff != FF_UNKNOWN && lm->force_ff != szs.fform_file )
 	{
-	    if ( lm->force_ff != szs.fform_file )
+	    enumError err = CompressWith(&szs,COMPR_DEFAULT,false,lm->force_ff,FF_UNKNOWN);
+	    if ( !err && szs.cdata )
 	    {
-		enumError err = CompressWith(&szs,COMPR_DEFAULT,false,lm->force_ff,FF_UNKNOWN);
-		if (szs.cdata)
+		fdata = szs.cdata;
+		fsize = szs.csize;
+		if (szs.cache_used)
+		    lm->cache_count++;
+		else
 		{
-		    fdata = szs.cdata;
-		    fsize = szs.csize;
-		    if (szs.cache_used)
-			lm->cache_count++;
-		    else
+		    lm->convert_count++;
+		 #if 0
+		    if ( !err && szs.cache_fname )
 		    {
-			lm->convert_count++;
-			if ( !err && szs.cache_fname )
-			{
-			    File_t F;
-			    CreateFile(&F,true,szs.cache_fname,FM_SILENT|FM_REMOVE);
-			    if (F.f)
-				fwrite(fdata,1,fsize,F.f);
-			    ResetFile(&F,false);
-			}
+			File_t F;
+			CreateFile(&F,true,szs.cache_fname,FM_SILENT|FM_REMOVE);
+			if (F.f)
+			    fwrite(fdata,1,fsize,F.f);
+			ResetFile(&F,false);
 		    }
+		 #endif
 		}
 	    }
 	}
+
+	ccp ext = GetExtFF(szs.fform_file,szs.fform_arch);
+	if (ext)
+	    AppendFastBuf(&lm->ext,ext+1,strlen(ext));
+	else
+	    AppendFastBuf(&lm->ext,EmptyString,1);
 
 	if (is_d)
 	    lm->d_count++;
@@ -8149,6 +8300,7 @@ static void load_file_lta
 	WriteFileAt(&lm->F,&lm->current_offset,lm->data_offset,fdata,fsize);
 	lm->data_offset += ALIGN32(fsize,opt_align_lta);
 
+	DecodeWU8(&szs);
 	CollectCommonFilesSZS(&szs,true,SORT_NONE);
 	CreateLFL(&szs,0,true,true); // sorting is defined here
 	PRINT0("LFL: %p %zu\n",szs.data,szs.size);
@@ -8193,27 +8345,41 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
 
     enum
     {
-	O_YAZ		= 0x01,  // force FF_YAZ0  compression
-	O_BZ		= 0x02,  // force FF_BZ    compression
-	O_BZIP2		= 0x03,  // force FF_BZIP2 compression
-	O_LZ		= 0x04,  // force FF_LZ    compression
-	O_LZMA		= 0x05,  // force FF_LZMA  compression
-	 O_M_METHOD	= 0x07,  // mask for above
+	O_YAZ		= 0x001,  // force FF_YAZ0  compression
+	O_BZ		= 0x002,  // force FF_BZ    compression
+	O_BZIP2		= 0x003,  // force FF_BZIP2 compression
+	O_LZ		= 0x004,  // force FF_LZ    compression
+	O_LZMA		= 0x005,  // force FF_LZMA  compression
+	 O_M_METHOD	= 0x007,  // mask for above
 
-	O_RM		= 0x08,
+	O_RM		= 0x008,
+	O_EXT		= 0x010,
+	O_REDIR		= 0x020,
 
-	O_ALL		= 0x0f,
+	O_ALL		= 0x1ff,
 	O_DEFAULT	= 0
     };
 
     static const KeywordTab_t keytab[] =
     {
-	{ O_YAZ,		"YAZ0",		0,		O_M_METHOD },
-	{ O_BZ,			"BZ",		0,		O_M_METHOD },
+	{ O_YAZ,		"YAZ0",		"SZS",		O_M_METHOD },
+	{ O_BZ,			"WBZ",		"BZ",		O_M_METHOD },
 	{ O_BZIP2,		"BZIP2",	"BZ2",		O_M_METHOD },
-	{ O_LZ,			"LZ",		0,		O_M_METHOD },
+	{ O_LZ,			"WLZ",		"LZ",		O_M_METHOD },
 	{ O_LZMA,		"LZMA",		0,		O_M_METHOD },
 	{ O_RM,			"REMOVE",	"RM",		0 },
+	{ O_EXT,		"EXT",		0,		0 },
+	{ O_REDIR,		"REDIR",	0,		0 },
+
+	{ LEO_PROGRESS0,	"PR0",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS1,	"PR1",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS2,	"PR2",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS5,	"PR5",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS10,	"PR10",		"PROGRESS",	LEO_M_PROGRESS },
+	{ LEO_PROGRESS20,	"PR20",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS30,	"PR30",		0,		LEO_M_PROGRESS },
+	{ LEO_PROGRESS60,	"PR60",		0,		LEO_M_PROGRESS },
+
 	{0,0,0,0}
     };
 
@@ -8227,10 +8393,11 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
 	FF_LZMA,
     };
 
-    uint opt = 0;
+    uint opt = O_DEFAULT | ( ld->spar.opt & LEO_M_PROGRESS );
+    
     if (mem_opt.len)
     {
-	s64 res = ScanKeywordListP(0,mem_opt.ptr,mem_opt.len,O_DEFAULT,keytab);
+	s64 res = ScanKeywordListP(0,mem_opt.ptr,mem_opt.len,opt,keytab);
 	if ( res < 0 )
 	    return ERR_SYNTAX;
 	if ( res >= 0 )
@@ -8249,6 +8416,8 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
 	.rm_source	= (opt&O_RM) != 0,
 	.force_ff	= ff_tab[opt&O_M_METHOD],
 	.base_slot	= -1,
+	.append_ext	= ( opt & O_EXT ) != 0,
+	.show_progress	= GetProgressMSecLEO(opt),
     };
     close_lta(&lm); // initialize more vars
 
@@ -8283,23 +8452,30 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
     for ( int slot = 0; slot < lm.distrib_end_slot; slot++ )
     {
      restart:;
+	lm.progress_nodes++;
 	le_track_t *lt = GetTrackLD(ld,slot);
 	if (!IsActiveLT(lt))
+	{
+	 cont:
+	    AppendFastBuf(&lm.ext,EmptyString,2); // std + _d
 	    continue;
+	}
 
 	ccp fname = GetPathL2(ld,lt,ld->spar.opt,0);
 	if (!fname)
-	    continue;
+	    goto cont;
 
 	struct stat st;
 	if ( stat(fname,&st) || !S_ISREG(st.st_mode) )
-	    continue;
+	    goto cont;
 
 	if ( slot >= lm.base_slot + LTA_MAX_NODES )
 	    close_lta(&lm);
 
 	if ( lm.base_slot < 0 )
 	{
+	    InitializeFastBufAlloc(&lm.ext,10000);
+
 	    lm.base_slot = slot;
 	    lm.max_slots = lm.distrib_end_slot - lm.base_slot;
 	    if ( lm.max_slots > LTA_MAX_NODES )
@@ -8315,6 +8491,7 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
 	}
 
 	const uint saved_data_offset = lm.data_offset;
+	const uint saved_ext_size = GetFastBufLen(&lm.ext);
 	lta_node_t node = { .std.szs_size = st.st_size };
 	load_file_lta(&lm,&node.std,fname,false);
 
@@ -8328,14 +8505,19 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
 	    node.d.szs_size = st.st_size;
 	    load_file_lta(&lm,&node.d,path,true);
 	}
+	else
+	    AppendFastBuf(&lm.ext,EmptyString,1);
 
 	if (!node.d.szs_off)
 	    node.d = node.std;
 
 	const uint node_size = ALIGN32( ( slot - lm.base_slot + 1 ) * sizeof(lta_node_t), opt_align_lta );
-	if ( lm.data_offset + node_size > LTA_MAX_SIZE )
+	const uint ext_size  = lm.append_ext ? ALIGN32(GetFastBufLen(&lm.ext),opt_align_lta) : 0;
+
+	if ( lm.data_offset + node_size + ext_size> LTA_MAX_SIZE )
 	{
 	    lm.data_offset = saved_data_offset;
+	    SetFastBufLen(&lm.ext,saved_ext_size);
 	    close_lta(&lm);
 	    goto restart;
 	}
@@ -8344,8 +8526,25 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
 	lm.last_slot = slot;
     }
     close_lta(&lm);
-    FREE(lm.buf);
 
+
+    //--- create lta.szs
+
+    if ( lm.track_index && opt & O_REDIR )
+    {
+	PathCatBufPPE(path,sizeof(path),lm.destdir,"lta",".szs");
+	File_t F;
+	enumError err = CreateFileOpt(&F,true,path,false,0);
+	if (err)
+	    return err;
+	fputs("#USE-LTA\r\n",F.f);
+	CloseFile(&F,0);
+    }
+
+
+    //--- clean
+
+    FREE(lm.buf);
     return ERR_OK;
 }
 

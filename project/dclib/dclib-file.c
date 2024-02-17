@@ -1677,7 +1677,7 @@ enumError WriteFileAt
 	}
     }
 
-    noPRINT("WRITE %zx @%zx -> %zx\n",size,offset,offset+size);
+    PRINT0("WRITE %zx @%zx -> %zx\n",size,offset,offset+size);
     const size_t written = fwrite(data,1,size,F->f);
     if ( written != size )
 	return ERROR1(ERR_WRITE_FAILED,"Writing %zu bytes at offset %zu failed: %s\n",

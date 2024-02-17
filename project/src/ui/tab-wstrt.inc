@@ -201,7 +201,7 @@
 
   { T_DEF_CMD,	"PATCH",	"PATCH",
 		    "wstrt PATCH [file]...",
-		"Patch 'main.dol and 'StaticR.rel' files of Mario Kart Wii."
+		"Patch 'main.dol' and 'StaticR.rel' files of Mario Kart Wii."
 		" " WILDCARDS_PIPE
 		" No backup is made." },
 
@@ -273,6 +273,9 @@
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GO,	"LE_CODE",	"le-code|lecode",
+		0, 0 /* copy of wszst */ },
+
+  { T_OPT_G,	"LE_04X",	"le-04x|le04x",
 		0, 0 /* copy of wszst */ },
 
   { T_OPT_GMP,	"CHDIR",	"chdir",
@@ -536,6 +539,10 @@
 		0,
 		"Add newest LE-CODE starter from 2023-12 to main.dol." },
 
+  { H_OPT_C,	"ADDS_LECODE",	"adds-lecode|addslecode",
+		0,
+		"Add newest LE-CODE starter from 2023-12 to main.dol like --add-section does it." },
+
   { T_OPT_C,	"ADD_OLD_LECODE",	"add-old-lecode|addoldlecode",
 		0,
 		"Add old LE-CODE starter from 2019-01 to main.dol." },
@@ -566,7 +573,7 @@
   { T_OPT_CP,	"ADD_SECTION",	"add-section|addsection",
 		"file",
 		"Each option call adds the filename to an internal list."
-		" Each file must be of type GCT, GCH or WCH."
+		" Each file must be of type GCT, GCT-TXT, GCH or WCH."
 		" All GCT files together are combined with an internal code handler"
 		" to one section (like a GCH file)."
 		" GCH and WCH define sections and patches. The defined sections"
@@ -623,13 +630,14 @@
 		" Parameter MODE is optional."
 		" If set, OFF disables and ON enables this feature."
 		" For mode AUTO (default) this feature is enabled,"
-		" if the cheat codes are too large or for internal reasons." },
+		" if the cheat codes are too large (@end>0x80003000@)"
+		" or for internal conflicts." },
 
   { T_OPT_CP,	"GCT_ADDR",	"gct-addr|gctaddr",
 		"address",
 		"If {--gct-move} is active, a text section is created"
 		" to manage the code handler. This section is only needed at start"
-		" and is placed by default at address 0c802c0000"
+		" and is placed by default at address 0x802c0000"
 		" (part of BSS, good address for all 4 regions)."
 		" This option changes the start address of the section."
 		" If address is @0@ or invalid, then unused BSS space is searched." },
@@ -648,7 +656,7 @@
 		" It is dedicated to custom distribution creators for test purposes."
 		" If enabled, a user can load an own instance of Gecko Code Handler"
 		" and cheat codes and can use them online."
-		" If disabled, pachcing for online modus is disabled if an"
+		" If disabled, patching for online modus is disabled if an"
 		" alternative Gecko Code Handler is detected."
 		"\n "
 		" Parameter MODE is optional."
@@ -1185,6 +1193,7 @@
   { T_COPT,	"CLEAN_DOL",	0,0,0 },
   { T_COPY_GRP,	"PATCH",	0,0,0 },
   { T_COPT,	"ADD_LECODE",	0,0,0 },
+  { H_COPT,	"ADDS_LECODE",	0,0,0 },
   { T_COPT,	"ADD_OLD_LECODE",0,0,0 },
   { T_COPT,	"ADD_CTCODE",	0,0,0 },
   { T_COPT,	"CT_DIR",	0,0,0 },

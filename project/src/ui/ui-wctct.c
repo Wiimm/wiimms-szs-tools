@@ -471,15 +471,17 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
-	"Be quiet and print only error messages. Multiple usage is possible."
-	" The impact is command dependent. In general: If set three times,"
-	" different file format warnings are suppressed."
+	"Be quiet and print only error messages. Multiple use is possible."
+	" Previous use of --verbose is reverted. The impact is command"
+	" dependent. If set at least three times, almost all error messages"
+	" will be suppressed."
     },
 
     {	OPT_VERBOSE, false, false, false, false, false, 'v', "verbose",
 	0,
-	"Be verbose and print more progress information. Multiple usage is"
-	" possible. The impact is command dependent."
+	"Be verbose and print more progress information. Multiple use is"
+	" possible. Previous use of --quiet is reverted. The impact is command"
+	" dependent."
     },
 
     {	OPT_LOGGING, false, false, false, false, false, 'L', "logging",
@@ -545,6 +547,12 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Enable LE-CODE and CT-CODE support. The optional parameter is"
 	" deprecated and ignored. See https://szs.wiimm.de/opt/lecode for"
 	" details."
+    },
+
+    {	OPT_LE_04X, false, false, false, false, false, 0, "le-04x",
+	0,
+	"Use format %04x instead of %03x for LE-CODE slots to enable uniform"
+	" slot numbers if slots >4095 are used."
     },
 
     {	OPT_OLD_SPINY, false, false, false, false, false, 0, "old-spiny",
@@ -707,7 +715,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" 0x3b:0x41 and 0x44:0xfe."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 89
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 90
 
 };
 
@@ -929,6 +937,8 @@ static const struct option OptionLong[] =
 	 { "ctcode",		0, 0, GO_CT_CODE },
 	{ "le-code",		2, 0, GO_LE_CODE },
 	 { "lecode",		2, 0, GO_LE_CODE },
+	{ "le-04x",		0, 0, GO_LE_04X },
+	 { "le04x",		0, 0, GO_LE_04X },
 	{ "old-spiny",		0, 0, GO_OLD_SPINY },
 	 { "oldspiny",		0, 0, GO_OLD_SPINY },
 	{ "crs1",		1, 0, GO_CRS1 },
@@ -1114,55 +1124,56 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x08a   */	OPT_NO_COLORS,
 	/* 0x08b   */	OPT_CT_CODE,
 	/* 0x08c   */	OPT_LE_CODE,
-	/* 0x08d   */	OPT_OLD_SPINY,
-	/* 0x08e   */	OPT_CRS1,
-	/* 0x08f   */	OPT_CHDIR,
-	/* 0x090   */	OPT_ROUND,
-	/* 0x091   */	OPT_NO_WILDCARDS,
-	/* 0x092   */	OPT_IN_ORDER,
-	/* 0x093   */	OPT_RAW,
-	/* 0x094   */	OPT_BMG_ENDIAN,
-	/* 0x095   */	OPT_BMG_ENCODING,
-	/* 0x096   */	OPT_BMG_INF_SIZE,
-	/* 0x097   */	OPT_BMG_MID,
-	/* 0x098   */	OPT_FORCE_ATTRIB,
-	/* 0x099   */	OPT_DEF_ATTRIB,
-	/* 0x09a   */	OPT_NO_ATTRIB,
-	/* 0x09b   */	OPT_X_ESCAPES,
-	/* 0x09c   */	OPT_OLD_ESCAPES,
-	/* 0x09d   */	OPT_NO_BMG_COLORS,
-	/* 0x09e   */	OPT_BMG_COLORS,
-	/* 0x09f   */	OPT_NO_BMG_INLINE,
-	/* 0x0a0   */	OPT_NO_ECHO,
-	/* 0x0a1   */	OPT_UTF_8,
-	/* 0x0a2   */	OPT_NO_UTF_8,
-	/* 0x0a3   */	OPT_FORCE,
-	/* 0x0a4   */	OPT_REPAIR_MAGICS,
-	/* 0x0a5   */	OPT_CREATE_DISTRIB,
-	/* 0x0a6   */	OPT_OLD,
-	/* 0x0a7   */	OPT_STD,
-	/* 0x0a8   */	OPT_NEW,
-	/* 0x0a9   */	OPT_EXTRACT,
-	/* 0x0aa   */	OPT_LIST,
-	/* 0x0ab   */	OPT_REF,
-	/* 0x0ac   */	OPT_FULL,
-	/* 0x0ad   */	OPT_HEX,
-	/* 0x0ae   */	OPT_CT_DIR,
-	/* 0x0af   */	OPT_CT_LOG,
-	/* 0x0b0   */	OPT_ALLOW_SLOTS,
-	/* 0x0b1   */	OPT_IMAGES,
-	/* 0x0b2   */	OPT_LOAD_BMG,
-	/* 0x0b3   */	OPT_PATCH_BMG,
-	/* 0x0b4   */	OPT_MACRO_BMG,
-	/* 0x0b5   */	OPT_FILTER_BMG,
-	/* 0x0b6   */	OPT_PATCH_NAMES,
-	/* 0x0b7   */	OPT_ORDER_BY,
-	/* 0x0b8   */	OPT_ORDER_ALL,
-	/* 0x0b9   */	OPT_DYNAMIC,
-	/* 0x0ba   */	OPT_WRITE_TRACKS,
-	/* 0x0bb   */	OPT_NUMBER,
-	/* 0x0bc   */	OPT_SECTIONS,
-	/* 0x0bd   */	 0,0,0,
+	/* 0x08d   */	OPT_LE_04X,
+	/* 0x08e   */	OPT_OLD_SPINY,
+	/* 0x08f   */	OPT_CRS1,
+	/* 0x090   */	OPT_CHDIR,
+	/* 0x091   */	OPT_ROUND,
+	/* 0x092   */	OPT_NO_WILDCARDS,
+	/* 0x093   */	OPT_IN_ORDER,
+	/* 0x094   */	OPT_RAW,
+	/* 0x095   */	OPT_BMG_ENDIAN,
+	/* 0x096   */	OPT_BMG_ENCODING,
+	/* 0x097   */	OPT_BMG_INF_SIZE,
+	/* 0x098   */	OPT_BMG_MID,
+	/* 0x099   */	OPT_FORCE_ATTRIB,
+	/* 0x09a   */	OPT_DEF_ATTRIB,
+	/* 0x09b   */	OPT_NO_ATTRIB,
+	/* 0x09c   */	OPT_X_ESCAPES,
+	/* 0x09d   */	OPT_OLD_ESCAPES,
+	/* 0x09e   */	OPT_NO_BMG_COLORS,
+	/* 0x09f   */	OPT_BMG_COLORS,
+	/* 0x0a0   */	OPT_NO_BMG_INLINE,
+	/* 0x0a1   */	OPT_NO_ECHO,
+	/* 0x0a2   */	OPT_UTF_8,
+	/* 0x0a3   */	OPT_NO_UTF_8,
+	/* 0x0a4   */	OPT_FORCE,
+	/* 0x0a5   */	OPT_REPAIR_MAGICS,
+	/* 0x0a6   */	OPT_CREATE_DISTRIB,
+	/* 0x0a7   */	OPT_OLD,
+	/* 0x0a8   */	OPT_STD,
+	/* 0x0a9   */	OPT_NEW,
+	/* 0x0aa   */	OPT_EXTRACT,
+	/* 0x0ab   */	OPT_LIST,
+	/* 0x0ac   */	OPT_REF,
+	/* 0x0ad   */	OPT_FULL,
+	/* 0x0ae   */	OPT_HEX,
+	/* 0x0af   */	OPT_CT_DIR,
+	/* 0x0b0   */	OPT_CT_LOG,
+	/* 0x0b1   */	OPT_ALLOW_SLOTS,
+	/* 0x0b2   */	OPT_IMAGES,
+	/* 0x0b3   */	OPT_LOAD_BMG,
+	/* 0x0b4   */	OPT_PATCH_BMG,
+	/* 0x0b5   */	OPT_MACRO_BMG,
+	/* 0x0b6   */	OPT_FILTER_BMG,
+	/* 0x0b7   */	OPT_PATCH_NAMES,
+	/* 0x0b8   */	OPT_ORDER_BY,
+	/* 0x0b9   */	OPT_ORDER_ALL,
+	/* 0x0ba   */	OPT_DYNAMIC,
+	/* 0x0bb   */	OPT_WRITE_TRACKS,
+	/* 0x0bc   */	OPT_NUMBER,
+	/* 0x0bd   */	OPT_SECTIONS,
+	/* 0x0be   */	 0,0,
 	/* 0x0c0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0d0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x0e0   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
@@ -1345,6 +1356,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_NO_COLORS,
 	OptionInfo + OPT_CT_CODE,
 	OptionInfo + OPT_LE_CODE,
+	OptionInfo + OPT_LE_04X,
 	OptionInfo + OPT_OLD_SPINY,
 	OptionInfo + OPT_CRS1,
 	OptionInfo + OPT_CHDIR,
@@ -1753,7 +1765,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms CT-CODE Tool : Manage the CT-CODE extension. BRRES, TEX0,"
 	" CT-CODE, CT-TEXT and LE-BIN files are accepted as input.",
 	0,
-	32,
+	33,
 	option_tab_tool,
 	0
     },

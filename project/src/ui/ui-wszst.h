@@ -143,6 +143,7 @@ typedef enum enumOptions
 	OPT_ANALYZE,
 	OPT_ANALYZE_MODE,
 	OPT_SOURCE,
+	OPT_ID_LIST,
 	OPT_REFERENCE,
 	OPT_DEST,
 	OPT_DEST2,
@@ -204,7 +205,7 @@ typedef enum enumOptions
 	OPT_RAW,
 	OPT_SECTIONS,
 
-	OPT__N_SPECIFIC, // == 148
+	OPT__N_SPECIFIC, // == 149
 
 	//----- global options -----
 
@@ -228,6 +229,7 @@ typedef enum enumOptions
 	OPT_NO_COLORS,
 	OPT_CT_CODE,
 	OPT_LE_CODE,
+	OPT_LE_04X,
 	OPT_LOAD_PREFIX,
 	OPT_LOAD_CATEGORY,
 	OPT_CHDIR,
@@ -248,7 +250,7 @@ typedef enum enumOptions
 	OPT_TFORM_KMP,
 	OPT_MDL,
 	OPT_PAT,
-	OPT_PATCH_FILE,
+	OPT_PATCH_FILES,
 	OPT_KMG_LIMIT,
 	OPT_KMG_COPY,
 	OPT_LT_CLEAR,
@@ -296,7 +298,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 235
+	OPT__N_TOTAL // == 237
 
 } enumOptions;
 
@@ -398,6 +400,7 @@ typedef enum enumOptions
 //	OB_ANALYZE		= 1llu << OPT_ANALYZE,
 //	OB_ANALYZE_MODE		= 1llu << OPT_ANALYZE_MODE,
 //	OB_SOURCE		= 1llu << OPT_SOURCE,
+//	OB_ID_LIST		= 1llu << OPT_ID_LIST,
 //	OB_REFERENCE		= 1llu << OPT_REFERENCE,
 //	OB_DEST			= 1llu << OPT_DEST,
 //	OB_DEST2		= 1llu << OPT_DEST2,
@@ -802,6 +805,7 @@ typedef enum enumOptions
 //				| OB_IGNORE
 //				| OB_LONG
 //				| OB_GRP_SCRIPT
+//				| OB_ID_LIST
 //				| OB_REFERENCE
 //				| OB_DEST
 //				| OB_DEST2,
@@ -1249,6 +1253,7 @@ typedef enum enumGetOpt
 	GO_NO_COLORS,
 	GO_CT_CODE,
 	GO_LE_CODE,
+	GO_LE_04X,
 	GO_LOAD_PREFIX,
 	GO_LOAD_CATEGORY,
 	GO_PLUS,
@@ -1307,7 +1312,7 @@ typedef enum enumGetOpt
 	GO_GAMEMODES,
 	GO_MDL,
 	GO_PAT,
-	GO_PATCH_FILE,
+	GO_PATCH_FILES,
 	GO_KMG_LIMIT,
 	GO_KMG_COPY,
 	GO_LT_CLEAR,
@@ -1389,6 +1394,7 @@ typedef enum enumGetOpt
 	GO_STD,
 	GO_NEW,
 	GO_EXTRACT,
+	GO_ID_LIST,
 	GO_REFERENCE,
 	GO_NUMBER,
 	GO_REMOVE_SRC,

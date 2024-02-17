@@ -2466,6 +2466,17 @@ void ResetFastBuf ( FastBuf_t *fb )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int SetFastBufLen ( FastBuf_t *fb, uint max_size )
+{
+     DASSERT(fb);
+     const uint cur_len = GetFastBufLen(fb);
+     if ( max_size < cur_len )
+	fb->ptr = fb->buf + max_size;
+    return GetFastBufLen(fb);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 ccp GetFastBufStatus ( const FastBuf_t *fb )
 {
     char info[100];

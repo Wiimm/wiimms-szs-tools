@@ -34,7 +34,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_YAZ0, 0, 0, "YAZ0",
 	".szs", ".szs", ".szs",
-	FFT_VALID | FFT_COMPRESS,
+	FFT_VALID | FFT_COMPRESS | FFT_TRACK,
 	4, {0x59,0x61,0x7a,0x30}, // "Yaz0"
 	0,
 	"0",
@@ -46,7 +46,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_YAZ1, 0, 0, "YAZ1",
 	".szs", ".szs", ".szs",
-	FFT_VALID | FFT_COMPRESS,
+	FFT_VALID | FFT_COMPRESS | FFT_TRACK,
 	4, {0x59,0x61,0x7a,0x31}, // "Yaz1"
 	0,
 	"1",
@@ -58,7 +58,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_XYZ, 0, 0, "XYZ",
 	".xyz", ".szs", ".xyz",
-	FFT_VALID | FFT_COMPRESS,
+	FFT_VALID | FFT_COMPRESS | FFT_TRACK,
 	0, {0}, // no magic
 	0,
 	MinusString,
@@ -70,7 +70,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_BZ, 0, 0, "BZ",
 	".bz", ".szs", ".bz",
-	FFT_VALID | FFT_COMPRESS,
+	FFT_VALID | FFT_COMPRESS | FFT_TRACK,
 	4, {0x57,0x42,0x5a,0x61}, // "WBZa"
 	0,
 	MinusString,
@@ -82,7 +82,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_BZIP2, 0, 0, "BZIP2",
 	".bz2", ".szs", ".bz2",
-	FFT_VALID | FFT_COMPRESS,
+	FFT_VALID | FFT_COMPRESS | FFT_TRACK,
 	0, {0}, // no magic
 	0,
 	MinusString,
@@ -94,7 +94,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_LZ, 0, 0, "LZ",
 	".lz", ".szs", ".lz",
-	FFT_VALID | FFT_COMPRESS,
+	FFT_VALID | FFT_COMPRESS | FFT_TRACK,
 	4, {0x57,0x4c,0x5a,0x61}, // "WLZa"
 	0,
 	MinusString,
@@ -106,7 +106,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_LZMA, 0, 0, "LZMA",
 	".lzma", ".szs", ".lzma",
-	FFT_VALID | FFT_COMPRESS,
+	FFT_VALID | FFT_COMPRESS | FFT_TRACK,
 	0, {0}, // no magic
 	0,
 	MinusString,
@@ -130,7 +130,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_U8, 0, 0, "U8",
 	".u8", ".szs", ".u8",
-	FFT_VALID | FFT_ARCHIVE | FFT_CREATE | FFT_EXTRACT | FFT_CUT | FFT_LINK,
+	FFT_VALID | FFT_ARCHIVE | FFT_TRACK | FFT_CREATE | FFT_EXTRACT | FFT_CUT | FFT_LINK,
 	4, {0x55,0xaa,0x38,0x2d}, // "Uª8-"
 	0,
 	MinusString,
@@ -142,7 +142,7 @@ const file_type_t FileTypeTab[FF_N+1] =
     {
 	FF_WU8, 0, 0, "WU8",
 	".wu8", ".wu8", ".wu8",
-	FFT_VALID | FFT_ARCHIVE | FFT_CREATE | FFT_EXTRACT | FFT_CUT | FFT_LINK,
+	FFT_VALID | FFT_ARCHIVE | FFT_TRACK | FFT_CREATE | FFT_EXTRACT | FFT_CUT | FFT_LINK,
 	4, {0x57,0x55,0x38,0x61}, // "WU8a"
 	0,
 	MinusString,
@@ -222,7 +222,19 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Simple archive format"
     },
 
- // FF_LTA = 17
+ // FF_USE_LTA = 17
+    {
+	FF_USE_LTA, 0, 0, "USE-LTA",
+	".szs", ".szs", ".szs",
+	FFT_VALID,
+	8, {0x23,0x55,0x53,0x45,0x2d,0x4c,0x54,0x41}, // "#USE-LTA"
+	0,
+	MinusString,
+	MinusString,
+	"LE-CODE redirect to LTA"
+    },
+
+ // FF_LTA = 18
     {
 	FF_LTA, 0, 0, "LTA",
 	".lta", "", ".lta",
@@ -234,7 +246,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"LE-CODE Track Archive"
     },
 
- // FF_LFL = 18
+ // FF_LFL = 19
     {
 	FF_LFL, 0, 0, "LFL",
 	".lfl", ".szs", ".lfl",
@@ -246,7 +258,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"LE-CODE File List"
     },
 
- // FF_CHR = 19
+ // FF_CHR = 20
     {
 	FF_CHR, 0, 0, "CHR",
 	".chr", ".szs", ".chr0",
@@ -258,7 +270,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Model movement animations"
     },
 
- // FF_CLR = 20
+ // FF_CLR = 21
     {
 	FF_CLR, 0, 0, "CLR",
 	".clr", ".szs", ".clr0",
@@ -270,7 +282,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Colour changing animations"
     },
 
- // FF_MDL = 21
+ // FF_MDL = 22
     {
 	FF_MDL, FF_MDL, FF_MDL_TXT, "MDL",
 	".mdl", ".szs", ".mdl0",
@@ -282,7 +294,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Model files"
     },
 
- // FF_PAT = 22
+ // FF_PAT = 23
     {
 	FF_PAT, FF_PAT, FF_PAT_TXT, "PAT",
 	".pat", ".szs", ".pat0",
@@ -294,7 +306,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Texture swapping animations"
     },
 
- // FF_SCN = 23
+ // FF_SCN = 24
     {
 	FF_SCN, 0, 0, "SCN",
 	".scn", ".szs", ".scn0",
@@ -306,7 +318,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Polygon morphing animations"
     },
 
- // FF_SHP = 24
+ // FF_SHP = 25
     {
 	FF_SHP, 0, 0, "SHP",
 	".shp", ".szs", ".shp0",
@@ -318,7 +330,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	filetype_info_unknown
     },
 
- // FF_SRT = 25
+ // FF_SRT = 26
     {
 	FF_SRT, 0, 0, "SRT",
 	".srt", ".szs", ".srt0",
@@ -330,7 +342,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Texture movement animations"
     },
 
- // FF_TEX = 26
+ // FF_TEX = 27
     {
 	FF_TEX, 0, 0, "TEX",
 	".tex", ".szs", ".tex0",
@@ -342,7 +354,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Texture file"
     },
 
- // FF_TEX_CT = 27
+ // FF_TEX_CT = 28
     {
 	FF_TEX_CT, 0, 0, "TEX+CT",
 	".tex", ".szs", ".tex0",
@@ -354,7 +366,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Texture file with CTGP-CODE"
     },
 
- // FF_CTDEF = 28
+ // FF_CTDEF = 29
     {
 	FF_CTDEF, 0, 0, "CT-DEF",
 	".txt", ".szs", ".txt",
@@ -366,7 +378,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-CODE definition file"
     },
 
- // FF_CT0_CODE = 29
+ // FF_CT0_CODE = 30
     {
 	FF_CT0_CODE, 0, 0, "C0CODE",
 	".bin", ".szs", ".bin",
@@ -378,7 +390,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-CODE for main.dol section T2"
     },
 
- // FF_CT0_DATA = 30
+ // FF_CT0_DATA = 31
     {
 	FF_CT0_DATA, 0, 0, "C0DATA",
 	".bin", ".szs", ".bin",
@@ -390,7 +402,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-DATA for main.dol section D8"
     },
 
- // FF_CT1_CODE = 31
+ // FF_CT1_CODE = 32
     {
 	FF_CT1_CODE, 0, 0, "C1CODE",
 	".bin", ".szs", ".bin",
@@ -402,7 +414,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-CODE for strap TEX0 file"
     },
 
- // FF_CT1_DATA = 32
+ // FF_CT1_DATA = 33
     {
 	FF_CT1_DATA, 0, 0, "C1DATA",
 	".ctcode", ".szs", ".ctcode",
@@ -414,7 +426,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-DATA for strap TEX0 file"
     },
 
- // FF_CUP1 = 33
+ // FF_CUP1 = 34
     {
 	FF_CUP1, 0, 0, "CUP1",
 	".bin", ".szs", ".bin",
@@ -426,7 +438,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-DATA section: Cups"
     },
 
- // FF_CRS1 = 34
+ // FF_CRS1 = 35
     {
 	FF_CRS1, 0, 0, "CRS1",
 	".bin", ".szs", ".bin",
@@ -438,7 +450,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-DATA section: Tracks"
     },
 
- // FF_MOD1 = 35
+ // FF_MOD1 = 36
     {
 	FF_MOD1, 0, 0, "MOD1",
 	".bin", ".szs", ".bin",
@@ -450,7 +462,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-DATA section: main.dol patches"
     },
 
- // FF_MOD2 = 36
+ // FF_MOD2 = 37
     {
 	FF_MOD2, 0, 0, "MOD2",
 	".bin", ".szs", ".bin",
@@ -462,7 +474,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-DATA section: StaticR.rel patches"
     },
 
- // FF_OVR1 = 37
+ // FF_OVR1 = 38
     {
 	FF_OVR1, 0, 0, "OVR1",
 	".bin", ".szs", ".bin",
@@ -474,7 +486,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"CT-DATA section: Speedometer"
     },
 
- // FF_LE_BIN = 38
+ // FF_LE_BIN = 39
     {
 	FF_LE_BIN, 0, 0, "LE-BIN",
 	".bin", ".szs", ".bin",
@@ -486,7 +498,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"LE-CODE binary"
     },
 
- // FF_LEX = 39
+ // FF_LEX = 40
     {
 	FF_LEX, FF_LEX, FF_LEX_TXT, "LEX",
 	".lex", ".szs", ".lex",
@@ -498,7 +510,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"LECODE extension file"
     },
 
- // FF_LEX_TXT = 40
+ // FF_LEX_TXT = 41
     {
 	FF_LEX_TXT, FF_LEX, FF_LEX_TXT, "LEX-TXT",
 	".txt", ".szs", ".txt",
@@ -510,7 +522,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text version of LEX"
     },
 
- // FF_LPAR = 41
+ // FF_LPAR = 42
     {
 	FF_LPAR, 0, 0, "LPAR",
 	".txt", ".szs", ".txt",
@@ -522,7 +534,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text file with LE-CODE parameters"
     },
 
- // FF_LEDEF = 42
+ // FF_LEDEF = 43
     {
 	FF_LEDEF, 0, 0, "LE-DEF",
 	".txt", ".szs", ".txt",
@@ -534,7 +546,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"LE-CODE definition file"
     },
 
- // FF_LEDIS = 43
+ // FF_LEDIS = 44
     {
 	FF_LEDIS, 0, 0, "LE-DIS",
 	".txt", ".szs", ".txt",
@@ -546,7 +558,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text file with CT+LE-CODE distribution settings"
     },
 
- // FF_LEREF = 44
+ // FF_LEREF = 45
     {
 	FF_LEREF, 0, 0, "LE-REF",
 	".txt", ".szs", ".txt",
@@ -558,7 +570,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text file as track reference"
     },
 
- // FF_LESTR = 45
+ // FF_LESTR = 46
     {
 	FF_LESTR, 0, 0, "LE-STR",
 	".txt", ".szs", ".txt",
@@ -570,7 +582,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text file strings for tracks"
     },
 
- // FF_SHA1REF = 46
+ // FF_SHA1REF = 47
     {
 	FF_SHA1REF, 0, 0, "SHA1REF",
 	".txt", ".szs", ".txt",
@@ -582,7 +594,19 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text file with SHA1 of tracks"
     },
 
- // FF_PREFIX = 47
+ // FF_SHA1ID = 48
+    {
+	FF_SHA1ID, 0, 0, "SHA1ID",
+	".txt", ".szs", ".txt",
+	FFT_VALID | FFT_TEXT | FFT_ENCODE,
+	8, {0x23,0x53,0x48,0x41,0x31,0x49,0x44,0x31}, // "#SHA1ID1"
+	0,
+	MinusString,
+	MinusString,
+	"Text file with SHA1 and file_id of tracks"
+    },
+
+ // FF_PREFIX = 49
     {
 	FF_PREFIX, 0, 0, "PREFIX",
 	".txt", ".szs", ".txt",
@@ -594,7 +618,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text file with console/game prefixes and info"
     },
 
- // FF_MTCAT = 48
+ // FF_MTCAT = 50
     {
 	FF_MTCAT, 0, 0, "MTCAT",
 	".txt", ".szs", ".txt",
@@ -606,7 +630,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text file with MKW Track Categories"
     },
 
- // FF_CT_SHA1 = 49
+ // FF_CT_SHA1 = 51
     {
 	FF_CT_SHA1, 0, 0, "CT-SHA1",
 	".txt", ".szs", ".txt",
@@ -618,7 +642,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_MDL_TXT = 50
+ // FF_MDL_TXT = 52
     {
 	FF_MDL_TXT, FF_MDL, FF_MDL_TXT, "MDLTXT",
 	".txt", ".szs", ".txt",
@@ -630,7 +654,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text version of MDL"
     },
 
- // FF_PAT_TXT = 51
+ // FF_PAT_TXT = 53
     {
 	FF_PAT_TXT, FF_PAT, FF_PAT_TXT, "PATTXT",
 	".txt", ".szs", ".txt",
@@ -642,7 +666,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text version of PAT"
     },
 
- // FF_TPL = 52
+ // FF_TPL = 54
     {
 	FF_TPL, 0, 0, "TPL",
 	".tpl", ".szs", ".tpl",
@@ -654,7 +678,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Image container"
     },
 
- // FF_BTI = 53
+ // FF_BTI = 55
     {
 	FF_BTI, 0, 0, "BTI",
 	".bti", ".szs", ".bti",
@@ -666,7 +690,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Image container"
     },
 
- // FF_BREFT_IMG = 54
+ // FF_BREFT_IMG = 56
     {
 	FF_BREFT_IMG, 0, 0, "BT-IMG",
 	".bt-img", ".szs", ".bt-img",
@@ -678,7 +702,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Raw image of BREFT file"
     },
 
- // FF_BMG = 55
+ // FF_BMG = 57
     {
 	FF_BMG, FF_BMG, FF_BMG_TXT, "BMG",
 	".bmg", ".szs", ".bmg",
@@ -690,7 +714,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Message file"
     },
 
- // FF_BMG_TXT = 56
+ // FF_BMG_TXT = 58
     {
 	FF_BMG_TXT, FF_BMG, FF_BMG_TXT, "BMGTXT",
 	".txt", ".szs", ".txt",
@@ -702,7 +726,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text version of BMG"
     },
 
- // FF_KCL = 57
+ // FF_KCL = 59
     {
 	FF_KCL, FF_KCL, FF_KCL_TXT, "KCL",
 	".kcl", ".szs", ".kcl",
@@ -714,7 +738,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Collision file"
     },
 
- // FF_KCL_TXT = 58
+ // FF_KCL_TXT = 60
     {
 	FF_KCL_TXT, FF_KCL, FF_KCL_TXT, "KCLTXT",
 	".obj", ".szs", ".obj",
@@ -726,7 +750,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Wavefront OBJ by WSZST"
     },
 
- // FF_WAV_OBJ = 59
+ // FF_WAV_OBJ = 61
     {
 	FF_WAV_OBJ, FF_KCL, FF_WAV_OBJ, "WAVOBJ",
 	".obj", ".szs", ".obj",
@@ -738,7 +762,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Wavefront OBJ"
     },
 
- // FF_SKP_OBJ = 60
+ // FF_SKP_OBJ = 62
     {
 	FF_SKP_OBJ, FF_KCL, FF_SKP_OBJ, "SKPOBJ",
 	".obj", ".szs", ".obj",
@@ -750,7 +774,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Wavefront OBJ by Sketchup"
     },
 
- // FF_KMP = 61
+ // FF_KMP = 63
     {
 	FF_KMP, FF_KMP, FF_KMP_TXT, "KMP",
 	".kmp", ".szs", ".kmp",
@@ -762,7 +786,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Track information file"
     },
 
- // FF_KMP_TXT = 62
+ // FF_KMP_TXT = 64
     {
 	FF_KMP_TXT, FF_KMP, FF_KMP_TXT, "KMPTXT",
 	".txt", ".szs", ".txt",
@@ -774,7 +798,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Text version of KMP"
     },
 
- // FF_ITEMSLT = 63
+ // FF_ITEMSLT = 65
     {
 	FF_ITEMSLT, FF_ITEMSLT, FF_ITEMSLT_TXT, "ITEMSLT",
 	".bin", ".szs", ".slt",
@@ -786,7 +810,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_ITEMSLT_TXT = 64
+ // FF_ITEMSLT_TXT = 66
     {
 	FF_ITEMSLT_TXT, FF_ITEMSLT, FF_ITEMSLT_TXT, "ITEMSLTTXT",
 	".txt", ".szs", ".txt",
@@ -798,7 +822,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_KMG = 65
+ // FF_KMG = 67
     {
 	FF_KMG, FF_KMG, FF_KMG_TXT, "KMG",
 	".kmg", ".szs", ".kmg",
@@ -810,7 +834,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_KMG_TXT = 66
+ // FF_KMG_TXT = 68
     {
 	FF_KMG_TXT, FF_KMG, FF_KMG_TXT, "KMGTXT",
 	".txt", ".szs", ".txt",
@@ -822,7 +846,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_KRM = 67
+ // FF_KRM = 69
     {
 	FF_KRM, FF_KRM, FF_KRM_TXT, "KRM",
 	".krm", ".szs", ".krm",
@@ -834,7 +858,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_KRM_TXT = 68
+ // FF_KRM_TXT = 70
     {
 	FF_KRM_TXT, FF_KRM, FF_KRM_TXT, "KRMTXT",
 	".txt", ".szs", ".txt",
@@ -846,7 +870,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_KRT = 69
+ // FF_KRT = 71
     {
 	FF_KRT, FF_KRT, FF_KRT_TXT, "KRT",
 	".krt", ".szs", ".krt",
@@ -858,7 +882,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_KRT_TXT = 70
+ // FF_KRT_TXT = 72
     {
 	FF_KRT_TXT, FF_KRT, FF_KRT_TXT, "KRTTXT",
 	".txt", ".szs", ".txt",
@@ -870,7 +894,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_OBJFLOW = 71
+ // FF_OBJFLOW = 73
     {
 	FF_OBJFLOW, FF_OBJFLOW, FF_OBJFLOW_TXT, "OBFLOW",
 	".bin", ".szs", ".bin",
@@ -882,7 +906,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_OBJFLOW_TXT = 72
+ // FF_OBJFLOW_TXT = 74
     {
 	FF_OBJFLOW_TXT, FF_OBJFLOW, FF_OBJFLOW_TXT, "OF-TXT",
 	".txt", ".szs", ".txt",
@@ -894,7 +918,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_GH_ITEM = 73
+ // FF_GH_ITEM = 75
     {
 	FF_GH_ITEM, FF_GH_ITEM, FF_GH_ITEM_TXT, "GHITEM",
 	".bin", ".szs", ".bin",
@@ -906,7 +930,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_GH_ITEM_TXT = 74
+ // FF_GH_ITEM_TXT = 76
     {
 	FF_GH_ITEM_TXT, FF_GH_ITEM, FF_GH_ITEM_TXT, "GI-TXT",
 	".txt", ".szs", ".txt",
@@ -918,7 +942,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_GH_IOBJ = 75
+ // FF_GH_IOBJ = 77
     {
 	FF_GH_IOBJ, FF_GH_IOBJ, FF_GH_IOBJ_TXT, "GHIOBJ",
 	".bin", ".szs", ".bin",
@@ -930,7 +954,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_GH_IOBJ_TXT = 76
+ // FF_GH_IOBJ_TXT = 78
     {
 	FF_GH_IOBJ_TXT, FF_GH_IOBJ, FF_GH_IOBJ_TXT, "GIOTXT",
 	".txt", ".szs", ".txt",
@@ -942,7 +966,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_GH_KART = 77
+ // FF_GH_KART = 79
     {
 	FF_GH_KART, FF_GH_KART, FF_GH_KART_TXT, "GHKART",
 	".bin", ".szs", ".bin",
@@ -954,7 +978,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_GH_KART_TXT = 78
+ // FF_GH_KART_TXT = 80
     {
 	FF_GH_KART_TXT, FF_GH_KART, FF_GH_KART_TXT, "GK-TXT",
 	".txt", ".szs", ".txt",
@@ -966,7 +990,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_GH_KOBJ = 79
+ // FF_GH_KOBJ = 81
     {
 	FF_GH_KOBJ, FF_GH_KOBJ, FF_GH_KOBJ_TXT, "GHKOBJ",
 	".bin", ".szs", ".bin",
@@ -978,7 +1002,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_GH_KOBJ_TXT = 80
+ // FF_GH_KOBJ_TXT = 82
     {
 	FF_GH_KOBJ_TXT, FF_GH_KOBJ, FF_GH_KOBJ_TXT, "GKOTXT",
 	".txt", ".szs", ".txt",
@@ -990,7 +1014,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_DRIVER = 81
+ // FF_DRIVER = 83
     {
 	FF_DRIVER, 0, 0, "DRV",
 	".bin", ".szs", ".bin",
@@ -1002,7 +1026,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_VEHICLE = 82
+ // FF_VEHICLE = 84
     {
 	FF_VEHICLE, 0, 0, "VEH",
 	".bin", ".szs", ".bin",
@@ -1014,7 +1038,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_BRASD = 83
+ // FF_BRASD = 85
     {
 	FF_BRASD, 0, 0, "BRASD",
 	".brasd", ".szs", ".brasd",
@@ -1026,7 +1050,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	filetype_info_unknown
     },
 
- // FF_RKG = 84
+ // FF_RKG = 86
     {
 	FF_RKG, 0, 0, "RKG",
 	".rkg", ".szs", ".rkg",
@@ -1038,7 +1062,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_RKCO = 85
+ // FF_RKCO = 87
     {
 	FF_RKCO, 0, 0, "RKCO",
 	".rkco", ".szs", ".rkco",
@@ -1050,7 +1074,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_STATICR = 86
+ // FF_STATICR = 88
     {
 	FF_STATICR, 0, 0, "STATICR",
 	".rel", ".szs", ".rel",
@@ -1062,7 +1086,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"A 'StaticR.rel' file"
     },
 
- // FF_DOL = 87
+ // FF_DOL = 89
     {
 	FF_DOL, 0, 0, "DOL",
 	".dol", ".szs", ".dol",
@@ -1074,19 +1098,31 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"An executable DOL file"
     },
 
- // FF_GCT = 88
+ // FF_GCT = 90
     {
 	FF_GCT, 0, 0, "GCT",
 	".gct", ".szs", ".gct",
 	FFT_VALID,
-	0, {0}, // no magic
+	4, {0x00,0xd0,0xc0,0xde}, // "\000ÐÀÞ"
 	0,
 	MinusString,
 	MinusString,
-	"Gecko Cheat Code"
+	"Gecko Cheat Code, binary"
     },
 
- // FF_GCH = 89
+ // FF_GCT_TXT = 91
+    {
+	FF_GCT_TXT, 0, 0, "GCT-TXT",
+	".gct", ".szs", ".gct",
+	FFT_VALID,
+	4, {0x23,0x47,0x43,0x54}, // "#GCT"
+	0,
+	MinusString,
+	MinusString,
+	"Gecko Cheat Code, text"
+    },
+
+ // FF_GCH = 92
     {
 	FF_GCH, 0, 0, "GCH",
 	".gch", ".szs", ".gch",
@@ -1098,7 +1134,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Gecko Cheat Handler + coded"
     },
 
- // FF_WCH = 90
+ // FF_WCH = 93
     {
 	FF_WCH, 0, 0, "WCH",
 	".wch", ".szs", ".wch",
@@ -1110,7 +1146,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Wiimms Cheat Handler + codes"
     },
 
- // FF_WPF = 91
+ // FF_WPF = 94
     {
 	FF_WPF, 0, 0, "WPF",
 	".wpf", ".szs", ".wpf",
@@ -1122,7 +1158,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Wiimms Patch File"
     },
 
- // FF_XPF = 92
+ // FF_XPF = 95
     {
 	FF_XPF, 0, 0, "XPF",
 	".xpf", ".szs", ".xpf",
@@ -1134,7 +1170,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"Extended Patch File"
     },
 
- // FF_DISTRIB = 93
+ // FF_DISTRIB = 96
     {
 	FF_DISTRIB, 0, 0, "DISTRIB",
 	".txt", ".szs", ".txt",
@@ -1146,7 +1182,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_PNG = 94
+ // FF_PNG = 97
     {
 	FF_PNG, 0, 0, "PNG",
 	".png", ".png", ".png",
@@ -1158,7 +1194,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	"A public image format"
     },
 
- // FF_PORTDB = 95
+ // FF_PORTDB = 98
     {
 	FF_PORTDB, 0, 0, "PORTDB",
 	".bin", ".szs", ".bin",
@@ -1170,7 +1206,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_TXT = 96
+ // FF_TXT = 99
     {
 	FF_TXT, 0, 0, "TXT",
 	".txt", ".szs", ".txt",
@@ -1182,7 +1218,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_SCRIPT = 97
+ // FF_SCRIPT = 100
     {
 	FF_SCRIPT, 0, 0, "SCRIPT",
 	".script", ".szs", ".script",
@@ -1194,7 +1230,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_JSON = 98
+ // FF_JSON = 101
     {
 	FF_JSON, 0, 0, "JSON",
 	".json", ".szs", ".json",
@@ -1206,7 +1242,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_SH = 99
+ // FF_SH = 102
     {
 	FF_SH, 0, 0, "SH",
 	".sh", ".szs", ".sh",
@@ -1218,7 +1254,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_BASH = 100
+ // FF_BASH = 103
     {
 	FF_BASH, 0, 0, "BASH",
 	".sh", ".szs", ".sh",
@@ -1230,7 +1266,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_PHP = 101
+ // FF_PHP = 104
     {
 	FF_PHP, 0, 0, "PHP",
 	".php", ".szs", ".php",
@@ -1242,7 +1278,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_MAKEDOC = 102
+ // FF_MAKEDOC = 105
     {
 	FF_MAKEDOC, 0, 0, "MAKEDOC",
 	".md", ".szs", ".md",
@@ -1254,7 +1290,7 @@ const file_type_t FileTypeTab[FF_N+1] =
 	EmptyString
     },
 
- // FF_DIRECTORY = 103
+ // FF_DIRECTORY = 106
     {
 	FF_DIRECTORY, 0, 0, "DIR",
 	".d", ".d", ".d",
@@ -1280,113 +1316,117 @@ const KeywordTab_t cmdtab_FileType[] =
 {
     // INFO: cmd->opt := ff_attrib_t
 
-    { FF_YAZ0,		"YAZ",		"YAZ0",		    0x3 },
-    { FF_YAZ1,		"YAZ1",		0,		    0x3 },
-    { FF_XYZ,		"XYZ",		0,		    0x3 },
-    { FF_BZ,		"BZ",		0,		    0x3 },
-    { FF_BZIP2,		"BZ2",		"BZIP2",	    0x3 },
-    { FF_LZ,		"LZ",		0,		    0x3 },
-    { FF_LZMA,		"LZMA",		0,		    0x3 },
+    { FF_YAZ0,		"YAZ",		"YAZ0",		  0x103 },
+    { FF_YAZ1,		"YAZ1",		0,		  0x103 },
+    { FF_XYZ,		"XYZ",		0,		  0x103 },
+    { FF_BZ,		"BZ",		0,		  0x103 },
+    { FF_BZIP2,		"BZ2",		"BZIP2",	  0x103 },
+    { FF_LZ,		"LZ",		0,		  0x103 },
+    { FF_LZMA,		"LZMA",		0,		  0x103 },
     { FF_XZ,		"XZ",		0,		    0x3 },
-    { FF_U8,		"U8",		0,		 0x8705 },
-    { FF_WU8,		"WU8",		0,		 0x8705 },
-    { FF_RARC,		"ARC",		"RARC",		  0x605 },
-    { FF_BRRES,		"BRES",		"BRRES",	  0x705 },
-    { FF_BREFF,		"BREFF",	"REFF",		  0x305 },
-    { FF_BREFT,		"BREFT",	"REFT",		  0x705 },
-    { FF_RKC,		"RKC",		0,		  0x705 },
-    { FF_PACK,		"PACK",		0,		  0x705 },
-    { FF_LTA,		"",		"LTA",		  0x705 },
-    { FF_LFL,		"LFL",		0,		  0x705 },
-    { FF_CHR,		"CHR",		"CHR0",		  0x461 },
-    { FF_CLR,		"CLR",		"CLR0",		  0x461 },
-    { FF_MDL,		"MDL",		"MDL0",		 0x4c61 },
-    { FF_PAT,		"PAT",		"PAT0",		 0x1c21 },
-    { FF_SCN,		"SCN",		"SCN0",		  0x461 },
-    { FF_SHP,		"SHP",		"SHP0",		  0x461 },
-    { FF_SRT,		"SRT",		"SRT0",		  0x461 },
-    { FF_TEX,		"TEX",		"TEX0",		 0x1c29 },
-    { FF_TEX_CT,	"TEX",		"TEX+CT",	 0x5c29 },
-    { FF_TEX_CT,	"TEX-CT",	"TEX0",		 0x5c29 },
-    { FF_TEX_CT,	"TEXCT",	0,		 0x5c29 },
-    { FF_CTDEF,		"CT-DEF",	"CTDEF",	 0x3811 },
+    { FF_U8,		"U8",		0,		0x10f05 },
+    { FF_WU8,		"WU8",		0,		0x10f05 },
+    { FF_RARC,		"ARC",		"RARC",		  0xc05 },
+    { FF_BRRES,		"BRES",		"BRRES",	  0xe05 },
+    { FF_BREFF,		"BREFF",	"REFF",		  0x605 },
+    { FF_BREFT,		"BREFT",	"REFT",		  0xe05 },
+    { FF_RKC,		"RKC",		0,		  0xe05 },
+    { FF_PACK,		"PACK",		0,		  0xe05 },
+    { FF_USE_LTA,	"USE-LTA",	"USELTA",	    0x1 },
+    { FF_LTA,		"",		"LTA",		  0xe05 },
+    { FF_LFL,		"LFL",		0,		  0xe05 },
+    { FF_CHR,		"CHR",		"CHR0",		  0x861 },
+    { FF_CLR,		"CLR",		"CLR0",		  0x861 },
+    { FF_MDL,		"MDL",		"MDL0",		 0x9861 },
+    { FF_PAT,		"PAT",		"PAT0",		 0x3821 },
+    { FF_SCN,		"SCN",		"SCN0",		  0x861 },
+    { FF_SHP,		"SHP",		"SHP0",		  0x861 },
+    { FF_SRT,		"SRT",		"SRT0",		  0x861 },
+    { FF_TEX,		"TEX",		"TEX0",		 0x3829 },
+    { FF_TEX_CT,	"TEX",		"TEX+CT",	 0xb829 },
+    { FF_TEX_CT,	"TEX-CT",	"TEX0",		 0xb829 },
+    { FF_TEX_CT,	"TEXCT",	0,		 0xb829 },
+    { FF_CTDEF,		"CT-DEF",	"CTDEF",	 0x7011 },
     { FF_CT0_CODE,	"C0CODE",	"CT0-CODE",	    0x1 },
     { FF_CT0_CODE,	"CT0CODE",	0,		    0x1 },
     { FF_CT0_DATA,	"C0DATA",	"CT0-DATA",	    0x1 },
     { FF_CT0_DATA,	"CT0DATA",	0,		    0x1 },
     { FF_CT1_CODE,	"C1CODE",	"CT1-CODE",	    0x1 },
     { FF_CT1_CODE,	"CT1CODE",	0,		    0x1 },
-    { FF_CT1_DATA,	"C1DATA",	"CT1-DATA",	 0x4c01 },
-    { FF_CT1_DATA,	"CT1DATA",	"CTCODE",	 0x4c01 },
+    { FF_CT1_DATA,	"C1DATA",	"CT1-DATA",	 0x9801 },
+    { FF_CT1_DATA,	"CT1DATA",	"CTCODE",	 0x9801 },
     { FF_CUP1,		"CUP1",		0,		    0x1 },
     { FF_CRS1,		"CRS1",		0,		    0x1 },
     { FF_MOD1,		"MOD1",		0,		    0x1 },
     { FF_MOD2,		"MOD2",		0,		    0x1 },
     { FF_OVR1,		"OVR1",		0,		    0x1 },
-    { FF_LE_BIN,	"LE-BIN",	"LEBIN",	 0x4c01 },
-    { FF_LEX,		"LEX",		0,		 0x1c01 },
-    { FF_LEX_TXT,	"LEX-TXT",	"LEXTXT",	 0x3811 },
-    { FF_LPAR,		"LPAR",		0,		 0x3811 },
-    { FF_LEDEF,		"LE-DEF",	"LEDEF",	 0x3811 },
-    { FF_LEDIS,		"LE-DIS",	"LEDIS",	 0x1811 },
-    { FF_LEREF,		"LE-REF",	"LEREF",	 0x1811 },
-    { FF_LESTR,		"LE-STR",	"LESTR",	 0x1811 },
-    { FF_SHA1REF,	"SHA1REF",	0,		 0x1011 },
-    { FF_PREFIX,	"PREFIX",	0,		 0x1811 },
-    { FF_MTCAT,		"MTCAT",	0,		 0x1811 },
+    { FF_LE_BIN,	"LE-BIN",	"LEBIN",	 0x9801 },
+    { FF_LEX,		"LEX",		0,		 0x3801 },
+    { FF_LEX_TXT,	"LEX-TXT",	"LEXTXT",	 0x7011 },
+    { FF_LPAR,		"LPAR",		0,		 0x7011 },
+    { FF_LEDEF,		"LE-DEF",	"LEDEF",	 0x7011 },
+    { FF_LEDIS,		"LE-DIS",	"LEDIS",	 0x3011 },
+    { FF_LEREF,		"LE-REF",	"LEREF",	 0x3011 },
+    { FF_LESTR,		"LE-STR",	"LESTR",	 0x3011 },
+    { FF_SHA1REF,	"SHA1REF",	0,		 0x2011 },
+    { FF_SHA1ID,	"SHA1ID",	0,		 0x2011 },
+    { FF_PREFIX,	"PREFIX",	0,		 0x3011 },
+    { FF_MTCAT,		"MTCAT",	0,		 0x3011 },
     { FF_CT_SHA1,	"CT-SHA1",	"CTSHA1",	   0x11 },
     { FF_MDL_TXT,	"MDL-TXT",	"MDLTXT",	   0x11 },
-    { FF_PAT_TXT,	"PAT-TXT",	"PATTXT",	 0x3811 },
-    { FF_TPL,		"TPL",		0,		 0x1c09 },
-    { FF_BTI,		"BTI",		"BTIENV",	 0x1c09 },
-    { FF_BTI,		"BTIMAT",	0,		 0x1c09 },
-    { FF_BREFT_IMG,	"BREFT-IMG",	"BREFTIMG",	 0x1c09 },
-    { FF_BREFT_IMG,	"BT-IMG",	"BTIMG",	 0x1c09 },
-    { FF_BMG,		"BMG",		"MESGBMG1",	 0x1c01 },
-    { FF_BMG_TXT,	"BMG-TXT",	"BMGTXT",	 0x1811 },
-    { FF_KCL,		"KCL",		0,		 0x5c01 },
-    { FF_KCL_TXT,	"KCL-TXT",	"KCLTXT",	 0x3811 },
-    { FF_WAV_OBJ,	"WAV-OBJ",	"WAVOBJ",	 0x3811 },
-    { FF_SKP_OBJ,	"SKP-OBJ",	"SKPOBJ",	 0x3811 },
-    { FF_KMP,		"KMP",		0,		 0x1c01 },
-    { FF_KMP_TXT,	"KMP-TXT",	"KMPTXT",	 0x3811 },
+    { FF_PAT_TXT,	"PAT-TXT",	"PATTXT",	 0x7011 },
+    { FF_TPL,		"TPL",		0,		 0x3809 },
+    { FF_BTI,		"BTI",		"BTIENV",	 0x3809 },
+    { FF_BTI,		"BTIMAT",	0,		 0x3809 },
+    { FF_BREFT_IMG,	"BREFT-IMG",	"BREFTIMG",	 0x3809 },
+    { FF_BREFT_IMG,	"BT-IMG",	"BTIMG",	 0x3809 },
+    { FF_BMG,		"BMG",		"MESGBMG1",	 0x3801 },
+    { FF_BMG_TXT,	"BMG-TXT",	"BMGTXT",	 0x3011 },
+    { FF_KCL,		"KCL",		0,		 0xb801 },
+    { FF_KCL_TXT,	"KCL-TXT",	"KCLTXT",	 0x7011 },
+    { FF_WAV_OBJ,	"WAV-OBJ",	"WAVOBJ",	 0x7011 },
+    { FF_SKP_OBJ,	"SKP-OBJ",	"SKPOBJ",	 0x7011 },
+    { FF_KMP,		"KMP",		0,		 0x3801 },
+    { FF_KMP_TXT,	"KMP-TXT",	"KMPTXT",	 0x7011 },
     { FF_ITEMSLT,	"ITEMSLT",	"SLT",		    0x1 },
     { FF_ITEMSLT_TXT,	"ITEMSLT-TXT",	"ITEMSLTTXT",	   0x11 },
-    { FF_KMG,		"KMG",		0,		 0x1801 },
-    { FF_KMG_TXT,	"KMG-TXT",	"KMGTXT",	 0x3811 },
+    { FF_KMG,		"KMG",		0,		 0x3001 },
+    { FF_KMG_TXT,	"KMG-TXT",	"KMGTXT",	 0x7011 },
     { FF_KRM,		"KRM",		0,		    0x1 },
     { FF_KRM_TXT,	"KRM-TXT",	"KRMTXT",	   0x11 },
     { FF_KRT,		"KRT",		0,		    0x1 },
     { FF_KRT_TXT,	"KRT-TXT",	"KRTTXT",	   0x11 },
-    { FF_OBJFLOW,	"OBFLOW",	"OBJFLOW",	 0x1801 },
-    { FF_OBJFLOW_TXT,	"OBJFLOW-TXT",	"OBJFLOWTXT",	 0x3811 },
-    { FF_OBJFLOW_TXT,	"OF-TXT",	"OFTXT",	 0x3811 },
-    { FF_GH_ITEM,	"GH-ITEM",	"GHITEM",	 0x1801 },
-    { FF_GH_ITEM_TXT,	"GH-ITEM-TXT",	"GHITEMTXT",	 0x3811 },
-    { FF_GH_ITEM_TXT,	"GI-TXT",	"GITXT",	 0x3811 },
-    { FF_GH_IOBJ,	"GH-IOBJ",	"GHIOBJ",	 0x1801 },
-    { FF_GH_IOBJ_TXT,	"GH-IOBJ-TXT",	"GHIOBJTXT",	 0x3811 },
-    { FF_GH_IOBJ_TXT,	"GIOTXT",	0,		 0x3811 },
-    { FF_GH_KART,	"GH-KART",	"GHKART",	 0x1801 },
-    { FF_GH_KART_TXT,	"GH-KART-TXT",	"GHKARTTXT",	 0x3811 },
-    { FF_GH_KART_TXT,	"GK-TXT",	"GKTXT",	 0x3811 },
-    { FF_GH_KOBJ,	"GH-KOBJ",	"GHKOBJ",	 0x1801 },
-    { FF_GH_KOBJ_TXT,	"GH-KOBJ-TXT",	"GHKOBJTXT",	 0x3811 },
-    { FF_GH_KOBJ_TXT,	"GKOTXT",	0,		 0x3811 },
+    { FF_OBJFLOW,	"OBFLOW",	"OBJFLOW",	 0x3001 },
+    { FF_OBJFLOW_TXT,	"OBJFLOW-TXT",	"OBJFLOWTXT",	 0x7011 },
+    { FF_OBJFLOW_TXT,	"OF-TXT",	"OFTXT",	 0x7011 },
+    { FF_GH_ITEM,	"GH-ITEM",	"GHITEM",	 0x3001 },
+    { FF_GH_ITEM_TXT,	"GH-ITEM-TXT",	"GHITEMTXT",	 0x7011 },
+    { FF_GH_ITEM_TXT,	"GI-TXT",	"GITXT",	 0x7011 },
+    { FF_GH_IOBJ,	"GH-IOBJ",	"GHIOBJ",	 0x3001 },
+    { FF_GH_IOBJ_TXT,	"GH-IOBJ-TXT",	"GHIOBJTXT",	 0x7011 },
+    { FF_GH_IOBJ_TXT,	"GIOTXT",	0,		 0x7011 },
+    { FF_GH_KART,	"GH-KART",	"GHKART",	 0x3001 },
+    { FF_GH_KART_TXT,	"GH-KART-TXT",	"GHKARTTXT",	 0x7011 },
+    { FF_GH_KART_TXT,	"GK-TXT",	"GKTXT",	 0x7011 },
+    { FF_GH_KOBJ,	"GH-KOBJ",	"GHKOBJ",	 0x3001 },
+    { FF_GH_KOBJ_TXT,	"GH-KOBJ-TXT",	"GHKOBJTXT",	 0x7011 },
+    { FF_GH_KOBJ_TXT,	"GKOTXT",	0,		 0x7011 },
     { FF_DRIVER,	"DRIVER",	"DRV",		    0x1 },
     { FF_VEHICLE,	"VEH",		"VEHICLE",	    0x1 },
     { FF_BRASD,		"BRASD",	0,		    0x1 },
     { FF_RKG,		"RKG",		0,		    0x1 },
     { FF_RKCO,		"RKCO",		0,		    0x1 },
-    { FF_STATICR,	"REL",		"STATICR",	 0x4001 },
-    { FF_DOL,		"DOL",		0,		 0x4201 },
+    { FF_STATICR,	"REL",		"STATICR",	 0x8001 },
+    { FF_DOL,		"DOL",		0,		 0x8401 },
     { FF_GCT,		"GCT",		0,		    0x1 },
+    { FF_GCT_TXT,	"GCT",		"GCT-TXT",	    0x1 },
+    { FF_GCT_TXT,	"GCTTXT",	0,		    0x1 },
     { FF_GCH,		"GCH",		0,		    0x1 },
     { FF_WCH,		"WCH",		0,		    0x1 },
     { FF_WPF,		"WPF",		0,		    0x1 },
     { FF_XPF,		"XPF",		0,		    0x1 },
     { FF_DISTRIB,	"DISTRIB",	0,		   0x11 },
-    { FF_PNG,		"PNG",		0,		 0x1889 },
+    { FF_PNG,		"PNG",		0,		 0x3089 },
     { FF_PORTDB,	"PORTDB",	0,		   0x81 },
     { FF_SCRIPT,	"SCRIPT",	0,		   0x91 },
     { FF_JSON,		"JSON",		0,		   0x91 },

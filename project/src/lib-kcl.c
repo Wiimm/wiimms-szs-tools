@@ -3947,7 +3947,7 @@ enumError ScanRawKCL
     KCL_ACTION_LOG(kcl,"ScanRawKCL() %s\n",kcl->fname);
     kcl->fform = FF_KCL;
 
-    if (!ka.order_ok)
+    if ( !ka.order_ok && ErrorLogEnabled() )
 	ERROR0(ERR_WARNING,
 		"KCL: Unusual section order: %d\n",ka.order_value);
 
@@ -4158,8 +4158,10 @@ enumError ScanKCL
 
 	default:
 	    ClearKCL(kcl,init_kcl);
-	    return ERROR0(ERR_INVALID_DATA,
-		"No KCL or OBJ file: %s\n", kcl->fname ? kcl->fname : "?");
+	    if ( ErrorLogEnabled() )
+		ERROR0(ERR_INVALID_DATA,
+			"No KCL or OBJ file: %s\n", kcl->fname ? kcl->fname : "?");
+	    return ERR_INVALID_DATA;
     }
     kcl->fform = fform;
     const bool rm_octree = kcl->octree_valid && KCL_MODE & KCLMD_NEW;

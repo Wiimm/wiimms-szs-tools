@@ -774,6 +774,7 @@ void ResetDataCTCODE ( ctcode_t * ctcode, bool create_empty )
 	}
 	else if (!ctcode->used_slot[tidx])
 	{
+// [[%04x-]]
 	    snprintf(namebuf,sizeof(namebuf),"Slot %u = 0x%03x",tidx,tidx);
 	    SetName16(td->tname,namebuf);
 	    snprintf(namebuf,sizeof(namebuf),"slot_%02x",tidx);
@@ -2021,14 +2022,15 @@ static enumError ScanRTL_Track
     const int tidx = td - ctcode->crs->data;
     if (ctcode->replace_at)
     {
+// [[%04x+]]
+	snprintf(buf,sizeof(buf),lecode_04x ? "%04X" : "%03X",tidx);
+
 	PRINT(">>> REPLACE:  %s\n",track_string);
-	snprintf(buf,sizeof(buf),"%03X",tidx);
 	track_string = ReplaceName(track_string,"@SLOT@",buf);
 	track_string = ReplaceName(track_string,"@@","@");
 	PRINT(">>> REPLACED: %s\n",track_string);
 
 	PRINT(">>> REPLACE:  %s\n",track_xstring);
-	snprintf(buf,sizeof(buf),"%03X",tidx);
 	track_xstring = ReplaceName(track_xstring,"@SLOT@",buf);
 	track_xstring = ReplaceName(track_xstring,"@@","@");
 	PRINT(">>> REPLACED: %s\n",track_xstring);
@@ -2050,7 +2052,8 @@ static enumError ScanRTL_Track
     if (!*fname)
     {
 	if (ctcode->use_lecode)
-	    snprintf(fname,sizeof(fname),"%03x",tidx);
+// [[%04x+]]
+	    snprintf(fname,sizeof(fname),lecode_04x?"%04x":"%03x",tidx);
 	else
 	    snprintf(fname,sizeof(fname),"slot_%02x",tidx);
     }
@@ -2992,7 +2995,8 @@ enumError ScanLEBinCTCODE
 		td->music_id	= htonl(*music);
 		td->property_id	= htonl(*prop);
 		*ct_flags	= *flags;
-		snprintf(td->filename,sizeof(td->filename),"%03x",tidx);
+// [[%04x+]]
+		snprintf(td->filename,sizeof(td->filename),lecode_04x?"%04x":"%03x",tidx);
 	    }
 	}
 	ctcode->n_tracks = max_tidx+1;

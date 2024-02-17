@@ -4358,10 +4358,10 @@ enumError SaveTextFileBMG
 	{ MID_LE_ALT_ARENA_BEG,		"LE-CODE: alternative arena names for random slots" },
 	{ MID_LE_ALT_ARENA_END,		0 },
 
-	{ MID_LE_CUP_BEG,		"LE-CODE: cup names" },
-	{ MID_LE_CUP_END,		0 },
 	{ MID_LE_TRACK_BEG,		"LE-CODE: track names" },
 	{ MID_LE_TRACK_END,		0 },
+	{ MID_LE_CUP_BEG,		"LE-CODE: cup names" },
+	{ MID_LE_CUP_END,		0 },
 	{ MID_LE_CUP_REF_BEG,		"LE-CODE: track-to-cup reference" },
 	{ MID_LE_CUP_REF_END,		0 },
 
@@ -6084,6 +6084,7 @@ bool PatchFillBMG
 	bmg_item_t * dptr = InsertItemBMG(bmg,mid,0,0,&old_item);
 	if ( !old_item || !dptr->len )
 	{
+// [[%04x-]] no access to lecode_04x
 	    const uint len
 		= snprintf(buf,sizeof(buf),"_T%03X_",mid-ctb.track_name1.beg);
 	    AssignItemTextBMG(dptr,buf,len);

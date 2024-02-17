@@ -293,6 +293,9 @@
 		"This option is completely ignored by wlect."
 		" It only exists due to compatibility with the other tools." },
 
+  { T_OPT_G,	"LE_04X",	"le-04x|le04x",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GP,	"LOAD_PREFIX",	"load-prefix|loadprefix",
 		0, 0 /* copy of wszst */ },
 

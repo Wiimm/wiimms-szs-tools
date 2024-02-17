@@ -1646,21 +1646,21 @@ void PrintImageHead
 {
     if ( long_count > 1 )
 	printf( "\n"
-		"%*sfile   image     mip  width     image  attributes(Gray,Alpha,Palette)\n"
-		"%*stype   type      map  height     size  ^  block file path\n"
-		"%*s%.79s\n",
+		"%*sfile   image     mip  width      image  attributes(Gray,Alpha,Palette)\n"
+		"%*stype   type      map  height      size  ^  block file path\n"
+		"%*s%.99s\n",
 		line_indent,"", line_indent,"", line_indent,"", Minus300 );
     else if ( long_count )
 	printf( "\n"
-		"%*sfile   image     mip  width     image\n"
-		"%*stype   type      map  height     size  file path\n"
-		"%*s%.79s\n",
+		"%*sfile   image     mip  width      image\n"
+		"%*stype   type      map  height      size  file path\n"
+		"%*s%.99s\n",
 		line_indent,"", line_indent,"", line_indent,"", Minus300 );
     else
 	printf( "\n"
 		"%*sfile   image     mip\n"
 		"%*stype   type      map file path\n"
-		"%*s%.79s\n",
+		"%*s%.99s\n",
 		line_indent,"", line_indent,"", line_indent,"", Minus300 );
 }
 
@@ -1735,7 +1735,7 @@ int PrintImage
 	    else
 		wcol = hcol = "";
 
-	    printf(" %s%4u%s*%s%-4u%s %7u",
+	    printf(" %s%4u%s*%s%-4u%s %8u",
 		wcol, img.width, *wcol ? TermTextModeReset : "",
 		hcol, img.height, *hcol ? TermTextModeReset : "",
 		img.xwidth * img.xheight * geo->bits_per_pixel / 8 );
