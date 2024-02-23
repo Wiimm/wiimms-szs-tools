@@ -163,3 +163,6 @@ szs v2.31a
 szs v2.34a
  - Support of wildcards.
 
+szs v2.41a
+ - LE-CODE supports 8192 tracks and 2048 versus cups now.
+

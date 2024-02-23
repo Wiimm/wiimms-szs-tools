@@ -287,6 +287,10 @@ __attribute__ ((__format__(__printf__,1,2)));
 //	xTRACELINE
 //	xBINGO
 //
+//  The macros with a preceding 'y' are active if enable_ydebug>0:
+//	yTRACELINE
+//	yBINGO
+//
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -487,6 +491,7 @@ void WAIT_ARG_FUNC ( ccp format, va_list arg );
 #undef BINGOD
 
 #undef xBINGO
+#undef YBINGO
 #undef PRINT_TIME
 
 // always disabled
@@ -543,6 +548,10 @@ void WAIT_ARG_FUNC ( ccp format, va_list arg );
 
 #define xBINGO BINGO_FUNC(__FUNCTION__,__LINE__,__FILE__)
 #define xTRACELINE TRACE_FUNC("%s() line #%d @ %s\n",__FUNCTION__,__LINE__,__FILE__)
+
+extern int enable_ydebug;
+#define yBINGO if (enable_ydebug) BINGO_FUNC(__FUNCTION__,__LINE__,__FILE__)
+#define yTRACELINE f (enable_ydebug) TRACE_FUNC("%s() line #%d @ %s\n",__FUNCTION__,__LINE__,__FILE__)
 
 #undef PRINTF
 #define PRINTF PRINT

@@ -120,7 +120,6 @@ int ScanOptTrackSource ( ccp arg, int arg_len, int mode )
 		&& !FindParamField(&opt_track_source,path)
 		)
 	    {
-// [[%04x-]]
 		PRINT("APPEND TRACK_SOURCE: 0x%03x %s\n",mode,path);
 		if (!opt_track_source.field)
 		    InitializeParamField(&opt_track_source);
@@ -3429,8 +3428,9 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 	}
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_276_t) )
-	    fprintf(f,"%*s" "Cup image size:    %u x %u pixels\n"
-		,indent,"", h->cup_icon_size, h->cup_icon_size );
+	    fprintf(f,"%*s" "Cup icon size:     %u x %u pixels (%u bytes)\n"
+		,indent,"", h->cup_icon_size, h->cup_icon_size
+		,h->cup_icon_size * h->cup_icon_size / 2 );
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_277_t) )
 	    fprintf(f,"%*s" "Slot format:       %u = \"%%0%ux\"\n"
@@ -3663,7 +3663,6 @@ void TransferTrackFile
 	    struct stat st;
 	    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
 	    {
-// [[%04x+]]
 		ccp format = lecode_04x ? "%s/%04x.szs" : "%s/%03x.szs";
 		snprintf(dest,sizeof(dest),format,opt_track_dest,dest_slot);
 		if (!TransferFile(log,dest,src,ptr->num|flags,0666))
@@ -3671,7 +3670,6 @@ void TransferTrackFile
 		    PathCatBufPPE(src,sizeof(src),ptr->key,src_name,"_d.szs");
 		    if ( !stat(src,&st) && S_ISREG(st.st_mode) )
 		    {
-// [[%04x+]]
 			ccp format = lecode_04x ? "%s/%04x_d.szs" : "%s/%03x_d.szs";
 			snprintf(dest,sizeof(dest),format,opt_track_dest,dest_slot);
 			TransferFile(log,dest,src,ptr->num|flags,0666);
@@ -3697,14 +3695,12 @@ void TransferTrackBySlot
 	flags &= TFMD_M_FLAGS;
 
 	char dest[PATH_MAX], src[PATH_MAX];
-// [[%04x+]] x2
 	ccp format = lecode_04x ? "%s/%04x.szs" : "%s/%03x.szs";
 	snprintf( dest, sizeof(dest), format, opt_track_dest, dest_slot );
 	snprintf( src,  sizeof(src),  format, opt_track_dest, src_slot  );
 
 	if (!TransferFile(log,dest,src,TFMD_LINK|flags,0666))
 	{
-// [[%04x+]] x2
 	    ccp format = lecode_04x ? "%s/%04x_d.szs" : "%s/%03x_d.szs";
 	    snprintf( dest, sizeof(dest), format, opt_track_dest, dest_slot );
 	    snprintf( src,  sizeof(src),  format, opt_track_dest, src_slot  );

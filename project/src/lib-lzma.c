@@ -450,7 +450,7 @@ enumError DecodeLZMApart
     uint		src_size	// size of source buffer
 )
 {
-    DASSERT(dest_ptr);
+    DASSERT(dest_buf);
     DASSERT(dest_written);
     DASSERT( src || !src_size );
 

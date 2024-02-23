@@ -3218,7 +3218,7 @@ void PrepareEditArgManager ( ArgManager_t *am, int needed_space )
 uint AppendArgManager ( ArgManager_t *am, ccp arg1, ccp arg2, bool move_arg )
 {
     DASSERT(am);
-    PRINT("AppendArgManager(,%s,%s,%d)\n",arg1,arg2,move_arg);
+    PRINT("AppendArgManager(,%s,%s,%d)\n",arg1?arg1:"",arg2?arg2:"",move_arg);
     return InsertArgManager(am,am->argc,arg1,arg2,move_arg);
 }
 
@@ -3253,7 +3253,7 @@ uint InsertArgManager
 	( ArgManager_t *am, int pos, ccp arg1, ccp arg2, bool move_arg )
 {
     DASSERT(am);
-    PRINT("InsertArgManager(,%d,%s,%s,%d)\n",pos,arg1,arg2,move_arg);
+    PRINT("InsertArgManager(,%d,%s,%s,%d)\n",pos,arg1?arg1:"",arg2?arg2:"",move_arg);
 
     pos = CheckIndex1(am->argc,pos);
     const int n = (arg1!=0) + (arg2!=0);

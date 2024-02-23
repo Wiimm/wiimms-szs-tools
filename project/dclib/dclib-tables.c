@@ -438,10 +438,10 @@ const sizeof_info_t sizeof_info_linux[] =
     SIZEOF_INFO_TITLE("Basic C types")
 	SIZEOF_INFO_ENTRY(char)
 	SIZEOF_INFO_ENTRY(wchar_t)
-	SIZEOF_INFO_ENTRY(short)
+	SIZEOF_INFO_ENTRY(short int)
 	SIZEOF_INFO_ENTRY(int)
-	SIZEOF_INFO_ENTRY(long)
-	SIZEOF_INFO_ENTRY(long long)
+	SIZEOF_INFO_ENTRY(long int)
+	SIZEOF_INFO_ENTRY(long long int)
  #ifdef __SIZEOF_INT128__
 	SIZEOF_INFO_ENTRY(__int128_t)
  #endif
@@ -451,6 +451,8 @@ const sizeof_info_t sizeof_info_linux[] =
 	SIZEOF_INFO_ENTRY(void*)
 
     SIZEOF_INFO_TITLE("Linux C types")
+	SIZEOF_INFO_ENTRY(intptr_t)
+	SIZEOF_INFO_ENTRY(ptrdiff_t)
 	SIZEOF_INFO_ENTRY(size_t)
 	//SIZEOF_INFO_ENTRY(ssize_t)
 	SIZEOF_INFO_ENTRY(off_t)

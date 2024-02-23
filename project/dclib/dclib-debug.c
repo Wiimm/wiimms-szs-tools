@@ -56,6 +56,8 @@ ccp TRACE_PREFIX = "";
 FILE *TRACE_FILE = 0;
 FILE *MEM_LOG_FILE = 0;
 
+int enable_ydebug = 0;
+
 ccp (*GetErrorNameHook)( int stat, ccp ret_not_found ) = 0;
 ccp (*GetErrorTextHook)( int stat, ccp ret_not_found ) = 0;
 

@@ -5758,6 +5758,8 @@ int InsertSecondKTPT
 	stat = 1;
 	ktpt = InsertList(kmp->dlist+KMP_KTPT,1);
     }
+    // avoid Cygwin warning
+    ktpt = (kmp_ktpt_entry_t*)kmp->dlist[KMP_KTPT].list + 1;
     DASSERT(ktpt);
 
     memset(ktpt,0,sizeof(*ktpt));

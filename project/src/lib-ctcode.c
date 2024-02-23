@@ -774,7 +774,6 @@ void ResetDataCTCODE ( ctcode_t * ctcode, bool create_empty )
 	}
 	else if (!ctcode->used_slot[tidx])
 	{
-// [[%04x-]]
 	    snprintf(namebuf,sizeof(namebuf),"Slot %u = 0x%03x",tidx,tidx);
 	    SetName16(td->tname,namebuf);
 	    snprintf(namebuf,sizeof(namebuf),"slot_%02x",tidx);
@@ -1056,10 +1055,9 @@ enumError ReorderTracksCTCODE ( ctcode_t * ctcode )
     enumError err = LoadXBMG(&bmg,true,opt_order_by,true,false);
     if (!err)
     {
-	track_info_t info[CODE_MAX_TRACKS];
-	memset(info,0,sizeof(info));
-
+	track_info_t *info = CALLOC(CODE_MAX_TRACKS,1);
 	track_info_t *ptr = info;
+
 	uint cidx;
 	for ( cidx = opt_order_all ? 0 : 8;
 		cidx < ctcode->n_racing_cups; cidx++ )
@@ -1069,7 +1067,7 @@ enumError ReorderTracksCTCODE ( ctcode_t * ctcode )
 	    uint ti;
 	    for ( ti = 0; ti < 4; ti++, ptr++ )
 	    {
-		DASSERT( ptr < info + ctcode->max_tracks );
+		DASSERT( ptr < info + CODE_MAX_TRACKS );
 		const uint tidx = be32(cd->track_id+ti);
 		const bmg_item_t *bi
 			= FindItemBMG(&bmg,tidx+ctcode->ctb.track_name1.beg);
@@ -1106,6 +1104,8 @@ enumError ReorderTracksCTCODE ( ctcode_t * ctcode )
 		write_be32(cd->track_id+ti,src->tidx);
 	    }
 	}
+
+	FREE(info);
     }
 
     ResetBMG(&bmg);
@@ -2022,7 +2022,6 @@ static enumError ScanRTL_Track
     const int tidx = td - ctcode->crs->data;
     if (ctcode->replace_at)
     {
-// [[%04x+]]
 	snprintf(buf,sizeof(buf),lecode_04x ? "%04X" : "%03X",tidx);
 
 	PRINT(">>> REPLACE:  %s\n",track_string);
@@ -2052,7 +2051,6 @@ static enumError ScanRTL_Track
     if (!*fname)
     {
 	if (ctcode->use_lecode)
-// [[%04x+]]
 	    snprintf(fname,sizeof(fname),lecode_04x?"%04x":"%03x",tidx);
 	else
 	    snprintf(fname,sizeof(fname),"slot_%02x",tidx);
@@ -2995,7 +2993,6 @@ enumError ScanLEBinCTCODE
 		td->music_id	= htonl(*music);
 		td->property_id	= htonl(*prop);
 		*ct_flags	= *flags;
-// [[%04x+]]
 		snprintf(td->filename,sizeof(td->filename),lecode_04x?"%04x":"%03x",tidx);
 	    }
 	}

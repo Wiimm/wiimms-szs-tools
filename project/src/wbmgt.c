@@ -779,6 +779,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_HELP:		help_exit(false);
 	case GO_XHELP:		help_exit(true);
 	case GO_CONFIG:		opt_config = optarg;
+	case GO_YDEBUG:		enable_ydebug++; break;
 	case GO_ALLOW_ALL:	allow_all = true; break;
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;

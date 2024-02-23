@@ -4770,7 +4770,6 @@ lta_file_ref_t LoadFileLTA ( int slot, int par_index )
     const lta_info_t *info = FindInfoLTA(slot);
     if (info)
     {
-xBINGO;
 	char fname[sizeof(LTA_PATH)+10];
 	snprintf(fname,sizeof(fname),LTA_PATH,info->index);
 	DVDFileInfo fi;

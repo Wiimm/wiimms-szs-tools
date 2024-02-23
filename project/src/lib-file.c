@@ -951,7 +951,7 @@ file_format_t GetByMagicFF
 
 	    case BRRES_MAGIC_NUM:	return FF_BRRES;
 
-	    case TPL_MAGIC_NUM:		return FF_TPL;
+	    //case TPL_MAGIC_NUM:		return FF_TPL;
 	    case KMP_MAGIC_NUM:		return FF_KMP;
 	    case BRASD_MAGIC_NUM:	return FF_BRASD;
 
@@ -970,6 +970,9 @@ file_format_t GetByMagicFF
 	    case CT_MOD1_MAGIC_NUM:	return FF_MOD1;
 	    case CT_MOD2_MAGIC_NUM:	return FF_MOD2;
 	    case CT_OVR1_MAGIC_NUM:	return FF_OVR1;
+
+	    case TPL_MAGIC_NUM:
+		return IsTplHeaderEx(data,data_size) ? FF_TPLX : FF_TPL;
 
 	    case BREFF_MAGIC_NUM:
 		if ( file_size >= 0x20 )
@@ -4327,7 +4330,7 @@ const mkw_prefix_t * GetPrefix ( ccp name, int name_len )
 
     if ( name_len < 0 )
 	name_len = strlen(name);
-    
+
     ccp p1 = memchr(name,' ',name_len);
     if (!p1)
 	return 0;
@@ -4339,7 +4342,7 @@ const mkw_prefix_t * GetPrefix ( ccp name, int name_len )
 	if (res)
 	    return res;
     }
-    
+
     return FindPrefix(name,p1-name);
 }
 
@@ -4797,7 +4800,7 @@ void ScanSha1Ref   ( struct ScanText_t *st )
 		good_size = str2ul(srcline.ptr+11,0,10);
 	    continue;
 	}
-	
+
 	mem_t src[IDX__N+2];
 	const uint n = SplitByCharMem(src,IDX__N+1,srcline,'|');
 	if ( n <= IDX__N )
@@ -5349,7 +5352,7 @@ void AnalyseSPF
 	if (spf->boost.len)
 	    spf->game_order++;
     }
-    
+
 
     //--- finally we have the pure name
 

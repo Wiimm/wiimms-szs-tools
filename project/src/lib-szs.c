@@ -3695,7 +3695,6 @@ int IterateFilesLTA
 	}
     }
 
-// [[%04x+]]
     ccp format_szs, format_lfl, format_d_szs, format_d_lfl;
     if ( lecode_04x || lta.base_slot + lta.n_slots >= 0x1000 )
     {

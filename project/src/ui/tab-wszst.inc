@@ -758,6 +758,10 @@
 		" then file @'" CONFIG_FILE "'@ is searched in different directories."
 		" Use command @'wszst CONFIG'@ to get more details." },
 
+  { H_OPT_G,	"YDEBUG",	"ydebug",
+		0,
+		" Enable Macros yBINGO and yTRACELINE." },
+
   { T_OPT_G,	"ALLOW_ALL",	"allow-all|allowall",
 		0,
 		"Usually commands accept only options with impact to the command."

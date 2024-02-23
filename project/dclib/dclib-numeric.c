@@ -902,6 +902,41 @@ int CheckIndex2End ( int max, int * p_begin, int * p_end )
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int CheckIndex2ex ( int max, int * p_begin, int * p_end )
+{
+    DASSERT( max >= 0 );
+    DASSERT(p_begin);
+    DASSERT(p_end);
+
+    int begin = *p_begin;
+    if ( begin < 0 )
+    {
+	begin += max;
+	if ( begin < 0 )
+	    begin = 0;
+    }
+    else if ( begin > max )
+	begin = max;
+
+    int end = *p_end;
+    if ( end <= 0 )
+    {
+	end += max;
+	// don't check for 'end<0' here, because 'end<begin' is checked later
+    }
+    else if ( end > max )
+	end = max;
+
+    if ( end < begin )
+	end = begin;
+
+    *p_begin = begin;
+    *p_end   = end;
+    return end - begin;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 int CheckIndexC ( int max, int * p_begin, int count )
 {
     DASSERT( max >= 0 );
@@ -9928,7 +9963,7 @@ char * PrintIP4ByMode
 
 void StartProgress ( progress_t *pr, u_msec_t interval_msec )
 {
-    DASSERT(PR);
+    DASSERT(pr);
     ResetProgress(pr);
     pr->interval_msec = interval_msec;
     pr->start_msec = GetTimerMSec();
@@ -9938,7 +9973,7 @@ void StartProgress ( progress_t *pr, u_msec_t interval_msec )
 
 bool CheckProgress ( progress_t *pr )
 {
-    DASSERT(PR);
+    DASSERT(pr);
     if ( pr->interval_msec > 0 && pr->counter != pr->last_counter )
     {
 	const u_msec_t now = GetTimerMSec();
@@ -9956,7 +9991,7 @@ bool CheckProgress ( progress_t *pr )
 
 bool FinalProgress ( progress_t *pr )
 {
-    DASSERT(PR);
+    DASSERT(pr);
     if ( pr->interval_msec > 0 && pr->counter != pr->last_counter )
     {
 	pr->last_log_msec = GetTimerMSec();

@@ -113,6 +113,7 @@ typedef enum enumOptions
 	OPT_HELP,
 	OPT_XHELP,
 	OPT_CONFIG,
+	OPT_YDEBUG,
 	OPT_ALLOW_ALL,
 	OPT_COMPATIBLE,
 	OPT_WIDTH,
@@ -153,7 +154,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 92
+	OPT__N_TOTAL // == 93
 
 } enumOptions;
 
@@ -464,6 +465,7 @@ typedef enum enumGetOpt
 
 	GO_XHELP		= 0x80,
 	GO_CONFIG,
+	GO_YDEBUG,
 	GO_ALLOW_ALL,
 	GO_COMPATIBLE,
 	GO_WIDTH,

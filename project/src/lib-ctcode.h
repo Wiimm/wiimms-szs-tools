@@ -82,15 +82,14 @@
 #define CT_CODE_MAX_CUPREF	   0x10  // track usage cross-ref, must be <= 0x100
 
 #define LE_CODE_MAX_TRACKS	BMG_N_LE_TRACK		// max supported tracks
-#define LE_CODE_MAX_CUPS	BMG_N_LE_RCUP		// max supported cups, must be <= 0x100
+#define LE_CODE_MAX_CUPS	BMG_N_LE_RCUP		// max supported cups, must be >= 0x100
 
 #define LE_FIRST_CT_SLOT	MKW_LE_SLOT_BEG		// LE: first used custom slot
 #define LE_LAST_CT_SLOT		(MKW_LE_SLOT_END-1)	// LE: last used custom slot
 #define LE_FIRST_RANDOM_SLOT	MKW_LE_RANDOM_BEG	// LE: first used random slot
 #define LE_LAST_RANDOM_SLOT	(MKW_LE_RANDOM_END-1)	// LE: last used random slot
 
-// 3 [[obsolete]] definitions
-#define LE_FIRST_LOWER_CT_SLOT	   0x44			// LE: first used custom slot
+// 2 [[obsolete]] definitions
 #define LE_FIRST_UPPER_CT_SLOT	  0x120			// LE: first used upper custom slot
 #define LE_LAST_UPPER_CT_SLOT	  0x13d			// LE: first used upper custom slot
 
@@ -293,8 +292,8 @@ typedef struct ctcode_t
     bmg_t		track_ident;	// identifiers of any length (e.g. checksums)
 
     // property, music and le_flags
-    le_property_t	property[CODE_MAX_TRACKS];	// not in use yet!!
-    le_music_t		music[CODE_MAX_TRACKS];		// not in use yet!!
+    le_property_t	property[CODE_MAX_TRACKS];
+    le_music_t		music[CODE_MAX_TRACKS];
     le_flags8_t		le_flags[CODE_MAX_TRACKS];
     u8			hidden[CODE_MAX_TRACKS];
 

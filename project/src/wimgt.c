@@ -508,7 +508,7 @@ static enumError cmd_copy()
 				: fform_dest != FF_UNKNOWN
 					? fform_dest
 					: src_f;
-	PRINT("FFORM = %s\n",GetNameFF(0,fform));
+	PRINT0("FFORM = %s\n",GetNameFF(0,fform));
 
 	char dest[PATH_MAX];
 	SubstDest(dest,sizeof(dest),arg,opt_dest,0,0,false);
@@ -529,7 +529,8 @@ static enumError cmd_copy()
 	    continue;
 	}
 
-	if ( verbose >= 0 || testmode )
+	const bool create_tpl = IsTplFF(fform);
+	if ( !create_tpl && ( verbose >= 0 || testmode ))
 	{
 	    image_format_t   iform = img.tform_valid && img.tform_iform != IMG_INVALID
 					? img.tform_iform : img.iform;
@@ -548,12 +549,34 @@ static enumError cmd_copy()
 	if (opt_pre_convert)
 	    TransformIMG(&img,2);
 
+	tpl_raw_t raw;
+	if (create_tpl)
+	{
+	    err = CreateRawTPL(&raw,&img,fform);
+
+	    if ( verbose >= 0 || testmode )
+	    {
+		fform = IsTplHeaderEx(raw.data.ptr,raw.data.len) ? FF_TPLX : FF_TPL;
+		fprintf(stdlog,"%s%sCOPY %s:%s -> %s:%s\n",
+			    verbose > 0 ? "\n" : "",
+			    testmode ? "WOULD " : "",
+			    PrintFormat3(src_f,src_i,src_p),
+			    arg,
+			    PrintFormat3(fform,img.iform,img.pform),
+			    dest );
+	    }
+	}
+
 	if (!testmode)
 	{
-	    err = SaveIMG(&img,fform,0,0,dest,samefile);
+	    err = create_tpl
+		? SaveRawTPL(&raw,0,dest,samefile)
+		: SaveIMG(&img,fform,0,0,dest,samefile);;
 	    if ( err > ERR_WARNING )
 		return err;
 	}
+	if (create_tpl)
+	    ResetRawTPL(&raw);
 	ResetIMG(&img);
     }
 
@@ -592,6 +615,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_HELP:		help_exit(false);
 	case GO_XHELP:		help_exit(true);
 	case GO_CONFIG:		opt_config = optarg;
+	case GO_YDEBUG:		enable_ydebug++; break;
 	case GO_ALLOW_ALL:	allow_all = true; break;
         case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;

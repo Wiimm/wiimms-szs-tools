@@ -134,11 +134,14 @@ enumError AssignIMG
 
     switch (fform)
     {
+// [[tpl-ex+]]
+      //case FF_CUPICON: never defined by magic
       case FF_TPL:
+      case FF_TPLX:
 	{
-	    const tpl_header_t * tpl;
-	    const tpl_pal_header_t * tp;
-	    const tpl_img_header_t * ti;
+	    const tpl_header_t *tpl;
+	    const tpl_pal_header_t *tp;
+	    const tpl_img_header_t *ti;
 
 	    if (SetupPointerTPL( data, data_size, img_index,
 				    &tpl, 0, &tp, &ti,
@@ -148,6 +151,14 @@ enumError AssignIMG
 		width	= be16(&ti->width);
 		height	= be16(&ti->height);
 		n_img	= be32(&tpl->n_image);
+
+// [[tpl-ex+]]
+		if ( fform == FF_TPLX )
+		{
+		    tpl_header_ex_t *tplx = (tpl_header_ex_t*)tpl;
+		    width  = be32(&tplx->ex_width);
+		    height = be32(&tplx->ex_height);
+		}
 
 		if (tp)
 		{
@@ -684,6 +695,13 @@ static enumError CreateGenericCupIconIMG
 	{
 	    par->force_width = str2ul(text.ptr+1,0,10);
 	    PRINT0(">>>>> width %u\n",par->force_width);
+	    continue;
+	}
+
+	if (!memcmp(text.ptr,":test",5))
+	{
+	    par->test_mode = true;
+	    continue;
 	}
 
 	Image_t cupicon;
@@ -748,6 +766,7 @@ static enumError CreateGenericCupIconIMG
     }
 
     img->is_cup_icon = true;
+    img->test_mode = par->test_mode;
     return err;
 }
 
@@ -895,6 +914,7 @@ void SetupMipmapOptions ( MipmapOptions_t *mmo )
 
     //memset(mmo,0,sizeof(*mmo));
     mmo->valid = true;
+    mmo->is_tpl = false;
 
     if (opt_n_images)
     {
@@ -916,13 +936,14 @@ void SetupMipmapOptions ( MipmapOptions_t *mmo )
 
 ///////////////////////////////////////////////////////////////////////////////
 
-void SetupMipmapOptions1 ( MipmapOptions_t *mmo )
+void SetupMipmapOptionsTPL ( MipmapOptions_t *mmo )
 {
     DASSERT(mmo);
 
     //memset(mmo,0,sizeof(*mmo));
     mmo->valid		= true;
     mmo->force		= true;
+    mmo->is_tpl		= true;
     mmo->n_mipmap	= 0;
     mmo->n_image	= 1;
     mmo->min_size	= 1;
@@ -1083,10 +1104,14 @@ static enumError PrepareImages
     //--- copy & convert images
 
     CopyIMG(&mmi->img,true,src_img,false);
-    Transform2InternIMG(&mmi->img);
-    enumError err = ExecTransformIMG(&mmi->img);
-    if (err)
-	return err;
+    const bool is_tpl	= mmi->mmo.is_tpl;
+    if (!is_tpl)
+    {
+	Transform2InternIMG(&mmi->img);
+	enumError err = ExecTransformIMG(&mmi->img);
+	if (err)
+	    return err;
+    }
 
 
     //--- calculate image size
@@ -1095,24 +1120,27 @@ static enumError PrepareImages
     if ( !geo || geo->is_x )
 	return ERROR0(ERR_INTERNAL,0);
 
-    uint ni, size = 0;
-    uint wd = mmi->img.width;
-    uint ht = mmi->img.height;
-    uint n_image = mmi->mmo.n_image;
+    uint size		= 0;
+    uint wd		= mmi->img.width;
+    uint ht		= mmi->img.height;
+    uint n_image	= mmi->mmo.n_image;
 
-    for ( ni = 0; ni < n_image; ni++ )
+    for ( int ni = 0; ni < n_image; ni++ )
     {
 	size += CalcImageSize( wd, ht, geo->bits_per_pixel,
 				geo->block_width, geo->block_height, 0,0,0,0 );
 	if (!ni)
 	    mmi->img.info_size = size;
-	wd /= 2;
-	ht /= 2;
-	DASSERT( opt_min_mipmap_size >= 1 );
-	if ( wd < mmi->mmo.min_size || ht < mmi->mmo.min_size )
+	if (!is_tpl)
 	{
-	    n_image = ni + 1;
-	    break;
+	    wd /= 2;
+	    ht /= 2;
+	    DASSERT( opt_min_mipmap_size >= 1 );
+	    if ( wd < mmi->mmo.min_size || ht < mmi->mmo.min_size )
+	    {
+		n_image = ni + 1;
+		break;
+	    }
 	}
     }
 
@@ -1126,7 +1154,7 @@ static enumError PrepareImages
 
 ///////////////////////////////////////////////////////////////////////////////
 
-static enumError PrepareImages1
+static enumError PrepareImagesTPL
 (
     mipmap_info_t	* mmi,		// valid mipmap info
     const Image_t	* src_img	// pointer to source image
@@ -1141,7 +1169,7 @@ static enumError PrepareImages1
     DASSERT(src_img);
 
     MipmapOptions_t mmo;
-    SetupMipmapOptions1(&mmo);
+    SetupMipmapOptionsTPL(&mmo);
     return PrepareImages(mmi,src_img,&mmo);
 }
 
@@ -1150,7 +1178,8 @@ static enumError PrepareImages1
 static enumError WriteImageData
 (
     mipmap_info_t	* mmi,		// valid mipmap info
-    u8			* data		// destination buffer
+    u8			* data,		// destination buffer
+    u8			** p_dest	// not NULL: store next destination
 )
 {
     DASSERT(mmi);
@@ -1158,6 +1187,8 @@ static enumError WriteImageData
 
     const Image_t *img = &mmi->img;
     memcpy(data,img->data,img->info_size);
+    if (p_dest)
+	*p_dest = data + img->info_size;
     if (!mmi->n_mipmap)
 	return ERR_OK;
 
@@ -1198,6 +1229,8 @@ static enumError WriteImageData
 	memcpy(dest,temp.data,temp.data_size);
 	dest += temp.data_size;
     }
+    if (p_dest)
+	*p_dest = dest;
 
     ResetIMG(&temp);
     ResetIMG(&mmi->img);
@@ -1229,7 +1262,10 @@ enumError SaveIMG
 
     switch(fform)
     {
-	case FF_TPL:		return SaveTPL(img,f,fname,overwrite);
+// [[tpl-ex+]]
+	case FF_CUPICON:
+	case FF_TPL:
+	case FF_TPLX:		return SaveTPL(img,fform,f,fname,overwrite);
 	case FF_BTI:		return SaveBTI(img,mmo,f,fname,overwrite);
 	case FF_TEX:		return SaveTEX(img,mmo,f,fname,overwrite,false);
 	case FF_TEX_CT:		return SaveTEX(img,mmo,f,fname,overwrite,true);
@@ -1260,10 +1296,20 @@ void ResetRawTPL ( tpl_raw_t *raw )
 
 //-----------------------------------------------------------------------------
 
+const tpl_signature_t TPLSignature0 =
+{
+    "LE-CODE\0",
+    0, 0, 0, 0, 0,
+    "Cup Icon"
+};
+
+//-----------------------------------------------------------------------------
+
 enumError CreateRawTPL
 (
-    tpl_raw_t	* raw,		// results with alloced data
-    Image_t	* src_img	// pointer to valid source img
+    tpl_raw_t		* raw,		// results with alloced data
+    Image_t		* src_img,	// pointer to valid source img
+    file_format_t	fform		// FF_TPL or FF_TPLX
 )
 {
     DASSERT(src_img);
@@ -1273,8 +1319,59 @@ enumError CreateRawTPL
 
     //--- special handling for cup icons
 
-    if ( src_img->is_cup_icon && !n_transform )
+    bool create_tplx = fform == FF_TPLX;
+    if ( fform == FF_CUPICON || src_img->is_cup_icon && !n_transform ) // no forced transformation
+    {
 	ConvertIMG(src_img,false,0,IMG_CMPR,PAL_INVALID);
+	create_tplx = true;
+    }
+    else
+    {
+	Transform2InternIMG(src_img);
+	const enumError err = ExecTransformIMG(src_img);
+	if (err)
+	    return err;
+    }
+
+    PRINT("is_cup_icon=%d, test_mode=%d, ff=%s\n",
+	src_img->is_cup_icon,src_img->test_mode,GetImageFormatName(src_img->iform,"?"));
+
+    if (create_tplx)
+	FreeMipmapsIMG(src_img);
+
+
+    //--- TPLx calculations
+
+    const ImageGeometry_t *geo = GetImageGeometry(src_img->iform);
+    if (!geo)
+	return ERROR0(ERR_INTERNAL,0);
+
+    int ex_width, ex_height, ex_fill; 
+    if (create_tplx)
+    {
+	// add 1 for special line
+	uint max_lines = MAX_IMAGE_HEIGHT / geo->block_height;
+	const uint n_lines = ( src_img->height + 2*geo->block_height - 1 ) / geo->block_height;
+	if ( src_img->test_mode && max_lines >= n_lines )
+	    max_lines = (n_lines-1) / geo->block_height * geo->block_height;
+	const uint n_cols  = ( n_lines + max_lines - 1 ) / max_lines;
+
+	ex_width  = src_img->width * n_cols;
+	ex_height = ( n_lines + n_cols - 1 ) / n_cols * geo->block_height;
+	ex_fill   = ( ex_width * ex_height - src_img->width * src_img->height )
+		  * geo->bits_per_pixel / 8;
+
+	PRINT("TPLx: %u*%u, cols=%d, lines=%d/%d, geo=%d*%d => %d*%d, fill:%x\n",
+		src_img->width, src_img->height,
+		n_cols, n_lines, max_lines, geo->block_width, geo->block_height,
+		ex_width, ex_height, ex_fill );
+    }
+    else
+    {
+	ex_width  = src_img->width  < MAX_IMAGE_WIDTH  ? src_img->width  : MAX_IMAGE_WIDTH;
+	ex_height = src_img->height < MAX_IMAGE_HEIGHT ? src_img->height : MAX_IMAGE_HEIGHT;
+	ex_fill   = 0;
+    }
 
 
     //--- setup images
@@ -1287,7 +1384,8 @@ enumError CreateRawTPL
     enumError err	= ERR_OK;
 
     const uint align	= 0x20;
-    const uint tab_off	= sizeof(tpl_header_t);
+// [[tpl-ex+]]
+    const uint tab_off	= create_tplx ? sizeof(tpl_header_ex_t) : sizeof(tpl_header_t);
     uint data_off	= tab_off + n_image * sizeof(tpl_imgtab_t);
 
     mipmap_info_t *m	= mmi;
@@ -1300,7 +1398,7 @@ enumError CreateRawTPL
     for ( i = 0; i < n_image; i++, m++, img = img->mipmap )
     {
 	DASSERT(img);
-	err = PrepareImages1(m,img);
+	err = PrepareImagesTPL(m,img);
 	if (err)
 	    return err;
 
@@ -1324,10 +1422,13 @@ enumError CreateRawTPL
     for ( i = 0, m = mmi; i < n_image; i++, m++ )
     {
 	m->img_data_off  = data_off;
-	m->img_data_size = m->image_size;
-	data_off = ALIGN32( m->img_data_off + m->img_data_size, align );
+	uint data_size   = m->image_size;
+	m->img_data_size = data_size;
+	if (!i)
+	    data_size += ex_fill;
+	data_off = ALIGN32( m->img_data_off + data_size, align );
 
-	PRINT("%6x %6x %6x | %6x %6x %6x | %6x = %6u\n",
+	PRINT0("%6x %6x %6x | %6x %6x %6x | %6x = %6u\n",
 		m->pal_head_off, m->pal_data_off, m->pal_data_size,
 		m->img_head_off, m->img_data_off, m->img_data_size,
 		data_off, data_off );
@@ -1342,10 +1443,20 @@ enumError CreateRawTPL
     const endian_func_t * endian = src_img->endian;
     raw->endian	= endian;
 
-    tpl_header_t * tpl = (tpl_header_t*)data;
+// [[tpl-ex+]]
+    tpl_header_ex_t *tpl = (tpl_header_ex_t*)data;
     endian->wr32(tpl->magic,TPL_MAGIC_NUM);
     endian->wr32(&tpl->n_image,n_image);
     endian->wr32(&tpl->imgtab_off,tab_off);
+
+// [[tpl-ex+]]
+    if (create_tplx)
+    {
+	endian->wr32(&tpl->ex_magic,TPL_EX_MAGIC_NUM);
+	endian->wr32(&tpl->ex_width,src_img->width);
+	endian->wr32(&tpl->ex_height,src_img->height);
+	endian->wr32(&tpl->ex_n_icon,src_img->height/src_img->width);
+    }
 
     tpl_imgtab_t * tab = (tpl_imgtab_t*)( data + tab_off );
 
@@ -1366,17 +1477,35 @@ enumError CreateRawTPL
 	    memcpy( data + m->pal_data_off, m->img.pal, 2*m->img.n_pal );
 	}
 
+// [[tpl-ex+]]
 	tpl_img_header_t * ti = (tpl_img_header_t*)( data + m->img_head_off );
-	endian->wr16( &ti->width,    m->img.width );
-	endian->wr16( &ti->height,   m->img.height );
+	endian->wr16( &ti->width,    ex_width );
+	endian->wr16( &ti->height,   ex_height );
 	endian->wr32( &ti->iform,    m->img.iform );
 	endian->wr32( &ti->data_off, m->img_data_off );
 	endian->wr32( &ti->min_filter, 1 );
 	endian->wr32( &ti->mag_filter, 1 );
 
-	err = WriteImageData( m, data + m->img_data_off );
+	u8 *dest;
+	err = WriteImageData( m, data + m->img_data_off, &dest );
 	if (err)
 	    return err;
+	PRINT0("DEST: %p - %p = %zx\n", dest, data + m->img_data_off, dest - (data + m->img_data_off) );
+
+	if ( !i && ex_fill )
+	{
+	    memset(dest,0,ex_fill);
+	    if ( ex_fill >= sizeof(tpl_signature_t) )
+	    {
+		tpl_signature_t *sig = (tpl_signature_t*)( dest + ex_fill ) -1;
+		*sig = TPLSignature0;
+		endian->wr32(&sig->width,src_img->width);
+		endian->wr32(&sig->height,src_img->height);
+		endian->wr32(&sig->n_icon,src_img->height/src_img->width);
+		endian->wr16(&sig->iform,src_img->iform);
+		endian->wr16(&sig->pform,src_img->pform);
+	    }
+	}
     }
 
     raw->valid = true;
@@ -1385,9 +1514,29 @@ enumError CreateRawTPL
 
 //-----------------------------------------------------------------------------
 
+enumError SaveRawTPL
+(
+    tpl_raw_t		*raw,		// raw data created by CreateRawTPL()
+    FILE		*f,		// output file, if NULL then use fname+overwrite
+    ccp			fname,		// filename of source
+    bool		overwrite	// true: allow overwriting
+)
+{
+    DASSERT(raw);
+    DASSERT(fname);
+    PRINT("SaveRawTPL(o=%d) %s\n", overwrite, fname );
+
+    return raw->valid
+	? SaveFILE2(f,fname,0,overwrite,raw->data.ptr,raw->data.len,0)
+	: ERR_ERROR;
+}
+
+//-----------------------------------------------------------------------------
+
 enumError SaveTPL
 (
     Image_t		*src_img,	// pointer to valid source img
+    file_format_t	fform,		// FF_TPL or FF_TPLX
     FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: allow overwriting
@@ -1396,12 +1545,13 @@ enumError SaveTPL
     DASSERT(src_img);
     DASSERT(fname);
 
-    PRINT("SaveTPL(o=%d) %s\n", overwrite, fname );
+    PRINT("SaveTPL(ff=%s,o=%d) %s\n", GetNameFF(fform,fform), overwrite, fname );
 
     tpl_raw_t raw;
-    enumError err = CreateRawTPL(&raw,src_img);
+    enumError err = CreateRawTPL(&raw,src_img,fform);
     if (raw.valid)
-	err = SaveFILE2(f,fname,0,overwrite,raw.data.ptr,raw.data.len,0);
+	err = SaveRawTPL(&raw,f,fname,overwrite);
+//	err = SaveFILE2(f,fname,0,overwrite,raw.data.ptr,raw.data.len,0);
     ResetRawTPL(&raw);
     return err;
 }
@@ -1478,7 +1628,7 @@ enumError SaveBTI
 	bti->wrap_t = 1;
     }
 
-    err = WriteImageData(&mmi,data+data_off);
+    err = WriteImageData(&mmi,data+data_off,0);
     if (!err)
 	err = SaveFILE2(f,fname,0,overwrite,data,total_size,0);
 
@@ -1564,7 +1714,7 @@ enumError SaveTEX
     endian->wr32(&ti->n_image,mmi.n_mipmap+1);
     endian->wrf4(&ti->image_val,mmi.n_mipmap);
 
-    err = WriteImageData(&mmi,data+grp_off);
+    err = WriteImageData(&mmi,data+grp_off,0);
     if (!err)
 	err = SaveFILE2(f,fname,0,overwrite,data,total_size,0);
 
@@ -1635,7 +1785,7 @@ enumError SaveBREFTIMG
     bi->iform	= mmi.img.iform;
     bi->n_image	= mmi.n_mipmap + 1;
 
-    err = WriteImageData(&mmi,data+img_off);
+    err = WriteImageData(&mmi,data+img_off,0);
     if (!err)
 	err = SaveFILE2(f,fname,0,overwrite,data,total_size,0);
 
@@ -2476,7 +2626,10 @@ const KeywordTab_t cmdtab_transform[] =
 {
 	//--- file formats
 
+// [[tpl-ex+]]
 	{ FF_TPL,	"TPL",		0,		TM_IDX_FILE|TM_F_PAL },
+	{ FF_TPLX,	"TPLx",		"TPLX",		TM_IDX_FILE|TM_F_PAL },
+	{ FF_CUPICON,	"CUPICON",	"CUP",		TM_IDX_FILE },
 	{ FF_BTI,	"BTI",		0,		TM_IDX_FILE|TM_F_PAL },
 	{ FF_TEX,	"TEX",		"TEX0",		TM_IDX_FILE },
 	{ FF_BREFT_IMG,	"BREFT-IMG",	"BREFTIMG",	TM_IDX_FILE },
@@ -2535,14 +2688,15 @@ const KeywordTab_t cmdtab_transform[] =
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+// [[transform_term_t]]
 
 typedef struct transform_term_t
 {
     ccp  arg;
     char res[TM_IDX_N];
     uint opt[TM_IDX_N];
-
-} transform_term_t;
+}
+transform_term_t;
 
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////////
@@ -2676,6 +2830,12 @@ int ScanOptTransform ( ccp arg )
 	    memcpy(t->src,sterm.res,sizeof(t->src));
 	    memcpy(t->dest,dterm.res,sizeof(t->dest));
 
+	    // special case: destionation is FF_CUPICON
+	    if ( t->src[TM_IDX_FILE] == FF_CUPICON )
+		t->src[TM_IDX_FILE] = FF_TPLX;
+	    if ( t->dest[TM_IDX_FILE] == FF_CUPICON )
+		t->dest[TM_IDX_IMG] = IMG_CMPR;
+
 	    src = sterm.arg;
 	    if ( !src )
 		break;
@@ -2722,17 +2882,17 @@ void DumpTransformList ( FILE * f, int indent, bool force )
 	return;
 
     fprintf(f,"\n"
-	"%*s            source formats             ->         destination formats\n"
-	"%*s file   image  palette pal  color alph -> file   image  palette pal  color alph\n"
-	"%*s--------------------------------------------------------------------------------\n",
+	"%*s file        source formats             -> file     destination formats\n"
+	"%*s type    image  palette pal  color alph -> type    image  palette pal  color alph\n"
+	"%*s----------------------------------------------------------------------------------\n",
 	indent, "", indent, "", indent, "" );
     uint i;
     for ( i = 0; i < n_transform; i++ )
     {
 	const transform_t *t = transform + i;
 	fprintf(f,
-		"%*s %-6s %-6s %-7s %-4.4s %-5s %-4.4s"
-		" -> %-6s %-6s %-7s %-4.4s %-5s %-4.4s\n",
+		"%*s %-7s %-6s %-7s %-4.4s %-5s %-4.4s"
+		" -> %-7s %-6s %-7s %-4.4s %-5s %-4.4s\n",
 		indent, "",
 		GetTransformName(0,t->src[0],"*"),
 		GetTransformName(1,t->src[1],"*"),
@@ -3372,7 +3532,8 @@ uint GetNImagesTPL
     DASSERT(data);
     DASSERT(endian);
 
-    return data_size >= sizeof(tpl_header_t) && endian->rd32(data) == TPL_MAGIC_NUM
+// [[tpl-ex+]]
+    return data_size >= sizeof(tpl_header_t) && endian->rd32(data) == TPL_MAGIC_NUM 
 		? endian->rd32(data+4)
 		: 0;
 }
@@ -3396,6 +3557,7 @@ bool SetupPointerTPL
     DASSERT(data);
     DASSERT(endian);
 
+// [[tpl-ex+]]
     if ( data_size >= sizeof(tpl_header_t) && endian->rd32(data) == TPL_MAGIC_NUM )
     {
       const tpl_header_t *tpl = (tpl_header_t*)data;

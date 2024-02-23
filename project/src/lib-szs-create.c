@@ -489,7 +489,10 @@ enumError CreateSZS
 		ext = ".obj";
 		break;
 
+// [[tpl-ex+]]
+	    case FF_CUPICON:
 	    case FF_TPL:
+	    case FF_TPLX:
 	    case FF_BTI:
 	    case FF_TEX:
 	    case FF_TEX_CT:
@@ -1653,7 +1656,7 @@ bool NormalizeExSZS
 	    if (!err)
 	    {
 		img.is_cup_icon = true;
-		CreateRawTPL(&raw,&img);
+		CreateRawTPL(&raw,&img,FF_CUPICON);
 	    }
 	    if (!raw.valid)
 		opt_cup_icons = 0;
@@ -1665,9 +1668,10 @@ bool NormalizeExSZS
 				.data = (u8*)raw.data.ptr, .size = raw.data.len,
 				.print_err = true };
 	    am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
-	    AddMissingFile("button/timg/ct_icons.tpl",FF_TPL,&am);
+// [[tpl-ex+]] 2x
+	    AddMissingFile("button/timg/ct_icons.tpl",FF_CUPICON,&am);
 	    am.link = am.last_subfile; // link always to save space
-	    AddMissingFile("control/timg/ct_icons.tpl",FF_TPL,&am);
+	    AddMissingFile("control/timg/ct_icons.tpl",FF_CUPICON,&am);
 	}
     }
 
@@ -2317,6 +2321,15 @@ static int IterateFilesTPL
     StringCopyS(it->path,sizeof(it->path),".TPL.header");
     it->func_it(it,false);
 
+    if (IsTplHeaderEx(data,szs->size))
+    {
+	it->index++;
+	it->off	 = sizeof(tpl_header_t);
+	it->size = sizeof(tpl_header_ex_t) - sizeof(tpl_header_t);
+	StringCopyS(it->path,sizeof(it->path),".TPL.header.ex");
+	it->func_it(it,false);
+    }
+
     it->index++;
     it->off	= (u8*)tab - data;
     it->size	= sizeof(tpl_imgtab_t) * n_img;
@@ -2815,6 +2828,7 @@ static void patch_9laps ( struct szs_iterator_t *it )
 			add_missing_t am = { .szs = it->szs, .norm = &it->norm_create,
 					.data = (u8*)cm->data, .size = cm->size, .print_err = true };
 			am.log_indent = verbose >= 1 || logging >= 2 ? 2 : -1;
+// [[tpl-ex-]]
 			AddMissingFile(ptr->fname,FF_TPL,&am);
 			it->job_create = true;
 		    }
@@ -2884,7 +2898,7 @@ static void patch_title_screen ( struct szs_iterator_t *it )
 	    {
 		ConvertIMG(&img,false,0,IMG_RGB565,PAL_AUTO);
 		tpl_raw_t raw = {0};
-		CreateRawTPL(&raw,&img);
+		CreateRawTPL(&raw,&img,FF_TPL);
 		if (raw.valid)
 		{
 		    patch_file(it,raw.data.ptr,raw.data.len,true,false);
@@ -3275,7 +3289,10 @@ void SetupExtendedSZS()
     cut_iter_func[FF_PAT]	= IterateFilesPAT;
     cut_iter_func[FF_TEX]	= IterateFilesTEX;
     cut_iter_func[FF_TEX_CT]	= IterateFilesTEX;
+// [[tpl-ex+]]
     cut_iter_func[FF_TPL]	= IterateFilesTPL;
+    cut_iter_func[FF_TPLX]	= IterateFilesTPL;
+    cut_iter_func[FF_CUPICON]	= IterateFilesTPL;
     cut_iter_func[FF_BTI]	= IterateFilesBTI;
 
   //std_iter_func[FF_TEX_CT]	= IterateFilesTEX;
@@ -4915,7 +4932,10 @@ static int extract_func
 	    }
 	    break;
 
+// [[tpl-ex+]]
 	  case FF_TPL:
+	  case FF_TPLX:
+	  case FF_CUPICON:
 	    if (analyze_fname)
 		AnalyzeTPL(szs,subszs.data,subszs.size,it->name);
 

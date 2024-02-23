@@ -274,11 +274,95 @@ void CopyIMG
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void ExtractIMG
+(
+    // mipmaps are deleted
+
+    Image_t		* dest,		// destination image
+    bool		init_dest,	// true: initialize 'dest' first
+    const Image_t	* src,		// valid source image
+
+    int			xbeg,		// x-index of first used pixel, robust
+    int			xend,		// x-index of first not used pixel, robust
+    int			ybeg,		// y-index of first used pixel, robust
+    int			yend		// y-index of first not used pixel, robust
+)
+{
+    DASSERT(dest);
+    PRINT("ExtractIMG(,,,%d,%d,%d,%d)\n",xbeg,xend,ybeg,yend);
+
+    if (!src)
+    {
+	CopyIMG(dest,init_dest,src,false);
+	return;
+    }
+
+    const int width  = CheckIndex2ex(src->width,&xbeg,&xend);
+    const int height = CheckIndex2ex(src->height,&ybeg,&yend);
+    PRINT(" => %d..%d/%u, %d..%d/%u)\n",xbeg,xend,src->width,ybeg,yend,src->height);
+
+    if ( !xbeg && xend == src->width && !ybeg && yend == src->height || width <= 0 || height <= 0 )
+    {
+	CopyIMG(dest,init_dest,src,false);
+	return;
+    }
+
+    //--- setup new image data
+
+    Image_t temp;
+    InitializeIMG(&temp);
+    ConvertToRGB(&temp,src,PAL_INVALID);
+    DASSERT( temp.iform == IMG_X_RGB );
+
+    const uint bytes_per_pixel	= 4;
+    const uint xwidth		= EXPAND8(width);
+    const uint xheight		= EXPAND8(height);
+    const uint data_size	= xwidth * xheight * bytes_per_pixel;
+    u8 *data			= MALLOC(data_size);
+    memset(data,0xff,data_size);
+    PRINT(" - new image: %u*%u -> %u*%u -> %u bytes\n",
+		width, height, xwidth, xheight, data_size );
+
+    const uint copy_line_size  = (xend-xbeg) * bytes_per_pixel;
+    const uint dest_line_size = bytes_per_pixel * xwidth;
+    const uint src_line_size  = bytes_per_pixel * src->xwidth;
+    const u8 * src1 = src->data + xbeg * bytes_per_pixel + ybeg * src_line_size;
+    u8 * dest1 = data;
+
+    for ( int y = ybeg; y < yend; y++ )
+    {
+	memcpy(dest1,src1,copy_line_size);
+	dest1 += dest_line_size;
+	src1  += src_line_size;
+    }
+
+    if (init_dest)
+	InitializeIMG(dest);
+    FreeIMG(dest,src);
+
+    dest->data		= data;
+    dest->data_alloced	= true;
+    dest->width		= width;
+    dest->height	= height;
+    dest->xwidth	= xwidth;
+    dest->xheight	= xheight;
+    dest->data_size	= data_size;
+    dest->iform		= IMG_X_RGB;
+    NormalizeFrameIMG(dest);
+
+    PRINT0(" - new image: %u*%u -> %u*%u -> %u bytes\n",
+		dest->width, dest->height, dest->xwidth, dest->xheight, dest->data_size );
+
+    ResetIMG(&temp);
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 void MoveIMG
 (
     Image_t		* dest,		// destination image
     bool		init_dest,	// true: initialize 'dest' first
-    Image_t		* src		// NULL or source image, isresetted
+    Image_t		* src		// NULL or source image, is initialized
 )
 {
     DASSERT(dest);
@@ -369,11 +453,14 @@ void ScanDataIMG
     img->info_fform = GetByMagicFF(data,data_size,0); // [[magic]]
     switch (img->info_fform)
     {
+// [[tpl-ex+]]
+      case FF_CUPICON:
       case FF_TPL:
+      case FF_TPLX:
 	{
-	    const tpl_header_t * tpl;
-	    const tpl_pal_header_t * tp;
-	    const tpl_img_header_t * ti;
+	    const tpl_header_t *tpl;
+	    const tpl_pal_header_t *tp;
+	    const tpl_img_header_t *ti;
 	    if (SetupPointerTPL( data, data_size, 0,
 				&tpl, 0, &tp, &ti, 0, 0, &be_func ))
 	    {
@@ -382,6 +469,14 @@ void ScanDataIMG
 		img->width		= be16(&ti->width);
 		img->height		= be16(&ti->height);
 		img->info_n_image	= be32(&tpl->n_image);
+// [[tpl-ex+]]
+		if ( img->info_fform == FF_TPLX )
+		{
+		    tpl_header_ex_t *tplx = (tpl_header_ex_t*)tpl;
+		    img->width  = be32(&tplx->ex_width);
+		    img->height = be32(&tplx->ex_height);
+		}
+
 		if (tp)
 		    img->pform = img->info_pform = be32(&tp->pform);
 	    }

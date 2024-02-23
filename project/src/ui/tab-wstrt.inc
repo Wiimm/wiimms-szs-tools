@@ -222,6 +222,9 @@
 
   { H_OPT_G,	"AT_DUMMY",	"@|@", 0, "" },
 
+  { H_OPT_G,	"YDEBUG",	"ydebug",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_G,	"ALLOW_ALL",	"allow-all|allowall",
 		0, 0 /* copy of wszst */ },
 

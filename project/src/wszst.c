@@ -303,9 +303,9 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(BZIP2_t)
 	SIZEOF_INFO_ENTRY(BZ2Manager_t)
 	SIZEOF_INFO_ENTRY(BZ2Source_t)
+	SIZEOF_INFO_ENTRY(CompressManager_t)
 	SIZEOF_INFO_ENTRY(sha1_type_t)
 	SIZEOF_INFO_ENTRY(sha1_db_t)
-	SIZEOF_INFO_ENTRY(DistributionInfo_t)
 	SIZEOF_INFO_ENTRY(pack_header_t)
 	SIZEOF_INFO_ENTRY(pack_metric_t)
 	SIZEOF_INFO_ENTRY(check_cache_t)
@@ -371,10 +371,12 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(GenericImgParam_t)
 	SIZEOF_INFO_ENTRY(cmpr_info_t)
 	SIZEOF_INFO_ENTRY(tpl_header_t)
+	SIZEOF_INFO_ENTRY(tpl_header_ex_t)
 	SIZEOF_INFO_ENTRY(tpl_imgtab_t)
 	SIZEOF_INFO_ENTRY(tpl_pal_header_t)
 	SIZEOF_INFO_ENTRY(tpl_img_header_t)
 	SIZEOF_INFO_ENTRY(tpl_raw_t)
+	SIZEOF_INFO_ENTRY(tpl_signature_t)
 	SIZEOF_INFO_ENTRY(bti_header_t)
 
     SIZEOF_INFO_TITLE("KCL")
@@ -5790,6 +5792,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_HELP:		help_exit(false);
 	case GO_XHELP:		help_exit(true);
 	case GO_CONFIG:		opt_config = optarg; break;
+	case GO_YDEBUG:		enable_ydebug++; break;
 	case GO_ALLOW_ALL:	allow_all = true; break;
 	case GO_COMPATIBLE:	err += ScanOptCompatible(optarg); break;
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;

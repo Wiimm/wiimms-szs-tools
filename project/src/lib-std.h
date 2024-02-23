@@ -121,6 +121,7 @@ void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 #define M1(a) ( (typeof(a))~0 )
 #define IS_M1(a) ( (a) == (typeof(a))~0 )
 
+
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			   Setup			///////////////
@@ -776,6 +777,9 @@ void SetCompressionFF
     file_format_t	ff_compr	// if >=0: set 'fform_compr'
 					//        and  'fform_compr_force'
 );
+
+static inline bool IsTplFF ( file_format_t ff )
+	{ return ff == FF_TPL || ff == FF_TPLX || ff == FF_CUPICON; }
 
 file_format_t IsImageFF
 (

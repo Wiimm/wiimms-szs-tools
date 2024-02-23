@@ -6084,7 +6084,6 @@ bool PatchFillBMG
 	bmg_item_t * dptr = InsertItemBMG(bmg,mid,0,0,&old_item);
 	if ( !old_item || !dptr->len )
 	{
-// [[%04x-]] no access to lecode_04x
 	    const uint len
 		= snprintf(buf,sizeof(buf),"_T%03X_",mid-ctb.track_name1.beg);
 	    AssignItemTextBMG(dptr,buf,len);

@@ -210,6 +210,9 @@
   { T_OPT_GP,	"CONFIG",	"config",
 		0, 0 /* copy of wszst */ },
 
+  { H_OPT_G,	"YDEBUG",	"ydebug",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_G,	"ALLOW_ALL",	"allow-all|allowall",
 		0, 0 /* copy of wszst */ },
 

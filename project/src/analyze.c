@@ -1139,7 +1139,8 @@ void AnalyzeTPL ( szs_file_t * szs, u8 * data, uint data_size, ccp name )
 {
 // [[analyse-magic]]
     file_format_t fform = GetByMagicFF(data,data_size,data_size);
-    if ( fform != FF_TPL
+// [[tpl-ex+]]
+    if ( !IsTplFF(fform)
 		|| opt_analyze_mode != ANA_MD_DEFAULT
 			&& !(opt_analyze_mode&ANA_MD_TPL) )
     {

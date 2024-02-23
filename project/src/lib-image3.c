@@ -953,11 +953,13 @@ enumError SmartResizeIMG
 
     //--- analyze width and height
 
+ #if 0
     if ( !src->width || !src->height )
     {
 	CopyIMG(dest,false,src,true);
 	return ERR_OK;
     }
+ #endif
 
     if (!width)
     {
@@ -1756,9 +1758,9 @@ int PrintImage
 	if (long_count)
 	{
 	    if ( img.width && img.height )
-		printf(" %4u*%-4u       -",img.width,img.height);
+		printf(" %4u*%-4u        -",img.width,img.height);
 	    else
-		fputs("     -           -",stdout);
+		fputs("     -            -",stdout);
 	}
 	if (long_count>1)
 	    fputs("  ---  - ",stdout);

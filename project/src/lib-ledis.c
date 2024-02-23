@@ -1546,7 +1546,6 @@ ccp GetPathL2 ( le_distrib_t *ld, const le_track_t *lt, le_options_t opt, ccp re
 	    }
 
 	    char buf[20];
-// [[%04x+]]
 	    snprintf(buf,sizeof(buf), lecode_04x ? "%04x" : "%03x", lt->track_slot );
 	    TransferMode_t tfer_mode;
 	    ccp found = FindTrackFile(buf,&tfer_mode);
@@ -1572,7 +1571,6 @@ ccp GetPathL2 ( le_distrib_t *ld, const le_track_t *lt, le_options_t opt, ccp re
 	    if ( len > 0 && path[len-1] == '/' )
 	    {
 		char newpath[PATH_MAX];
-// [[%04x+]]
 		ccp format = lecode_04x ? "%s%04x.szs" : "%s%03x.szs";
 		snprintf(newpath,sizeof(newpath),format,path,lt->track_slot);
 		SetPathLT((le_track_t*)lt,&par,newpath);
@@ -4237,7 +4235,6 @@ enumError AddToArchLD ( le_distrib_t *ld, raw_data_t *raw )
 	    if ( ld->spar.opt & LEO_HEX2SLOT && ( spf.f_name.len == 3 || spf.f_name.len == 4 ))
 	    {
 		const uint slot = str2ul(spf.f_name.ptr,0,16);
-// [[%04x+]]
 		snprintf(fname_buf,sizeof(fname_buf),"%03x",slot);
 		if (!strncasecmp(spf.f_name.ptr,fname_buf,3))
 		{
@@ -4651,7 +4648,6 @@ void ImportAnaLD ( le_distrib_t *ld, const le_analyze_t *ana )
 	    if (ana->flags)	lt->flags    = ana->flags[slot];
 
 	    char name[30];
-// [[%04x+]]
 	    snprintf(name,sizeof(name), lecode_04x ? "_%04x" : "_%03x", slot );
 	    SetNameLT(lt,0,name);
 	}
@@ -6442,6 +6438,7 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	O_GAME		= 0x0080,
 	O_XGAME		= 0x0100,
 	O_SPACE		= 0x0200,
+	O_TEST		= 0x0400,
 
 	O_CHARS		= 0x1000,
 	 O_M_CHARS	= 0xf000,
@@ -6468,6 +6465,7 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	{ O_GAME,		"GAME",		0,		0 },
 	{ O_XGAME,		"XGAME",	0,		0 },
 	{ O_SPACE,		"SPACE",	0,		0 },
+	{ O_TEST,		"TEST",		0,		0 },
 
 	{  0*O_CHARS,		 "0",		0,		O_M_CHARS },
 	{  1*O_CHARS,		 "1",		0,		O_M_CHARS },
@@ -6538,6 +6536,9 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
     }
     if (!opt)
 	opt = O__DEFAULT;
+
+    if ( opt & O_TEST )
+	dest = StringCopyE(dest,bufend,":test\n");
 
     const uint pix = (( opt & O_M_PIXEL ) >> O_S_PIXEL ) * O_PIXEL_FACTOR;
     if ( pix && pix != 128 )
@@ -6638,7 +6639,8 @@ enumError CreateCupIconsLD ( ld_out_param_t *lop, mem_t mem_opt, bool print_info
 	    err = CreateGenericIMG(&genpar,&img,true);
 	    if (!err)
 	    {
-		const file_format_t fform = GetImageFFByFName(lop->fname,FF_TPL,true);
+// [[tpl-ex+]]
+		const file_format_t fform = GetImageFFByFName(lop->fname,FF_CUPICON,true);
 		err = SaveIMG(&img,fform,0,lop->f,lop->fname,false);
 	    }
 	}
@@ -8218,7 +8220,7 @@ static void load_file_lta
 {
     DASSERT(lm);
     DASSERT(rec);
-    DASSERT(path);
+    DASSERT(fname);
 
     progress_lta(lm,false);
 

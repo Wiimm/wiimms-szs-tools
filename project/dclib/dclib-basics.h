@@ -80,6 +80,8 @@
 #define SIZEOFRANGE(type,a,b) \
 	( offsetof(type,b) + sizeof(((type*)0)->b) - offsetof(type,a) )
 
+#define NUM_OF_ELEMENTS(a) (sizeof(a)/sizeof(*(a)))
+
 #define END_OF_VAR(v) ((void*)( (char*)(v) + sizeof(v) ))
 
 #define PTR_DISTANCE(a,b) ( (char*)(a) - (char*)(b) )
@@ -817,11 +819,14 @@ static inline mem_t MemByE ( ccp str, ccp end )
 
 // Index helpers
 // For the 'End' variants, index 0 is end_of_source
+// For the 'ex' variants, index 0 is end_of_source, but only for parem 'p_end'
 
 int CheckIndex1	   ( int max, int index );
 int CheckIndex1End ( int max, int index );
 int CheckIndex2    ( int max, int * p_begin, int * p_end );
 int CheckIndex2End ( int max, int * p_begin, int * p_end );
+int CheckIndex2    ( int max, int * p_begin, int * p_end );
+int CheckIndex2ex  ( int max, int * p_begin, int * p_end );
 int CheckIndexC    ( int max, int * p_begin, int count );
 int CheckIndexCEnd ( int max, int * p_begin, int count );
 

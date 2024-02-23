@@ -85,6 +85,7 @@ typedef struct MipmapOptions_t
 {
     bool	valid;		// TRUE: setup of this record done
     bool	force;		// TRUE: force 'n_mipmap'
+    bool	is_tpl;		// destination is TPL
     uint	n_mipmap;	// number of mipmaps
     uint	n_image;	// := n_mipmap+1
     uint	min_size;	// minimal mipmap width and height
@@ -92,10 +93,10 @@ typedef struct MipmapOptions_t
 MipmapOptions_t;
 
 // both functions return 'dest', 'src' may be NULL
-void SetupMipmapOptions	  ( MipmapOptions_t *mmo );
-void SetupMipmapOptions1  ( MipmapOptions_t *mmo );
-void CopyMipmapOptions    ( MipmapOptions_t *dest, const MipmapOptions_t *src );
-void MipmapOptionsByImage ( MipmapOptions_t *mmo, const struct Image_t *img );
+void SetupMipmapOptions	   ( MipmapOptions_t *mmo );
+void SetupMipmapOptionsTPL ( MipmapOptions_t *mmo );
+void CopyMipmapOptions     ( MipmapOptions_t *dest, const MipmapOptions_t *src );
+void MipmapOptionsByImage  ( MipmapOptions_t *mmo, const struct Image_t *img );
 
 ccp InfoMipmapOptions ( const MipmapOptions_t *mmo );
 ccp TextMipmapOptions ( const MipmapOptions_t *mmo );
@@ -105,6 +106,11 @@ void PrintMipmapOptions ( FILE *f, int indent, const MipmapOptions_t *mmo );
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			ImageGeometry_t			///////////////
 ///////////////////////////////////////////////////////////////////////////////
+
+#define MAX_IMAGE_WIDTH  0xffff
+#define MAX_IMAGE_HEIGHT 0xffff
+
+//-----------------------------------------------------------------------------
 // [[ImageGeometry_t]]
 
 typedef struct ImageGeometry_t
@@ -134,6 +140,8 @@ ImageGeometry_t;
 const ImageGeometry_t * GetImageGeometry ( image_format_t iform );
 int PaletteToImageFormat ( int pform, int return_if_invalid );
 
+//-----------------------------------------------------------------------------
+
 uint CalcImageSize
 (
     uint		width,		// width of image in pixel
@@ -148,6 +156,8 @@ uint CalcImageSize
     uint		* h_blocks,	// not NULL: store number of horizontal blocks
     uint		* v_blocks	// not NULL: store number of vertical blocks
 );
+
+//-----------------------------------------------------------------------------
 
 const ImageGeometry_t * CalcImageGeometry
 (
@@ -172,7 +182,7 @@ typedef struct Image_t
 {
     //--- image data
 
-    image_format_t	iform;		// current data format
+    image_format_t	iform;		// current image format
     u8			* data;		// pointer to data or NULL if iform==IMG_INVALID
     uint		data_size;	// size of data in bytes
     bool		data_alloced;	// true: 'data' is alloced -> free() it
@@ -219,6 +229,7 @@ typedef struct Image_t
     ccp			path;		// NULL or alloced filename of image
     bool		path_alloced;	// true: 'path' is alloced -> free() it
     bool		is_cup_icon;	// true: image contains cup icons
+    bool		test_mode;	// true: enable test mode for cup icons (TPL only)
     file_format_t	info_fform;	// info about original file format
     image_format_t	info_iform;	// info about original image format
     palette_format_t	info_pform;	// info about original palette format
@@ -295,11 +306,27 @@ void CopyIMG
 
 ///////////////////////////////////////////////////////////////////////////////
 
+void ExtractIMG
+(
+    // mipmaps are deleted
+
+    Image_t		* dest,		// destination image
+    bool		init_dest,	// true: initialize 'dest' first
+    const Image_t	* src,		// valid source image
+
+    int			xbeg,		// x-index of first used pixel, robust
+    int			xend,		// x-index of first not used pixel, robust
+    int			ybeg,		// y-index of first used pixel, robust
+    int			yend		// y-index of first not used pixel, robust
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
 void MoveIMG
 (
     Image_t		* dest,		// destination image
     bool		init_dest,	// true: initialize 'dest' first
-    Image_t		* src		// NULL or source image, isresetted
+    Image_t		* src		// NULL or source image, is initialized
 );
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -397,7 +424,18 @@ void ResetRawTPL ( tpl_raw_t *raw );
 enumError CreateRawTPL
 (
     tpl_raw_t		* raw,		// results with alloced data
-    Image_t		* src_img	// pointer to valid source img
+    Image_t		* src_img,	// pointer to valid source img
+    file_format_t	fform		// FF_TPL or FF_TPLX
+);
+
+//-----------------------------------------------------------------------------
+
+enumError SaveRawTPL
+(
+    tpl_raw_t		*raw,		// raw data created by CreateRawTPL()
+    FILE		*f,		// output file, if NULL then use fname+overwrite
+    ccp			fname,		// filename of source
+    bool		overwrite	// true: allow overwriting
 );
 
 //-----------------------------------------------------------------------------
@@ -405,6 +443,7 @@ enumError CreateRawTPL
 enumError SaveTPL
 (
     Image_t		*src_img,	// pointer to valid source img
+    file_format_t	fform,		// FF_TPL or FF_TPLX
     FILE		*f,		// output file, if NULL then use fname+overwrite
     ccp			fname,		// filename of source
     bool		overwrite	// true: allow overwriting
@@ -612,7 +651,8 @@ typedef struct GenericImgParam_t
     //--- analysis, setup by CreateGenericIMG()
 
     const KeywordTab_t	*cmd;		// selected command
-    int			force_width;	// !=128: finally resize image size to width given 
+    int			force_width;	// !=128: finally resize image size to width given
+    bool		test_mode;	// true: enable test mode for cup icons (TPL only)
     int			width;		// width of image
     int			height;		// height of image
     Color_t		color;		// default color
@@ -1019,17 +1059,48 @@ uint MedianCut
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			    TPL support			///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[tpl_header_t]]
 
-#define TPL_MAGIC_NUM 0x0020AF30
+#define TPL_MAGIC_NUM		0x0020AF30
+#define TPL_EX_MAGIC_NUM	0x54504c78
+
+///////////////////////////////////////////////////////////////////////////////
+// [[tpl_header_t]]
 
 typedef struct tpl_header_t
 {
-    u8			magic[4];	// always TPL_MAGIC_NUM
+// [[tpl-ex+]]
+    u8			magic[4];	// TPL_MAGIC_NUM
     u32			n_image;	// number of images
     u32			imgtab_off;	// image table offset relative to file start
 }
 __attribute__ ((packed)) tpl_header_t;
+
+///////////////////////////////////////////////////////////////////////////////
+// [[tpl_header_ex_t]]
+
+typedef struct tpl_header_ex_t
+{
+// [[tpl-ex+]]
+    u8			magic[4];	// TPL_MAGIC_NUM
+    u32			n_image;	// number of images
+    u32			imgtab_off;	// image table offset relative to file start
+
+    u32			ex_magic;	// always TPL_EX_MAGIC_NUM
+    u32			ex_width;	// real (icon) width
+    u32			ex_height;	// real (icon) height
+    u32			ex_n_icon;	// number of icons
+}
+__attribute__ ((packed)) tpl_header_ex_t;
+
+//-----------------------------------------------------------------------------
+
+static inline bool IsTplHeaderEx ( const void *data, uint data_size )
+{
+    const tpl_header_ex_t *tpl = (tpl_header_ex_t*)data;
+    return data_size >= sizeof(tpl_header_ex_t)
+	&& be32(&tpl->imgtab_off) >= sizeof(tpl_header_ex_t)
+	&& be32(&tpl->ex_magic) == TPL_EX_MAGIC_NUM;
+}
 
 ///////////////////////////////////////////////////////////////////////////////
 // [[tpl_imgtab_t]]
@@ -1058,6 +1129,7 @@ __attribute__ ((packed)) tpl_pal_header_t;
 
 typedef struct tpl_img_header_t
 {
+// [[tpl-ex+]]
     u16			height;		// height of image in pixel
     u16			width;		// width of image in pixel
     u32			iform;		// image format
@@ -1102,6 +1174,23 @@ bool SetupPointerTPL
     const u8			** img_data,	// not NULL: store pointer to img data
     const endian_func_t		* endian	// endian functions
 );
+
+///////////////////////////////////////////////////////////////////////////////
+// [[tpl_signature_t]]
+
+typedef struct tpl_signature_t
+{
+    u8		magic1[8];		// always "LE-CODE\0"
+    u32		width;			// width of image
+    u32		height;			// height of image
+    u32		n_icon;			// number of icons
+    u16		iform;			// image format
+    u16		pform;			// palette format
+    u8		magic2[8];		// always "Cup Icon"
+}
+__attribute__ ((packed)) tpl_signature_t;
+
+extern const tpl_signature_t TPLSignature0;
 
 //
 ///////////////////////////////////////////////////////////////////////////////
