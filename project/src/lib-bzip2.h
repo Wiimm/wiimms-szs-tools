@@ -88,7 +88,7 @@ int IsBZIP2
     //  1..9: seems to be BZIP2 data; compression level is returned
 
     cvp			data,		// NULL or data to investigate
-    uint		size		// size of 'data'
+    int			size		// size of 'data'
 );
 
 //-----------------------------------------------------------------------------
@@ -221,7 +221,7 @@ enumError EncodeBZIP2
 
     bool		use_iobuf,	// true: allow the usage of 'iobuf'
     uint		header_size,	// insert 'header_size' bytes before dest data
-    bool		add_dec_size,	// true: add decompressed size
+    bool		add_dec_size,	// true: add decompressed size before BZIP2 header
 
     const void		*src,		// source buffer
     uint		src_size,	// size of source buffer
@@ -264,7 +264,7 @@ enumError DecodeBZIP2buf
     uint		dest_size,	// size of 'dest'
     uint		*dest_written,	// store num bytes written to 'dest_ptr', never NULL
 
-    const void		*src,		// source buffer, first 4 bytes = dest size
+    const void		*src,		// source buffer
     uint		src_size	// size of source buffer
 );
 

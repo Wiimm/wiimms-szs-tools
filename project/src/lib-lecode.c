@@ -3326,30 +3326,31 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		,indent,"", h->cheat_mode, GetCheatModeInfo(h->cheat_mode)
 		);
 
+	if ( ana->param_size >= sizeof(le_binpar_v1_260_t) )
+	{
+	    fprintf(f,
+		"%*s" "Item cheats:       %u = %s\n"
+		"%*s" "Debug mode:        %u = %s\n"
+		,indent,"", h->item_cheat, h->item_cheat ? "enabled" : "disabled"
+		,indent,"", h->debug_mode, GetLecodeDebugInfo(h->debug_mode)
+		);
+	}
+
 	fprintf(f,
-		"%*s" "Engine chances:    "
-			"%u + %u + %u = %u (1%s0cc+mirror=total)\n"
-		"%*s" "200cc:             %u = %sabled\n"
 		"%*s" "Perform. monitor:  %u = %s\n"
-		,indent,""
-			,h->engine[0], h->engine[1], h->engine[2]
-			,h->engine[0] + h->engine[1] + h->engine[2]
-			,h->enable_200cc ? "50cc+20" : "00cc+15"
-		,indent,"", h->enable_200cc, h->enable_200cc ? "en" :"dis"
 		,indent,"", h->enable_perfmon,
 			h->enable_perfmon > 1 ? "Wii(U)+Dolphin"
 			: h->enable_perfmon ? "Wii(U) only" :"disabled"
 		);
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_37_t) )
-	    fprintf(f,
-		"%*s" "Custom Timetrial:  %u = %sabled\n"
-		"%*s" "Extended P-Flags:  %u = %sabled\n"
-		"%*s" "Block tracks for:  %u race%s\n"
-		,indent,"", h->enable_custom_tt, h->enable_custom_tt ? "en" :"dis"
-		,indent,"", h->enable_xpflags, h->enable_xpflags ? "en" :"dis"
-		,indent,"", h->block_track, h->block_track == 1 ? "" : "s"
-		);
+	if ( ana->param_size >= sizeof(le_binpar_v1_277_t) )
+	    fprintf(f,"%*s" "Slot format:       %u = \"%%0%ux\"\n"
+		,indent,"", h->slot_04x, h->slot_04x ? 4 : 3 );
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_276_t) )
+	    fprintf(f,"%*s" "Cup icon size:     %u x %u pixels (%u bytes)\n"
+		,indent,"", h->cup_icon_size, h->cup_icon_size
+		,h->cup_icon_size * h->cup_icon_size / 2 );
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_1bc_t) )
 	{
@@ -3371,15 +3372,26 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 		indent,"", h->enable_speedo, comment );
 	}
 
-	if ( ana->param_size >= sizeof(le_binpar_v1_260_t) )
-	{
-	    fprintf(f,
-		"%*s" "Debug mode:        %u = %s\n"
-		"%*s" "Item cheat:        %u = %s\n"
-		,indent,"", h->debug_mode, GetLecodeDebugInfo(h->debug_mode)
-		,indent,"", h->item_cheat, h->item_cheat ? "enabled" : "disabled"
+	fprintf(f,
+		"%*s" "200cc:             %u = %sabled\n"
+		"%*s" "Engine chances:    "
+			"%u + %u + %u = %u (1%s0cc+mirror=total)\n"
+		,indent,"", h->enable_200cc, h->enable_200cc ? "en" :"dis"
+		,indent,""
+			,h->engine[0], h->engine[1], h->engine[2]
+			,h->engine[0] + h->engine[1] + h->engine[2]
+			,h->enable_200cc ? "50cc+20" : "00cc+15"
 		);
-	}
+
+	if ( ana->param_size >= sizeof(le_binpar_v1_37_t) )
+	    fprintf(f,
+		"%*s" "Custom Timetrial:  %u = %sabled\n"
+		"%*s" "Extended P-Flags:  %u = %sabled\n"
+		"%*s" "Block tracks for:  %u race%s\n"
+		,indent,"", h->enable_custom_tt, h->enable_custom_tt ? "en" :"dis"
+		,indent,"", h->enable_xpflags, h->enable_xpflags ? "en" :"dis"
+		,indent,"", h->block_track, h->block_track == 1 ? "" : "s"
+		);
 
 	if ( ana->param_size >= sizeof(le_binpar_v1_264_t) )
 	{
@@ -3426,15 +3438,6 @@ void DumpLEAnalyse ( FILE *f, uint indent, const le_analyze_t *ana )
 			,max, PrintHMS(0,0,max,LE_VIEW_ONLINE_HMS," (",")")
 		);
 	}
-
-	if ( ana->param_size >= sizeof(le_binpar_v1_276_t) )
-	    fprintf(f,"%*s" "Cup icon size:     %u x %u pixels (%u bytes)\n"
-		,indent,"", h->cup_icon_size, h->cup_icon_size
-		,h->cup_icon_size * h->cup_icon_size / 2 );
-
-	if ( ana->param_size >= sizeof(le_binpar_v1_277_t) )
-	    fprintf(f,"%*s" "Slot format:       %u = \"%%0%ux\"\n"
-		,indent,"", h->slot_04x, h->slot_04x ? 4 : 3 );
 
 	// [[new-lpar]]
 

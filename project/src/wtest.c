@@ -4214,7 +4214,7 @@ static enumError test_pf_expand ( int argc, char ** argv )
 		"  -i : Set mode to INSERT (default).\n"
 		"  -a : Set mode to APPEND.\n"
 		"\n");
-	exit(1);
+	ExitFixed(1);
     }
 
 
@@ -4269,7 +4269,7 @@ static enumError test_coded_version ( int argc, char ** argv )
     if ( argc <= 1 )
     {
 	printf(	"\nSyntax: VERSIONCODE | VC [number]...\n\n");
-	exit(1);
+	ExitFixed(1);
     }
 
     int fw = 11;
@@ -4318,7 +4318,7 @@ static enumError test_key_list ( int argc, char ** argv )
     if ( argc <= 1 )
     {
 	printf(	"\nSyntax: KEY-LIST | KL  [options] [a..b] [args]...\n\n");
-	exit(1);
+	ExitFixed(1);
     }
 
     static const KeywordTab_t keytab[] =
@@ -4807,7 +4807,6 @@ be32n((u32*)head,(u32*)head,sizeof(head)/4);
 be32n((u32*)node,(u32*)node,sizeof(node)/4);
 	    while ( node->data_size )
 	    {
-xBINGO;
 		if (!strcasecmp(node->file_name,path))
 		{
 		    res.data = (u8*)node  + node->data_offset;
@@ -5283,7 +5282,7 @@ void help_exit()
  #endif
 
     ClosePager();
-    exit(ERR_SYNTAX);
+    ExitFixed(ERR_SYNTAX);
 };
 
 //

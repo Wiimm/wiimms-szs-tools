@@ -151,6 +151,10 @@ MAX-ONLINE-SEC	= %3u%s
 # 64x64 (saves 75%% space) for >800 cups and more. The image with the cup
 # icons, which is loaded with the --cup-icons option, for example, must have
 # the appropriate size.
+#
+# As of build 41, LE-CODE supports the TPLx file format. If the cup icons are
+# in this file format and a valid signature is found, then CUP-ICON-SIZE will
+# be ignored.
 
 CUP-ICON-SIZE	= %u
 
@@ -159,6 +163,9 @@ CUP-ICON-SIZE	= %u
 # format (same number of characters). However, this is only relevant if a slot
 # ≥0x1000 (≥4096) is used. The distribution creator must ensure that the files
 # in ./Race/Course/ and directories in ./Race/Common/ are in the same format.
+#
+# As of build 41, LE-CODE scans the ./Race/Course/ directory and finds out
+# which format is used. This setting is then only used as a fallback.
 
 SLOT-04X	= %u
 

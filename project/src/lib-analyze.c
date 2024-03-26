@@ -192,24 +192,6 @@ void AnalyzeSZS
     FindSpecialFilesSZS(szs,false);
 
 
-    //--- scan LEX
-
-    InitializeLexInfo(&as->lexinfo);
-
-    if (szs->course_lex_data)
-    {
-	lex_t lex;
-	InitializeLEX(&lex);
-	lex.check_only = true;
-	ScanLEX(&lex,false,szs->course_lex_data,szs->course_lex_size);
-	szs->have.lex_sect	= lex.have_sect;
-	szs->have.lex_feat	= lex.have_feat;
-	szs->have.lex_apply_otl	= lex.apply_otl;
-	SetupLexInfo(&as->lexinfo,&lex);
-	ResetLEX(&lex);
-    }
-
-
     //--- scan slots
 
     AnalyzeSlot(&as->slotana,szs);
@@ -220,6 +202,32 @@ void AnalyzeSZS
     FinalizeSlotInfo(&as->slotinfo,true);
     if (*as->slotinfo.slot_attrib)
 	ct_dest = StringCat2E(ct_dest,ct_end,",",as->slotinfo.slot_attrib);
+
+
+    //--- scan LEX
+
+    InitializeLexInfo(&as->lexinfo);
+
+    if (szs->course_lex_data)
+    {
+	lex_t lex;
+	InitializeLEX(&lex);
+	lex.check_only = true;
+	ScanLEX(&lex,false,szs->course_lex_data,szs->course_lex_size);
+	if (lex.have_sect)
+	{
+	    szs->have.lex_sect	= lex.have_sect;
+	    szs->have.lex_feat	= lex.have_feat;
+	    szs->have.lex_apply_otl	= lex.apply_otl;
+	    SetupLexInfo(&as->lexinfo,&lex);
+	}
+	if (!lex.have_sect)
+	{
+	    szs->course_lex_data = 0;
+	    szs->course_lex_size = 0;
+	}
+	ResetLEX(&lex);
+    }
 
 
     //--- scan KMP
@@ -390,9 +398,14 @@ void AnalyzeSZS
 	ct_dest = StringCopyE(ct_dest,ct_end,",aiparam");
     }
 
-    if ( szs->have.szs[HAVESZS_LICENSE] > HFM_NONE )
+    if ( szs->have.szs[HAVESZS_LICENSE_TXT] > HFM_NONE )
     {
 	ct_dest = StringCopyE(ct_dest,ct_end,",license");
+    }
+
+    if ( szs->have.szs[HAVESZS_VERSION_BIN] > HFM_NONE )
+    {
+	ct_dest = StringCopyE(ct_dest,ct_end,",vers_bin");
     }
 
 

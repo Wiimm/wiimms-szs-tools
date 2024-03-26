@@ -4,8 +4,8 @@
 [order]
 
 # This list contains all extracted files in the order of the original archive.
-# If creating archives (but not U8) this list will be used to sort the found
-# files. For archives with directory support (all but not PACK) it is very
+# If creating archives (but neither U8 nor LTA) this list will be used to sort
+# the found files. For archives with directory support (all except PACK) it is
 # important, that the directories are listed before the files that resides in
 # the directories.
 #

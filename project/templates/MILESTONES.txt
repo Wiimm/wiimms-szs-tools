@@ -166,3 +166,6 @@ szs v2.34a
 szs v2.41a
  - LE-CODE supports 8192 tracks and 2048 versus cups now.
 
+szs v2.41b
+ - Support of file format TPLx.
+

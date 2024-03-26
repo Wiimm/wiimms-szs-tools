@@ -1,10 +1,18 @@
 szs v@@VERSION@@ r@@REV-NEXT@@ - @@@@-@@-@@
 
- - Cygwin only: Fixed a silent stack overflow if reordering the tracks.
- - New image format TPLx: Technically, TPLx is a TPL file with 2 extensions.
-   The main feature is the conversion of width and height so that images with
-   a height >65535 lines can be used. Cup icons are an example of this.
- - New virtual image type CUPICON: Alias for TPLx.CMPR.
+ - Updated prefix database: Added CTGPS, EX, EXTR, GK2, GK3, GK7, HGSS, HWTA,
+   SBSPLCP, SKK, TGO. Removed LPC.
+ - Bug fix for option --lex-purge: The tools occasionally crashed when
+   attempting to delete an existing but unneeded LEX file.
+ - Added support for compression methods YBZ and YLZ (Yaz0 header, but
+   alternative compressions bzip2 or LZMA). Use one of the new options --cybz,
+   --ybz, --cylz or --ylz to select the new methods. LE-CODE supports YLZ.
+ - New option --zero (-z): This option affects the exit status of the
+   programs. Instead of an exit status, the value 0 is returned for OK. This
+   happens for notices (-v, status<15), warnings (-vv, status<29), errors
+   (-vvv, status<115) and fatal errors (-vvvv). The exit status for INTERRUPT
+   (112) is never replaced.
+ - Information only: wszst now knows 243 different options.
 
 ~ - KMP:STGI support for up to 255 laps.
 ~    - Option --kmp=MODES supports now settings 1LAP .. 15LAPS.

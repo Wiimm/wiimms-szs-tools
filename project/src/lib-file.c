@@ -916,6 +916,9 @@ file_format_t GetByMagicFF
 	switch(magic32)
 	{
 	    //---  see below for BOM support
+//	    case YBZ_MAGIC_NUM:		return FF_YBZ;
+//	    case YLZ_MAGIC_NUM:		return FF_YLZ;
+
 	    case BMG_TEXT_MAGIC_NUM:	return FF_BMG_TXT;
 	    case KCL_TEXT_MAGIC_NUM:	return FF_KCL_TXT;
 	    case KMP_TEXT_MAGIC_NUM:	return FF_KMP_TXT;
@@ -927,7 +930,11 @@ file_format_t GetByMagicFF
 
 	    case GCTTXT_MAGIC_NUM:	return FF_GCT_TXT;
 
-	    case YAZ0_MAGIC_NUM:	return FF_YAZ0;
+	    case YAZ0_MAGIC_NUM:
+		return IsBZIP2(data+sizeof(ybz_header_t),data_size-sizeof(ybz_header_t)) >= 0
+		    ? FF_YBZ
+		    : IsYLZ(data,data_size) >= 0 ? FF_YLZ : FF_YAZ0;
+
 	    case YAZ1_MAGIC_NUM:	return FF_YAZ1;
 	    case XYZ0_MAGIC_NUM:	return FF_XYZ;
 //	    case BZ_MAGIC_NUM:		return FF_BZ;
@@ -2644,6 +2651,21 @@ bool CanBeTrackFF ( file_format_t ff )
 bool IsArchiveFF ( file_format_t ff )
 {
     return (uint)ff < FF_N && FileTypeTab[ff].attrib & FFT_ARCHIVE;
+}
+
+//-----------------------------------------------------------------------------
+
+bool IsCompressFF ( file_format_t ff )
+{
+    return (uint)ff < FF_N && FileTypeTab[ff].attrib & FFT_COMPRESS;
+}
+
+//-----------------------------------------------------------------------------
+
+bool IsTrackCompressFF ( file_format_t ff )
+{
+    const uint cond = FFT_TRACK | FFT_COMPRESS;
+    return (uint)ff < FF_N && ( FileTypeTab[ff].attrib & cond ) == cond;
 }
 
 //-----------------------------------------------------------------------------

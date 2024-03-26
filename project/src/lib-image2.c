@@ -2629,7 +2629,8 @@ const KeywordTab_t cmdtab_transform[] =
 // [[tpl-ex+]]
 	{ FF_TPL,	"TPL",		0,		TM_IDX_FILE|TM_F_PAL },
 	{ FF_TPLX,	"TPLx",		"TPLX",		TM_IDX_FILE|TM_F_PAL },
-	{ FF_CUPICON,	"CUPICON",	"CUP",		TM_IDX_FILE },
+	{ FF_CUPICON,	"CUPICON",	"CUPICONS",	TM_IDX_FILE },
+	 { FF_CUPICON,	"CUP",		"CUPS",		TM_IDX_FILE },
 	{ FF_BTI,	"BTI",		0,		TM_IDX_FILE|TM_F_PAL },
 	{ FF_TEX,	"TEX",		"TEX0",		TM_IDX_FILE },
 	{ FF_BREFT_IMG,	"BREFT-IMG",	"BREFTIMG",	TM_IDX_FILE },

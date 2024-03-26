@@ -1234,7 +1234,7 @@ static bool RemoveElementLEX
     for ( i = 0, ss = lex->item; i < lex->item_used; i++, ss++ )
 	if ( *ss == li )
 	{
-	    memmove(ss,ss+1,lex->item_used-i);
+	    memmove(ss,ss+1,sizeof(*ss)*(lex->item_used-i));
 	    lex->item_used--;
 	    FREE((lex_item_t*)li);
 	    UpdateHaveLex(lex);
@@ -1492,8 +1492,7 @@ void ResetLEX ( lex_t * lex )
 
 	if (lex->item)
 	{
-	    uint i;
-	    for ( i = 0; i < lex->item_used; i++ )
+	    for ( int i = 0; i < lex->item_used; i++ )
 		if (lex->item[i])
 		    FREE(lex->item[i]);
 	    FREE(lex->item);
@@ -3705,7 +3704,12 @@ bool PurgeLEX ( lex_t * lex )
 	}
 
 	if (remove)
-	    modified |= RemoveElementLEX(lex,*ss);
+	{
+	    if (RemoveElementLEX(lex,*ss))
+		modified |= 1;
+	    else
+		i++;
+	}
 	else
 	    i++;
     }

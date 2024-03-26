@@ -65,139 +65,141 @@ typedef enum file_format_t
 	FF_YAZ1,	//  2
 	FF_XYZ,		//  3
 	FF_BZ,		//  4
-	FF_BZIP2,	//  5
-	FF_LZ,		//  6
-	FF_LZMA,	//  7
-	FF_XZ,		//  8
+	FF_YBZ,		//  5
+	FF_BZIP2,	//  6
+	FF_LZ,		//  7
+	FF_YLZ,		//  8
+	FF_LZMA,	//  9
+	FF_XZ,		// 10
 
-	FF_U8,		//  9
-	FF_WU8,		// 10
-	FF_RARC,	// 11
-	FF_BRRES,	// 12
-	FF_BREFF,	// 13
-	FF_BREFT,	// 14
-	FF_RKC,		// 15
-	FF_PACK,	// 16
-	FF_USE_LTA,	// 17
-	FF_LTA,		// 18
-	FF_LFL,		// 19
+	FF_U8,		// 11
+	FF_WU8,		// 12
+	FF_RARC,	// 13
+	FF_BRRES,	// 14
+	FF_BREFF,	// 15
+	FF_BREFT,	// 16
+	FF_RKC,		// 17
+	FF_PACK,	// 18
+	FF_USE_LTA,	// 19
+	FF_LTA,		// 20
+	FF_LFL,		// 21
 
-	FF_CHR,		// 20
-	FF_CLR,		// 21
-	FF_MDL,		// 22
-	FF_PAT,		// 23
-	FF_SCN,		// 24
-	FF_SHP,		// 25
-	FF_SRT,		// 26
-	FF_TEX,		// 27
+	FF_CHR,		// 22
+	FF_CLR,		// 23
+	FF_MDL,		// 24
+	FF_PAT,		// 25
+	FF_SCN,		// 26
+	FF_SHP,		// 27
+	FF_SRT,		// 28
+	FF_TEX,		// 29
 
-	FF_TEX_CT,	// 28
-	FF_CTDEF,	// 29
+	FF_TEX_CT,	// 30
+	FF_CTDEF,	// 31
 
-	FF_CT0_CODE,	// 30
-	FF_CT0_DATA,	// 31
-	FF_CT1_CODE,	// 32
-	FF_CT1_DATA,	// 33
+	FF_CT0_CODE,	// 32
+	FF_CT0_DATA,	// 33
+	FF_CT1_CODE,	// 34
+	FF_CT1_DATA,	// 35
 
-	FF_CUP1,	// 34
-	FF_CRS1,	// 35
-	FF_MOD1,	// 36
-	FF_MOD2,	// 37
-	FF_OVR1,	// 38
+	FF_CUP1,	// 36
+	FF_CRS1,	// 37
+	FF_MOD1,	// 38
+	FF_MOD2,	// 39
+	FF_OVR1,	// 40
 
-	FF_LE_BIN,	// 39
-	FF_LEX,		// 40
-	FF_LEX_TXT,	// 41
+	FF_LE_BIN,	// 41
+	FF_LEX,		// 42
+	FF_LEX_TXT,	// 43
 
-	FF_LPAR,	// 42
-	FF_LEDEF,	// 43
-	FF_LEDIS,	// 44
-	FF_LEREF,	// 45
-	FF_LESTR,	// 46
-	FF_SHA1REF,	// 47
-	FF_SHA1ID,	// 48
-	FF_PREFIX,	// 49
-	FF_MTCAT,	// 50
-	FF_CT_SHA1,	// 51
+	FF_LPAR,	// 44
+	FF_LEDEF,	// 45
+	FF_LEDIS,	// 46
+	FF_LEREF,	// 47
+	FF_LESTR,	// 48
+	FF_SHA1REF,	// 49
+	FF_SHA1ID,	// 50
+	FF_PREFIX,	// 51
+	FF_MTCAT,	// 52
+	FF_CT_SHA1,	// 53
 
-	FF_MDL_TXT,	// 52
+	FF_MDL_TXT,	// 54
 
-	FF_PAT_TXT,	// 53
+	FF_PAT_TXT,	// 55
 
-	FF_TPL,		// 54
-	FF_TPLX,	// 55
-	FF_CUPICON,	// 56
-	FF_BTI,		// 57
-	FF_BREFT_IMG,	// 58
+	FF_TPL,		// 56
+	FF_TPLX,	// 57
+	FF_CUPICON,	// 58
+	FF_BTI,		// 59
+	FF_BREFT_IMG,	// 60
 
-	FF_BMG,		// 59
-	FF_BMG_TXT,	// 60
+	FF_BMG,		// 61
+	FF_BMG_TXT,	// 62
 
-	FF_KCL,		// 61
-	FF_KCL_TXT,	// 62
-	FF_WAV_OBJ,	// 63
-	FF_SKP_OBJ,	// 64
+	FF_KCL,		// 63
+	FF_KCL_TXT,	// 64
+	FF_WAV_OBJ,	// 65
+	FF_SKP_OBJ,	// 66
 
-	FF_KMP,		// 65
-	FF_KMP_TXT,	// 66
+	FF_KMP,		// 67
+	FF_KMP_TXT,	// 68
 
-	FF_ITEMSLT,	// 67
-	FF_ITEMSLT_TXT,	// 68
+	FF_ITEMSLT,	// 69
+	FF_ITEMSLT_TXT,	// 70
 
-	FF_KMG,		// 69
-	FF_KMG_TXT,	// 70
+	FF_KMG,		// 71
+	FF_KMG_TXT,	// 72
 
-	FF_KRM,		// 71
-	FF_KRM_TXT,	// 72
+	FF_KRM,		// 73
+	FF_KRM_TXT,	// 74
 
-	FF_KRT,		// 73
-	FF_KRT_TXT,	// 74
+	FF_KRT,		// 75
+	FF_KRT_TXT,	// 76
 
-	FF_OBJFLOW,	// 75
-	FF_OBJFLOW_TXT,	// 76
+	FF_OBJFLOW,	// 77
+	FF_OBJFLOW_TXT,	// 78
 
-	FF_GH_ITEM,	// 77
-	FF_GH_ITEM_TXT,	// 78
+	FF_GH_ITEM,	// 79
+	FF_GH_ITEM_TXT,	// 80
 
-	FF_GH_IOBJ,	// 79
-	FF_GH_IOBJ_TXT,	// 80
+	FF_GH_IOBJ,	// 81
+	FF_GH_IOBJ_TXT,	// 82
 
-	FF_GH_KART,	// 81
-	FF_GH_KART_TXT,	// 82
+	FF_GH_KART,	// 83
+	FF_GH_KART_TXT,	// 84
 
-	FF_GH_KOBJ,	// 83
-	FF_GH_KOBJ_TXT,	// 84
+	FF_GH_KOBJ,	// 85
+	FF_GH_KOBJ_TXT,	// 86
 
-	FF_DRIVER,	// 85
-	FF_VEHICLE,	// 86
+	FF_DRIVER,	// 87
+	FF_VEHICLE,	// 88
 
-	FF_BRASD,	// 87
-	FF_RKG,		// 88
-	FF_RKCO,	// 89
+	FF_BRASD,	// 89
+	FF_RKG,		// 90
+	FF_RKCO,	// 91
 
-	FF_STATICR,	// 90
-	FF_DOL,		// 91
+	FF_STATICR,	// 92
+	FF_DOL,		// 93
 
-	FF_GCT,		// 92
-	FF_GCT_TXT,	// 93
-	FF_GCH,		// 94
-	FF_WCH,		// 95
-	FF_WPF,		// 96
-	FF_XPF,		// 97
-	FF_DISTRIB,	// 98
+	FF_GCT,		// 94
+	FF_GCT_TXT,	// 95
+	FF_GCH,		// 96
+	FF_WCH,		// 97
+	FF_WPF,		// 98
+	FF_XPF,		// 99
+	FF_DISTRIB,	// 100
 
-	FF_PNG,		// 99
-	FF_PORTDB,	// 100
+	FF_PNG,		// 101
+	FF_PORTDB,	// 102
 
-	FF_TXT,		// 101
-	FF_SCRIPT,	// 102
-	FF_JSON,	// 103
-	FF_SH,		// 104
-	FF_BASH,	// 105
-	FF_PHP,		// 106
-	FF_MAKEDOC,	// 107
+	FF_TXT,		// 103
+	FF_SCRIPT,	// 104
+	FF_JSON,	// 105
+	FF_SH,		// 106
+	FF_BASH,	// 107
+	FF_PHP,		// 108
+	FF_MAKEDOC,	// 109
 
-	FF_DIRECTORY,	// 108
+	FF_DIRECTORY,	// 110
 
 	//--- number of elements
 

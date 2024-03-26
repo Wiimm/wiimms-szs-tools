@@ -92,6 +92,33 @@ int IsLZ
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int IsYLZ
+(
+    // returns
+    // -1:    not LZ data
+    //	0:    seems to be YLZ; compression level is unknown
+    //  1..9: seems to be YLZ; compression level is returned
+
+    cvp			data,		// NULL or data to investigate
+    uint		size		// size of 'data'
+)
+{
+    const uint delta = sizeof(ylz_header_t);
+    const u8 *d = data;
+    if ( !d || size < delta+1 || memcmp(d,YLZ_MAGIC,4) ) 
+    {
+	return -1;
+    }
+
+    const u32 magic = be24(d+delta);
+    if ( magic != LZMA_MAGIC_NUM3 )
+	return -1;
+
+    return GetComprLevelLZMA(le32(d+delta+1));
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
 int IsLZMA
 (
     // returns

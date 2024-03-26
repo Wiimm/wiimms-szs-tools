@@ -121,7 +121,6 @@ void LogSHA1 ( ccp func, ccp file, uint line, cvp data, uint size, ccp info );
 #define M1(a) ( (typeof(a))~0 )
 #define IS_M1(a) ( (a) == (typeof(a))~0 )
 
-
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			   Setup			///////////////
@@ -166,6 +165,9 @@ enum
 };
 
 //-----------------------------------------------------------------------------
+
+int FixExitStatus ( int stat );
+void ExitFixed ( int stat )  __attribute__ ((noreturn));
 
 ccp LibGetErrorName ( int stat, ccp ret_not_found );
 ccp LibGetErrorText ( int stat, ccp ret_not_found );
@@ -688,7 +690,7 @@ typedef enum cmd_flags_t
 
 //-----------------------------------------------------------------------------
 
-ccp GetNameFF		( file_format_t ff1, file_format_t ff2 );
+ccp GetNameFF		( file_format_t ff_arch, file_format_t ff_data );
 ccp GetNameFFv		( file_format_t ff1, file_format_t ff2, int version );
 ccp GetExtFF		( file_format_t ff1, file_format_t ff2 );
 ccp GetBinExtFF		( file_format_t ff );
@@ -761,6 +763,8 @@ bool IsByMagicBRSUB	( const void * data, uint data_size );
 
 bool CanBeTrackFF	( file_format_t ff );
 bool IsArchiveFF	( file_format_t ff );
+bool IsCompressFF	( file_format_t ff );
+bool IsTrackCompressFF	( file_format_t ff );
 bool IsTextFF		( file_format_t ff );
 bool IsGeoHitKartFF	( file_format_t ff );
 bool IsGeoHitObjFF	( file_format_t ff );
@@ -775,7 +779,7 @@ void SetCompressionFF
 (
     file_format_t	ff_arch,	// if >=0: set 'opt_fform'
     file_format_t	ff_compr	// if >=0: set 'fform_compr'
-					//        and  'fform_compr_force'
+					//         and 'fform_compr_force'
 );
 
 static inline bool IsTplFF ( file_format_t ff )
@@ -1806,6 +1810,7 @@ void CheckOptDest ( ccp default_dest, bool default_mkdir );
 ///////////////////////////////////////////////////////////////////////////////
 
 int ScanOptCompr ( ccp arg );
+int GetComprByFF ( file_format_t ff, int compr );
 int ScanOptTracks ( ccp arg );
 int ScanOptArenas ( ccp arg );
 ccp NormalizeTrackName ( char *buf, uint bufsize, ccp arg );
@@ -2640,6 +2645,42 @@ void AnalyzeKCL  ( const struct kcl_t * kcl );
 
 ///////////////////////////////////////////////////////////////////////////////
 
+int GetCompressionLevel
+(
+    // return	-1:	invalid ff,
+    //		0:	compression level unknown
+    //		1..9:	compression level unknown
+
+    file_format_t	ff,	// file format, call GetByMagicFF() if FF_UNKNOWN
+    cvp			data,	// NULL or pointer to data
+    uint		size	// size of data
+);
+
+//-----------------------------------------------------------------------------
+
+ccp GetCompressionSuffix
+(
+    // returns EmptyString[] or CircBuf of format ".#"
+
+    file_format_t	ff,	// file format, call GetByMagicFF() if FF_UNKNOWN
+    cvp			data,	// NULL or pointer to data
+    uint		size	// size of data
+);
+
+//-----------------------------------------------------------------------------
+
+ccp GetCompressionNameFF
+(
+    // returns const string or CircBuf of format "FF.#"
+
+    file_format_t	ff_arch, // FF_UNKNOWN or file format of archive
+    file_format_t	ff_data, // file format of data, call GetByMagicFF() if FF_UNKNOWN
+    cvp			data,	// NULL or pointer to data
+    uint		size	// size of data
+);
+
+///////////////////////////////////////////////////////////////////////////////
+
 bool IsExtractEnabled(); // return true if enabled and mkdir() successful
 
 bool PrepareExtract
@@ -2766,6 +2807,7 @@ typedef struct Image_t Image_t;
 
 extern ccp		opt_config;
 extern bool		opt_no_pager;
+extern int		opt_zero;
 extern ccp		config_path;
 extern ccp		tool_name;
 extern ccp		std_share_path;

@@ -228,7 +228,7 @@ static analyze_item_t * add_item
     }
 
     ERROR0(ERR_FATAL,"Analyze list full (max=%u): %s\n",MAX_ANA_ITEM,ana->szs->fname);
-    exit(ERR_FATAL);
+    ExitFixed(ERR_FATAL);
 }
 
 ///////////////////////////////////////////////////////////////////////////////

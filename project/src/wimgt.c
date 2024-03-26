@@ -77,7 +77,7 @@ static void help_exit ( bool xmode )
 	PrintHelpCmd(&InfoUI_wimgt,stdout,0,0,"HELP",0,URI_HOME);
 
     ClosePager();
-    exit(ERR_OK);
+    ExitFixed(ERR_OK);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -102,7 +102,7 @@ static void version_exit()
     else
 	fputs( TITLE "\n", stdout );
 
-    exit(ERR_OK);
+    ExitFixed(ERR_OK);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -136,7 +136,7 @@ static void hint_exit ( enumError stat )
 	fprintf(stderr,
 	    "-> Type '%s -h' or '%s help' (pipe it to a pager like 'less') for more help.\n\n",
 	    ProgInfo.progname, ProgInfo.progname );
-    exit(stat);
+    ExitFixed(stat);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -169,7 +169,7 @@ static void syntax_error ( ccp func, ccp file, uint line )
     }
     else
 	PrintErrorFile(func,file,line,0,0,ERR_SYNTAX,"Syntax Error!\n");
-    exit(ERR_SYNTAX);
+    ExitFixed(ERR_SYNTAX);
 }
 
 //
@@ -621,6 +621,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
 	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
 	case GO_NO_PAGER:	opt_no_pager = true; break;
+	case GO_ZERO:		opt_zero++; break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
@@ -813,7 +814,7 @@ static enumError CheckCommand ( int argc, char ** argv )
     if (SIGINT_level)
 	err = ERROR0(ERR_INTERRUPT,"Program interrupted by user.");
     ClosePager();
-    return err;
+    return FixExitStatus(err);
 }
 
 //

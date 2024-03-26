@@ -8349,9 +8349,11 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
     {
 	O_YAZ		= 0x001,  // force FF_YAZ0  compression
 	O_BZ		= 0x002,  // force FF_BZ    compression
-	O_BZIP2		= 0x003,  // force FF_BZIP2 compression
-	O_LZ		= 0x004,  // force FF_LZ    compression
-	O_LZMA		= 0x005,  // force FF_LZMA  compression
+	O_YBZ		= 0x003,  // force FF_YBZ   compression
+	O_BZIP2		= 0x004,  // force FF_BZIP2 compression
+	O_LZ		= 0x005,  // force FF_LZ    compression
+	O_YLZ		= 0x006,  // force FF_YLZ   compression
+	O_LZMA		= 0x007,  // force FF_LZMA  compression
 	 O_M_METHOD	= 0x007,  // mask for above
 
 	O_RM		= 0x008,
@@ -8366,8 +8368,10 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
     {
 	{ O_YAZ,		"YAZ0",		"SZS",		O_M_METHOD },
 	{ O_BZ,			"WBZ",		"BZ",		O_M_METHOD },
+	{ O_YBZ,		"YBZ",		0,		O_M_METHOD },
 	{ O_BZIP2,		"BZIP2",	"BZ2",		O_M_METHOD },
 	{ O_LZ,			"WLZ",		"LZ",		O_M_METHOD },
+	{ O_YLZ,		"YLZ",		0,		O_M_METHOD },
 	{ O_LZMA,		"LZMA",		0,		O_M_METHOD },
 	{ O_RM,			"REMOVE",	"RM",		0 },
 	{ O_EXT,		"EXT",		0,		0 },
@@ -8390,8 +8394,10 @@ enumError CreateTrackArchivesLD ( le_distrib_t *ld, ccp destdir, mem_t mem_opt )
 	FF_UNKNOWN,
 	FF_YAZ0,
 	FF_BZ,
+	FF_YBZ,
 	FF_BZIP2,
 	FF_LZ,
+	FF_YLZ,
 	FF_LZMA,
     };
 

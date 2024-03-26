@@ -174,6 +174,9 @@
 		"NO_PAGER",	"no-pager|nopager",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_GM,	"ZERO",		"z|zero",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0, 0 /* copy of wszst */ },
 

@@ -70,6 +70,19 @@ int IsLZ
 
 //-----------------------------------------------------------------------------
 
+int IsYLZ
+(
+    // returns
+    // -1:    not LZ data
+    //	0:    seems to be LZ; compression level is unknown
+    //  1..9: seems to be LZ; compression level is returned
+
+    cvp			data,		// NULL or data to investigate
+    uint		size		// size of 'data'
+);
+
+//-----------------------------------------------------------------------------
+
 int IsLZMA
 (
     // returns

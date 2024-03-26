@@ -84,7 +84,7 @@ int IsBZIP2
     //  1..9: seems to be BZIP2 data; compression level is returned
 
     cvp			data,		// NULL or data to investigate
-    uint		size		// size of 'data'
+    int			size		// size of 'data'
 )
 {
     const u8 *d = data;
@@ -412,7 +412,7 @@ enumError EncodeBZIP2
     uint		*dest_written,	// store num bytes written to 'dest', never NULL
     bool		use_iobuf,	// true: allow the usage of 'iobuf'
     uint		header_size,	// insert 'header_size' bytes before dest data
-    bool		add_dec_size,	// true: add decompressed size
+    bool		add_dec_size,	// true: add decompressed size before BZIP2 header
 
     const void		*src,		// source buffer
     uint		src_size,	// size of source buffer
@@ -599,7 +599,7 @@ enumError DecodeBZIP2buf
     uint		dest_size,	// size of 'dest'
     uint		*dest_written,	// store num bytes written to 'dest', never NULL
 
-    const void		*src,		// source buffer, first 4 bytes = dest size
+    const void		*src,		// source buffer
     uint		src_size	// size of source buffer
 )
 {
@@ -616,7 +616,8 @@ enumError DecodeBZIP2buf
     DASSERT(dest_written);
     DASSERT(src);
 
-    uint dest_need = ntohl(*(u32*)src);
+//    uint dest_need = ntohl(*(u32*)src);
+    uint dest_need = dest_size;
     PRINT("DecodeBZIP2buf() %u -> %u,%u bytes\n",src_size,dest_size,dest_need);
 
     if ( be32(src+4) == 0x52415730 ) // "RAW0" == not compressed
@@ -629,7 +630,7 @@ enumError DecodeBZIP2buf
 
     *dest_written = dest_need;
     int bzerror = BZ2_bzBuffToBuffDecompress ( (char*)dest, dest_written,
-				(char*)src+4, src_size-4, 0, 0 );
+				(char*)src, src_size, 0, 0 );
 
     if ( bzerror != BZ_OK )
 	return ERROR0(ERR_BZIP2,
@@ -661,7 +662,7 @@ enumError DecodeBZIP2
     u8 *dest = MALLOC(dest_size+header_size);
     memset(dest,0,header_size);
 
-    enumError err = DecodeBZIP2buf(dest+header_size,dest_size,dest_written,src,src_size);
+    enumError err = DecodeBZIP2buf(dest+header_size,dest_size,dest_written,src+4,src_size-4);
     if (err)
     {
 	FREE(dest);

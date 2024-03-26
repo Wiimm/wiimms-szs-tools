@@ -634,7 +634,6 @@ static inline void LinkCacheSZS
 
 //-----------------------------------------------------------------------------
 
-bool IsCompressFF ( file_format_t ff );
 file_format_t GetNewCompressionSZS ( szs_file_t * szs );
 
 #define COMPR_DEFAULT -99
@@ -1519,7 +1518,7 @@ enumError LoadRawData
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			  BZ/BZIP2 support		///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[wbz_header_t]]
+// [[wbz_header_t]] [[wlz_header_t]]
 
 #define BZ_MAGIC	"WBZa"
 #define BZ_MAGIC_NUM	0x57425a61
@@ -1533,31 +1532,53 @@ typedef struct wbz_header_t
 }
 __attribute__ ((packed)) wbz_header_t;
 
+typedef wbz_header_t wlz_header_t;
+
+//-----------------------------------------------------------------------------
+// [[ybz_header_t]] [[ylz_header_t]]
+
+#define YBZ_MAGIC	YAZ0_MAGIC
+#define YLZ_MAGIC	YAZ0_MAGIC
+
+typedef struct ybz_header_t
+{
+    char	magic[4];		// = YBZ_MAGIC
+    u32		uncompressed_size;	// size of uncompressed data
+    u32		compressed_size;	// size of compressed data
+    char	first_4[4];		// copy of first 4 bytes of uncompressed
+					// data for fast magic detection.
+    u8		cdata[];		// compressed data
+}
+__attribute__ ((packed)) ybz_header_t;
+
+typedef ybz_header_t ylz_header_t;
+
 //-----------------------------------------------------------------------------
 
 enumError DecompressBZ    ( szs_file_t * szs, bool rm_compressed );
+enumError DecompressYBZ   ( szs_file_t * szs, bool rm_compressed );
 enumError DecompressBZIP2 ( szs_file_t * szs, bool rm_compressed );
 
 enumError CompressBZ    ( szs_file_t * szs, int compr, bool remove_uncompressed );
+enumError CompressYBZ   ( szs_file_t * szs, int compr, bool remove_uncompressed );
 enumError CompressBZIP2 ( szs_file_t * szs, int compr, bool remove_uncompressed );
 
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			  LZ/LZMA support		///////////////
 ///////////////////////////////////////////////////////////////////////////////
-// [[lbz_header_t]]
 
 #define LZ_MAGIC	"WLZa"
 #define LZ_MAGIC_NUM	0x574c5a61
 
-typedef wbz_header_t wlz_header_t;
-
 //-----------------------------------------------------------------------------
 
 enumError DecompressLZ   ( szs_file_t * szs, bool rm_compressed );
+enumError DecompressYLZ  ( szs_file_t * szs, bool rm_compressed );
 enumError DecompressLZMA ( szs_file_t * szs, bool rm_compressed );
 
 enumError CompressLZ    ( szs_file_t * szs, int compr, bool remove_uncompressed );
+enumError CompressYLZ    ( szs_file_t * szs, int compr, bool remove_uncompressed );
 enumError CompressLZMA  ( szs_file_t * szs, int compr, bool remove_uncompressed );
 
 //

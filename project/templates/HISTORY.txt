@@ -424,7 +424,7 @@ szs v2.20a r8279 - 2020-10-03
    and self linked item routes with 1 point.
  - wszst CHECK: Hints about unusual TEX version 1 are suppressed now if option
    --verbose is not set.
- - Fewer program crashes when reading faulty SZS files. 
+ - Fewer program crashes when reading faulty SZS files.
 
 
 szs v2.21a r8311 - 2020-11-30
@@ -436,7 +436,7 @@ szs v2.21a r8311 - 2020-11-30
  - Support of LE-CODE build 25:
     - Speedometer support for LPAR-files.
     - New option for wlect: --speedometer=off/on
- - Again fewer program crashes when reading faulty SZS files. 
+ - Again fewer program crashes when reading faulty SZS files.
  - BMG supports little endian files now, but only encoding UTF-8 was checked.
    I need example files to verify other encodings (CP-1252,UTF-16,SHIFT-JIS).
  - KCL/OBJ: Faces with any number of vertices are accepted now. Before there
@@ -672,7 +672,7 @@ szs v2.31a r8725 - 2022-12-16
  - File format LE-DEF: Instructions STANDARD-BATTLE-ARENAS and/or
    STANDARD-VERSUS-TRACKS will be executed automatically if no other battle
    arena or no other versus track are defined.
- - wlect DISTRIB: 
+ - wlect DISTRIB:
     - Bug fix: Random slots are ignored now if adding missed tracks to cups.
     - Fixed import of LE-CODE binaries without standard tracks.
     - New instructions: CUP-ICONS, CUP-INFO (both are experimental).
@@ -688,7 +688,7 @@ szs v2.32a r8742 - 2022-12-25
  - wlect DISTRIB:
     - Instructions cup-icons= and cup-info=:
        - By default, 5 characters are used for the name part. The source can
-         now be specified as an optional storage indicator.
+	 now be specified as an optional storage indicator.
        - Fixed some issues.
     - Instruction distrib=: Improved track list.
     - New instruction report=: Analyse the distribution and print a report.
@@ -775,17 +775,17 @@ szs v2.36a r8834 - 2023-07-22
  - The 114 commands of the following list including their short cuts accept
    wildcards as source now:
     - wszst: ANALYZE AUTOADD BINARY BMG BRSUB CAT CHECK COMPRESS COPY CREATE
-             DECOMPRESS DISTRIBUTION DUMP ENCODE EXTRACT FEATURES FILETYPE
-             GHOST ILIST INFO INSTALL IS-ARENA IS-TEXTURE KCL KMP LEX MEMORY
-             MINIMAP NAME-REF NORMALIZE PATCH SHA1 SLOTS SPLIT STGI TEXT
-             UPDATE XALL XCOMMON XDECODE XEXPORT YAZDUMP
+	     DECOMPRESS DISTRIBUTION DUMP ENCODE EXTRACT FEATURES FILETYPE
+	     GHOST ILIST INFO INSTALL IS-ARENA IS-TEXTURE KCL KMP LEX MEMORY
+	     MINIMAP NAME-REF NORMALIZE PATCH SHA1 SLOTS SPLIT STGI TEXT
+	     UPDATE XALL XCOMMON XDECODE XEXPORT YAZDUMP
     - wbmgt: CAT DECODE ENCODE FILETYPE LIST MIX SECTIONS PATCH SLOTS
     - wctct: CAT CREATE DECODE DUMP FILETYPE PATCH
     - wimgt: CONVERT COPY DECODE ENCODE FILETYPE LIST
     - wkclt: ANALYZE BLOW CAT CFF CHECK COPY DECODE DUMP ENCODE FILETYPE
-             FLAGS LIST SHA1 TRIANGLES
+	     FLAGS LIST SHA1 TRIANGLES
     - wkmpt: CAT CHECK DECODE DRAW ENCODE FILETYPE GAMEMODES GOBJ KTPT ROUTES
-             STGI
+	     STGI
     - wlect: CAT DECODE DUMP ENCODE FILETYPE LPAR PATCH TIMESTAMP
     - wmdlt: CAT DECODE ENCODE FILETYPE GEOMETRY STRINGS XTEST
     - wpatt: CAT DECODE ENCODE FILETYPE
@@ -827,9 +827,9 @@ szs v2.38a r8889 - 2023-09-22
  - Fixed a bug that caused distribution files to be read incorrectly.
  - New compression formats:
     LZ:   Read and create LZ compressed files. LZ is like YAZ0 and BZ, but
-          with LZMA compression.
+	  with LZMA compression.
     LZMA: Read and create LZMA compressed files. Tracks compressed with LZMA
-          are approx 40% smaller than the YAZ0 compressed tracks.
+	  are approx 40% smaller than the YAZ0 compressed tracks.
     XZ:   Detect XZ compressed files.
  - Formats BZIP2, LZMA and XZ are compatible with external tools like 'bzip2',
    'lzma' and 'xz'.
@@ -917,6 +917,14 @@ szs v2.41a r8953 - 2024-02-17
  - New global option --le-04x: Use format %04x instead of %03x for LE-CODE
    slots to enable uniform slot numbers if slots >4095 are used.
  - New LPAR setting: SLOT-04X.
+
+
+szs v2.41b r8971 - 2024-02-23
+ - Cygwin only: Fixed a silent stack overflow if reordering the tracks.
+ - New image format TPLx: Technically, TPLx is a TPL file with 2 extensions.
+   The main feature is the conversion of width and height so that images with
+   a height >65535 lines can be used. Cup icons are an example of this.
+ - New virtual image type CUPICON: Alias for TPLx.CMPR.
 
 
 @@MODULE(last-history.txt)@@

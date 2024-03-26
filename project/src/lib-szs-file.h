@@ -70,7 +70,8 @@ typedef enum have_szs_file_t
     HAVESZS_MINIGAME,		// common/minigame.kmg
     HAVESZS_AIPARAM_BAA,	// AIParam/AIParam.baa
     HAVESZS_AIPARAM_BAS,	// AIParam/AIParam.bas
-    HAVESZS_LICENSE,		// license.txt, any case
+    HAVESZS_LICENSE_TXT,	// license.txt, any case
+    HAVESZS_VERSION_BIN,	// version.bin,any case
     HAVESZS__N
 }
 __attribute__ ((packed)) have_szs_file_t;

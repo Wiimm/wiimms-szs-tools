@@ -621,6 +621,14 @@
 	"", \
 	"Forbid the internal usage of a pager." )
 
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple use is possible." \
@@ -1383,12 +1391,12 @@
 
 #:def_opt( "CUP_ICONS", "cup-icons|cupicons", "CP", \
 	"image", \
-	"Load given image, convert it to TPL.CMPR and add the result as" \
+	"Load given image, convert it to TPLx.CMPR and add the result as" \
 	" sub-files 'button/timg/ct_icons.tpl' and as" \
 	" 'control/timg/ct_icons.tpl' to files 'Channel.szs', 'MenuMulti.szs'" \
 	" and 'MenuSingle.szs'. Both sub-files are always linked, so that" \
 	" storage space is saved. The usual size for each single icon is" \
-	" 128x128. This can be changed by LPAR setting CUP-ICON-SIZE." )
+	" 128x128." )
 
 #:def_opt( "NO_COPY", "no-copy|nocopy", "C", \
 	"", \
@@ -1714,14 +1722,36 @@
 	"", \
 	"If creating a compressed file, create a BZIP2 compatible file." )
 
+#:def_opt( "CYBZ", "cybz", "G", \
+	"", \
+	"If creating a compressed file, force YBZ compression (YAZ0 file" \
+	" header, but BZIP2 compression), but don't change the payload." )
+
+#:def_opt( "YBZ", "ybz", "G", \
+	"", \
+	"If creating a compressed file, force archive format U8 with YBZ" \
+	" compression (YAZ0 file header, but BZIP2 compression). Therefore it" \
+	" is a short cut for {--u8 --cybz}." )
+
 #:def_opt( "LZ", "lz", "G", \
 	"", \
-	"If creating a compressed file, force BZ compression (a YAZ0 like file" \
+	"If creating a compressed file, force LZ compression (a YAZ0 like file" \
 	" format with LZMA compression)." )
 
 #:def_opt( "LZMA", "lzma", "G", \
 	"", \
 	"If creating a compressed file, create a LZMA compatible file." )
+
+#:def_opt( "CYLZ", "cylz", "G", \
+	"", \
+	"If creating a compressed file, force YLZ compression (YAZ0 file" \
+	" header, but LZMA compression), but don't change the payload." )
+
+#:def_opt( "YLZ", "ylz", "G", \
+	"", \
+	"If creating a compressed file, force archive format U8 with YLZ" \
+	" compression (YAZ0 file header, but LZMA compression). Therefore it" \
+	" is a short cut for {--u8 --cylz}." )
 
 #:def_opt( "SH", "sh", "G", \
 	"", \
@@ -2023,8 +2053,11 @@
 	" find the best compression mode with testing the first N modes of 9," \
 	" 1, 8, 2, 5. @TRY2@ is used for normalizing. For non bz-compression," \
 	" @TRY*@ are the same as @BEST@.\n" \
+	"  Do not use compression level >6 for LZMA if the file is intended" \
+	" for Mario Kart Wii, as too much memory is required for decoding.\n" \
+	"\n" \
 	"  Option {--norm} takes precedence over {--compr} and sets the" \
-	" compression level to @TRY2@ (@BEST@).\n" \
+	" compression level for bzip2 to @TRY2@ (@BEST@) and for LZMA to 6.\n" \
 	"  For more modes and details type {wszst -C list}. To force colorized" \
 	" output type {wszst -C clist}." )
 
@@ -2723,11 +2756,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST", "YLZ", \
 	"", \
 	"" )
 
@@ -2956,11 +3005,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_L", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_L", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_L", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_L", "YLZ", \
 	"", \
 	"" )
 
@@ -3189,11 +3254,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LL", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LL", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_LL", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LL", "YLZ", \
 	"", \
 	"" )
 
@@ -3422,11 +3503,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LLL", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LLL", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_LLL", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LLL", "YLZ", \
 	"", \
 	"" )
 
@@ -3655,11 +3752,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_A", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_A", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_A", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_A", "YLZ", \
 	"", \
 	"" )
 
@@ -3888,11 +4001,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "LIST_LA", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "LIST_LA", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "LIST_LA", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "LIST_LA", "YLZ", \
 	"", \
 	"" )
 
@@ -4132,11 +4261,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST", "YLZ", \
 	"", \
 	"" )
 
@@ -4353,11 +4498,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_L", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_L", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST_L", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_L", "YLZ", \
 	"", \
 	"" )
 
@@ -4574,11 +4735,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LL", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LL", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST_LL", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LL", "YLZ", \
 	"", \
 	"" )
 
@@ -4795,11 +4972,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_A", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_A", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST_A", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_A", "YLZ", \
 	"", \
 	"" )
 
@@ -5016,11 +5209,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "ILIST_LA", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "ILIST_LA", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "ILIST_LA", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "ILIST_LA", "YLZ", \
 	"", \
 	"" )
 
@@ -5245,11 +5454,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "MEMORY", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY", "YLZ", \
 	"", \
 	"" )
 
@@ -5474,11 +5699,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "MEMORY_A", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "MEMORY_A", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "MEMORY_A", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "MEMORY_A", "YLZ", \
 	"", \
 	"" )
 
@@ -5674,11 +5915,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUMP", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUMP", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "DUMP", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUMP", "YLZ", \
 	"", \
 	"" )
 
@@ -5891,11 +6148,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SHA1", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SHA1", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "SHA1", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SHA1", "YLZ", \
 	"", \
 	"" )
 
@@ -6395,11 +6668,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DISTRIBUTION", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DISTRIBUTION", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "DISTRIBUTION", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DISTRIBUTION", "YLZ", \
 	"", \
 	"" )
 
@@ -6663,11 +6952,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CHECK", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CHECK", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "CHECK", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CHECK", "YLZ", \
 	"", \
 	"" )
 
@@ -7072,11 +7377,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "SLOTS", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "SLOTS", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "SLOTS", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "SLOTS", "YLZ", \
 	"", \
 	"" )
 
@@ -7556,11 +7877,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "NORMALIZE", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "NORMALIZE", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "NORMALIZE", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "NORMALIZE", "YLZ", \
 	"", \
 	"" )
 
@@ -7916,11 +8253,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "PATCH", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "PATCH", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "PATCH", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "PATCH", "YLZ", \
 	"", \
 	"" )
 
@@ -8280,11 +8633,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COPY", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COPY", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "COPY", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COPY", "YLZ", \
 	"", \
 	"" )
 
@@ -8648,11 +9017,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "DUPLICATE", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "DUPLICATE", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "DUPLICATE", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "DUPLICATE", "YLZ", \
 	"", \
 	"" )
 
@@ -9205,11 +9590,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "COMPRESS", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "COMPRESS", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "COMPRESS", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "COMPRESS", "YLZ", \
 	"", \
 	"" )
 
@@ -10222,11 +10623,27 @@
 	"", \
 	"" )
 
+#:def_cmd_opt( "CREATE", "CYBZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "YBZ", \
+	"", \
+	"" )
+
 #:def_cmd_opt( "CREATE", "LZ", \
 	"", \
 	"" )
 
 #:def_cmd_opt( "CREATE", "LZMA", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "CYLZ", \
+	"", \
+	"" )
+
+#:def_cmd_opt( "CREATE", "YLZ", \
 	"", \
 	"" )
 
@@ -13496,6 +13913,14 @@
 	"", \
 	"Forbid the internal usage of a pager." )
 
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple use is possible." \
@@ -14875,6 +15300,14 @@
 	"", \
 	"Forbid the internal usage of a pager." )
 
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple use is possible." \
@@ -15191,8 +15624,7 @@
 	" separated list of slots (A), slot ranges (A:B) or keywords is" \
 	" expected. If preceded by a minus sign, the slots are disabled. The" \
 	" keywords are: @TRACKS@ (slots 0:0x1f), @ARENAS@ (0x20:0x29) and" \
-	" @SPECIAL@ (0x36:0x3a). @CTCODE@ is an abbreviation for" \
-	" @ARENAS,SPECIAL@.\n" \
+	" @SPECIAL@ (0x36:0x3a). @CTCODE@ is a short cut for @ARENAS,SPECIAL@.\n" \
 	"  The default is to enable slot ranges @0x00:0x1f@, @0x2a:0x35@," \
 	" @0x3b:0x41@ and @0x44:0xfe@." )
 
@@ -16347,6 +16779,14 @@
 	"", \
 	"Forbid the internal usage of a pager." )
 
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple use is possible." \
@@ -17468,6 +17908,14 @@
 #:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
 	"", \
 	"Forbid the internal usage of a pager." )
+
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
@@ -20145,6 +20593,14 @@
 	"", \
 	"Forbid the internal usage of a pager." )
 
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple use is possible." \
@@ -22364,6 +22820,14 @@
 	"", \
 	"Forbid the internal usage of a pager." )
 
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple use is possible." \
@@ -24148,6 +24612,14 @@
 	"", \
 	"Forbid the internal usage of a pager." )
 
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple use is possible." \
@@ -25515,6 +25987,14 @@
 	"", \
 	"Forbid the internal usage of a pager." )
 
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
+
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \
 	"Be quiet and print only error messages. Multiple use is possible." \
@@ -26219,6 +26699,14 @@
 #:def_opt( "NO_PAGER", "no-pager|nopager", "G", \
 	"", \
 	"Forbid the internal usage of a pager." )
+
+#:def_opt( "ZERO", "z|zero", "GM", \
+	"", \
+	"This option affects the exit status of the programs. Instead of an" \
+	" exit status, the value 0 is returned for OK. This happens for" \
+	" notices ({-v}, status<15), warnings ({-vv}, status<29), errors" \
+	" ({-vvv}, status<115) and fatal errors ({-vvvv}). The exit status for" \
+	" INTERRUPT (112) is never replaced." )
 
 #:def_opt( "QUIET", "q|quiet", "GM", \
 	"", \

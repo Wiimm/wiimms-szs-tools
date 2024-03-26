@@ -215,6 +215,9 @@
 		"NO_PAGER",	"no-pager|nopager",
 		0, 0 /* copy of wszst */ },
 
+  { T_OPT_GM,	"ZERO",		"z|zero",
+		0, 0 /* copy of wszst */ },
+
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0, 0 /* copy of wszst */ },
 
@@ -449,7 +452,7 @@
 		" is expected. If preceded by a minus sign, the slots are disabled."
 		" The keywords are: @TRACKS@ (slots 0:0x1f), @ARENAS@ (0x20:0x29)"
 		" and @SPECIAL@ (0x36:0x3a)."
-		" @CTCODE@ is an abbreviation for @ARENAS,SPECIAL@."
+		" @CTCODE@ is a short cut for @ARENAS,SPECIAL@."
 		"\n "
 		" The default is to enable slot ranges"
 		" @0x00:0x1f@, @0x2a:0x35@, @0x3b:0x41@ and @0x44:0xfe@." },

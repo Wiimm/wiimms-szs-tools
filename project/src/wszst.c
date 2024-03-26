@@ -99,7 +99,7 @@ static void help_exit ( bool xmode )
 	PrintHelpCmd(&InfoUI_wszst,stdout,0,0,"HELP",0,URI_HOME);
 
     ClosePager();
-    exit(ERR_OK);
+    ExitFixed(ERR_OK);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -107,7 +107,10 @@ static void help_exit ( bool xmode )
 static void list_compressions_exit()
 {
     SetupColors();
-    const int fw = GetTermWidth(80,40) - 1;
+    int fw = GetTermWidth(80,40) - 1;
+    if ( fw > 120 )
+	fw = 120;
+
     PrintColoredLines(stdout,colout,0,fw,0,0,
 	"\n{setup|%s}\n\n{caption|Compression modes:}\n"
 	"\n"
@@ -116,7 +119,7 @@ static void list_compressions_exit()
 	" Each methods and level can be address by a numerical mode"
 	" and some by a name.\n"
 	"\n"
-	"In general, 2 compression formats are supported: YAZ0/YAZ1 and BZ (bzip2).\n"
+	"In general, 3 compression formats are supported: YAZ0/YAZ1, BZ (bzip2) and LZ (LZMA).\n"
 	"\n"
 	"The following list shows all modes."
 	" A mode can by selected by option {opt|--compr=param} or {opt|-C param}.\n"
@@ -131,9 +134,13 @@ static void list_compressions_exit()
 	"\t{hl|  1\tFAST}\t|"
 		"Fastest available standard compression.\n"
 	"\t{hl|1-8\t}\t|"
-		"Standard levels between {par|FAST} and {par|BEST}.\n"
+		"Standard levels between {par|FAST} and {par|BEST}."
+		" Do not use compression level >6 for {cmd|LZMA} if the file is intended"
+		" for Mario Kart Wii, as too much memory is required for decoding.\n" 
 	"\t{hl|  9\tBEST}\t|"
-		"Best and {par|default} standard compression.\n"
+		"Best compression level.\n"
+	"\t{hl|\tDEFAULT}\t|"
+		"Default compression: {par|6} for {cmd|LZMA} and {par|9} for all other methods.\n"
 	"\n"
 	"\t\t{hl|TRY2 - TRY5}\t|"
 		"Because of many repeated data, the best {cmd|BZ} compression mode varies."
@@ -177,7 +184,7 @@ static void list_compressions_exit()
 	,3*fw,ThinLine300_3
 	);
 
-    exit(ERR_OK);
+    ExitFixed(ERR_OK);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -202,7 +209,7 @@ static void version_exit()
     else
 	fputs( TITLE "\n", stdout );
 
-    exit(ERR_OK);
+    ExitFixed(ERR_OK);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -236,7 +243,7 @@ static void hint_exit ( enumError stat )
 	fprintf(stderr,
 	    "-> Type '%s -h' or '%s help' (pipe it to a pager like 'less') for more help.\n\n",
 	    ProgInfo.progname, ProgInfo.progname );
-    exit(stat);
+    ExitFixed(stat);
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -626,6 +633,8 @@ static const sizeof_info_t sizeof_info_szs_list[] =
 	SIZEOF_INFO_ENTRY(raw_data_t)
 	SIZEOF_INFO_ENTRY(wbz_header_t)
 	SIZEOF_INFO_ENTRY(wlz_header_t)
+	SIZEOF_INFO_ENTRY(ybz_header_t)
+	SIZEOF_INFO_ENTRY(ylz_header_t)
 	SIZEOF_INFO_ENTRY(analyze_param_t)
 	SIZEOF_INFO_ENTRY(analyze_szs_t)
 	SIZEOF_INFO_ENTRY(file_type_t)
@@ -672,7 +681,7 @@ static enumError cmd_test_options()
     printf("  align-breff: %16x = %12d\n",opt_align_breff,opt_align_breff);
     printf("  align-breft: %16x = %12d\n",opt_align_breft,opt_align_breft);
     printf("  tiny:        %16x = %12d\n",opt_tiny,opt_tiny);
-    printf("  compression:          mode %2d, level %d\n",opt_compr_mode,opt_compr);
+    printf("  compression:          mode %2d, level %d ==> %d\n",opt_compr_mode,opt_compr,GetComprByFF(fform_compr,0));
     printf("  recurse:     %16x = %12d\n",opt_recurse,opt_recurse);
     printf("  cmpr-default:         valid=%d, RGB565: %04x %04x, RGB: %06x %06x\n",
 		opt_cmpr_valid,
@@ -1443,7 +1452,7 @@ static enumError cmd_code()
  {
     ERROR0(ERR_NOT_IMPLEMENTED,
 	"Command _RECODE not implemented in this version!\n");
-    exit(ERR_NOT_IMPLEMENTED);
+    ExitFixed(ERR_NOT_IMPLEMENTED);
  }
 
 #endif
@@ -5758,7 +5767,7 @@ static enumError cmd_yazdump()
  {
     ERROR0(ERR_NOT_IMPLEMENTED,
 	"Command VEHICLE not implemented in this version!\n");
-    exit(ERR_NOT_IMPLEMENTED);
+    ExitFixed(ERR_NOT_IMPLEMENTED);
  }
 
 #endif
@@ -5798,6 +5807,7 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_WIDTH:		err += ScanOptWidth(optarg); break;
 	case GO_MAX_WIDTH:	err += ScanOptMaxWidth(optarg); break;
 	case GO_NO_PAGER:	opt_no_pager = true; break;
+	case GO_ZERO:		opt_zero++; break;
 	case GO_QUIET:		verbose = verbose > -1 ? -1 : verbose - 1; break;
 	case GO_VERBOSE:	verbose = verbose <  0 ?  0 : verbose + 1; break;
 	case GO_LOGGING:	logging++; break;
@@ -5926,8 +5936,10 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_XYZ:		SetCompressionFF(FF_INVALID,FF_XYZ); break;
 	case GO_BZ:		SetCompressionFF(FF_INVALID,FF_BZ); break;
 	case GO_BZIP2:		SetCompressionFF(FF_INVALID,FF_BZIP2); break;
+	case GO_CYBZ:		SetCompressionFF(FF_INVALID,FF_YBZ); break;
 	case GO_LZ:		SetCompressionFF(FF_INVALID,FF_LZ); break;
 	case GO_LZMA:		SetCompressionFF(FF_INVALID,FF_LZMA); break;
+	case GO_CYLZ:		SetCompressionFF(FF_INVALID,FF_YLZ); break;
 
 	case GO_U8:		SetCompressionFF(FF_U8,FF_INVALID); break;
 	case GO_SZS:		SetCompressionFF(FF_U8,FF_YAZ0); break;
@@ -5935,6 +5947,8 @@ static enumError CheckOptions ( int argc, char ** argv, bool is_env )
 	case GO_XWU8:		SetCompressionFF(FF_WU8,FF_XYZ); break;
 	case GO_WBZ:		SetCompressionFF(FF_WU8,FF_BZ); break;
 	case GO_WLZ:		SetCompressionFF(FF_WU8,FF_LZ); break;
+	case GO_YBZ:		SetCompressionFF(FF_U8,FF_YBZ); break;
+	case GO_YLZ:		SetCompressionFF(FF_U8,FF_YLZ); break;
 	//case GO_LTA:		SetCompressionFF(FF_LTA,FF_INVALID); break;
 	case GO_LFL:		SetCompressionFF(FF_LFL,FF_INVALID); break;
 	//case GO_ARC:		SetCompressionFF(FF_RARC,FF_INVALID); break;
@@ -6575,7 +6589,7 @@ int main ( int argc, char ** argv )
     DASSERT(w);
     const int err = w->func(argc,argv);
     ClosePager();
-    return err;
+    return FixExitStatus(err);
 }
 
 //

@@ -799,6 +799,14 @@
 		0,
 		"Forbid the internal usage of a pager." },
 
+  { T_OPT_GM,	"ZERO",		"z|zero",
+		0,
+		"This option affects the exit status of the programs."
+		" Instead of an exit status, the value 0 is returned for OK."
+		" This happens for notices ({-v}, status<15), warnings ({-vv}, status<29),"
+		" errors ({-vvv}, status<115) and fatal errors ({-vvvv})."
+		" The exit status for INTERRUPT (112) is never replaced." },
+
   { T_OPT_GM,	"QUIET",	"q|quiet",
 		0,
 		"Be quiet and print only error messages."
@@ -1711,12 +1719,11 @@
 
   { T_OPT_CP,	"CUP_ICONS",	"cup-icons|cupicons",
 		"image",
-		"Load given image, convert it to TPL.CMPR and add the result as sub-files"
+		"Load given image, convert it to TPLx.CMPR and add the result as sub-files"
 		" 'button/timg/ct_icons.tpl' and as 'control/timg/ct_icons.tpl'"
 		" to files 'Channel.szs', 'MenuMulti.szs' and 'MenuSingle.szs'."
 		" Both sub-files are always linked, so that storage space is saved."
-		" The usual size for each single icon is 128x128."
-		" This can be changed by LPAR setting CUP-ICON-SIZE." },
+		" The usual size for each single icon is 128x128." },
 
   { T_OPT_C,	"NO_COPY",	"no-copy|nocopy",
 		0,
@@ -2103,14 +2110,38 @@
 		0,
 		"If creating a compressed file, create a BZIP2 compatible file." },
 
+  { T_OPT_G,	"CYBZ",		"cybz",
+		0,
+		"If creating a compressed file, force YBZ compression"
+		" (YAZ0 file header, but BZIP2 compression),"
+		" but don't change the payload." },
+
+  { T_OPT_G,	"YBZ",		"ybz",
+		0,
+		"If creating a compressed file, force archive format U8"
+		" with YBZ compression (YAZ0 file header, but BZIP2 compression)."
+		" Therefore it is a short cut for {--u8 --cybz}." },
+
   { T_OPT_G,	"LZ",		"lz",
 		0,
-		"If creating a compressed file, force BZ compression"
+		"If creating a compressed file, force LZ compression"
 		" (a YAZ0 like file format with LZMA compression)." },
 
   { T_OPT_G,	"LZMA",		"lzma",
 		0,
 		"If creating a compressed file, create a LZMA compatible file." },
+
+  { T_OPT_G,	"CYLZ",		"cylz",
+		0,
+		"If creating a compressed file, force YLZ compression"
+		" (YAZ0 file header, but LZMA compression),"
+		" but don't change the payload." },
+
+  { T_OPT_G,	"YLZ",		"ylz",
+		0,
+		"If creating a compressed file, force archive format U8"
+		" with YLZ compression (YAZ0 file header, but LZMA compression)."
+		" Therefore it is a short cut for {--u8 --cylz}." },
 
   { T_SEP_OPT,	0,0,0,0 }, //----- separator -----
 
@@ -2163,7 +2194,7 @@
 
   { H_OPT_CP,	"FMODES",	"fmodes|feature-modes|featuremodes",
 		"list",
-		"--fmodes is an abbreviation for --feature-modes and declares an output filter."
+		"--fmodes is a short cut for --feature-modes and declares an output filter."
 		" @LIST@ is a keyword list. The keywords are:"
 		" @SECTION, VISUAL, GAMEPLAY, BATTLE, RACING, TIMETRIAL, OFFLINE@ and @ONLINE@."
 		" A feature is only printed if *all* set keywords match."
@@ -2511,8 +2542,12 @@
 		" N modes of 9, 1, 8, 2, 5. @TRY2@ is used for normalizing."
 		" For non bz-compression, @TRY*@ are the same as @BEST@."
 		"\n "
+		" Do not use compression level >6 for LZMA if the file is intended"
+		" for Mario Kart Wii, as too much memory is required for decoding.\n" 
+		"\n "
 		" Option {--norm} takes precedence over {--compr}"
-		" and sets the compression level to @TRY2@ (@BEST@)."
+		" and sets the compression level for bzip2 to @TRY2@ (@BEST@)"
+		" and for LZMA to 6."
 		"\n "
 		" For more modes and details type {wszst -C list}."
 		" To force colorized output type {wszst -C clist}." },
@@ -2747,8 +2782,12 @@
   { H_COPT,	"XYZ",		0,0,0 },
   { T_COPT,	"BZ",		0,0,0 },
   { T_COPT,	"BZIP2",	0,0,0 },
+  { T_COPT,	"CYBZ",		0,0,0 },
+  { T_COPT,	"YBZ",		0,0,0 },
   { T_COPT,	"LZ",		0,0,0 },
   { T_COPT,	"LZMA",		0,0,0 },
+  { T_COPT,	"CYLZ",		0,0,0 },
+  { T_COPT,	"YLZ",		0,0,0 },
   { T_COPT,	"SZS",		0,0,0 },
   { H_COPT,	"XWU8",		0,0,0 },
   { T_COPT,	"WBZ",		0,0,0 },
@@ -2771,8 +2810,12 @@
   { H_COPT,	"XYZ",		0,0,0 },
   { T_COPT,	"BZ",		0,0,0 },
   { T_COPT,	"BZIP2",	0,0,0 },
+  { T_COPT,	"CYBZ",		0,0,0 },
+  { T_COPT,	"YBZ",		0,0,0 },
   { T_COPT,	"LZ",		0,0,0 },
   { T_COPT,	"LZMA",		0,0,0 },
+  { T_COPT,	"CYLZ",		0,0,0 },
+  { T_COPT,	"YLZ",		0,0,0 },
   { T_COPT,	"SZS",		0,0,0 },
   { H_COPT,	"XWU8",		0,0,0 },
   { T_COPT,	"WBZ",		0,0,0 },

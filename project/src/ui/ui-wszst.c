@@ -502,12 +502,12 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_CUP_ICONS, false, false, false, false, false, 0, "cup-icons",
 	"image",
-	"Load given image, convert it to TPL.CMPR and add the result as"
+	"Load given image, convert it to TPLx.CMPR and add the result as"
 	" sub-files 'button/timg/ct_icons.tpl' and as"
 	" 'control/timg/ct_icons.tpl' to files 'Channel.szs', 'MenuMulti.szs'"
 	" and 'MenuSingle.szs'. Both sub-files are always linked, so that"
 	" storage space is saved. The usual size for each single icon is"
-	" 128x128. This can be changed by LPAR setting CUP-ICON-SIZE."
+	" 128x128."
     },
 
     {	OPT_NO_COPY, false, false, false, false, false, 0, "no-copy",
@@ -757,10 +757,10 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 
     {	OPT_FMODES, false, true, false, false, false, 0, "fmodes",
 	"list",
-	"--fmodes is an abbreviation for --feature-modes and declares an"
-	" output filter. LIST is a keyword list. The keywords are: SECTION,"
-	" VISUAL, GAMEPLAY, BATTLE, RACING, TIMETRIAL, OFFLINE and ONLINE. A"
-	" feature is only printed if *all* set keywords match.\n"
+	"--fmodes is a short cut for --feature-modes and declares an output"
+	" filter. LIST is a keyword list. The keywords are: SECTION, VISUAL,"
+	" GAMEPLAY, BATTLE, RACING, TIMETRIAL, OFFLINE and ONLINE. A feature"
+	" is only printed if *all* set keywords match.\n"
 	"  Each keyword can also be used with a minus as prefix to define a"
 	" second condition. In this case the feature is excluded from printing"
 	" if *any* set keywords match."
@@ -1087,8 +1087,11 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" the best compression mode with testing the first N modes of 9, 1, 8,"
 	" 2, 5. TRY2 is used for normalizing. For non bz-compression, TRY* are"
 	" the same as BEST.\n"
+	"  Do not use compression level >6 for LZMA if the file is intended"
+	" for Mario Kart Wii, as too much memory is required for decoding.\n"
+	"\n"
 	"  Option --norm takes precedence over --compr and sets the"
-	" compression level to TRY2 (BEST).\n"
+	" compression level for bzip2 to TRY2 (BEST) and for LZMA to 6.\n"
 	"  For more modes and details type 'wszst -C list'. To force colorized"
 	" output type 'wszst -C clist'."
     },
@@ -1300,6 +1303,15 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
     {	OPT_NO_PAGER, false, false, false, true, false, 0, "no-pager",
 	0,
 	"Forbid the internal usage of a pager."
+    },
+
+    {	OPT_ZERO, false, false, false, false, false, 'z', "zero",
+	0,
+	"This option affects the exit status of the programs. Instead of an"
+	" exit status, the value 0 is returned for OK. This happens for"
+	" notices (-v, status<15), warnings (-vv, status<29), errors (-vvv,"
+	" status<115) and fatal errors (-vvvv). The exit status for INTERRUPT"
+	" (112) is never replaced."
     },
 
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
@@ -1862,15 +1874,41 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"If creating a compressed file, create a BZIP2 compatible file."
     },
 
+    {	OPT_CYBZ, false, false, false, false, false, 0, "cybz",
+	0,
+	"If creating a compressed file, force YBZ compression (YAZ0 file"
+	" header, but BZIP2 compression), but don't change the payload."
+    },
+
+    {	OPT_YBZ, false, false, false, false, false, 0, "ybz",
+	0,
+	"If creating a compressed file, force archive format U8 with YBZ"
+	" compression (YAZ0 file header, but BZIP2 compression). Therefore it"
+	" is a short cut for '--u8 --cybz'."
+    },
+
     {	OPT_LZ, false, false, false, false, false, 0, "lz",
 	0,
-	"If creating a compressed file, force BZ compression (a YAZ0 like file"
+	"If creating a compressed file, force LZ compression (a YAZ0 like file"
 	" format with LZMA compression)."
     },
 
     {	OPT_LZMA, false, false, false, false, false, 0, "lzma",
 	0,
 	"If creating a compressed file, create a LZMA compatible file."
+    },
+
+    {	OPT_CYLZ, false, false, false, false, false, 0, "cylz",
+	0,
+	"If creating a compressed file, force YLZ compression (YAZ0 file"
+	" header, but LZMA compression), but don't change the payload."
+    },
+
+    {	OPT_YLZ, false, false, false, false, false, 0, "ylz",
+	0,
+	"If creating a compressed file, force archive format U8 with YLZ"
+	" compression (YAZ0 file header, but LZMA compression). Therefore it"
+	" is a short cut for '--u8 --cylz'."
     },
 
     {	OPT_SH, false, false, false, false, true, 0, "sh",
@@ -1951,7 +1989,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" helper option."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 238
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 243
 
 };
 
@@ -2586,7 +2624,7 @@ static const KeywordTab_t CommandTab[] =
 ///////////////            OptionShort & OptionLong             ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static const char OptionShort[] = "VhqvLYW:c:lHB1XPS:M:T:A:x:ts:d:D:E:orupiNC:nRea";
+static const char OptionShort[] = "VhzqvLYW:c:lHB1XPS:M:T:A:x:ts:d:D:E:orupiNC:nRea";
 
 static const struct option OptionLong[] =
 {
@@ -2603,6 +2641,7 @@ static const struct option OptionLong[] =
 	 { "maxwidth",		1, 0, GO_MAX_WIDTH },
 	{ "no-pager",		0, 0, GO_NO_PAGER },
 	 { "nopager",		0, 0, GO_NO_PAGER },
+	{ "zero",		0, 0, 'z' },
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
@@ -2844,8 +2883,12 @@ static const struct option OptionLong[] =
 	{ "bz",			0, 0, GO_BZ },
 	{ "bzip2",		0, 0, GO_BZIP2 },
 	 { "bz2",		0, 0, GO_BZIP2 },
+	{ "cybz",		0, 0, GO_CYBZ },
+	{ "ybz",		0, 0, GO_YBZ },
 	{ "lz",			0, 0, GO_LZ },
 	{ "lzma",		0, 0, GO_LZMA },
+	{ "cylz",		0, 0, GO_CYLZ },
+	{ "ylz",		0, 0, GO_YLZ },
 	{ "sh",			0, 0, GO_SH },
 	{ "bash",		0, 0, GO_BASH },
 	{ "json",		0, 0, GO_JSON },
@@ -3051,7 +3094,9 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x076 v */	OPT_VERBOSE,
 	/* 0x077   */	 0,
 	/* 0x078 x */	OPT_TRANSFORM,
-	/* 0x079   */	 0,0,0,0, 0,0,0,
+	/* 0x079   */	 0,
+	/* 0x07a z */	OPT_ZERO,
+	/* 0x07b   */	 0,0,0,0, 0,
 	/* 0x080   */	OPT_XHELP,
 	/* 0x081   */	OPT_CONFIG,
 	/* 0x082   */	OPT_YDEBUG,
@@ -3188,72 +3233,77 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x105   */	OPT_XYZ,
 	/* 0x106   */	OPT_BZ,
 	/* 0x107   */	OPT_BZIP2,
-	/* 0x108   */	OPT_LZ,
-	/* 0x109   */	OPT_LZMA,
-	/* 0x10a   */	OPT_SH,
-	/* 0x10b   */	OPT_BASH,
-	/* 0x10c   */	OPT_JSON,
-	/* 0x10d   */	OPT_PHP,
-	/* 0x10e   */	OPT_MAKEDOC,
-	/* 0x10f   */	OPT_VAR,
-	/* 0x110   */	OPT_ARRAY,
-	/* 0x111   */	OPT_AVAR,
-	/* 0x112   */	OPT_CASE,
-	/* 0x113   */	OPT_FMODES,
-	/* 0x114   */	OPT_INSTALL,
-	/* 0x115   */	OPT_ANALYZE,
-	/* 0x116   */	OPT_ANALYZE_MODE,
-	/* 0x117   */	OPT_OLD,
-	/* 0x118   */	OPT_STD,
-	/* 0x119   */	OPT_NEW,
-	/* 0x11a   */	OPT_EXTRACT,
-	/* 0x11b   */	OPT_ID_LIST,
-	/* 0x11c   */	OPT_REFERENCE,
-	/* 0x11d   */	OPT_NUMBER,
-	/* 0x11e   */	OPT_REMOVE_SRC,
-	/* 0x11f   */	OPT_IGNORE_SETUP,
-	/* 0x120   */	OPT_PURGE,
-	/* 0x121   */	OPT_ALIGN_U8,
-	/* 0x122   */	OPT_ALIGN_LTA,
-	/* 0x123   */	OPT_ALIGN_PACK,
-	/* 0x124   */	OPT_ALIGN_BRRES,
-	/* 0x125   */	OPT_ALIGN_BREFF,
-	/* 0x126   */	OPT_ALIGN_BREFT,
-	/* 0x127   */	OPT_ALIGN,
-	/* 0x128   */	OPT_ENCODE_ALL,
-	/* 0x129   */	OPT_ENCODE_IMG,
-	/* 0x12a   */	OPT_NO_ENCODE,
-	/* 0x12b   */	OPT_NO_RECURSE,
-	/* 0x12c   */	OPT_AUTO_ADD,
-	/* 0x12d   */	OPT_NO_ECHO,
-	/* 0x12e   */	OPT_PT_DIR,
-	/* 0x12f   */	OPT_RM_AIPARAM,
-	/* 0x130   */	OPT_U8,
-	/* 0x131   */	OPT_SZS,
-	/* 0x132   */	OPT_WU8,
-	/* 0x133   */	OPT_XWU8,
-	/* 0x134   */	OPT_WBZ,
-	/* 0x135   */	OPT_WLZ,
-	/* 0x136   */	OPT_LFL,
-	/* 0x137   */	OPT_PACK,
-	/* 0x138   */	OPT_BRRES,
-	/* 0x139   */	OPT_BREFF,
-	/* 0x13a   */	OPT_BREFT,
-	/* 0x13b   */	OPT_NO_COMPRESS,
-	/* 0x13c   */	OPT_FAST,
-	/* 0x13d   */	OPT_LINKS,
-	/* 0x13e   */	OPT_BASEDIR,
-	/* 0x13f   */	OPT_DECODE,
-	/* 0x140   */	OPT_MIPMAPS,
-	/* 0x141   */	OPT_NO_MIPMAPS,
-	/* 0x142   */	OPT_N_MIPMAPS,
-	/* 0x143   */	OPT_MAX_MIPMAPS,
-	/* 0x144   */	OPT_MIPMAP_SIZE,
-	/* 0x145   */	OPT_FAST_MIPMAPS,
-	/* 0x146   */	OPT_CMPR_DEFAULT,
-	/* 0x147   */	OPT_CUT,
-	/* 0x148   */	OPT_RAW,
-	/* 0x149   */	OPT_SECTIONS,
+	/* 0x108   */	OPT_CYBZ,
+	/* 0x109   */	OPT_YBZ,
+	/* 0x10a   */	OPT_LZ,
+	/* 0x10b   */	OPT_LZMA,
+	/* 0x10c   */	OPT_CYLZ,
+	/* 0x10d   */	OPT_YLZ,
+	/* 0x10e   */	OPT_SH,
+	/* 0x10f   */	OPT_BASH,
+	/* 0x110   */	OPT_JSON,
+	/* 0x111   */	OPT_PHP,
+	/* 0x112   */	OPT_MAKEDOC,
+	/* 0x113   */	OPT_VAR,
+	/* 0x114   */	OPT_ARRAY,
+	/* 0x115   */	OPT_AVAR,
+	/* 0x116   */	OPT_CASE,
+	/* 0x117   */	OPT_FMODES,
+	/* 0x118   */	OPT_INSTALL,
+	/* 0x119   */	OPT_ANALYZE,
+	/* 0x11a   */	OPT_ANALYZE_MODE,
+	/* 0x11b   */	OPT_OLD,
+	/* 0x11c   */	OPT_STD,
+	/* 0x11d   */	OPT_NEW,
+	/* 0x11e   */	OPT_EXTRACT,
+	/* 0x11f   */	OPT_ID_LIST,
+	/* 0x120   */	OPT_REFERENCE,
+	/* 0x121   */	OPT_NUMBER,
+	/* 0x122   */	OPT_REMOVE_SRC,
+	/* 0x123   */	OPT_IGNORE_SETUP,
+	/* 0x124   */	OPT_PURGE,
+	/* 0x125   */	OPT_ALIGN_U8,
+	/* 0x126   */	OPT_ALIGN_LTA,
+	/* 0x127   */	OPT_ALIGN_PACK,
+	/* 0x128   */	OPT_ALIGN_BRRES,
+	/* 0x129   */	OPT_ALIGN_BREFF,
+	/* 0x12a   */	OPT_ALIGN_BREFT,
+	/* 0x12b   */	OPT_ALIGN,
+	/* 0x12c   */	OPT_ENCODE_ALL,
+	/* 0x12d   */	OPT_ENCODE_IMG,
+	/* 0x12e   */	OPT_NO_ENCODE,
+	/* 0x12f   */	OPT_NO_RECURSE,
+	/* 0x130   */	OPT_AUTO_ADD,
+	/* 0x131   */	OPT_NO_ECHO,
+	/* 0x132   */	OPT_PT_DIR,
+	/* 0x133   */	OPT_RM_AIPARAM,
+	/* 0x134   */	OPT_U8,
+	/* 0x135   */	OPT_SZS,
+	/* 0x136   */	OPT_WU8,
+	/* 0x137   */	OPT_XWU8,
+	/* 0x138   */	OPT_WBZ,
+	/* 0x139   */	OPT_WLZ,
+	/* 0x13a   */	OPT_LFL,
+	/* 0x13b   */	OPT_PACK,
+	/* 0x13c   */	OPT_BRRES,
+	/* 0x13d   */	OPT_BREFF,
+	/* 0x13e   */	OPT_BREFT,
+	/* 0x13f   */	OPT_NO_COMPRESS,
+	/* 0x140   */	OPT_FAST,
+	/* 0x141   */	OPT_LINKS,
+	/* 0x142   */	OPT_BASEDIR,
+	/* 0x143   */	OPT_DECODE,
+	/* 0x144   */	OPT_MIPMAPS,
+	/* 0x145   */	OPT_NO_MIPMAPS,
+	/* 0x146   */	OPT_N_MIPMAPS,
+	/* 0x147   */	OPT_MAX_MIPMAPS,
+	/* 0x148   */	OPT_MIPMAP_SIZE,
+	/* 0x149   */	OPT_FAST_MIPMAPS,
+	/* 0x14a   */	OPT_CMPR_DEFAULT,
+	/* 0x14b   */	OPT_CUT,
+	/* 0x14c   */	OPT_RAW,
+	/* 0x14d   */	OPT_SECTIONS,
+	/* 0x14e   */	 0,0,0,0, 0,0,
 };
 
 //
@@ -4016,6 +4066,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_WIDTH,
 	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_NO_PAGER,
+	OptionInfo + OPT_ZERO,
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
@@ -4079,8 +4130,12 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_XYZ,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 
 	OptionInfo + OPT_NONE, // separator
 
@@ -4430,8 +4485,12 @@ static const InfoOption_t * option_tab_cmd_LIST[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -4506,8 +4565,12 @@ static const InfoOption_t * option_tab_cmd_LIST_L[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -4582,8 +4645,12 @@ static const InfoOption_t * option_tab_cmd_LIST_LL[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -4658,8 +4725,12 @@ static const InfoOption_t * option_tab_cmd_LIST_LLL[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -4734,8 +4805,12 @@ static const InfoOption_t * option_tab_cmd_LIST_A[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -4810,8 +4885,12 @@ static const InfoOption_t * option_tab_cmd_LIST_LA[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -4893,8 +4972,12 @@ static const InfoOption_t * option_tab_cmd_ILIST[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -4966,8 +5049,12 @@ static const InfoOption_t * option_tab_cmd_ILIST_L[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5039,8 +5126,12 @@ static const InfoOption_t * option_tab_cmd_ILIST_LL[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5112,8 +5203,12 @@ static const InfoOption_t * option_tab_cmd_ILIST_A[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5185,8 +5280,12 @@ static const InfoOption_t * option_tab_cmd_ILIST_LA[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5263,8 +5362,12 @@ static const InfoOption_t * option_tab_cmd_MEMORY[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5341,8 +5444,12 @@ static const InfoOption_t * option_tab_cmd_MEMORY_A[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5409,8 +5516,12 @@ static const InfoOption_t * option_tab_cmd_DUMP[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5481,8 +5592,12 @@ static const InfoOption_t * option_tab_cmd_SHA1[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5675,8 +5790,12 @@ static const InfoOption_t * option_tab_cmd_DISTRIBUTION[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5764,8 +5883,12 @@ static const InfoOption_t * option_tab_cmd_CHECK[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -5887,8 +6010,12 @@ static const InfoOption_t * option_tab_cmd_SLOTS[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -6052,8 +6179,12 @@ static const InfoOption_t * option_tab_cmd_NORMALIZE[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -6163,8 +6294,12 @@ static const InfoOption_t * option_tab_cmd_PATCH[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -6275,8 +6410,12 @@ static const InfoOption_t * option_tab_cmd_COPY[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -6388,8 +6527,12 @@ static const InfoOption_t * option_tab_cmd_DUPLICATE[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -6560,8 +6703,12 @@ static const InfoOption_t * option_tab_cmd_COMPRESS[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -6868,8 +7015,12 @@ static const InfoOption_t * option_tab_cmd_CREATE[] =
 	OptionInfo + OPT_YAZ1,
 	OptionInfo + OPT_BZ,
 	OptionInfo + OPT_BZIP2,
+	OptionInfo + OPT_CYBZ,
+	OptionInfo + OPT_YBZ,
 	OptionInfo + OPT_LZ,
 	OptionInfo + OPT_LZMA,
+	OptionInfo + OPT_CYLZ,
+	OptionInfo + OPT_YLZ,
 	OptionInfo + OPT_SZS,
 	OptionInfo + OPT_WBZ,
 	OptionInfo + OPT_WLZ,
@@ -7875,7 +8026,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" SZS, U8, PACK, BRRES, BREFF and BREFT archives. Additonally, RARC"
 	" archive can be extracted. It is also a wrapper to all other tools.",
 	0,
-	80,
+	85,
 	option_tab_tool,
 	0
     },
@@ -8409,7 +8560,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
 	" details.",
 	0,
-	58,
+	62,
 	option_tab_cmd_LIST,
 	option_allowed_cmd_LIST
     },
@@ -8425,7 +8576,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" 'LIST --long'. Wildcards and pipe characters are parsed, see"
 	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	58,
+	62,
 	option_tab_cmd_LIST_L,
 	option_allowed_cmd_LIST_L
     },
@@ -8441,7 +8592,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" short cuts for 'LIST --long --long'. Wildcards and pipe characters"
 	" are parsed, see https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	58,
+	62,
 	option_tab_cmd_LIST_LL,
 	option_allowed_cmd_LIST_LL
     },
@@ -8458,7 +8609,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" and pipe characters are parsed, see"
 	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	58,
+	62,
 	option_tab_cmd_LIST_LLL,
 	option_allowed_cmd_LIST_LLL
     },
@@ -8474,7 +8625,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" cuts for 'LIST --long --all --all'. Wildcards and pipe characters"
 	" are parsed, see https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	58,
+	62,
 	option_tab_cmd_LIST_A,
 	option_allowed_cmd_LIST_A
     },
@@ -8491,7 +8642,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" and pipe characters are parsed, see"
 	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	58,
+	62,
 	option_tab_cmd_LIST_LA,
 	option_allowed_cmd_LIST_LA
     },
@@ -8527,7 +8678,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" does it) and listed. Wildcards and pipe characters are parsed, see"
 	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	55,
+	59,
 	option_tab_cmd_ILIST,
 	option_allowed_cmd_ILIST
     },
@@ -8542,7 +8693,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"List all image files with geometry data. 'ILIST-L' and 'ILL' are"
 	" short cuts for 'ILIST --long'.",
 	0,
-	55,
+	59,
 	option_tab_cmd_ILIST_L,
 	option_allowed_cmd_ILIST_L
     },
@@ -8557,7 +8708,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"List all sub files with advanced geometry data. 'ILIST-LL' and 'ILLL'"
 	" are short cuts for 'ILIST --long --long'.",
 	0,
-	55,
+	59,
 	option_tab_cmd_ILIST_LL,
 	option_allowed_cmd_ILIST_LL
     },
@@ -8572,7 +8723,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"List recursive all image files. 'ILIST-A' and 'ILA' are short cuts"
 	" for 'ILIST --all'.",
 	0,
-	55,
+	59,
 	option_tab_cmd_ILIST_A,
 	option_allowed_cmd_ILIST_A
     },
@@ -8587,7 +8738,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"List recursive all image files with geometry data. 'ILIST-LA' and"
 	" 'ILLA' are short cuts for 'ILIST --long --all'.",
 	0,
-	55,
+	59,
 	option_tab_cmd_ILIST_LA,
 	option_allowed_cmd_ILIST_LA
     },
@@ -8603,7 +8754,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" directories) are also supported. Wildcards and pipe characters are"
 	" parsed, see https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	57,
+	61,
 	option_tab_cmd_MEMORY,
 	option_allowed_cmd_MEMORY
     },
@@ -8618,7 +8769,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Dump recursive a memory map of each source file. 'MEMORY-A' and"
 	" 'MEMA' are short cuts for 'MEMORY --all --all'.",
 	0,
-	57,
+	61,
 	option_tab_cmd_MEMORY_A,
 	option_allowed_cmd_MEMORY_A
     },
@@ -8636,7 +8787,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" supported. Wildcards and pipe characters are parsed, see"
 	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	51,
+	55,
 	option_tab_cmd_DUMP,
 	option_allowed_cmd_DUMP
     },
@@ -8653,7 +8804,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" characters are parsed, see https://szs.wiimm.de/doc/wildcards for"
 	" details.",
 	0,
-	59,
+	63,
 	option_tab_cmd_SHA1,
 	option_allowed_cmd_SHA1
     },
@@ -8755,7 +8906,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" See »welect DISTRIBUTION« for a new and alternative implementation"
 	" of this.",
 	0,
-	55,
+	59,
 	option_tab_cmd_DISTRIBUTION,
 	option_allowed_cmd_DISTRIBUTION
     },
@@ -8792,7 +8943,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" or WBZ file, or an U8 like directory. Wildcards and pipe characters"
 	" are parsed, see https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	107,
+	111,
 	option_tab_cmd_CHECK,
 	option_allowed_cmd_CHECK
     },
@@ -8811,7 +8962,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" arenas, the keyword ARENA is printed. Wildcards and pipe characters"
 	" are parsed, see https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	103,
+	107,
 	option_tab_cmd_SLOTS,
 	option_allowed_cmd_SLOTS
     },
@@ -8873,7 +9024,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" https://szs.wiimm.de/doc/wildcards for details.\n"
 	"  'wszst NORMALIZE' is the same as 'wszst PATCH --norm'.",
 	0,
-	89,
+	93,
 	option_tab_cmd_NORMALIZE,
 	option_allowed_cmd_NORMALIZE
     },
@@ -8892,7 +9043,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" and pipe characters are parsed, see"
 	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	91,
+	95,
 	option_tab_cmd_PATCH,
 	option_allowed_cmd_PATCH
     },
@@ -8916,7 +9067,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" https://szs.wiimm.de/doc/wildcards for details. Patching is also"
 	" possible and option --overwrite is set implicitly.",
 	0,
-	91,
+	95,
 	option_tab_cmd_COPY,
 	option_allowed_cmd_COPY
     },
@@ -8941,7 +9092,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" Use command 'wkmpt GAMEMODES' to list all variants and to check them"
 	" beforehand.",
 	0,
-	92,
+	96,
 	option_tab_cmd_DUPLICATE,
 	option_allowed_cmd_DUPLICATE
     },
@@ -8977,7 +9128,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" destination is '%P/%N.szs'. Wildcards and pipe characters are"
 	" parsed, see https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	90,
+	94,
 	option_tab_cmd_COMPRESS,
 	option_allowed_cmd_COMPRESS
     },
@@ -9028,7 +9179,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	" Wildcards and pipe characters are parsed, see"
 	" https://szs.wiimm.de/doc/wildcards for details.",
 	0,
-	113,
+	117,
 	option_tab_cmd_CREATE,
 	option_allowed_cmd_CREATE
     },

@@ -119,6 +119,7 @@ typedef enum enumOptions
 	OPT_WIDTH,
 	OPT_MAX_WIDTH,
 	OPT_NO_PAGER,
+	OPT_ZERO,
 	OPT_QUIET,
 	OPT_VERBOSE,
 	OPT_LOGGING,
@@ -154,7 +155,7 @@ typedef enum enumOptions
 	OPT_NEW,
 	OPT_EXTRACT,
 
-	OPT__N_TOTAL // == 93
+	OPT__N_TOTAL // == 94
 
 } enumOptions;
 
@@ -462,6 +463,7 @@ typedef enum enumGetOpt
 	GO_TEST			= 't',
 	GO_UPDATE		= 'u',
 	GO_VERBOSE		= 'v',
+	GO_ZERO			= 'z',
 
 	GO_XHELP		= 0x80,
 	GO_CONFIG,
@@ -545,7 +547,7 @@ typedef enum enumGetOpt
 //extern const struct option OptionLong[];
 //extern u8 OptionUsed[OPT__N_TOTAL+1];
 //extern const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE];
-//UIOPT_INDEX_SIZE := 0x14a = 330
+//UIOPT_INDEX_SIZE := 0x154 = 340
 //extern const InfoCommand_t CommandInfo[CMD__N+1];
 extern const InfoUI_t InfoUI_wlect;
 

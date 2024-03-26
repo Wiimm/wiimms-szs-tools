@@ -3880,7 +3880,6 @@ static int ana_slot42_brres
 	&& !strcasecmp(it->name,"course")
        )
     {
-	PRINT("MOONVIEW MDL FOUND: %x |%s|%s|\n",it->fform,it->path,it->name);
 	szs_file_t szs;
 // [[fname+]]
 	InitializeSubSZS(&szs,it->szs,it->off,it->size,FF_MDL,it->path,false);

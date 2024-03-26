@@ -77,6 +77,7 @@
 
 ccp		opt_config		= 0;
 bool		opt_no_pager		= false;
+int		opt_zero		= 0;
 ccp		tool_name		= "?";
 ccp		std_share_path		= 0;
 ccp		share_path		= 0;
@@ -694,6 +695,28 @@ const KeywordTab_t * CheckCommandHelper
 //
 ///////////////////////////////////////////////////////////////////////////////
 ///////////////			error messages			///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int FixExitStatus ( int stat )
+{
+    return stat == ERR_INTERRUPT
+	?  stat
+	:  opt_zero > 0 && stat <= ERR_NOT_EXISTS
+	|| opt_zero > 1 && stat <= ERR_WARNING
+	|| opt_zero > 2 && stat <= ERR_ERROR
+	|| opt_zero > 3
+	? 0
+	: stat;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+void ExitFixed ( int stat )
+{
+    exit(FixExitStatus(stat));
+    ASSERT(0);
+}
+
 ///////////////////////////////////////////////////////////////////////////////
 
 ccp LibGetErrorName ( int stat, ccp ret_not_found )
@@ -3082,20 +3105,21 @@ int ScanOptCompr ( ccp arg )
 {
     static const KeywordTab_t alias[] =
     {
-	{  0,	"LIST",		0,		-9 },
-	{  1,	"C-LIST",	"CLIST",	-9 },
+	{  0,		"LIST",		0,		-9 },
+	{  1,		"C-LIST",	"CLIST",	-9 },
 
-	{  0,	"UNCOMPRESSED",	0,		-1 },
+	{  0,		"UNCOMPRESSED",	0,		-1 },
 
-	{  0,	"NOCHUNKS",	0,		1 },
-	{  1,	"FAST",		0,		1 },
-	{  9,	"BEST",		0,		1 },
-	{ 10,	"ULTRA",	0,		1 },
+	{  0,		"NOCHUNKS",	0,		1 },
+	{  1,		"FAST",		0,		1 },
+	{  9,		"BEST",		0,		1 },
+	{ 10,		"ULTRA",	0,		1 },
+	{ COMPR_DEFAULT,"DEFAULT",	0,		1 },
 
-	{  9,	"T2",		"TRY2",		2 },
-	{  9,	"T3",		"TRY3",		3 },
-	{  9,	"T4",		"TRY4",		4 },
-	{  9,	"T5",		"TRY5",		5 },
+	{ COMPR_DEFAULT,"T2",		"TRY2",		2 },
+	{ COMPR_DEFAULT,"T3",		"TRY3",		3 },
+	{ COMPR_DEFAULT,"T4",		"TRY4",		4 },
+	{ COMPR_DEFAULT,"T5",		"TRY5",		5 },
 
 	{ 0,0,0,0 }
     };
@@ -3135,6 +3159,38 @@ int ScanOptCompr ( ccp arg )
     if ( opt_compr_mode != -1 )
 	opt_compr = cmd->id;
     return 0;
+}
+
+//-----------------------------------------------------------------------------
+
+int GetComprByFF ( file_format_t ff, int compr )
+{
+    if (!compr)
+	compr = opt_compr_mode > 0 ? opt_compr : COMPR_DEFAULT;
+
+    switch(ff)
+    {
+	case FF_BZ:
+	case FF_YBZ:
+	case FF_BZIP2:
+	    return compr == COMPR_DEFAULT
+			? BZIP2_DEFAULT_COMPR
+			: compr >= 1 && compr <= 9
+			? compr
+			: opt_compr_mode >= 2 && opt_compr_mode <= 5
+			? -1
+			: BZIP2_DEFAULT_COMPR;
+
+	case FF_LZ:
+	case FF_YLZ:
+	case FF_LZMA:
+	    return compr >= 1 && compr <= 9 ? compr : LZMA_DEFAULT_COMPR;
+
+	default:
+	    return compr < 1
+			? 9
+			: compr;
+    }
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -4160,6 +4216,98 @@ enumError cmd_error()
 
 //
 ///////////////////////////////////////////////////////////////////////////////
+///////////////			get compression level		///////////////
+///////////////////////////////////////////////////////////////////////////////
+
+int GetCompressionLevel
+(
+    // return	-1:	invalid ff,
+    //		0:	compression level unknown
+    //		1..9:	compression level unknown
+
+    file_format_t	ff,	// file format, call GetByMagicFF() if FF_UNKNOWN
+    cvp			data,	// NULL or pointer to data
+    uint		size	// size of data
+)
+{
+    if ( !data || size < 8 )
+	return -1;
+
+    if ( ff == FF_UNKNOWN )
+	ff = GetByMagicFF(data,size,size);
+
+    int bz_offset = -1;
+    switch(ff)
+    {
+	case FF_BZ:
+	    bz_offset = sizeof(wbz_header_t) + 4;
+	    break;
+
+	case FF_YBZ:
+	    bz_offset = sizeof(ybz_header_t);
+	    break;
+
+	case FF_BZIP2:
+	    bz_offset = 0;
+	    break;
+
+	case FF_LZ:
+	    return IsLZ(data,size);
+
+	case FF_YLZ:
+	    return IsYLZ(data,size);
+
+	case FF_LZMA:
+	    return IsLZMA(data,size);
+
+	case FF_XZ:
+	    return IsXZ(data,size);
+
+	default:
+	    return -1;
+    }
+
+    return bz_offset >= 0 && size > bz_offset
+	? IsBZIP2(data+bz_offset,size-bz_offset)
+	: 0;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetCompressionSuffix
+(
+    // returns EmptyString[] or CircBuf of format ".#"
+
+    file_format_t	ff,	// file format, call GetByMagicFF() if FF_UNKNOWN
+    cvp			data,	// NULL or pointer to data
+    uint		size	// size of data
+)
+{
+    const int compr_level = GetCompressionLevel(ff,data,size);
+    return compr_level > 0 ? PrintCircBuf(".%u",compr_level) : EmptyString;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+
+ccp GetCompressionNameFF
+(
+    // returns const string or CircBuf of format "FF.#"
+
+    file_format_t	ff_arch, // FF_UNKNOWN or file format of archive
+    file_format_t	ff_data, // file format of data, call GetByMagicFF() if FF_UNKNOWN
+    cvp			data,	// NULL or pointer to data
+    uint		size	// size of data
+)
+{
+    ccp name = GetNameFF(ff_arch,ff_data);
+    const int compr_level = GetCompressionLevel(ff_data,data,size);
+    return compr_level > 0
+		? PrintCircBuf("%s.%u",name,compr_level)
+		: name;
+}
+
+//
+///////////////////////////////////////////////////////////////////////////////
 ///////////////			command filetype		///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
@@ -4179,13 +4327,6 @@ enumError cmd_filetype()
 		 max_len = len;
 	}
 
- #if 0
-	if ( long_count > 2 )
-	    printf("\n"
-		   "type    decomp    vers  valid file name\n"
-		   "%.*s\n", max_len + 40, Minus300 );
-	else
- #endif
 	if ( long_count > 1 )
 	    printf("\n"
 		   "type    decomp    vers  valid file name\n"
@@ -4203,7 +4344,6 @@ enumError cmd_filetype()
     const int bufsize = 1200000; // >1MB for BZIP2
     char *buf1 = MALLOC(bufsize);
     char *buf2 = MALLOC(bufsize);
-    char bufstat[10];
 
     for ( int argi = 0; argi < plist.used; argi++ )
     {
@@ -4222,7 +4362,7 @@ enumError cmd_filetype()
 	    else
 		fform1 = GetByMagicFF(buf1,bufsize,fatt.size);
 
-	    ccp stat1 = err > ERR_WARNING ? "-" : GetNameFF(0,fform1);
+	    ccp stat1 = err > ERR_WARNING ? "-" : GetCompressionNameFF(0,fform1,buf1,bufsize);
 	    ccp buf = buf1;
 	    if (long_count)
 	    {
@@ -4259,22 +4399,16 @@ enumError cmd_filetype()
 		    const file_format_t ff_temp
 			= GetByMagicFF(wh->first_8,sizeof(wh->first_8),be32(wh->cdata));
 		    stat2 = GetNameFF(0,ff_temp);
-		    version = GetVersionFF(ff_temp,wh->first_8,sizeof(wh->first_8),&suffix);
-		    if ( fatt.size >= 20 )
-		    {
-			char compr = buf1[19];
-			if ( compr >= '1' && compr <= '9' )
-			{
-			    snprintf(bufstat,sizeof(bufstat),"%s.%c",stat1,compr);
-			    stat1 = bufstat;
-			}
-		    }
+		}
+		else if ( fform1 == FF_YBZ )
+		{
+		    ybz_header_t *yh = (ybz_header_t*)buf1;
+		    const file_format_t ff_temp
+			= GetByMagicFF(yh->first_4,sizeof(yh->first_4),be32(yh->cdata));
+		    stat2 = GetNameFF(0,ff_temp);
 		}
 		else if ( fform1 == FF_BZIP2 )
 		{
-		    snprintf(bufstat,sizeof(bufstat),"BZIP2.%u",IsBZIP2(buf1,bufsize));
-		    stat1 = bufstat;
-
 		    uint wr;
 		    DecodeBZIP2part(buf2,bufsize,&wr,buf1,bufsize);
 		    fform2 = GetByMagicFF(buf2,wr,wr);
@@ -4288,39 +4422,21 @@ enumError cmd_filetype()
 		    const file_format_t ff_temp
 			= GetByMagicFF(wh->first_8,sizeof(wh->first_8),be32(wh->cdata));
 		    stat2 = GetNameFF(0,ff_temp);
-		    version = GetVersionFF(ff_temp,wh->first_8,sizeof(wh->first_8),&suffix);
-		    if ( fatt.size >= 20 )
-		    {
-			const uint compr = IsLZ(buf1,bufsize);
-			if ( compr >= 1 && compr <= 9 )
-			{
-			    snprintf(bufstat,sizeof(bufstat),"%s.%u",stat1,compr);
-			    stat1 = bufstat;
-			}
-		    }
+		}
+		else if ( fform1 == FF_YLZ )
+		{
+		    ylz_header_t *yh = (ylz_header_t*)buf1;
+		    const file_format_t ff_temp
+			= GetByMagicFF(yh->first_4,sizeof(yh->first_4),be32(yh->cdata));
+		    stat2 = GetNameFF(0,ff_temp);
 		}
 		else if ( fform1 == FF_LZMA )
 		{
-		    const int level = IsLZMA(buf1,bufsize);
-		    if ( level >= 1 )
-		    {
-			snprintf(bufstat,sizeof(bufstat),"LZMA.%u",level);
-			stat1 = bufstat;
-		    }
 		    uint wr;
 		    DecodeLZMApart(buf2,bufsize,&wr,buf1,bufsize);
 		    fform2 = GetByMagicFF(buf2,wr,wr);
 		    stat2 = GetNameFF(0,fform2);
 		    load_full = true;
-		}
-		else if ( fform1 == FF_XZ )
-		{
-		    const int level = IsXZ(buf1,bufsize);
-		    if ( level >= 1 )
-		    {
-			snprintf(bufstat,sizeof(bufstat),"XZ.%u",level);
-			stat1 = bufstat;
-		    }
 		}
 		else if ( fform1 == FF_PORTDB )
 		{
@@ -4349,18 +4465,11 @@ enumError cmd_filetype()
 			else
 			    valid = IsValid(buf,written,fatt.size,0,fform2,arg);
 		    }
- #if 0
-		    if ( long_count > 2 )
-			printf("%-7s %-7s %7s %-5s %s:%s\n",
-				stat1, stat2, vbuf, valid_text[valid],
-				GetNameFF(fform1,fform2), arg );
-		    else
- #endif
-			printf("%-7s %-7s %7s %-5s %s\n",
-				stat1, stat2, vbuf, valid_text[valid], arg );
+		    
+		    printf("%-7s %-7s %7s %-5s %s\n", stat1, stat2, vbuf, valid_text[valid], arg );
 		}
 		else
-		    printf("%-7s %-7s %7s %s\n",stat1,stat2,vbuf,arg);
+		    printf("%-7s %-7s %7s %s\n", stat1, stat2,vbuf,arg);
 	    }
 	    else
 		printf("%-7s %s\n",stat1,arg);

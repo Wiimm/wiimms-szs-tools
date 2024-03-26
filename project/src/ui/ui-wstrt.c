@@ -593,6 +593,15 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	"Forbid the internal usage of a pager."
     },
 
+    {	OPT_ZERO, false, false, false, false, false, 'z', "zero",
+	0,
+	"This option affects the exit status of the programs. Instead of an"
+	" exit status, the value 0 is returned for OK. This happens for"
+	" notices (-v, status<15), warnings (-vv, status<29), errors (-vvv,"
+	" status<115) and fatal errors (-vvvv). The exit status for INTERRUPT"
+	" (112) is never replaced."
+    },
+
     {	OPT_QUIET, false, false, false, false, false, 'q', "quiet",
 	0,
 	"Be quiet and print only error messages. Multiple use is possible."
@@ -949,7 +958,7 @@ static const InfoOption_t OptionInfo[OPT__N_TOTAL+1] =
 	" directory."
     },
 
-    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 127
+    {0,0,0,0,0,0,0,0,0,0} // OPT__N_TOTAL == 128
 
 };
 
@@ -1160,7 +1169,7 @@ static const KeywordTab_t CommandTab[] =
 ///////////////            OptionShort & OptionLong             ///////////////
 ///////////////////////////////////////////////////////////////////////////////
 
-static const char OptionShort[] = "Vh@qvLYW:c:lBHT:A:R:td:D:E:orupi0U";
+static const char OptionShort[] = "Vh@zqvLYW:c:lBHT:A:R:td:D:E:orupi0U";
 
 static const struct option OptionLong[] =
 {
@@ -1178,6 +1187,7 @@ static const struct option OptionLong[] =
 	 { "maxwidth",		1, 0, GO_MAX_WIDTH },
 	{ "no-pager",		0, 0, GO_NO_PAGER },
 	 { "nopager",		0, 0, GO_NO_PAGER },
+	{ "zero",		0, 0, 'z' },
 	{ "quiet",		0, 0, 'q' },
 	{ "verbose",		0, 0, 'v' },
 	{ "logging",		0, 0, 'L' },
@@ -1404,7 +1414,9 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x074 t */	OPT_TEST,
 	/* 0x075 u */	OPT_UPDATE,
 	/* 0x076 v */	OPT_VERBOSE,
-	/* 0x077   */	 0,0,0,0, 0,0,0,0, 0,
+	/* 0x077   */	 0,0,0,
+	/* 0x07a z */	OPT_ZERO,
+	/* 0x07b   */	 0,0,0,0, 0,
 	/* 0x080   */	OPT_XHELP,
 	/* 0x081   */	OPT_CONFIG,
 	/* 0x082   */	OPT_YDEBUG,
@@ -1511,7 +1523,8 @@ static const OptionIndex_t OptionIndex[UIOPT_INDEX_SIZE] =
 	/* 0x110   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x120   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
 	/* 0x130   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
-	/* 0x140   */	 0,0,0,0, 0,0,0,0, 0,0,
+	/* 0x140   */	 0,0,0,0, 0,0,0,0, 0,0,0,0, 0,0,0,0,
+	/* 0x150   */	 0,0,0,0, 
 };
 
 //
@@ -1711,6 +1724,7 @@ static const InfoOption_t * option_tab_tool[] =
 	OptionInfo + OPT_WIDTH,
 	OptionInfo + OPT_MAX_WIDTH,
 	OptionInfo + OPT_NO_PAGER,
+	OptionInfo + OPT_ZERO,
 	OptionInfo + OPT_QUIET,
 	OptionInfo + OPT_VERBOSE,
 	OptionInfo + OPT_LOGGING,
@@ -2170,7 +2184,7 @@ static const InfoCommand_t CommandInfo[CMD__N+1] =
 	"Wiimms StaticR Tool : Manipulate the 'main.dol' and 'StaticR.rel'"
 	" files of Mario Kart Wii.",
 	0,
-	44,
+	45,
 	option_tab_tool,
 	0
     },
